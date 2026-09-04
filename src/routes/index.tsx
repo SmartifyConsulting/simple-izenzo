@@ -10,6 +10,7 @@ const GATES = [
     blurb: "Bid and offer, deal documents, counterparties, counter, confirm intent, POI.",
     foot: "Discover Counterparty →",
     locked: false,
+    to: "/transactions/new" as const,
   },
   {
     n: "02",
@@ -129,35 +130,47 @@ function Landing() {
               which facilitate a connective network across the Gates.
             </p>
             <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-              {GATES.map((gate) => (
-                <Link
-                  key={gate.n}
-                  to="/auth"
-                  search={{ mode: "signup" }}
-                  className="flex min-h-[216px] flex-col rounded-2xl border border-border bg-background p-5 text-left shadow-sm transition-shadow hover:shadow-md hover:border-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-[11px] text-muted-foreground">{gate.n}</span>
-                    <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-muted-foreground">
-                      {gate.status}
-                    </span>
-                  </div>
-                  <h3 className="mt-4 text-lg font-semibold tracking-tight">{gate.name}</h3>
-                  <p className="mt-1.5 flex-1 text-[13.5px] leading-relaxed text-muted-foreground">
-                    {gate.blurb}
-                  </p>
-                  <p
-                    className={
-                      gate.locked
-                        ? "mt-4 flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground"
-                        : "mt-4 text-[13px] font-semibold text-success"
-                    }
-                  >
-                    {gate.locked && <Lock className="h-3 w-3" />}
-                    {gate.foot}
-                  </p>
-                </Link>
-              ))}
+              {GATES.map((gate) => {
+                const cardClassName =
+                  "flex min-h-[216px] flex-col rounded-2xl border border-border bg-background p-5 text-left shadow-sm transition-shadow hover:shadow-md hover:border-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+                const cardContent = (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-[11px] text-muted-foreground">{gate.n}</span>
+                      <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-muted-foreground">
+                        {gate.status}
+                      </span>
+                    </div>
+                    <h3 className="mt-4 text-lg font-semibold tracking-tight">{gate.name}</h3>
+                    <p className="mt-1.5 flex-1 text-[13.5px] leading-relaxed text-muted-foreground">
+                      {gate.blurb}
+                    </p>
+                    <p
+                      className={
+                        gate.locked
+                          ? "mt-4 flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground"
+                          : "mt-4 text-[13px] font-semibold text-success"
+                      }
+                    >
+                      {gate.locked && <Lock className="h-3 w-3" />}
+                      {gate.foot}
+                    </p>
+                  </>
+                );
+
+                if (gate.to === "/transactions/new") {
+                  return (
+                    <Link key={gate.n} to="/transactions/new" className={cardClassName}>
+                      {cardContent}
+                    </Link>
+                  );
+                }
+                return (
+                  <Link key={gate.n} to="/auth" search={{ mode: "signup" }} className={cardClassName}>
+                    {cardContent}
+                  </Link>
+                );
+              })}
             </div>
           </div>
         </section>
