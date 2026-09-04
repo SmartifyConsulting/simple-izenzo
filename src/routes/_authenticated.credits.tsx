@@ -4,6 +4,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -46,7 +48,9 @@ function groupByMonth<T extends { created_at: string }>(rows: T[]): [string, T[]
 function Credits() {
   const { org, refresh } = useAuth();
   const qc = useQueryClient();
-  const [busy, setBusy] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [pack, setPack] = useState("1");
+  const [customAmount, setCustomAmount] = useState("");
 
   const { data: ledger = [] } = useQuery({
     queryKey: ["credit_ledger", org?.id],
@@ -84,9 +88,16 @@ function Credits() {
     .filter((r) => r.delta < 0 && new Date(r.created_at).getFullYear() === currentYear)
     .reduce((sum, r) => sum + Math.abs(r.delta), 0);
 
-  async function buy(n: number) {
+  const selectedAmount = pack === "custom" ? Number(customAmount) || 0 : Number(pack);
+
+  async function buy() {
     if (!org) return;
-    setBusy(n);
+    const n = selectedAmount;
+    if (n <= 0) {
+      toast.error("Enter how many tokens to buy.");
+      return;
+    }
+    setBusy(true);
     try {
       const { error } = await supabase
         .from("organisations")
@@ -102,10 +113,11 @@ function Credits() {
       await refresh();
       await qc.invalidateQueries({ queryKey: ["credit_ledger"] });
       toast.success(`${n} token${n === 1 ? "" : "s"} added`);
+      setCustomAmount("");
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
-      setBusy(null);
+      setBusy(false);
     }
   }
 
@@ -118,34 +130,48 @@ function Credits() {
           <p className="mt-1 text-sm text-muted-foreground">
             A Proof of Intent costs 1 token. A WaD case costs 3.
           </p>
-        </div>
 
-        <div>
-          <h2 className="text-sm font-semibold">Buy tokens</h2>
-          <div className="mt-3 grid gap-3 sm:grid-cols-4">
-            {PACKS.map((n) => (
-              <div key={n} className="rounded-md border border-border p-5">
-                <p className="text-lg font-semibold tabular-nums">{n}</p>
-                <p className="text-xs text-muted-foreground">
-                  USD {n * TOKEN_PRICE_USD}
-                </p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="mt-3 w-full"
-                  disabled={busy !== null || !org}
-                  onClick={() => buy(n)}
-                >
-                  Buy
-                </Button>
+          <div className="mt-5 border-t border-border pt-5">
+            <p className="text-sm font-semibold">Buy tokens</p>
+            <div className="mt-3 flex flex-wrap items-end gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Amount</label>
+                <Select value={pack} onValueChange={setPack}>
+                  <SelectTrigger className="h-9 w-[160px] text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PACKS.map((n) => (
+                      <SelectItem key={n} value={String(n)}>
+                        {n} token{n === 1 ? "" : "s"} — USD {n * TOKEN_PRICE_USD}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="custom">Custom amount…</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            ))}
+              {pack === "custom" && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Tokens</label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={customAmount}
+                    onChange={(e) => setCustomAmount(e.target.value)}
+                    className="h-9 w-28 text-sm"
+                  />
+                </div>
+              )}
+              <Button size="sm" disabled={busy || !org || selectedAmount <= 0} onClick={buy}>
+                Buy {selectedAmount > 0 ? `— USD ${selectedAmount * TOKEN_PRICE_USD}` : ""}
+              </Button>
+            </div>
+            {!org && (
+              <p className="mt-3 text-sm text-muted-foreground">
+                Add your organisation details before buying tokens.
+              </p>
+            )}
           </div>
-          {!org && (
-            <p className="mt-3 text-sm text-muted-foreground">
-              Add your organisation details before buying tokens.
-            </p>
-          )}
         </div>
 
         <div>
