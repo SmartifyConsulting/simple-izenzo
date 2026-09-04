@@ -7,7 +7,6 @@ import {
   ShieldCheck,
   Menu,
   LogOut,
-  BookText,
   Settings,
   Building2,
   Receipt,
@@ -31,13 +30,18 @@ const NAV: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/inbox", label: "Inbox", icon: Inbox },
   { to: "/credits", label: "Tokens", icon: Coins },
-  { to: "/glossary", label: "Glossary", icon: BookText },
   { to: "/admin", label: "Administration", icon: ShieldCheck, seats: ["admin"] },
 ];
 
+function greeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
 function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
-  const { profile, org, roles, signOut } = useAuth();
-  const navigate = useNavigate();
+  const { org, roles } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const items = NAV.filter((n) => !n.seats || n.seats.some((r) => roles.includes(r)));
 
@@ -81,54 +85,53 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
           );
         })}
       </nav>
-
-      <div className="border-t border-sidebar-border p-3">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="flex w-full items-center gap-2.5 rounded px-2 py-2 text-left hover:bg-sidebar-accent/60">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sidebar-accent text-[11px] font-semibold text-sidebar-accent-foreground">
-                {(profile?.full_name ?? profile?.email ?? "?").slice(0, 2).toUpperCase()}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-xs font-medium text-sidebar-primary">
-                  {profile?.full_name ?? profile?.email}
-                </span>
-                <span className="block truncate text-[11px] text-sidebar-foreground/60">
-                  {roles.join(" · ") || "party"} seat
-                </span>
-              </span>
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56">
-            <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-              {profile?.email}
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel className="text-[11px] font-semibold uppercase tracking-[0.09em] text-muted-foreground">
-              Account
-            </DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => navigate({ to: "/account/settings" })}>
-              <Settings className="mr-2 h-3.5 w-3.5" /> Settings
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate({ to: "/account/organisations" })}>
-              <Building2 className="mr-2 h-3.5 w-3.5" /> Organizations
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate({ to: "/account/billing" })}>
-              <Receipt className="mr-2 h-3.5 w-3.5" /> Billing History
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={async () => {
-                await signOut();
-                navigate({ to: "/" });
-              }}
-            >
-              <LogOut className="mr-2 h-3.5 w-3.5" /> Sign out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
     </div>
+  );
+}
+
+function AvatarMenu() {
+  const { profile, roles, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="flex shrink-0 items-center gap-2 rounded-full hover:opacity-80">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-sidebar text-[11px] font-semibold text-sidebar-foreground">
+            {(profile?.full_name ?? profile?.email ?? "?").slice(0, 2).toUpperCase()}
+          </span>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+          {profile?.email}
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel className="text-[11px] font-semibold uppercase tracking-[0.09em] text-muted-foreground">
+          Account
+        </DropdownMenuLabel>
+        <DropdownMenuItem onClick={() => navigate({ to: "/account/settings" })}>
+          <Settings className="mr-2 h-3.5 w-3.5" /> Settings
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate({ to: "/account/organisations" })}>
+          <Building2 className="mr-2 h-3.5 w-3.5" /> Organizations
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate({ to: "/account/billing" })}>
+          <Receipt className="mr-2 h-3.5 w-3.5" /> Billing History
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={async () => {
+            await signOut();
+            navigate({ to: "/" });
+          }}
+        >
+          <LogOut className="mr-2 h-3.5 w-3.5" /> Sign out
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <p className="px-2 py-1.5 text-[11px] text-muted-foreground">{roles.join(" · ") || "party"} seat</p>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -144,6 +147,8 @@ export function AppShell({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const { profile } = useAuth();
+  const firstName = (profile?.full_name ?? profile?.email ?? "").split(/[\s@]/)[0];
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -172,7 +177,13 @@ export function AppShell({
               <p className="truncate text-xs text-muted-foreground">{description}</p>
             )}
           </div>
+          {firstName && (
+            <p className="hidden shrink-0 text-sm text-muted-foreground sm:block">
+              {greeting()}, <span className="font-medium text-foreground">{firstName}</span>
+            </p>
+          )}
           {actions}
+          <AvatarMenu />
         </header>
         <main className="flex-1 px-4 py-6 sm:px-6">{children}</main>
       </div>
