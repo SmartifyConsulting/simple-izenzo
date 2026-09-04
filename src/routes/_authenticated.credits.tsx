@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Minus, Plus, Handshake, FileCheck } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -72,18 +73,23 @@ function groupByMonth<T extends { created_at: string }>(rows: T[]): [string, T[]
 }
 
 function Credits() {
-  const { org, refresh } = useAuth();
+  const { org, orgs, refresh } = useAuth();
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [amount, setAmount] = useState(1);
+  const [orgFilter, setOrgFilter] = useState("all");
+
+  const orgIds = orgs.map((o) => o.id);
+  const orgName = useMemo(() => new Map(orgs.map((o) => [o.id, o.name])), [orgs]);
 
   const { data: ledger = [] } = useQuery({
-    queryKey: ["credit_ledger", org?.id],
-    enabled: Boolean(org?.id),
+    queryKey: ["credit_ledger", orgIds.join(",")],
+    enabled: orgIds.length > 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("credit_ledger")
         .select("*")
+        .in("org_id", orgIds)
         .order("created_at", { ascending: false });
       if (error) throw error;
       const rows = data ?? [];
@@ -110,8 +116,10 @@ function Credits() {
 
   const homeValue = formatHomeCurrency((org?.credits ?? 0) * TOKEN_PRICE_USD, org?.country);
 
+  const filteredLedger = orgFilter === "all" ? ledger : ledger.filter((r) => r.org_id === orgFilter);
+
   const currentYear = new Date().getFullYear();
-  const spentThisYear = ledger
+  const spentThisYear = filteredLedger
     .filter((r) => r.delta < 0 && new Date(r.created_at).getFullYear() === currentYear)
     .reduce((sum, r) => sum + Math.abs(r.delta), 0);
 
@@ -269,21 +277,43 @@ function Credits() {
         </div>
 
         <div>
-          <div className="flex items-baseline justify-between">
-            <h2 className="text-sm font-semibold">Token ledger</h2>
-            <p className="text-xs text-muted-foreground">
-              Total spent this year:{" "}
-              <span className="font-mono font-semibold text-destructive">
-                USD {spentThisYear * TOKEN_PRICE_USD}
-              </span>
-            </p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold">Token ledger</h2>
+              <p className="text-xs text-muted-foreground">
+                Total spent this year:{" "}
+                <span className="font-mono font-semibold text-destructive">
+                  USD {spentThisYear * TOKEN_PRICE_USD}
+                </span>
+              </p>
+            </div>
+            {orgs.length > 1 && (
+              <div className="space-y-1">
+                <label className="block text-right text-xs font-medium text-muted-foreground">
+                  Organisation
+                </label>
+                <Select value={orgFilter} onValueChange={setOrgFilter}>
+                  <SelectTrigger className="h-9 w-[220px] text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All organisations</SelectItem>
+                    {orgs.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>
+                        {o.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <div className="mt-3 overflow-hidden rounded-md border border-border">
-            {ledger.length === 0 ? (
+            {filteredLedger.length === 0 ? (
               <p className="p-6 text-sm text-muted-foreground">Nothing recorded yet.</p>
             ) : (
               <Accordion type="multiple" defaultValue={[monthKey(new Date().toISOString())]}>
-                {groupByMonth(ledger).map(([month, rows]) => {
+                {groupByMonth(filteredLedger).map(([month, rows]) => {
                   const net = rows.reduce((sum, r) => sum + r.delta, 0);
                   return (
                     <AccordionItem key={month} value={month} className="border-border last:border-b-0">
@@ -304,6 +334,9 @@ function Credits() {
                               <th className="px-4 py-2 font-medium">Value</th>
                               <th className="px-4 py-2 font-medium">Reason</th>
                               <th className="px-4 py-2 font-medium">Deal</th>
+                              {orgFilter === "all" && orgs.length > 1 && (
+                                <th className="px-4 py-2 font-medium">Organisation</th>
+                              )}
                               <th className="px-4 py-2 font-medium">When</th>
                             </tr>
                           </thead>
@@ -328,6 +361,11 @@ function Credits() {
                                 </td>
                                 <td className="px-4 py-2.5">{row.reason}</td>
                                 <td className="px-4 py-2.5 text-muted-foreground">{row.dealTitle ?? "—"}</td>
+                                {orgFilter === "all" && orgs.length > 1 && (
+                                  <td className="px-4 py-2.5 text-muted-foreground">
+                                    {orgName.get(row.org_id) ?? "—"}
+                                  </td>
+                                )}
                                 <td className="px-4 py-2.5 text-muted-foreground">{when(row.created_at)}</td>
                               </tr>
                             ))}
