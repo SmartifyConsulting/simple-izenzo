@@ -10,12 +10,12 @@ import { money, when, type Transaction } from "@/lib/tx";
 export const Route = createFileRoute("/_authenticated/inbox")({
   head: () => ({
     meta: [
-      { title: "Counterparty inbox — Izenzo" },
+      { title: "Inbox — Izenzo" },
       {
         name: "description",
         content: "Transactions where your organisation sits on the other side of the table.",
       },
-      { property: "og:title", content: "Counterparty inbox — Izenzo" },
+      { property: "og:title", content: "Inbox — Izenzo" },
       {
         property: "og:description",
         content: "Transactions where your organisation is the counterparty.",
@@ -43,7 +43,7 @@ function InboxPage() {
   });
 
   return (
-    <AppShell title="Counterparty inbox" description="Where you are on the other side">
+    <AppShell title="Inbox" description="Where you are on the other side">
       <div className="overflow-hidden rounded-md border border-border">
         {isLoading ? (
           <p className="p-6 text-sm text-muted-foreground">Loading…</p>

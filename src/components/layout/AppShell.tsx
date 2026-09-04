@@ -30,7 +30,7 @@ type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; seats?
 
 const NAV: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/inbox", label: "Counterparty inbox", icon: Inbox },
+  { to: "/inbox", label: "Inbox", icon: Inbox },
   { to: "/credits", label: "Tokens", icon: Coins },
   { to: "/glossary", label: "Glossary", icon: BookText },
   { to: "/admin", label: "Administration", icon: ShieldCheck, seats: ["admin"] },
