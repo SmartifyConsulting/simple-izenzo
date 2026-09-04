@@ -275,16 +275,24 @@ function Landing() {
       </main>
 
       <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-5 py-8 text-xs text-muted-foreground">
-          <span>Izenzo</span>
-          <div className="flex gap-4">
-            <Link to="/glossary" className="hover:text-foreground">
-              Glossary
-            </Link>
-            <Link to="/auth" className="hover:text-foreground">
-              Sign in
-            </Link>
-          </div>
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 py-8 sm:flex-row">
+          <p className="text-center text-[11px] tracking-wide text-muted-foreground sm:text-left sm:text-xs">
+            Izenzo is the trading name of Starfair162 (Pty) Ltd Reg: 2018 / 331720 / 07.
+          </p>
+          <nav aria-label="Footer" className="flex items-center gap-6">
+            <a href="/docs" className="text-[11px] tracking-wide text-muted-foreground transition-colors hover:text-foreground sm:text-xs">
+              Docs
+            </a>
+            <a href="/status" className="text-[11px] tracking-wide text-muted-foreground transition-colors hover:text-foreground sm:text-xs">
+              Status
+            </a>
+            <a href="/pricing" className="text-[11px] tracking-wide text-muted-foreground transition-colors hover:text-foreground sm:text-xs">
+              Pricing
+            </a>
+            <a href="mailto:support@izenzo.co.za" className="text-[11px] tracking-wide text-muted-foreground transition-colors hover:text-foreground sm:text-xs">
+              Support
+            </a>
+          </nav>
         </div>
       </footer>
     </div>
