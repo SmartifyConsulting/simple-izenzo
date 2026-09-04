@@ -1,0 +1,868 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
+  public: {
+    Tables: {
+      ai_proposals: {
+        Row: {
+          adopted_at: string | null
+          adopted_by: string | null
+          created_at: string
+          id: string
+          kind: string
+          model: string | null
+          output: string | null
+          prompt: string | null
+          transaction_id: string
+        }
+        Insert: {
+          adopted_at?: string | null
+          adopted_by?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          model?: string | null
+          output?: string | null
+          prompt?: string | null
+          transaction_id: string
+        }
+        Update: {
+          adopted_at?: string | null
+          adopted_by?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          model?: string | null
+          output?: string | null
+          prompt?: string | null
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_proposals_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bid_offers: {
+        Row: {
+          created_at: string
+          currency: string
+          direction: string
+          id: string
+          price: number | null
+          quantity: number | null
+          status: string
+          submitted_by: string
+          terms: string | null
+          transaction_id: string
+          unit: string | null
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          direction?: string
+          id?: string
+          price?: number | null
+          quantity?: number | null
+          status?: string
+          submitted_by?: string
+          terms?: string | null
+          transaction_id: string
+          unit?: string | null
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          direction?: string
+          id?: string
+          price?: number | null
+          quantity?: number | null
+          status?: string
+          submitted_by?: string
+          terms?: string | null
+          transaction_id?: string
+          unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bid_offers_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      counterparties: {
+        Row: {
+          chosen_at: string | null
+          created_at: string
+          id: string
+          jurisdiction: string | null
+          media_flags: Json
+          name: string
+          rationale: string | null
+          score: number | null
+          sector: string | null
+          source: string | null
+          status: string
+          transaction_id: string
+        }
+        Insert: {
+          chosen_at?: string | null
+          created_at?: string
+          id?: string
+          jurisdiction?: string | null
+          media_flags?: Json
+          name: string
+          rationale?: string | null
+          score?: number | null
+          sector?: string | null
+          source?: string | null
+          status?: string
+          transaction_id: string
+        }
+        Update: {
+          chosen_at?: string | null
+          created_at?: string
+          id?: string
+          jurisdiction?: string | null
+          media_flags?: Json
+          name?: string
+          rationale?: string | null
+          score?: number | null
+          sector?: string | null
+          source?: string | null
+          status?: string
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "counterparties_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credit_ledger: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          delta: number
+          id: string
+          org_id: string
+          reason: string
+          transaction_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          delta: number
+          id?: string
+          org_id: string
+          reason: string
+          transaction_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          delta?: number
+          id?: string
+          org_id?: string
+          reason?: string
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_ledger_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_ledger_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documents: {
+        Row: {
+          created_at: string
+          doc_type: string
+          id: string
+          name: string
+          notes: string | null
+          sha256: string | null
+          storage_path: string | null
+          transaction_id: string
+          uploaded_by: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          doc_type?: string
+          id?: string
+          name: string
+          notes?: string | null
+          sha256?: string | null
+          storage_path?: string | null
+          transaction_id: string
+          uploaded_by?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          doc_type?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          sha256?: string | null
+          storage_path?: string | null
+          transaction_id?: string
+          uploaded_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      execution_records: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          phase: string
+          prep_stage: string | null
+          recorded_by: string
+          status: string
+          transaction_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          phase: string
+          prep_stage?: string | null
+          recorded_by?: string
+          status?: string
+          transaction_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          phase?: string
+          prep_stage?: string | null
+          recorded_by?: string
+          status?: string
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "execution_records_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finality_records: {
+        Row: {
+          change_event: string | null
+          created_at: string
+          evidence: string | null
+          finality_type: string | null
+          hash: string | null
+          id: string
+          recorded_by: string
+          sealed_at: string | null
+          status: string
+          transaction_id: string
+          validation: string | null
+        }
+        Insert: {
+          change_event?: string | null
+          created_at?: string
+          evidence?: string | null
+          finality_type?: string | null
+          hash?: string | null
+          id?: string
+          recorded_by?: string
+          sealed_at?: string | null
+          status?: string
+          transaction_id: string
+          validation?: string | null
+        }
+        Update: {
+          change_event?: string | null
+          created_at?: string
+          evidence?: string | null
+          finality_type?: string | null
+          hash?: string | null
+          id?: string
+          recorded_by?: string
+          sealed_at?: string | null
+          status?: string
+          transaction_id?: string
+          validation?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finality_records_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          org_id: string | null
+          read: boolean
+          title: string
+          user_id: string | null
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          org_id?: string | null
+          read?: boolean
+          title: string
+          user_id?: string | null
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          org_id?: string | null
+          read?: boolean
+          title?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organisations: {
+        Row: {
+          address: string | null
+          country: string | null
+          created_at: string
+          credits: number
+          id: string
+          name: string
+          registration_no: string | null
+          sector: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          country?: string | null
+          created_at?: string
+          credits?: number
+          id?: string
+          name: string
+          registration_no?: string | null
+          sector?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          country?: string | null
+          created_at?: string
+          credits?: number
+          id?: string
+          name?: string
+          registration_no?: string | null
+          sector?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          org_id: string | null
+          seat: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          org_id?: string | null
+          seat?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          org_id?: string | null
+          seat?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stakeholder_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          notes: string | null
+          party_name: string
+          recorded_by: string
+          role: string | null
+          transaction_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          notes?: string | null
+          party_name: string
+          recorded_by?: string
+          role?: string | null
+          transaction_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          notes?: string | null
+          party_name?: string
+          recorded_by?: string
+          role?: string | null
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stakeholder_events_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transaction_events: {
+        Row: {
+          action: string
+          actor_id: string
+          actor_name: string | null
+          created_at: string
+          fingerprint: string | null
+          id: string
+          payload: Json
+          stage: Database["public"]["Enums"]["spine_stage"]
+          step: string
+          summary: string | null
+          transaction_id: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string
+          actor_name?: string | null
+          created_at?: string
+          fingerprint?: string | null
+          id?: string
+          payload?: Json
+          stage: Database["public"]["Enums"]["spine_stage"]
+          step: string
+          summary?: string | null
+          transaction_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          actor_name?: string | null
+          created_at?: string
+          fingerprint?: string | null
+          id?: string
+          payload?: Json
+          stage?: Database["public"]["Enums"]["spine_stage"]
+          step?: string
+          summary?: string | null
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_events_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transactions: {
+        Row: {
+          commodity: string | null
+          counterparty_org_id: string | null
+          created_at: string
+          created_by: string
+          currency: string
+          finality_sealed_at: string | null
+          id: string
+          incoterms: string | null
+          intent_confirmed_at: string | null
+          jurisdiction: string | null
+          org_id: string
+          poi_hash: string | null
+          poi_sealed_at: string | null
+          price: number | null
+          quantity: number | null
+          stage: Database["public"]["Enums"]["spine_stage"]
+          status: string
+          step: string
+          title: string
+          unit: string | null
+          updated_at: string
+          wad_completed_at: string | null
+        }
+        Insert: {
+          commodity?: string | null
+          counterparty_org_id?: string | null
+          created_at?: string
+          created_by?: string
+          currency?: string
+          finality_sealed_at?: string | null
+          id?: string
+          incoterms?: string | null
+          intent_confirmed_at?: string | null
+          jurisdiction?: string | null
+          org_id: string
+          poi_hash?: string | null
+          poi_sealed_at?: string | null
+          price?: number | null
+          quantity?: number | null
+          stage?: Database["public"]["Enums"]["spine_stage"]
+          status?: string
+          step?: string
+          title: string
+          unit?: string | null
+          updated_at?: string
+          wad_completed_at?: string | null
+        }
+        Update: {
+          commodity?: string | null
+          counterparty_org_id?: string | null
+          created_at?: string
+          created_by?: string
+          currency?: string
+          finality_sealed_at?: string | null
+          id?: string
+          incoterms?: string | null
+          intent_confirmed_at?: string | null
+          jurisdiction?: string | null
+          org_id?: string
+          poi_hash?: string | null
+          poi_sealed_at?: string | null
+          price?: number | null
+          quantity?: number | null
+          stage?: Database["public"]["Enums"]["spine_stage"]
+          status?: string
+          step?: string
+          title?: string
+          unit?: string | null
+          updated_at?: string
+          wad_completed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_counterparty_org_id_fkey"
+            columns: ["counterparty_org_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      wad_cases: {
+        Row: {
+          authority: Json
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          kyb: Json
+          kyc: Json
+          pep: Json
+          sanctions: Json
+          status: string
+          transaction_id: string
+          ubo: Json
+        }
+        Insert: {
+          authority?: Json
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          kyb?: Json
+          kyc?: Json
+          pep?: Json
+          sanctions?: Json
+          status?: string
+          transaction_id: string
+          ubo?: Json
+        }
+        Update: {
+          authority?: Json
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          kyb?: Json
+          kyc?: Json
+          pep?: Json
+          sanctions?: Json
+          status?: string
+          transaction_id?: string
+          ubo?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wad_cases_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      can_access_tx: { Args: { _tx: string }; Returns: boolean }
+      current_org_id: { Args: never; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+    }
+    Enums: {
+      app_role: "party" | "counterparty" | "admin"
+      spine_stage:
+        | "trading"
+        | "compliance"
+        | "execution"
+        | "finality"
+        | "memory"
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+}
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never) = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never) = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {
+      app_role: ["party", "counterparty", "admin"],
+      spine_stage: ["trading", "compliance", "execution", "finality", "memory"],
+    },
+  },
+} as const
