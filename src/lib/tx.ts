@@ -1,0 +1,107 @@
+import { supabase } from "@/integrations/supabase/client";
+import type { StageKey } from "@/lib/spine";
+
+export type Transaction = {
+  id: string;
+  org_id: string;
+  counterparty_org_id: string | null;
+  title: string;
+  commodity: string | null;
+  quantity: number | null;
+  unit: string | null;
+  price: number | null;
+  currency: string;
+  incoterms: string | null;
+  jurisdiction: string | null;
+  stage: StageKey;
+  step: string;
+  status: string;
+  intent_confirmed_at: string | null;
+  poi_sealed_at: string | null;
+  poi_hash: string | null;
+  wad_completed_at: string | null;
+  finality_sealed_at: string | null;
+  created_at: string;
+};
+
+export type TxEvent = {
+  id: string;
+  transaction_id: string;
+  actor_id: string;
+  actor_name: string | null;
+  stage: string;
+  step: string;
+  action: string;
+  summary: string | null;
+  payload: Record<string, unknown>;
+  fingerprint: string | null;
+  created_at: string;
+};
+
+export async function recordEvent(input: {
+  transactionId: string;
+  stage: StageKey;
+  step: string;
+  action: string;
+  summary?: string;
+  payload?: Record<string, unknown>;
+  actorName?: string | null;
+}) {
+  const { data: userData } = await supabase.auth.getUser();
+  const fingerprint = await fingerprintOf({
+    tx: input.transactionId,
+    action: input.action,
+    payload: input.payload ?? {},
+    at: new Date().toISOString(),
+  });
+  const { error } = await supabase.from("transaction_events").insert({
+    transaction_id: input.transactionId,
+    actor_id: userData.user?.id as string,
+    actor_name: input.actorName ?? userData.user?.email ?? null,
+    stage: input.stage,
+    step: input.step,
+    action: input.action,
+    summary: input.summary ?? null,
+    payload: input.payload ?? {},
+    fingerprint,
+  });
+  if (error) throw error;
+  return fingerprint;
+}
+
+export async function fingerprintOf(value: unknown) {
+  const bytes = new TextEncoder().encode(JSON.stringify(value));
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+export async function advance(transactionId: string, stage: StageKey, step: string) {
+  await supabase.from("transactions").update({ stage, step }).eq("id", transactionId);
+}
+
+export function money(value: number | null | undefined, currency = "USD") {
+  if (value === null || value === undefined) return "—";
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+export function shortHash(hash: string | null | undefined) {
+  if (!hash) return "—";
+  return `${hash.slice(0, 12)}…${hash.slice(-8)}`;
+}
+
+export function when(iso: string | null | undefined) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
