@@ -3,6 +3,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Gauge } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AuthTabs } from "@/components/auth/AuthTabs";
+import { SiteHeader } from "@/components/layout/SiteHeader";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SPINE, type StageKey } from "@/lib/spine";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
@@ -162,33 +164,7 @@ function Landing() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-5">
-          <Link to="/" className="flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded bg-foreground text-[11px] font-bold text-background">
-              IZ
-            </span>
-            <span className="text-sm font-semibold tracking-tight">Izenzo</span>
-          </Link>
-          <nav className="flex items-center gap-1">
-            <a href="#demo">
-              <Button variant="ghost" size="sm">
-                Request a Demo
-              </Button>
-            </a>
-            <Link to="/glossary">
-              <Button variant="ghost" size="sm">
-                Glossary
-              </Button>
-            </Link>
-            <Link to="/contact">
-              <Button variant="ghost" size="sm">
-                Contact Us
-              </Button>
-            </Link>
-          </nav>
-        </div>
-      </header>
+      <SiteHeader />
 
       <main>
         <section className="flex flex-col lg:flex-row">
@@ -206,15 +182,15 @@ function Landing() {
                 moves, and the record can be read forward and backward for as long as it matters.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <Link to="/glossary">
+                <a href="mailto:support@izenzo.co.za?subject=Demo%20request&body=I'd%20like%20to%20request%20a%20demo%20of%20the%20Izenzo%20Trading%20Gateway.">
                   <Button
                     size="lg"
                     variant="outline"
                     className="border-sidebar-foreground/25 bg-transparent text-sidebar-foreground hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground"
                   >
-                    Read the terms
+                    Request a Demo
                   </Button>
-                </Link>
+                </a>
               </div>
             </div>
           </div>
@@ -232,23 +208,6 @@ function Landing() {
             ) : (
               <AuthTabs className="w-full max-w-sm rounded-2xl bg-background p-8 shadow-xl" />
             )}
-          </div>
-        </section>
-
-        <section id="demo" className="scroll-mt-14 border-b border-border bg-muted/40">
-          <div className="mx-auto max-w-3xl px-5 py-16">
-            <p className="label-caps">Demo</p>
-            <h2 className="mt-3 text-2xl font-semibold tracking-tight">Request a demo</h2>
-            <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-              Tell us a little about your organisation and we'll walk you through a live transaction
-              on the Izenzo Trading Gateway — Trading, Compliance, Execution, Finality and Memory,
-              gate by gate.
-            </p>
-            <div className="mt-6">
-              <a href="mailto:support@izenzo.co.za?subject=Demo%20request">
-                <Button size="lg">Email support@izenzo.co.za</Button>
-              </a>
-            </div>
           </div>
         </section>
 
@@ -312,27 +271,7 @@ function Landing() {
         </section>
       </main>
 
-      <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 py-8 sm:flex-row">
-          <p className="text-center text-[11px] tracking-wide text-muted-foreground sm:text-left sm:text-xs">
-            Izenzo is the trading name of Starfair162 (Pty) Ltd Reg: 2018 / 331720 / 07.
-          </p>
-          <nav aria-label="Footer" className="flex items-center gap-6">
-            <a href="/docs" className="text-[11px] tracking-wide text-muted-foreground transition-colors hover:text-foreground sm:text-xs">
-              Docs
-            </a>
-            <a href="/status" className="text-[11px] tracking-wide text-muted-foreground transition-colors hover:text-foreground sm:text-xs">
-              Status
-            </a>
-            <a href="/pricing" className="text-[11px] tracking-wide text-muted-foreground transition-colors hover:text-foreground sm:text-xs">
-              Pricing
-            </a>
-            <a href="mailto:support@izenzo.co.za" className="text-[11px] tracking-wide text-muted-foreground transition-colors hover:text-foreground sm:text-xs">
-              Support
-            </a>
-          </nav>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

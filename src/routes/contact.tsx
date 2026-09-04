@@ -1,5 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { Button } from "@/components/ui/button";
+import { createFileRoute } from "@tanstack/react-router";
+import { SiteHeader } from "@/components/layout/SiteHeader";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 
 export const Route = createFileRoute("/contact")({
   head: () => ({
@@ -16,21 +17,7 @@ export const Route = createFileRoute("/contact")({
 function ContactUs() {
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border">
-        <div className="mx-auto flex h-14 max-w-3xl items-center justify-between px-5">
-          <Link to="/" className="flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded bg-foreground text-[11px] font-bold text-background">
-              IZ
-            </span>
-            <span className="text-sm font-semibold">Izenzo</span>
-          </Link>
-          <Link to="/auth">
-            <Button size="sm" variant="outline">
-              Sign in
-            </Button>
-          </Link>
-        </div>
-      </header>
+      <SiteHeader />
       <main className="mx-auto max-w-3xl px-5 py-14">
         <p className="label-caps">Get in touch</p>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight">Contact Us</h1>
@@ -55,6 +42,7 @@ function ContactUs() {
           </div>
         </dl>
       </main>
+      <SiteFooter />
     </div>
   );
 }
