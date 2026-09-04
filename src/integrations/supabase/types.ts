@@ -425,8 +425,10 @@ export type Database = {
         Row: {
           created_at: string
           email: string | null
+          email_verified_at: string | null
           full_name: string | null
           id: string
+          login_count: number
           org_id: string | null
           seat: string
           updated_at: string
@@ -434,8 +436,10 @@ export type Database = {
         Insert: {
           created_at?: string
           email?: string | null
+          email_verified_at?: string | null
           full_name?: string | null
           id: string
+          login_count?: number
           org_id?: string | null
           seat?: string
           updated_at?: string
@@ -443,8 +447,10 @@ export type Database = {
         Update: {
           created_at?: string
           email?: string | null
+          email_verified_at?: string | null
           full_name?: string | null
           id?: string
+          login_count?: number
           org_id?: string | null
           seat?: string
           updated_at?: string
@@ -719,6 +725,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bump_login_count: { Args: never; Returns: number }
       can_access_tx: { Args: { _tx: string }; Returns: boolean }
       current_org_id: { Args: never; Returns: string }
       has_role: {
@@ -728,6 +735,8 @@ export type Database = {
         }
         Returns: boolean
       }
+      mark_email_verified: { Args: never; Returns: undefined }
+      mark_email_verified_if_oauth: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "party" | "counterparty" | "admin"
