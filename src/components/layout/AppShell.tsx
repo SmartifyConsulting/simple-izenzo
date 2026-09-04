@@ -8,7 +8,6 @@ import {
   Menu,
   LogOut,
   Settings,
-  Building2,
   Receipt,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -119,9 +118,6 @@ function AvatarMenu() {
         <DropdownMenuItem onClick={() => navigate({ to: "/account/settings" })}>
           <Settings className="mr-2 h-3.5 w-3.5" /> Settings
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigate({ to: "/account/organisations" })}>
-          <Building2 className="mr-2 h-3.5 w-3.5" /> Organizations
-        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => navigate({ to: "/account/billing" })}>
           <Receipt className="mr-2 h-3.5 w-3.5" /> Billing History
         </DropdownMenuItem>
@@ -207,7 +203,7 @@ export function AppShell({
           )}
           <AvatarMenu />
         </header>
-        <main className="flex-1 px-4 pb-6 pt-10 sm:px-6 sm:pt-12">{children}</main>
+        <main className="flex-1 px-4 pb-6 pt-[2cm] sm:px-6">{children}</main>
       </div>
     </div>
   );

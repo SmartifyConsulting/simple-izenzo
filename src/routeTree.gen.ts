@@ -22,7 +22,6 @@ import { Route as AuthenticatedCreditsRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated.inbox'
 import { Route as AuthenticatedAccountBillingRouteImport } from './routes/_authenticated.account.billing'
-import { Route as AuthenticatedAccountOrganisationsRouteImport } from './routes/_authenticated.account.organisations'
 import { Route as AuthenticatedAccountSettingsRouteImport } from './routes/_authenticated.account.settings'
 import { Route as AuthenticatedTransactionsNewRouteImport } from './routes/_authenticated.transactions.new'
 import { Route as AuthenticatedTxIdStageStepRouteImport } from './routes/_authenticated.tx.$id.$stage.$step'
@@ -92,12 +91,6 @@ const AuthenticatedAccountBillingRoute =
     path: '/account/billing',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedAccountOrganisationsRoute =
-  AuthenticatedAccountOrganisationsRouteImport.update({
-    id: '/account/organisations',
-    path: '/account/organisations',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedAccountSettingsRoute =
   AuthenticatedAccountSettingsRouteImport.update({
     id: '/account/settings',
@@ -130,7 +123,6 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/account/billing': typeof AuthenticatedAccountBillingRoute
-  '/account/organisations': typeof AuthenticatedAccountOrganisationsRoute
   '/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/transactions/new': typeof AuthenticatedTransactionsNewRoute
   '/tx/$id/$stage/$step': typeof AuthenticatedTxIdStageStepRoute
@@ -148,7 +140,6 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/account/billing': typeof AuthenticatedAccountBillingRoute
-  '/account/organisations': typeof AuthenticatedAccountOrganisationsRoute
   '/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/transactions/new': typeof AuthenticatedTransactionsNewRoute
   '/tx/$id/$stage/$step': typeof AuthenticatedTxIdStageStepRoute
@@ -168,7 +159,6 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
   '/_authenticated/account/billing': typeof AuthenticatedAccountBillingRoute
-  '/_authenticated/account/organisations': typeof AuthenticatedAccountOrganisationsRoute
   '/_authenticated/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/_authenticated/transactions/new': typeof AuthenticatedTransactionsNewRoute
   '/_authenticated/tx/$id/$stage/$step': typeof AuthenticatedTxIdStageStepRoute
@@ -188,7 +178,6 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/inbox'
     | '/account/billing'
-    | '/account/organisations'
     | '/account/settings'
     | '/transactions/new'
     | '/tx/$id/$stage/$step'
@@ -206,7 +195,6 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/inbox'
     | '/account/billing'
-    | '/account/organisations'
     | '/account/settings'
     | '/transactions/new'
     | '/tx/$id/$stage/$step'
@@ -225,7 +213,6 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/inbox'
     | '/_authenticated/account/billing'
-    | '/_authenticated/account/organisations'
     | '/_authenticated/account/settings'
     | '/_authenticated/transactions/new'
     | '/_authenticated/tx/$id/$stage/$step'
@@ -335,13 +322,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAccountBillingRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/account/organisations': {
-      id: '/_authenticated/account/organisations'
-      path: '/account/organisations'
-      fullPath: '/account/organisations'
-      preLoaderRoute: typeof AuthenticatedAccountOrganisationsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/account/settings': {
       id: '/_authenticated/account/settings'
       path: '/account/settings'
@@ -372,7 +352,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
   AuthenticatedAccountBillingRoute: typeof AuthenticatedAccountBillingRoute
-  AuthenticatedAccountOrganisationsRoute: typeof AuthenticatedAccountOrganisationsRoute
   AuthenticatedAccountSettingsRoute: typeof AuthenticatedAccountSettingsRoute
   AuthenticatedTransactionsNewRoute: typeof AuthenticatedTransactionsNewRoute
   AuthenticatedTxIdStageStepRoute: typeof AuthenticatedTxIdStageStepRoute
@@ -384,8 +363,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedInboxRoute: AuthenticatedInboxRoute,
   AuthenticatedAccountBillingRoute: AuthenticatedAccountBillingRoute,
-  AuthenticatedAccountOrganisationsRoute:
-    AuthenticatedAccountOrganisationsRoute,
   AuthenticatedAccountSettingsRoute: AuthenticatedAccountSettingsRoute,
   AuthenticatedTransactionsNewRoute: AuthenticatedTransactionsNewRoute,
   AuthenticatedTxIdStageStepRoute: AuthenticatedTxIdStageStepRoute,

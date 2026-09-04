@@ -38,10 +38,10 @@ function RequireEmailVerified() {
     !nativelyConfirmed;
 
   const needsOrg = !loading && !!profile && !profile.org_id;
-  const onOrgSetup = pathname.startsWith("/account/organisations");
+  const onOrgSetup = pathname.startsWith("/account/settings");
 
   useEffect(() => {
-    if (!mustVerify && needsOrg && !onOrgSetup) navigate({ to: "/account/organisations", replace: true });
+    if (!mustVerify && needsOrg && !onOrgSetup) navigate({ to: "/account/settings", replace: true });
   }, [mustVerify, needsOrg, onOrgSetup, navigate]);
 
   if (needsOrg && !onOrgSetup && !mustVerify) return null;
