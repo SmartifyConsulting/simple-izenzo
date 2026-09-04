@@ -124,7 +124,7 @@ function Credits() {
           <h2 className="text-sm font-semibold">Buy tokens</h2>
           <div className="mt-3 grid gap-3 sm:grid-cols-4">
             {PACKS.map((n) => (
-              <div key={n} className="rounded-md border border-border p-4">
+              <div key={n} className="rounded-md border border-border p-5">
                 <p className="text-lg font-semibold tabular-nums">{n}</p>
                 <p className="text-xs text-muted-foreground">
                   USD {n * TOKEN_PRICE_USD}

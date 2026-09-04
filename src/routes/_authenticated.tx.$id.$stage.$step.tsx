@@ -95,7 +95,7 @@ function TxStepPage() {
           </div>
 
           {locked && !isPast ? (
-            <div className="rounded-md border border-border bg-muted/40 p-6">
+            <div className="rounded-md border border-border bg-muted/40 p-5">
               <h2 className="text-sm font-semibold">This step is locked</h2>
               <p className="mt-1 text-sm text-muted-foreground">{locked}.</p>
             </div>
