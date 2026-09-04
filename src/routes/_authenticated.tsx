@@ -8,6 +8,7 @@ import {
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { VerifyEmailDialog } from "@/components/auth/VerifyEmailDialog";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -40,10 +41,14 @@ function RequireEmailVerified() {
   const onOrgSetup = pathname.startsWith("/account/organisations");
 
   useEffect(() => {
-    if (mustVerify) navigate({ to: "/verify-email", replace: true });
-    else if (needsOrg && !onOrgSetup) navigate({ to: "/account/organisations", replace: true });
+    if (!mustVerify && needsOrg && !onOrgSetup) navigate({ to: "/account/organisations", replace: true });
   }, [mustVerify, needsOrg, onOrgSetup, navigate]);
 
-  if (mustVerify || (needsOrg && !onOrgSetup)) return null;
-  return <Outlet />;
+  if (needsOrg && !onOrgSetup && !mustVerify) return null;
+  return (
+    <>
+      <Outlet />
+      <VerifyEmailDialog open={mustVerify} />
+    </>
+  );
 }
