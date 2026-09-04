@@ -6,8 +6,8 @@ export function Logo({
   className,
   onDark = false,
 }: {
-  className?: string;
-  onDark?: boolean;
+  className?: string | undefined;
+  onDark?: boolean | undefined;
 }) {
   const img = <img src="/izenzo-logo.png" alt="Izenzo" className={cn("h-5 w-auto", className)} />;
 

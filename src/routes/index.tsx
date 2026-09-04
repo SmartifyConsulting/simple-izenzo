@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowRight, Gauge } from "lucide-react";
+import { Gauge } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AuthTabs } from "@/components/auth/AuthTabs";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SiteFooter } from "@/components/layout/SiteFooter";
-import { Logo } from "@/components/Logo";
 import { SPINE, type StageKey } from "@/lib/spine";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
@@ -176,19 +175,21 @@ function Landing() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user && next) navigate({ to: safeNext(next), replace: true });
+    if (user) navigate({ to: safeNext(next), replace: true });
   }, [user, next, navigate]);
 
   return (
     <div className="min-h-screen bg-background">
-      <SiteHeader />
+      <SiteHeader
+        logoClassName="h-[1.875rem]"
+        containerClassName="max-w-none px-6 sm:px-10 lg:px-16"
+      />
 
       <main>
         <section className="flex flex-col lg:flex-row">
           <div className="flex flex-1 flex-col justify-center bg-sidebar px-6 py-16 text-sidebar-foreground sm:px-10 sm:py-20 lg:px-16">
             <div className="max-w-xl">
-              <Logo onDark className="h-[140px] w-auto" />
-              <p className="mt-6 text-[11px] font-semibold uppercase tracking-[0.09em] text-sidebar-foreground/55">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-sidebar-foreground/55">
                 Trading · Compliance · Execution · Finality · Memory
               </p>
               <h1 className="mt-4 text-4xl font-semibold leading-[1.1] tracking-tight text-white sm:text-5xl">
@@ -214,18 +215,7 @@ function Landing() {
           </div>
 
           <div className="flex flex-1 items-center justify-center bg-sidebar px-5 py-16 sm:py-20">
-            {user ? (
-              <div className="w-full max-w-sm rounded-2xl bg-background p-8 text-center shadow-xl">
-                <p className="text-sm text-muted-foreground">You already have a seat.</p>
-                <Link to="/dashboard" className="mt-4 inline-block">
-                  <Button size="lg" className="gap-2">
-                    Go to dashboard <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-              </div>
-            ) : (
-              <AuthTabs next={next} className="w-full max-w-sm rounded-2xl bg-background p-8 shadow-xl" />
-            )}
+            <AuthTabs next={next} className="w-full max-w-sm rounded-2xl bg-background p-8 shadow-xl" />
           </div>
         </section>
 
