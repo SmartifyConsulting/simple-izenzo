@@ -62,7 +62,7 @@ export async function recordEvent(input: {
     step: input.step,
     action: input.action,
     summary: input.summary ?? null,
-    payload: input.payload ?? {},
+    payload: (input.payload ?? {}) as never,
     fingerprint,
   });
   if (error) throw error;
