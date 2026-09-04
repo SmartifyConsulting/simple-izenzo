@@ -182,7 +182,7 @@ function Landing() {
                 moves, and the record can be read forward and backward for as long as it matters.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <a href="mailto:support@izenzo.co.za?subject=Demo%20request&body=I'd%20like%20to%20request%20a%20demo%20of%20the%20Izenzo%20Trading%20Gateway.">
+                <a href="mailto:support@izenzo.co.za?subject=Demo%20request&body=I%20would%20like%20to%20request%20a%20demo%20of%20the%20Izenzo%20Trading%20Gateway.">
                   <Button
                     size="lg"
                     variant="outline"
