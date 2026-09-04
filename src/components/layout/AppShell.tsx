@@ -180,7 +180,7 @@ export function AppShell({
           </Sheet>
           <div className="min-w-0 flex-1">
             {firstName && (
-              <p className="truncate text-lg font-semibold tracking-tight sm:text-xl">
+              <p className="truncate text-[2.025rem] font-semibold tracking-tight sm:text-[2.25rem]">
                 {greeting()}, {firstName}
               </p>
             )}
