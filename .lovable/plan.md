@@ -35,6 +35,7 @@ Opening the inbox currently makes the app loop on itself and throw an error. The
 
 - Data is inserted with `run_sql` (no schema changes needed) against the existing tables: `organisations`, `profiles`, `user_roles`, `transactions`, `transaction_events`, `bid_offers`, `documents`, `counterparties`, `ai_proposals`, `wad_cases`, `execution_records`, `stakeholder_events`, `finality_records`, `credit_ledger`, `notifications`.
 - `profiles.org_id` for user `173989ea-…` is set to the new Izenzo org; `user_roles` gains `admin` and `counterparty` rows for that user (roles stay in the separate roles table).
+- 12 `organisations` rows total; ~20 `transactions` rows with `org_id`/`counterparty_org_id` pointing at varied pairs so the market graph is connected. Rows not involving your org stay invisible to you under RLS except through admin — that is expected and keeps the admin overview meaningful.
 - Stage/step, `intent_confirmed_at`, `poi_sealed_at` + `poi_hash`, `wad_completed_at` and `finality_sealed_at` are set consistently per deal so `lockReason()` in `src/lib/spine.ts` unlocks exactly the intended steps.
 - Event fingerprints are seeded as SHA-256 hex strings so the seal blocks render.
 - `src/routes/_authenticated.tsx` moves to `src/routes/_authenticated/route.tsx` with `ssr: false` and a `beforeLoad` `supabase.auth.getUser()` redirect, replacing the `useEffect` + `navigate` loop (`href` in the dependency list re-fires the navigation).
