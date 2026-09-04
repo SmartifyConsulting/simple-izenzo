@@ -12,7 +12,8 @@
  */
 
 @theme inline {
-  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Courier Prime", ui-monospace, SFMono-Regular, monospace;
+  --font-heading: "DM Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
 
   --radius-sm: calc(var(--radius) - 2px);
@@ -169,7 +170,14 @@
   h2,
   h3,
   h4 {
+    font-family: var(--font-heading);
     letter-spacing: -0.015em;
+  }
+
+  button,
+  [role="button"],
+  nav a {
+    font-family: var(--font-heading);
   }
 }
 

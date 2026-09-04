@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Check, Lock, Circle, Dot } from "lucide-react";
+import { Check, Lock, Circle, Dot, ChevronRight } from "lucide-react";
 import { SPINE, lockReason, stepIndex, type StageKey } from "@/lib/spine";
 import type { Transaction } from "@/lib/tx";
 import { cn } from "@/lib/utils";
@@ -15,6 +16,7 @@ export function SpineRail({
 }) {
   const currentIdx = stepIndex(tx.stage, tx.step);
   const viewingIdx = stepIndex(currentStage, currentStep);
+  const [openStage, setOpenStage] = useState<string | null>(null);
 
   return (
     <nav className="lg:sticky lg:top-20">
@@ -22,9 +24,20 @@ export function SpineRail({
       <ol className="mt-3 space-y-5">
         {SPINE.map((stage) => {
           const locked = lockReason(stage.key as StageKey, stage.steps[0]!.key, tx);
+          const isOpen = openStage === stage.key;
           return (
             <li key={stage.key}>
-              <div className="flex items-center gap-2 px-1">
+              <button
+                type="button"
+                onClick={() => setOpenStage(isOpen ? null : stage.key)}
+                className="flex w-full items-center gap-1.5 px-1 text-left"
+              >
+                <ChevronRight
+                  className={cn(
+                    "h-3 w-3 shrink-0 text-muted-foreground transition-transform",
+                    isOpen && "rotate-90",
+                  )}
+                />
                 <span
                   className={cn(
                     "text-[11px] font-semibold uppercase tracking-[0.09em]",
@@ -34,7 +47,8 @@ export function SpineRail({
                   {stage.label}
                 </span>
                 {locked && <Lock className="h-3 w-3 text-muted-foreground" />}
-              </div>
+              </button>
+              {isOpen && (
               <ul className="mt-1.5 border-l border-border">
                 {stage.steps.map((step) => {
                   const idx = stepIndex(stage.key, step.key);
@@ -88,6 +102,7 @@ export function SpineRail({
                   );
                 })}
               </ul>
+              )}
             </li>
           );
         })}
