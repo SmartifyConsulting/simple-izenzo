@@ -222,7 +222,10 @@ function Landing() {
 
         <section className="border-y border-border bg-muted/40">
           <div className="mx-auto max-w-6xl px-5 py-14">
-            <h2 className="text-lg font-semibold tracking-tight">The Izenzo Trading Gateway</h2>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <h2 className="text-lg font-semibold tracking-tight">The Izenzo Trading Gateway</h2>
+              <p className="text-xs font-medium text-muted-foreground">Only pay for what you use</p>
+            </div>
             <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">
               The Izenzo Trading Gateway is modular. Each gate can operate as a distinct module, while
               transaction data, approvals and evidence flow forwards and backwards through Trading,
