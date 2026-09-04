@@ -61,6 +61,11 @@ function Credits() {
     },
   });
 
+  const currentYear = new Date().getFullYear();
+  const spentThisYear = ledger
+    .filter((r) => r.delta < 0 && new Date(r.created_at).getFullYear() === currentYear)
+    .reduce((sum, r) => sum + Math.abs(r.delta), 0);
+
   async function buy(n: number) {
     if (!org) return;
     setBusy(n);
@@ -126,7 +131,15 @@ function Credits() {
         </div>
 
         <div>
-          <h2 className="text-sm font-semibold">Token ledger</h2>
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-sm font-semibold">Token ledger</h2>
+            <p className="text-xs text-muted-foreground">
+              Total spent this year:{" "}
+              <span className="font-mono font-semibold text-destructive">
+                USD {spentThisYear * TOKEN_PRICE_USD}
+              </span>
+            </p>
+          </div>
           <div className="mt-3 overflow-hidden rounded-md border border-border">
             {ledger.length === 0 ? (
               <p className="p-6 text-sm text-muted-foreground">Nothing recorded yet.</p>
