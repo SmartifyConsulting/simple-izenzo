@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Star } from "lucide-react";
+import { ArrowRight, Gauge } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SignUpForm } from "@/components/auth/SignUpForm";
 import { SPINE, type StageKey } from "@/lib/spine";
@@ -245,11 +245,11 @@ function Landing() {
             <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
               {GATES.map((gate, i) => (
                 <div key={gate.n} className="flex flex-col">
-                  <div className="mb-2 flex h-4 items-center gap-1 text-xs font-medium text-muted-foreground">
-                    {i === GATES.length - 1 && (
+                  <div className="mb-2 flex min-h-8 items-start gap-1.5 text-left text-xs font-medium text-muted-foreground">
+                    {i === 0 && (
                       <>
-                        <Star className="h-3 w-3 shrink-0 fill-current" />
-                        Only pay for what you use
+                        <Gauge className="h-3.5 w-3.5 shrink-0" />
+                        Pay only for what you use. Zero subscriptions. Zero lock-ins.
                       </>
                     )}
                   </div>
