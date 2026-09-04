@@ -1,4 +1,10 @@
-import { createFileRoute, Outlet, redirect, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Outlet,
+  redirect,
+  useNavigate,
+  useRouterState,
+} from "@tanstack/react-router";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -18,6 +24,7 @@ export const Route = createFileRoute("/_authenticated")({
 function RequireEmailVerified() {
   const { user, profile, loading } = useAuth();
   const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   const provider = (user?.app_metadata as { provider?: string } | undefined)?.provider ?? "email";
   const mustVerify =
@@ -27,10 +34,14 @@ function RequireEmailVerified() {
     (profile.login_count ?? 0) >= 2 &&
     !profile.email_verified_at;
 
+  const needsOrg = !loading && !!profile && !profile.org_id;
+  const onOrgSetup = pathname.startsWith("/account/organisations");
+
   useEffect(() => {
     if (mustVerify) navigate({ to: "/verify-email", replace: true });
-  }, [mustVerify, navigate]);
+    else if (needsOrg && !onOrgSetup) navigate({ to: "/account/organisations", replace: true });
+  }, [mustVerify, needsOrg, onOrgSetup, navigate]);
 
-  if (mustVerify) return null;
+  if (mustVerify || (needsOrg && !onOrgSetup)) return null;
   return <Outlet />;
 }

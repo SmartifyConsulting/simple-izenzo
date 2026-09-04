@@ -2,7 +2,6 @@ import { useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard,
-  Building2,
   Coins,
   Inbox,
   ShieldCheck,
@@ -10,6 +9,9 @@ import {
   LogOut,
   BookText,
   Plus,
+  Settings,
+  Building2,
+  Receipt,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,7 +30,6 @@ type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; seats?
 
 const NAV: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/organisation", label: "Organisation", icon: Building2 },
   { to: "/inbox", label: "Counterparty inbox", icon: Inbox },
   { to: "/credits", label: "Tokens", icon: Coins },
   { to: "/glossary", label: "Glossary", icon: BookText },
@@ -111,9 +112,19 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
               {profile?.email}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate({ to: "/organisation" })}>
-              Organisation details
+            <DropdownMenuLabel className="text-[11px] font-semibold uppercase tracking-[0.09em] text-muted-foreground">
+              Account
+            </DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => navigate({ to: "/account/settings" })}>
+              <Settings className="mr-2 h-3.5 w-3.5" /> Settings
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate({ to: "/account/organisations" })}>
+              <Building2 className="mr-2 h-3.5 w-3.5" /> Organizations
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate({ to: "/account/billing" })}>
+              <Receipt className="mr-2 h-3.5 w-3.5" /> Billing History
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={async () => {
                 await signOut();

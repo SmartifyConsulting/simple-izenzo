@@ -27,10 +27,12 @@ type AuthValue = {
   session: Session | null;
   profile: Profile | null;
   org: Org | null;
+  orgs: Org[];
   roles: string[];
   loading: boolean;
   refresh: () => Promise<void>;
   signOut: () => Promise<void>;
+  switchOrg: (orgId: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthValue>({
@@ -38,10 +40,12 @@ const AuthContext = createContext<AuthValue>({
   session: null,
   profile: null,
   org: null,
+  orgs: [],
   roles: [],
   loading: true,
   refresh: async () => {},
   signOut: async () => {},
+  switchOrg: async () => {},
 });
 
 const bumpedTokens = new Set<string>();
@@ -50,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [org, setOrg] = useState<Org | null>(null);
+  const [orgs, setOrgs] = useState<Org[]>([]);
   const [roles, setRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -57,15 +62,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!uid) {
       setProfile(null);
       setOrg(null);
+      setOrgs([]);
       setRoles([]);
       return;
     }
-    const [{ data: p }, { data: r }] = await Promise.all([
+    const [{ data: p }, { data: r }, { data: memberships }] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", uid).maybeSingle(),
       supabase.from("user_roles").select("role").eq("user_id", uid),
+      supabase.from("org_members").select("org_id").eq("user_id", uid),
     ]);
     setProfile((p as Profile) ?? null);
     setRoles((r ?? []).map((x: { role: string }) => x.role));
+
+    const orgIds = (memberships ?? []).map((m: { org_id: string }) => m.org_id);
+    if (orgIds.length > 0) {
+      const { data: os } = await supabase.from("organisations").select("*").in("id", orgIds);
+      setOrgs((os as Org[]) ?? []);
+    } else {
+      setOrgs([]);
+    }
+
     if (p?.org_id) {
       const { data: o } = await supabase
         .from("organisations")
@@ -112,6 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     session,
     profile,
     org,
+    orgs,
     roles,
     loading,
     refresh: () => load(session?.user?.id),
@@ -119,7 +136,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await supabase.auth.signOut();
       setProfile(null);
       setOrg(null);
+      setOrgs([]);
       setRoles([]);
+    },
+    switchOrg: async (orgId: string) => {
+      if (!session?.user) return;
+      const { error } = await supabase
+        .from("profiles")
+        .update({ org_id: orgId })
+        .eq("id", session.user.id);
+      if (error) throw error;
+      await load(session.user.id);
     },
   };
 

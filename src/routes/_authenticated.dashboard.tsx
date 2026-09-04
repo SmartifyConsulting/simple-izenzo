@@ -60,7 +60,7 @@ function Dashboard() {
             Transactions belong to an organisation, not to a person. Add your legal name,
             registration number and domicile before opening the first bid.
           </p>
-          <Link to="/organisation">
+          <Link to="/account/organisations">
             <Button size="sm" className="mt-4">
               Add organisation details
             </Button>
