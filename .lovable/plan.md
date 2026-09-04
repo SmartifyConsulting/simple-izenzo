@@ -5,8 +5,10 @@ Right now your account (georgia.adams@smartify.co.za) has no company attached, s
 ## What you'll see after this
 
 - **Your company**: Izenzo Commodities (Pty) Ltd, with a token balance and a history of top-ups and spends.
-- **A partner company**: Meridian Metals SA, used as the counterparty on your deals, so the inbox has real incoming business.
+- **A trading market of 12 companies**: Meridian Metals SA, Kalahari Resources, Zambezi Bulk Traders, Cape Bulk Commodities, Atlas Ferroalloys, Highveld Minerals, Indian Ocean Shipping & Trade, Savannah Energy Trading, Rift Valley Mining, Baltic Ore Partners and Gulf Commodity Holdings — each with country, sector and registration details.
+- **Deals across the whole market**, not just yours: the 12 companies trade with each other in around 20 deals at mixed stages, so lists, searches and surfaced-counterparty screens look like a live market rather than a single test deal. Your own company sits on both sides of several of them — as buyer on some, as the receiving counterparty on others, so the inbox has genuine incoming business.
 - **Your seats**: party, counterparty and admin — so the admin area shows content too.
+
 
 ## The sample deals
 
