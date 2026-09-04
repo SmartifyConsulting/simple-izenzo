@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -63,34 +63,23 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
-/** Cycles focus across the gates, and the active step within whichever gate has focus. */
-function useGateFocusCycle(stepMs = 1100) {
-  const [gateIdx, setGateIdx] = useState(0);
-  const [stepIdx, setStepIdx] = useState(0);
-
-  useEffect(() => {
-    const steps = SPINE.find((s) => s.key === GATES[gateIdx]!.stageKey)?.steps ?? [];
-    const id = setInterval(() => {
-      setStepIdx((prev) => {
-        if (prev + 1 >= steps.length) {
-          setGateIdx((g) => (g + 1) % GATES.length);
-          return 0;
-        }
-        return prev + 1;
-      });
-    }, stepMs);
-    return () => clearInterval(id);
-  }, [gateIdx, stepMs]);
-
-  return { gateIdx, stepIdx };
-}
-
-function GateCard({ gate, focused }: { gate: (typeof GATES)[number]; focused: boolean }) {
+function GateCard({
+  gate,
+  selected,
+  onSelect,
+}: {
+  gate: (typeof GATES)[number];
+  selected: boolean;
+  onSelect: () => void;
+}) {
   return (
-    <div
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={selected}
       className={cn(
-        "flex min-h-[190px] flex-col rounded-2xl border bg-background p-5 shadow-sm transition-all duration-500",
-        focused ? "border-primary/40 shadow-md opacity-100" : "border-border opacity-40",
+        "flex min-h-[190px] flex-col rounded-2xl border bg-background p-5 text-left shadow-sm transition-colors",
+        selected ? "border-primary/40 shadow-md" : "border-border hover:border-foreground/20",
       )}
     >
       <div className="flex items-center justify-between">
@@ -101,51 +90,34 @@ function GateCard({ gate, focused }: { gate: (typeof GATES)[number]; focused: bo
       </div>
       <h3 className="mt-4 text-lg font-semibold tracking-tight">{gate.name}</h3>
       <p className="mt-1.5 flex-1 text-[13.5px] leading-relaxed text-muted-foreground">{gate.blurb}</p>
-    </div>
+    </button>
   );
 }
 
-function GateStepStrip({ gate, stepIdx }: { gate: (typeof GATES)[number]; stepIdx: number }) {
+function GateStepStrip({ gate }: { gate: (typeof GATES)[number] }) {
   const steps = SPINE.find((s) => s.key === gate.stageKey)?.steps ?? [];
   return (
-    <div className="mt-4 rounded-xl border border-border bg-background p-4">
+    <div className="mt-4 animate-in fade-in slide-in-from-top-1 rounded-xl border border-border bg-background p-4 duration-300">
       <p className="label-caps">
         {gate.n} · {gate.name.toUpperCase()}
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
-        {steps.map((s, i) => {
-          const done = i < stepIdx;
-          const isCurrent = i === stepIdx;
-          return (
-            <span
-              key={s.key}
-              className={cn(
-                "flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors duration-500",
-                isCurrent
-                  ? "bg-primary text-primary-foreground"
-                  : done
-                    ? "text-foreground"
-                    : "text-muted-foreground/50",
-              )}
-            >
-              <span
-                className={cn(
-                  "h-1.5 w-1.5 shrink-0 rounded-full",
-                  isCurrent ? "bg-primary-foreground" : "bg-current",
-                )}
-              />
-              {s.label}
-            </span>
-          );
-        })}
+        {steps.map((s) => (
+          <span
+            key={s.key}
+            className="flex items-center gap-2 whitespace-nowrap rounded-lg bg-muted px-3 py-1.5 text-[13px] font-medium text-foreground"
+          >
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground" />
+            {s.label}
+          </span>
+        ))}
       </div>
     </div>
   );
 }
 
 function Landing() {
-  const { gateIdx, stepIdx } = useGateFocusCycle();
-  const focusedGate = GATES[gateIdx]!;
+  const [selectedGate, setSelectedGate] = useState<number | null>(null);
 
   return (
     <div className="min-h-screen bg-background">
@@ -211,11 +183,16 @@ function Landing() {
             </p>
             <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
               {GATES.map((gate, i) => (
-                <GateCard key={gate.n} gate={gate} focused={i === gateIdx} />
+                <GateCard
+                  key={gate.n}
+                  gate={gate}
+                  selected={i === selectedGate}
+                  onSelect={() => setSelectedGate((cur) => (cur === i ? null : i))}
+                />
               ))}
             </div>
 
-            <GateStepStrip gate={focusedGate} stepIdx={stepIdx} />
+            {selectedGate !== null && <GateStepStrip gate={GATES[selectedGate]!} />}
           </div>
         </section>
 
