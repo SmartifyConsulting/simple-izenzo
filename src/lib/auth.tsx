@@ -8,6 +8,8 @@ export type Profile = {
   full_name: string | null;
   org_id: string | null;
   seat: string;
+  login_count?: number | null;
+  email_verified_at?: string | null;
 };
 
 export type Org = {
@@ -42,6 +44,8 @@ const AuthContext = createContext<AuthValue>({
   signOut: async () => {},
 });
 
+const bumpedTokens = new Set<string>();
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -75,10 +79,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
       setTimeout(() => {
-        void load(s?.user?.id).finally(() => setLoading(false));
+        void (async () => {
+          if (event === "SIGNED_IN" && s) {
+            const token = s.access_token.slice(-24);
+            if (!bumpedTokens.has(token)) {
+              bumpedTokens.add(token);
+              const provider = (s.user.app_metadata as { provider?: string })?.provider ?? "email";
+              await supabase.rpc("bump_login_count");
+              if (provider !== "email") await supabase.rpc("mark_email_verified_if_oauth");
+            }
+          }
+          await load(s?.user?.id);
+          setLoading(false);
+        })();
       }, 0);
     });
 
