@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { sealProofOfIntent, completeWad, runAiProposal } from "@/lib/izenzo.functions";
+import { sealProofOfIntent, completeWad, runAiProposal, searchCounterparties } from "@/lib/izenzo.functions";
 import { advance, fingerprintOf, money, recordEvent, shortHash, when, type Transaction, type TxEvent } from "@/lib/tx";
 import { SPINE, stageOf, stepDef, stepIndex, POI_COST, WAD_COST, type StageKey } from "@/lib/spine";
 import { cn } from "@/lib/utils";
@@ -188,14 +188,20 @@ function Body(props: Props) {
 
 /* ---------- trading ---------- */
 
+const INCOTERMS = ["EXW", "FOB", "CIF", "CFR", "DAP", "DDP", "FCA", "CPT"];
+
 function BidOffer({ tx, reload }: Props) {
   const qc = useQueryClient();
   const [form, setForm] = useState({
     direction: "bid",
+    commodity: tx.commodity ?? "",
     price: String(tx.price ?? ""),
     quantity: String(tx.quantity ?? ""),
     unit: tx.unit ?? "",
-    terms: "",
+    incoterms: tx.incoterms ?? "",
+    jurisdiction: tx.jurisdiction ?? "",
+    paymentTerms: "",
+    deliveryTerms: "",
   });
   const [busy, setBusy] = useState(false);
 
@@ -212,20 +218,43 @@ function BidOffer({ tx, reload }: Props) {
     },
   });
 
+  const requiredFilled =
+    form.commodity.trim() &&
+    form.price &&
+    form.quantity &&
+    form.unit.trim() &&
+    form.incoterms &&
+    form.jurisdiction.trim() &&
+    form.paymentTerms.trim() &&
+    form.deliveryTerms.trim();
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!requiredFilled) {
+      toast.error("Every field is required before this bid or offer can be recorded.");
+      return;
+    }
     setBusy(true);
     try {
+      const terms = `Payment: ${form.paymentTerms.trim()}. Delivery: ${form.deliveryTerms.trim()}.`;
       const { error } = await supabase.from("bid_offers").insert({
         transaction_id: tx.id,
         direction: form.direction,
-        price: form.price ? Number(form.price) : null,
-        quantity: form.quantity ? Number(form.quantity) : null,
-        unit: form.unit || null,
+        price: Number(form.price),
+        quantity: Number(form.quantity),
+        unit: form.unit.trim(),
         currency: tx.currency,
-        terms: form.terms || null,
+        terms,
       });
       if (error) throw error;
+      await supabase
+        .from("transactions")
+        .update({
+          commodity: form.commodity.trim(),
+          incoterms: form.incoterms,
+          jurisdiction: form.jurisdiction.trim(),
+        })
+        .eq("id", tx.id);
       await recordEvent({
         transactionId: tx.id,
         stage: "trading",
@@ -249,7 +278,7 @@ function BidOffer({ tx, reload }: Props) {
     <div className="space-y-6">
       <Panel
         title="Place a bid or an offer"
-        description="Each entry is new. Nothing is overwritten."
+        description="Every field below is required. Each entry is new — nothing is overwritten."
         footer={
           <div className="text-right">
             <Button size="sm" form="bid-form" type="submit" disabled={busy}>
@@ -274,31 +303,81 @@ function BidOffer({ tx, reload }: Props) {
               </SelectContent>
             </Select>
           </Field>
+          <Field label="Commodity">
+            <Input
+              required
+              value={form.commodity}
+              onChange={(e) => setForm({ ...form, commodity: e.target.value })}
+            />
+          </Field>
           <Field label={`Price (${tx.currency})`}>
             <Input
+              required
               type="number"
               step="any"
+              min="0"
               value={form.price}
               onChange={(e) => setForm({ ...form, price: e.target.value })}
             />
           </Field>
           <Field label="Quantity">
             <Input
+              required
               type="number"
               step="any"
+              min="0"
               value={form.quantity}
               onChange={(e) => setForm({ ...form, quantity: e.target.value })}
             />
           </Field>
           <Field label="Unit">
-            <Input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} />
+            <Input
+              required
+              placeholder="e.g. metric tonnes"
+              value={form.unit}
+              onChange={(e) => setForm({ ...form, unit: e.target.value })}
+            />
+          </Field>
+          <Field label="Incoterms">
+            <Select
+              value={form.incoterms}
+              onValueChange={(v) => setForm({ ...form, incoterms: v })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Choose…" />
+              </SelectTrigger>
+              <SelectContent>
+                {INCOTERMS.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Governing jurisdiction">
+            <Input
+              required
+              placeholder="e.g. South Africa"
+              value={form.jurisdiction}
+              onChange={(e) => setForm({ ...form, jurisdiction: e.target.value })}
+            />
+          </Field>
+          <Field label="Payment terms">
+            <Input
+              required
+              placeholder="e.g. 30% on signing, 70% against shipping docs"
+              value={form.paymentTerms}
+              onChange={(e) => setForm({ ...form, paymentTerms: e.target.value })}
+            />
           </Field>
           <div className="sm:col-span-2">
-            <Field label="Terms">
-              <Textarea
-                rows={3}
-                value={form.terms}
-                onChange={(e) => setForm({ ...form, terms: e.target.value })}
+            <Field label="Delivery terms">
+              <Input
+                required
+                placeholder="e.g. First shipment within 45 days, inspection by SGS at load port"
+                value={form.deliveryTerms}
+                onChange={(e) => setForm({ ...form, deliveryTerms: e.target.value })}
               />
             </Field>
           </div>
@@ -512,29 +591,44 @@ function MediaScan({ tx, reload }: Props) {
 
 function SearchStep({ tx, reload }: Props) {
   const qc = useQueryClient();
-  const [criteria, setCriteria] = useState({ region: "", sector: tx.commodity ?? "", note: "" });
-  const [candidate, setCandidate] = useState({ name: "", jurisdiction: "", source: "search" });
-  const [busy, setBusy] = useState(false);
+  const search = useServerFn(searchCounterparties);
+  const [region, setRegion] = useState("");
+  const [candidate, setCandidate] = useState({ name: "", jurisdiction: "", source: "manual" });
+  const [running, setRunning] = useState<"ai" | "ai_plus" | null>(null);
 
-  async function runSearch(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
+  const { data: candidates = [] } = useQuery({
+    queryKey: ["counterparties", tx.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("counterparties")
+        .select("*")
+        .eq("transaction_id", tx.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  async function runSearch(kind: "ai" | "ai_plus") {
+    setRunning(kind);
     try {
       await recordEvent({
         transactionId: tx.id,
         stage: "trading",
         step: "search",
         action: "search_run",
-        summary: `Search: ${criteria.sector || "any"} in ${criteria.region || "any region"}`,
-        payload: { ...criteria },
+        summary: `${kind === "ai" ? "AI" : "AI+"} search: ${tx.commodity ?? "any"}${region ? ` in ${region}` : ""}`,
+        payload: { region, kind },
       });
+      const result = await search({ data: { transactionId: tx.id, kind, region: region || undefined } });
+      await qc.invalidateQueries({ queryKey: ["counterparties", tx.id] });
       await advance(tx.id, "trading", "ai");
       reload();
-      toast.success("Search recorded");
+      toast.success(`${result.candidates.length} candidate(s) found`);
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
-      setBusy(false);
+      setRunning(null);
     }
   }
 
@@ -556,7 +650,7 @@ function SearchStep({ tx, reload }: Props) {
         summary: candidate.name,
         payload: { ...candidate },
       });
-      setCandidate({ name: "", jurisdiction: "", source: "search" });
+      setCandidate({ name: "", jurisdiction: "", source: "manual" });
       await qc.invalidateQueries({ queryKey: ["counterparties", tx.id] });
       toast.success("Candidate surfaced");
     } catch (err) {
@@ -567,43 +661,77 @@ function SearchStep({ tx, reload }: Props) {
   return (
     <div className="space-y-6">
       <Panel
-        title="Search criteria"
-        description="What you looked for is part of the record."
+        title="Search for counterparties"
+        description="AI and AI+ scan for organisations matching this bid's commodity, price, incoterms and jurisdiction. What was searched is part of the record."
         footer={
-          <div className="text-right">
-            <Button size="sm" form="search-form" type="submit" disabled={busy}>
-              Record search
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => runSearch("ai")}
+              disabled={running !== null}
+              className="gap-2"
+            >
+              {running === "ai" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Sparkles className="h-3.5 w-3.5" />
+              )}
+              Search with AI
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => runSearch("ai_plus")}
+              disabled={running !== null}
+              className="gap-2"
+            >
+              {running === "ai_plus" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Sparkles className="h-3.5 w-3.5" />
+              )}
+              Search with AI+
             </Button>
           </div>
         }
       >
-        <form id="search-form" onSubmit={runSearch} className="grid gap-4 sm:grid-cols-2">
-          <Field label="Region">
-            <Input
-              value={criteria.region}
-              onChange={(e) => setCriteria({ ...criteria, region: e.target.value })}
-            />
-          </Field>
-          <Field label="Sector or commodity">
-            <Input
-              value={criteria.sector}
-              onChange={(e) => setCriteria({ ...criteria, sector: e.target.value })}
-            />
-          </Field>
-          <div className="sm:col-span-2">
-            <Field label="Notes">
-              <Textarea
-                rows={2}
-                value={criteria.note}
-                onChange={(e) => setCriteria({ ...criteria, note: e.target.value })}
-              />
-            </Field>
-          </div>
-        </form>
+        <Field label="Preferred counterparty region (optional)">
+          <Input placeholder="e.g. Southern Africa" value={region} onChange={(e) => setRegion(e.target.value)} />
+        </Field>
+      </Panel>
+
+      <Panel title="Candidates surfaced">
+        {candidates.length === 0 ? (
+          <Empty text="No candidates yet. Run a search above." />
+        ) : (
+          <ul className="divide-y divide-border">
+            {candidates.map((c) => (
+              <li key={c.id} className="py-2.5 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium">{c.name}</span>
+                  <div className="flex items-center gap-2">
+                    {c.score != null && (
+                      <Badge variant="secondary" className="font-normal">
+                        {c.score}/100
+                      </Badge>
+                    )}
+                    <Badge variant="secondary" className="font-normal">
+                      {c.source ?? "manual"}
+                    </Badge>
+                  </div>
+                </div>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {[c.jurisdiction, c.sector].filter(Boolean).join(" · ")}
+                </p>
+                {c.rationale && <p className="mt-1 text-xs text-muted-foreground">{c.rationale}</p>}
+              </li>
+            ))}
+          </ul>
+        )}
       </Panel>
 
       <Panel
-        title="Surface a candidate"
+        title="Add a candidate manually"
         footer={
           <div className="text-right">
             <Button size="sm" form="cand-form" type="submit" variant="outline">

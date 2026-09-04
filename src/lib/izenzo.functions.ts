@@ -175,6 +175,125 @@ export const completeWad = createServerFn({ method: "POST" })
     return { decision: data.decision, fingerprint, creditsLeft: (org.credits ?? 0) - WAD_COST };
   });
 
+type CandidateResult = {
+  name: string;
+  jurisdiction?: string | undefined;
+  sector?: string | undefined;
+  score?: number | undefined;
+  rationale?: string | undefined;
+};
+
+function parseCandidates(raw: string): CandidateResult[] {
+  const match = raw.match(/\[[\s\S]*\]/);
+  if (!match) return [];
+  try {
+    const parsed = JSON.parse(match[0]) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((c): c is Record<string, unknown> => typeof c === "object" && c !== null)
+      .map((c) => ({
+        name: String(c["name"] ?? "").slice(0, 200),
+        jurisdiction: c["jurisdiction"] ? String(c["jurisdiction"]).slice(0, 200) : undefined,
+        sector: c["sector"] ? String(c["sector"]).slice(0, 200) : undefined,
+        score: typeof c["score"] === "number" ? c["score"] : undefined,
+        rationale: c["rationale"] ? String(c["rationale"]).slice(0, 500) : undefined,
+      }))
+      .filter((c) => c.name.length > 0)
+      .slice(0, 8);
+  } catch {
+    return [];
+  }
+}
+
+/** AI-driven counterparty search. AI/AI+ propose candidates from the bid's terms; a person still chooses. */
+export const searchCounterparties = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) =>
+    z
+      .object({
+        transactionId: z.string().uuid(),
+        kind: z.enum(["ai", "ai_plus"]),
+        region: z.string().max(200).optional(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const apiKey = process.env["LOVABLE_API_KEY"];
+    if (!apiKey) throw new Error("AI is not configured");
+
+    const { data: tx } = await supabase
+      .from("transactions")
+      .select("*")
+      .eq("id", data.transactionId)
+      .maybeSingle();
+    if (!tx) throw new Error("Transaction not found");
+
+    const { data: bids } = await supabase
+      .from("bid_offers")
+      .select("direction, price, quantity, unit, currency, terms")
+      .eq("transaction_id", tx.id)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const latestBid = bids?.[0];
+
+    const system =
+      data.kind === "ai"
+        ? "You are the Izenzo counterparty search assistant. Given a bid or offer, propose plausible counterparty organisations that could plausibly transact on these terms. You never decide and never contact anyone — you only propose candidates for a person to review. Respond with ONLY a JSON array, each item: {\"name\":string,\"jurisdiction\":string,\"sector\":string,\"score\":number 0-100,\"rationale\":string under 40 words}. No prose outside the array."
+        : "You are Izenzo AI+, a deeper counterparty search. Given a bid or offer, propose well-matched counterparty organisations, weighing jurisdiction fit, sector fit and deal size. You never decide and never contact anyone. Respond with ONLY a JSON array, each item: {\"name\":string,\"jurisdiction\":string,\"sector\":string,\"score\":number 0-100,\"rationale\":string under 40 words covering fit and any risk notes}. No prose outside the array.";
+
+    const prompt = [
+      `Commodity: ${tx.commodity ?? "n/a"}`,
+      `Quantity: ${tx.quantity ?? "n/a"} ${tx.unit ?? ""}`,
+      `Price: ${tx.price ?? "n/a"} ${tx.currency}`,
+      `Incoterms: ${tx.incoterms ?? "n/a"}`,
+      `Jurisdiction: ${tx.jurisdiction ?? "n/a"}`,
+      data.region ? `Preferred counterparty region: ${data.region}` : "",
+      latestBid
+        ? `Latest ${latestBid.direction}: ${latestBid.price ?? "n/a"} ${latestBid.currency} for ${latestBid.quantity ?? "n/a"} ${latestBid.unit ?? ""}. Terms: ${latestBid.terms ?? "n/a"}`
+        : "",
+      "Propose 4-6 candidates.",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const model = data.kind === "ai" ? "google/gemini-3.7-flash" : "openai/gpt-5.4";
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: prompt },
+        ],
+      }),
+    });
+    if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
+    if (res.status === 402) throw new Error("AI credits are exhausted for this workspace.");
+    if (!res.ok) throw new Error("AI request failed");
+    const json = (await res.json()) as { choices: { message: { content: string } }[] };
+    const output = json.choices?.[0]?.message?.content ?? "";
+    const candidates = parseCandidates(output);
+    if (candidates.length === 0) throw new Error("AI did not return any candidates. Try again.");
+
+    const source = data.kind === "ai" ? "ai_search" : "ai_plus_search";
+    const rows = candidates.map((c) => ({
+      transaction_id: tx.id,
+      name: c.name,
+      jurisdiction: c.jurisdiction ?? null,
+      sector: c.sector ?? null,
+      score: c.score ?? null,
+      source,
+      rationale: c.rationale ?? null,
+      status: "surfaced",
+    }));
+    const { data: inserted, error } = await supabase.from("counterparties").insert(rows).select();
+    if (error) throw error;
+
+    return { candidates: inserted ?? [], model };
+  });
+
 /** AI and AI+ proposals. AI proposes; a person always confirms. */
 export const runAiProposal = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
