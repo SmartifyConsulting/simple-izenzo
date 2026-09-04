@@ -198,7 +198,7 @@ export function AppShell({
           {actions}
           <AvatarMenu />
         </header>
-        <main className="flex-1 px-4 py-6 sm:px-6">{children}</main>
+        <main className="flex-1 px-4 pb-6 pt-10 sm:px-6 sm:pt-12">{children}</main>
       </div>
     </div>
   );
