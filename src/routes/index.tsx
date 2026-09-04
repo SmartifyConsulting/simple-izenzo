@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { AuthTabs } from "@/components/auth/AuthTabs";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SiteFooter } from "@/components/layout/SiteFooter";
+import { Logo } from "@/components/Logo";
 import { SPINE, type StageKey } from "@/lib/spine";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
@@ -186,7 +187,8 @@ function Landing() {
         <section className="flex flex-col lg:flex-row">
           <div className="flex flex-1 flex-col justify-center bg-sidebar px-6 py-16 text-sidebar-foreground sm:px-10 sm:py-20 lg:px-16">
             <div className="max-w-xl">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-sidebar-foreground/55">
+              <Logo onDark className="h-[140px] w-auto" />
+              <p className="mt-6 text-[11px] font-semibold uppercase tracking-[0.09em] text-sidebar-foreground/55">
                 Trading · Compliance · Execution · Finality · Memory
               </p>
               <h1 className="mt-4 text-4xl font-semibold leading-[1.1] tracking-tight text-white sm:text-5xl">
