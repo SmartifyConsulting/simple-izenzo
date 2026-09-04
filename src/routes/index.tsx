@@ -1,48 +1,45 @@
+import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Lock } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SPINE, type StageKey } from "@/lib/spine";
+import { cn } from "@/lib/utils";
 
-const GATES = [
+const GATES: { n: string; name: string; status: string; blurb: string; stageKey: StageKey }[] = [
   {
     n: "01",
     name: "Trading Gate",
     status: "NOT STARTED",
     blurb: "Bid and offer, deal documents, counterparties, counter, confirm intent, POI.",
-    foot: "Discover Counterparty →",
-    locked: false,
-    to: "/transactions/new" as const,
+    stageKey: "trading",
   },
   {
     n: "02",
     name: "Compliance Gate",
     status: "NOT STARTED",
     blurb: "WaD — Without a Doubt. KYC, KYB, UBO, PEP, AML/sanctions before Execution.",
-    foot: "Locked · needs POI",
-    locked: true,
+    stageKey: "compliance",
   },
   {
     n: "03",
     name: "Execution Gate",
     status: "NOT STARTED",
     blurb: "Project preparation, bankability, implementation, stakeholder entry/exit.",
-    foot: "Locked · needs WaD pass",
-    locked: true,
+    stageKey: "execution",
   },
   {
     n: "04",
     name: "Finality Gate",
     status: "NOT STARTED",
     blurb: "Type, change/value event, evidence, validation and the finality record.",
-    foot: "Locked · needs Execution complete",
-    locked: true,
+    stageKey: "finality",
   },
   {
     n: "05",
     name: "Memory Gate",
     status: "EMPTY",
     blurb: "Attributable record and Capital Deployment Assessment — hash-chained.",
-    foot: "View ledger →",
-    locked: false,
+    stageKey: "memory",
   },
 ];
 
@@ -65,6 +62,63 @@ export const Route = createFileRoute("/")({
   }),
   component: Landing,
 });
+
+function GateCard({
+  gate,
+  staggerMs,
+}: {
+  gate: (typeof GATES)[number];
+  staggerMs: number;
+}) {
+  const steps = SPINE.find((s) => s.key === gate.stageKey)?.steps ?? [];
+  const [active, setActive] = useState(0);
+
+  useEffect(() => {
+    if (steps.length <= 1) return;
+    let interval: ReturnType<typeof setInterval>;
+    const timeout = setTimeout(() => {
+      interval = setInterval(() => {
+        setActive((i) => (i + 1) % steps.length);
+      }, 1700);
+    }, staggerMs);
+    return () => {
+      clearTimeout(timeout);
+      clearInterval(interval);
+    };
+  }, [steps.length, staggerMs]);
+
+  return (
+    <div className="flex min-h-[216px] flex-col rounded-2xl border border-border bg-background p-5 shadow-sm">
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-[11px] text-muted-foreground">{gate.n}</span>
+        <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-muted-foreground">
+          {gate.status}
+        </span>
+      </div>
+      <h3 className="mt-4 text-lg font-semibold tracking-tight">{gate.name}</h3>
+      <p className="mt-1.5 flex-1 text-[13.5px] leading-relaxed text-muted-foreground">{gate.blurb}</p>
+
+      {steps.length > 0 && steps[active] && (
+        <div className="mt-4">
+          <p key={active} className="animate-in fade-in text-[13px] font-semibold text-primary duration-500">
+            {steps[active].label}
+          </p>
+          <div className="mt-2 flex gap-1">
+            {steps.map((s, i) => (
+              <span
+                key={s.key}
+                className={cn(
+                  "h-1 flex-1 rounded-full transition-colors duration-500",
+                  i === active ? "bg-primary" : "bg-muted",
+                )}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function Landing() {
   return (
@@ -130,47 +184,9 @@ function Landing() {
               which facilitate a connective network across the Gates.
             </p>
             <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-              {GATES.map((gate) => {
-                const cardClassName =
-                  "flex min-h-[216px] flex-col rounded-2xl border border-border bg-background p-5 text-left shadow-sm transition-shadow hover:shadow-md hover:border-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
-                const cardContent = (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-[11px] text-muted-foreground">{gate.n}</span>
-                      <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-muted-foreground">
-                        {gate.status}
-                      </span>
-                    </div>
-                    <h3 className="mt-4 text-lg font-semibold tracking-tight">{gate.name}</h3>
-                    <p className="mt-1.5 flex-1 text-[13.5px] leading-relaxed text-muted-foreground">
-                      {gate.blurb}
-                    </p>
-                    <p
-                      className={
-                        gate.locked
-                          ? "mt-4 flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground"
-                          : "mt-4 text-[13px] font-semibold text-success"
-                      }
-                    >
-                      {gate.locked && <Lock className="h-3 w-3" />}
-                      {gate.foot}
-                    </p>
-                  </>
-                );
-
-                if (gate.to === "/transactions/new") {
-                  return (
-                    <Link key={gate.n} to="/transactions/new" className={cardClassName}>
-                      {cardContent}
-                    </Link>
-                  );
-                }
-                return (
-                  <Link key={gate.n} to="/auth" search={{ mode: "signup" }} className={cardClassName}>
-                    {cardContent}
-                  </Link>
-                );
-              })}
+              {GATES.map((gate, i) => (
+                <GateCard key={gate.n} gate={gate} staggerMs={i * 220} />
+              ))}
             </div>
           </div>
         </section>
