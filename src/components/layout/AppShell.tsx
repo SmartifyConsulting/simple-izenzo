@@ -203,7 +203,11 @@ export function AppShell({
           )}
           <AvatarMenu />
         </header>
-        <main className="flex-1 px-4 pb-6 pt-[2cm] sm:px-6">{children}</main>
+        <main className="flex-1 px-4 pb-6 pt-[2cm] sm:px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-[2fr_4fr_4fr_2fr]">
+            <div className="lg:col-start-2 lg:col-span-2">{children}</div>
+          </div>
+        </main>
       </div>
     </div>
   );
