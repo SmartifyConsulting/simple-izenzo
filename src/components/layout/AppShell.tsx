@@ -8,7 +8,6 @@ import {
   Menu,
   LogOut,
   BookText,
-  Plus,
   Settings,
   Building2,
   Receipt,
@@ -81,13 +80,6 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
             </Link>
           );
         })}
-        <div className="px-1 pt-3">
-          <Link to="/transactions/new" onClick={onNavigate}>
-            <Button size="sm" variant="secondary" className="w-full gap-2">
-              <Plus className="h-3.5 w-3.5" /> New transaction
-            </Button>
-          </Link>
-        </div>
       </nav>
 
       <div className="border-t border-sidebar-border p-3">
