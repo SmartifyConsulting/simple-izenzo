@@ -2,6 +2,7 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SignUpForm } from "@/components/auth/SignUpForm";
 import { SPINE, type StageKey } from "@/lib/spine";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
@@ -175,27 +176,47 @@ function Landing() {
       </header>
 
       <main>
-        <section className="mx-auto max-w-6xl px-5 py-20">
-          <p className="label-caps">Trading · Compliance · Execution · Finality · Memory</p>
-          <h1 className="mt-4 max-w-3xl text-4xl font-semibold leading-[1.1] tracking-tight sm:text-5xl">
-            A transaction is not a conversation. It is a record.
-          </h1>
-          <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground">
-            Izenzo carries a trade through the Izenzo Trading Gateway. Every step is written once,
-            attributed to a person, timestamped and fingerprinted. Intent is sealed before anything
-            moves, and the record can be read forward and backward for as long as it matters.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link to="/auth" search={{ mode: "signup" }}>
-              <Button size="lg" className="gap-2">
-                Open a seat <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
-            <Link to="/glossary">
-              <Button size="lg" variant="outline">
-                Read the terms
-              </Button>
-            </Link>
+        <section className="flex flex-col lg:flex-row">
+          <div className="flex flex-1 flex-col justify-center bg-sidebar px-6 py-16 text-sidebar-foreground sm:px-10 sm:py-20 lg:px-16">
+            <div className="max-w-xl">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-sidebar-foreground/55">
+                Trading · Compliance · Execution · Finality · Memory
+              </p>
+              <h1 className="mt-4 text-4xl font-semibold leading-[1.1] tracking-tight sm:text-5xl">
+                A transaction is not a conversation. It is a record.
+              </h1>
+              <p className="mt-5 max-w-lg text-base leading-relaxed text-sidebar-foreground/75">
+                Izenzo carries a trade through the Izenzo Trading Gateway. Every step is written once,
+                attributed to a person, timestamped and fingerprinted. Intent is sealed before anything
+                moves, and the record can be read forward and backward for as long as it matters.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Link to="/glossary">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="border-sidebar-foreground/25 bg-transparent text-sidebar-foreground hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground"
+                  >
+                    Read the terms
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-1 items-center justify-center bg-background px-5 py-16 sm:py-20">
+            {user ? (
+              <div className="w-full max-w-sm text-center">
+                <p className="text-sm text-muted-foreground">You already have a seat.</p>
+                <Link to="/dashboard" className="mt-4 inline-block">
+                  <Button size="lg" className="gap-2">
+                    Go to dashboard <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <SignUpForm className="w-full max-w-sm" />
+            )}
           </div>
         </section>
 
