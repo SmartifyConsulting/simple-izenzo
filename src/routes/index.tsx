@@ -242,24 +242,19 @@ function Landing() {
               Compliance, Execution, Finality and Memory. This is enabled by AI, agentic AI and AI+,
               which facilitate a connective network across the Gates.
             </p>
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <p className="mt-8 flex items-center gap-1.5 whitespace-nowrap text-xs font-medium text-muted-foreground">
+              <Gauge className="h-3.5 w-3.5 shrink-0" />
+              Pay only for what you use. Zero subscriptions. Zero lock-ins.
+            </p>
+            <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
               {GATES.map((gate, i) => (
-                <div key={gate.n} className="flex flex-col">
-                  <div className="mb-2 flex min-h-8 items-start gap-1.5 text-left text-xs font-medium text-muted-foreground">
-                    {i === 0 && (
-                      <>
-                        <Gauge className="h-3.5 w-3.5 shrink-0" />
-                        Pay only for what you use. Zero subscriptions. Zero lock-ins.
-                      </>
-                    )}
-                  </div>
-                  <GateCard
-                    gate={gate}
-                    selected={i === selectedGate}
-                    onSelect={() => setSelectedGate((cur) => (cur === i ? null : i))}
-                    href={user ? (gate.stageKey === "trading" ? "/transactions/new" : "/dashboard") : undefined}
-                  />
-                </div>
+                <GateCard
+                  key={gate.n}
+                  gate={gate}
+                  selected={i === selectedGate}
+                  onSelect={() => setSelectedGate((cur) => (cur === i ? null : i))}
+                  href={user ? (gate.stageKey === "trading" ? "/transactions/new" : "/dashboard") : undefined}
+                />
               ))}
             </div>
 
