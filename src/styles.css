@@ -1,20 +1,23 @@
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
+@import "@fontsource-variable/sora";
+@import "@fontsource-variable/manrope";
 
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Izenzo design system — OntheBall look and feel.
- * Charcoal / greyscale on white, near-black sidebar, quiet borders,
- * minimal shadows, small radii, dense professional layout.
- * DM Sans everywhere; IBM Plex Mono for hashes, IDs and seal blocks.
+ * Izenzo design system — navy + emerald.
+ * Deep navy primary/sidebar, soft indigo page wash, white cards,
+ * emerald for completed/sealed states, quiet cool-grey borders.
+ * Manrope body, Sora headings, IBM Plex Mono for hashes and seals.
  */
 
 @theme inline {
-  --font-sans: "Courier Prime", ui-monospace, SFMono-Regular, monospace;
-  --font-heading: "DM Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-sans: "Manrope Variable", "Manrope", system-ui, -apple-system, sans-serif;
+  --font-heading: "Sora Variable", "Sora", system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
 
   --radius-sm: calc(var(--radius) - 2px);
   --radius-md: var(--radius);
