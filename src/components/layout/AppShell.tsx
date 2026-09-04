@@ -42,7 +42,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
-      <Link to="/dashboard" className="flex h-42 items-center border-b border-sidebar-border px-6">
+      <Link to="/dashboard" className="flex h-42 items-center px-6">
         <Logo onDark className="h-16 w-auto" />
       </Link>
 
@@ -146,7 +146,7 @@ export function AppShell({
   actions,
   children,
 }: {
-  title: string;
+  title?: string;
   description?: string;
   actions?: ReactNode;
   children: ReactNode;
@@ -164,7 +164,7 @@ export function AppShell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-42 items-center gap-3 border-b border-border bg-background/95 px-4 backdrop-blur sm:px-6">
+        <header className="sticky top-0 z-30 flex h-42 items-center gap-3 bg-background/95 px-4 backdrop-blur sm:px-6">
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="lg:hidden">
@@ -182,9 +182,11 @@ export function AppShell({
                 {greeting()}, {firstName}
               </p>
             )}
-            <h1 className="truncate text-sm font-semibold tracking-tight text-muted-foreground">
-              {title}
-            </h1>
+            {title && (
+              <h1 className="truncate text-sm font-semibold tracking-tight text-muted-foreground">
+                {title}
+              </h1>
+            )}
             {description && (
               <p className="truncate text-xs text-muted-foreground">{description}</p>
             )}

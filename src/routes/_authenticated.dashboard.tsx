@@ -30,12 +30,21 @@ function groupByMonth<T extends { created_at: string }>(rows: T[]): [string, T[]
 }
 
 const STAGE_BADGE_CLASS: Record<StageKey, string> = {
-  trading: "bg-info/15 text-info",
-  compliance: "bg-warning/20 text-warning",
-  execution: "bg-[oklch(0.55_0.14_310)]/15 text-[oklch(0.55_0.14_310)]",
-  finality: "bg-[oklch(0.5_0.13_35)]/15 text-[oklch(0.5_0.13_35)]",
-  memory: "bg-success/15 text-success",
+  trading: "bg-info text-white",
+  compliance: "bg-warning text-white",
+  execution: "bg-[oklch(0.55_0.14_310)] text-white",
+  finality: "bg-[oklch(0.5_0.13_35)] text-white",
+  memory: "bg-success text-white",
 };
+
+const ORG_BADGE_PALETTE = [
+  "bg-[oklch(0.5_0.19_260)] text-white",
+  "bg-[oklch(0.55_0.2_150)] text-white",
+  "bg-[oklch(0.6_0.2_35)] text-white",
+  "bg-[oklch(0.55_0.22_310)] text-white",
+  "bg-[oklch(0.6_0.19_95)] text-white",
+  "bg-[oklch(0.5_0.16_200)] text-white",
+];
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -50,10 +59,32 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 });
 
 function Dashboard() {
-  const { org, profile } = useAuth();
+  const { org, orgs, profile, roles } = useAuth();
   const [titleFilter, setTitleFilter] = useState("");
   const [stageFilter, setStageFilter] = useState("all");
   const [valueSort, setValueSort] = useState<"none" | "asc" | "desc">("none");
+  const [orgFilter, setOrgFilter] = useState("all");
+  const isAdmin = roles.includes("admin");
+
+  const { data: allOrgs = [] } = useQuery({
+    queryKey: ["all-orgs-for-transactions"],
+    enabled: isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("organisations").select("id, name").order("name");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const selectableOrgs = isAdmin ? allOrgs : orgs;
+  const orgName = useMemo(() => new Map(selectableOrgs.map((o) => [o.id, o.name])), [selectableOrgs]);
+  const orgBadgeClass = useMemo(
+    () =>
+      new Map(
+        selectableOrgs.map((o, i) => [o.id, ORG_BADGE_PALETTE[i % ORG_BADGE_PALETTE.length]]),
+      ),
+    [selectableOrgs],
+  );
 
   const { data: txs = [], isLoading } = useQuery({
     queryKey: ["transactions", org?.id],
@@ -83,6 +114,9 @@ function Dashboard() {
     if (stageFilter !== "all") {
       rows = rows.filter((t) => t.stage === stageFilter);
     }
+    if (orgFilter !== "all") {
+      rows = rows.filter((t) => t.org_id === orgFilter);
+    }
     if (valueSort !== "none") {
       rows = [...rows].sort((a, b) => {
         const diff = (a.price ?? 0) - (b.price ?? 0);
@@ -90,20 +124,10 @@ function Dashboard() {
       });
     }
     return rows;
-  }, [txs, titleFilter, stageFilter, valueSort]);
+  }, [txs, titleFilter, stageFilter, orgFilter, valueSort]);
 
   return (
-    <AppShell
-      title="Dashboard"
-      description={org?.name ?? "Set up your organisation to begin"}
-      actions={
-        <Link to="/transactions/new">
-          <Button size="sm" className="gap-2">
-            <Plus className="h-3.5 w-3.5" /> New Trade
-          </Button>
-        </Link>
-      }
-    >
+    <AppShell description={org?.name ?? "Set up your organisation to begin"}>
       {!org && (
         <div className="mb-6 rounded-md border border-border bg-muted/40 p-5">
           <h2 className="text-sm font-semibold">Set up your organisation</h2>
@@ -119,7 +143,9 @@ function Dashboard() {
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-md border border-border">
+      <h1 className="text-lg font-semibold tracking-tight">Dashboard</h1>
+
+      <div className="mt-3 overflow-x-auto rounded-md border border-border">
         <div className="grid w-max min-w-full grid-cols-6 divide-x divide-border">
           <div className="min-w-[140px] bg-background p-4">
             <p className="label-caps">Tokens</p>
@@ -135,7 +161,14 @@ function Dashboard() {
       </div>
 
       <section className="mt-8">
-        <h2 className="text-sm font-semibold">Transactions</h2>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <h2 className="text-sm font-semibold">Transactions</h2>
+          <Link to="/transactions/new">
+            <Button size="sm" className="gap-2">
+              <Plus className="h-3.5 w-3.5" /> New Trade
+            </Button>
+          </Link>
+        </div>
 
         {txs.length > 0 && (
           <div className="mt-3 flex flex-wrap items-end gap-3">
@@ -172,6 +205,22 @@ function Dashboard() {
                   {SPINE.map((s) => (
                     <SelectItem key={s.key} value={s.key}>
                       {s.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Organisation</label>
+              <Select value={orgFilter} onValueChange={setOrgFilter}>
+                <SelectTrigger className="h-8 w-[170px] text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All organisations</SelectItem>
+                  {selectableOrgs.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>
+                      {o.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -218,6 +267,9 @@ function Dashboard() {
                           <th className="px-4 py-2 font-medium">Transaction</th>
                           <th className="hidden px-4 py-2 font-medium sm:table-cell">Value</th>
                           <th className="px-4 py-2 font-medium">On the Trading Gateway</th>
+                          {orgFilter === "all" && selectableOrgs.length > 1 && (
+                            <th className="hidden px-4 py-2 font-medium lg:table-cell">Organisation</th>
+                          )}
                           <th className="hidden px-4 py-2 font-medium md:table-cell">Opened</th>
                           <th className="w-10" />
                         </tr>
@@ -249,6 +301,19 @@ function Dashboard() {
                                 {stageOf(t.stage)?.label} · {stepDef(t.stage, t.step)?.label ?? t.step}
                               </Badge>
                             </td>
+                            {orgFilter === "all" && selectableOrgs.length > 1 && (
+                              <td className="hidden px-4 py-3 lg:table-cell">
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    "font-normal border-transparent",
+                                    orgBadgeClass.get(t.org_id) ?? "bg-muted text-muted-foreground",
+                                  )}
+                                >
+                                  {orgName.get(t.org_id) ?? "—"}
+                                </Badge>
+                              </td>
+                            )}
                             <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
                               {when(t.created_at)}
                             </td>
