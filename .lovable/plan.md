@@ -12,7 +12,8 @@ Right now your account (georgia.adams@smartify.co.za) has no company attached, s
 
 ## The sample deals
 
-Both of the things you asked for: one deal parked at each stage, plus one deal taken all the way through.
+Both of the things you asked for: one deal parked at each stage, plus one deal taken all the way through. These five are the deals your own company is on; the rest of the market carries a further ~15 deals between the other companies, spread over the same stages.
+
 
 | Deal | Where it sits | What it demonstrates |
 |---|---|---|
