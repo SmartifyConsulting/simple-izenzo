@@ -57,7 +57,25 @@ function Credits() {
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data ?? [];
+      const rows = data ?? [];
+
+      const txIds = Array.from(
+        new Set(rows.map((r) => r.transaction_id).filter((id): id is string => Boolean(id))),
+      );
+      let dealTitles = new Map<string, string>();
+      if (txIds.length > 0) {
+        const { data: txs, error: txErr } = await supabase
+          .from("transactions")
+          .select("id, title")
+          .in("id", txIds);
+        if (txErr) throw txErr;
+        dealTitles = new Map((txs ?? []).map((t) => [t.id, t.title]));
+      }
+
+      return rows.map((r) => ({
+        ...r,
+        dealTitle: r.transaction_id ? (dealTitles.get(r.transaction_id) ?? null) : null,
+      }));
     },
   });
 
@@ -165,6 +183,7 @@ function Credits() {
                               <th className="px-4 py-2 font-medium">Movement</th>
                               <th className="px-4 py-2 font-medium">Value</th>
                               <th className="px-4 py-2 font-medium">Reason</th>
+                              <th className="px-4 py-2 font-medium">Deal</th>
                               <th className="px-4 py-2 font-medium">When</th>
                             </tr>
                           </thead>
@@ -188,6 +207,7 @@ function Credits() {
                                   {row.delta < 0 ? "-" : "+"}USD {Math.abs(row.delta) * TOKEN_PRICE_USD}
                                 </td>
                                 <td className="px-4 py-2.5">{row.reason}</td>
+                                <td className="px-4 py-2.5 text-muted-foreground">{row.dealTitle ?? "—"}</td>
                                 <td className="px-4 py-2.5 text-muted-foreground">{when(row.created_at)}</td>
                               </tr>
                             ))}

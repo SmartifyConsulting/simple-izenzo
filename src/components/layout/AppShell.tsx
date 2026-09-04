@@ -166,7 +166,7 @@ export function AppShell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-28 items-center gap-3 border-b border-border bg-background/95 px-4 backdrop-blur sm:px-6">
+        <header className="sticky top-0 z-30 flex h-42 items-center gap-3 border-b border-border bg-background/95 px-4 backdrop-blur sm:px-6">
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="lg:hidden">
