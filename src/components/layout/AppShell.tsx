@@ -128,7 +128,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
             <DropdownMenuItem
               onClick={async () => {
                 await signOut();
-                navigate({ to: "/auth" });
+                navigate({ to: "/" });
               }}
             >
               <LogOut className="mr-2 h-3.5 w-3.5" /> Sign out

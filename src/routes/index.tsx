@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, Gauge } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AuthTabs } from "@/components/auth/AuthTabs";
@@ -55,7 +55,12 @@ const STATUS_BADGE_CLASS: Record<GateStatus, string> = {
   EMPTY: "bg-muted text-muted-foreground",
 };
 
+type Search = { next?: string | undefined };
+
 export const Route = createFileRoute("/")({
+  validateSearch: (search: Record<string, unknown>): Search => ({
+    next: typeof search["next"] === "string" ? (search["next"] as string) : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Izenzo — Proof-backed trading, from intent to memory" },
@@ -158,9 +163,20 @@ function GateStepStrip({ gate }: { gate: (typeof GATES)[number] }) {
   );
 }
 
+function safeNext(next: string | undefined) {
+  if (next && next.startsWith("/") && !next.startsWith("//")) return next;
+  return "/dashboard";
+}
+
 function Landing() {
   const [selectedGate, setSelectedGate] = useState<number | null>(null);
   const { user } = useAuth();
+  const { next } = Route.useSearch();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user && next) navigate({ to: safeNext(next), replace: true });
+  }, [user, next, navigate]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -206,7 +222,7 @@ function Landing() {
                 </Link>
               </div>
             ) : (
-              <AuthTabs className="w-full max-w-sm rounded-2xl bg-background p-8 shadow-xl" />
+              <AuthTabs next={next} className="w-full max-w-sm rounded-2xl bg-background p-8 shadow-xl" />
             )}
           </div>
         </section>

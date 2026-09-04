@@ -86,7 +86,7 @@ function ForgotPassword() {
           </>
         )}
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          <Link to="/auth" className="font-medium text-foreground hover:underline">
+          <Link to="/" className="font-medium text-foreground hover:underline">
             Back to sign in
           </Link>
         </p>

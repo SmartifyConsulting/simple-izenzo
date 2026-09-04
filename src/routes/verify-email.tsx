@@ -107,7 +107,7 @@ function VerifyEmailPage() {
             )}
             <button
               type="button"
-              onClick={() => void signOut().then(() => navigate({ to: "/auth", replace: true }))}
+              onClick={() => void signOut().then(() => navigate({ to: "/", replace: true }))}
               className="mt-6 w-full text-center text-xs text-muted-foreground hover:text-foreground"
             >
               Sign out

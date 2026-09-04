@@ -67,7 +67,7 @@ export function VerifyEmailDialog({ open }: { open: boolean }) {
         )}
         <button
           type="button"
-          onClick={() => void signOut().then(() => navigate({ to: "/auth", replace: true }))}
+          onClick={() => void signOut().then(() => navigate({ to: "/", replace: true }))}
           className="text-center text-xs text-muted-foreground hover:text-foreground"
         >
           Sign out
