@@ -88,18 +88,28 @@ export const POI_COST = 1;
 export const WAD_COST = 3;
 export const TOKEN_PRICE_USD = 10;
 
-/** Reason a step is locked, or null when it is reachable. */
+/**
+ * Reason a step is locked, or null when it is reachable. Gates themselves are not
+ * necessarily worked in strict order (compliance/execution/finality open on their own
+ * token gates), but the steps within a gate always are: a step is locked until every
+ * step before it, in that gate, has been reached.
+ */
 export function lockReason(
   stage: StageKey,
   step: string,
-  tx: { poi_sealed_at: string | null; wad_completed_at: string | null } | null,
+  tx: { stage: string; step: string; poi_sealed_at: string | null; wad_completed_at: string | null } | null,
 ): string | null {
   if (!tx) return null;
   const poi = Boolean(tx.poi_sealed_at);
   const wad = Boolean(tx.wad_completed_at);
-  if (stage === "trading") return null;
-  if (stage === "compliance") return poi ? null : "Proof of Intent required";
-  if (!poi) return "Proof of Intent required";
-  if (!wad) return "WaD verification required";
+  if (stage === "compliance" && !poi) return "Proof of Intent required";
+  if (stage === "execution" || stage === "finality" || stage === "memory") {
+    if (!poi) return "Proof of Intent required";
+    if (!wad) return "WaD verification required";
+  }
+
+  const targetIdx = stepIndex(stage, step);
+  const currentIdx = stepIndex(tx.stage, tx.step);
+  if (targetIdx > currentIdx) return "Complete the earlier steps first";
   return null;
 }

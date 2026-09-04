@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -19,7 +20,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { sealProofOfIntent, completeWad, runAiProposal } from "@/lib/izenzo.functions";
 import { advance, fingerprintOf, money, recordEvent, shortHash, when, type Transaction, type TxEvent } from "@/lib/tx";
-import { stepDef, POI_COST, WAD_COST, type StageKey } from "@/lib/spine";
+import { SPINE, stageOf, stepDef, stepIndex, POI_COST, WAD_COST, type StageKey } from "@/lib/spine";
+import { cn } from "@/lib/utils";
 
 type Props = {
   tx: Transaction;
@@ -72,12 +74,78 @@ export function StepScreen(props: Props) {
   const def = stepDef(props.stage, props.step);
   return (
     <div className="space-y-6">
-      <header>
-        <p className="label-caps">{props.stage.replace("_", " ")}</p>
-        <h2 className="mt-1 text-lg font-semibold tracking-tight">{def?.label ?? props.step}</h2>
-        {def?.blurb && <p className="mt-1 text-sm text-muted-foreground">{def.blurb}</p>}
+      <header className="space-y-3">
+        <GateStepper tx={props.tx} stage={props.stage} step={props.step} />
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">{def?.label ?? props.step}</h2>
+          {def?.blurb && <p className="mt-1 text-sm text-muted-foreground">{def.blurb}</p>}
+        </div>
       </header>
       <Body {...props} />
+    </div>
+  );
+}
+
+/** Horizontal, sequential stepper for the steps within one gate. Steps ahead of the
+ * transaction's current position are locked — a gate's steps must be worked in order,
+ * even though the gates themselves are not necessarily worked in order. */
+function GateStepper({ tx, stage, step }: { tx: Transaction; stage: StageKey; step: string }) {
+  const gate = stageOf(stage);
+  if (!gate) return null;
+  const gateNumber = SPINE.findIndex((s) => s.key === stage) + 1;
+  const currentIdx = stepIndex(tx.stage, tx.step);
+
+  return (
+    <div>
+      <p className="label-caps">
+        {String(gateNumber).padStart(2, "0")} · {gate.label.toUpperCase()}
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-1 rounded-xl border border-border bg-muted/40 p-1.5">
+        {gate.steps.map((s) => {
+          const idx = stepIndex(stage, s.key);
+          const done = currentIdx > idx;
+          const isCurrent = s.key === step;
+          const locked = idx > currentIdx;
+
+          const inner = (
+            <span
+              className={cn(
+                "flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors",
+                isCurrent
+                  ? "bg-primary text-primary-foreground"
+                  : locked
+                    ? "text-muted-foreground/50"
+                    : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {done ? (
+                <Check className="h-3 w-3 shrink-0 text-success" />
+              ) : (
+                <span
+                  className={cn(
+                    "h-1.5 w-1.5 shrink-0 rounded-full",
+                    isCurrent ? "bg-primary-foreground" : "bg-current",
+                  )}
+                />
+              )}
+              {s.label}
+            </span>
+          );
+
+          if (locked) {
+            return (
+              <span key={s.key} className="cursor-not-allowed" title="Complete the earlier steps first">
+                {inner}
+              </span>
+            );
+          }
+          return (
+            <Link key={s.key} to="/tx/$id/$stage/$step" params={{ id: tx.id, stage, step: s.key }}>
+              {inner}
+            </Link>
+          );
+        })}
+      </div>
     </div>
   );
 }
