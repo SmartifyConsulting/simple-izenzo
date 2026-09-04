@@ -99,7 +99,7 @@ function Dashboard() {
       actions={
         <Link to="/transactions/new">
           <Button size="sm" className="gap-2">
-            <Plus className="h-3.5 w-3.5" /> New transaction
+            <Plus className="h-3.5 w-3.5" /> New Trade
           </Button>
         </Link>
       }

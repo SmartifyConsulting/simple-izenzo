@@ -12,6 +12,7 @@ import { useAuth } from "@/lib/auth";
 import { when } from "@/lib/tx";
 import { TOKEN_PRICE_USD } from "@/lib/spine";
 import { cn } from "@/lib/utils";
+import { formatHomeCurrency } from "@/lib/currency";
 
 export const Route = createFileRoute("/_authenticated/credits")({
   head: () => ({
@@ -83,6 +84,8 @@ function Credits() {
     },
   });
 
+  const homeValue = formatHomeCurrency((org?.credits ?? 0) * TOKEN_PRICE_USD, org?.country);
+
   const currentYear = new Date().getFullYear();
   const spentThisYear = ledger
     .filter((r) => r.delta < 0 && new Date(r.created_at).getFullYear() === currentYear)
@@ -125,11 +128,23 @@ function Credits() {
     <AppShell title="Tokens" description="One token is USD 10">
       <div className="max-w-3xl space-y-8">
         <div className="rounded-md border border-border p-5">
-          <p className="label-caps">Balance</p>
-          <p className="mt-1 text-3xl font-semibold tabular-nums">{org?.credits ?? 0}</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            A Proof of Intent costs 1 token. A WaD case costs 3.
-          </p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="label-caps">Balance</p>
+              <p className="mt-1 text-3xl font-semibold tabular-nums">{org?.credits ?? 0}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                A Proof of Intent costs 1 token. A WaD case costs 3.
+              </p>
+            </div>
+            <div className="shrink-0 text-right">
+              <p className="text-xs text-muted-foreground">1 token = USD {TOKEN_PRICE_USD}</p>
+              {homeValue && (
+                <p className="mt-1 text-sm font-semibold tabular-nums">
+                  ≈ {homeValue.formatted} {homeValue.code}
+                </p>
+              )}
+            </div>
+          </div>
 
           <div className="mt-5 border-t border-border pt-5">
             <p className="text-sm font-semibold">Buy tokens</p>
