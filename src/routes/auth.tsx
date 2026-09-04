@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/PasswordInput";
 import { mapAuthError, useAuth } from "@/lib/auth";
 
-type Search = { mode?: "signin" | "signup"; next?: string };
+type Search = { mode: "signin" | "signup"; next: string | undefined };
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (search: Record<string, unknown>): Search => ({
