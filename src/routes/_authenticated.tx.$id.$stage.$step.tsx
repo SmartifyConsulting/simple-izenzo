@@ -14,9 +14,9 @@ export const Route = createFileRoute("/_authenticated/tx/$id/$stage/$step")({
   head: () => ({
     meta: [
       { title: "Transaction — Izenzo" },
-      { name: "description", content: "Work a transaction along the Izenzo spine." },
+      { name: "description", content: "Work a transaction along the Izenzo Trade Gates." },
       { property: "og:title", content: "Transaction — Izenzo" },
-      { property: "og:description", content: "Work a transaction along the Izenzo spine." },
+      { property: "og:description", content: "Work a transaction along the Izenzo Trade Gates." },
     ],
   }),
   component: TxStepPage,

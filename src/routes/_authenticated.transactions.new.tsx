@@ -13,9 +13,9 @@ export const Route = createFileRoute("/_authenticated/transactions/new")({
   head: () => ({
     meta: [
       { title: "New transaction — Izenzo" },
-      { name: "description", content: "Open a new transaction at the head of the Izenzo spine." },
+      { name: "description", content: "Open a new transaction at the head of the Izenzo Trade Gates." },
       { property: "og:title", content: "New transaction — Izenzo" },
-      { property: "og:description", content: "Open a new transaction on the Izenzo spine." },
+      { property: "og:description", content: "Open a new transaction on the Izenzo Trade Gates." },
     ],
   }),
   component: NewTransaction,
@@ -80,7 +80,7 @@ function NewTransaction() {
   }
 
   return (
-    <AppShell title="New transaction" description="The head of the spine">
+    <AppShell title="New transaction" description="The head of the Trade Gates">
       <form onSubmit={submit} className="max-w-2xl space-y-6">
         <div className="rounded-md border border-border">
           <div className="border-b border-border px-5 py-3">

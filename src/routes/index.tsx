@@ -1,7 +1,49 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, ShieldCheck, FileLock2, GitBranch, Landmark, History } from "lucide-react";
+import { ArrowRight, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SPINE } from "@/lib/spine";
+
+const GATES = [
+  {
+    n: "01",
+    name: "Trading",
+    status: "NOT STARTED",
+    blurb: "Bid and offer, deal documents, counterparties, counter, confirm intent, POI.",
+    foot: "Discover Counterparty →",
+    locked: false,
+  },
+  {
+    n: "02",
+    name: "Compliance",
+    status: "NOT STARTED",
+    blurb: "WaD — Without a Doubt. KYC, KYB, UBO, PEP, AML/sanctions before Execution.",
+    foot: "Locked · needs POI",
+    locked: true,
+  },
+  {
+    n: "03",
+    name: "Execution",
+    status: "NOT STARTED",
+    blurb: "Project preparation, bankability, implementation, stakeholder entry/exit.",
+    foot: "Locked · needs WaD pass",
+    locked: true,
+  },
+  {
+    n: "04",
+    name: "Finality",
+    status: "NOT STARTED",
+    blurb: "Type, change/value event, evidence, validation and the finality record.",
+    foot: "Locked · needs Execution complete",
+    locked: true,
+  },
+  {
+    n: "05",
+    name: "Memory",
+    status: "EMPTY",
+    blurb: "Attributable record and Capital Deployment Assessment — hash-chained.",
+    foot: "View ledger →",
+    locked: false,
+  },
+];
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -16,14 +58,12 @@ export const Route = createFileRoute("/")({
       {
         property: "og:description",
         content:
-          "A trading spine that records every step: trading, compliance and governance, execution, finality and memory.",
+          "The Izenzo Trade Gates record every step: trading, compliance and governance, execution, finality and memory.",
       },
     ],
   }),
   component: Landing,
 });
-
-const STAGE_ICONS = [GitBranch, ShieldCheck, Landmark, FileLock2, History];
 
 function Landing() {
   return (
@@ -61,9 +101,9 @@ function Landing() {
             A transaction is not a conversation. It is a record.
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground">
-            Izenzo carries a trade along a single spine. Every step is written once, attributed to a
-            person, timestamped and fingerprinted. Intent is sealed before anything moves, and the
-            record can be read forward and backward for as long as it matters.
+            Izenzo carries a trade through the Izenzo Trade Gates. Every step is written once,
+            attributed to a person, timestamped and fingerprinted. Intent is sealed before anything
+            moves, and the record can be read forward and backward for as long as it matters.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link to="/auth" search={{ mode: "signup" }}>
@@ -81,27 +121,41 @@ function Landing() {
 
         <section className="border-y border-border bg-muted/40">
           <div className="mx-auto max-w-6xl px-5 py-14">
-            <h2 className="text-lg font-semibold tracking-tight">The spine</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Five stages. Nothing skips ahead of its gate.
+            <h2 className="text-lg font-semibold tracking-tight">Izenzo Trade Gates</h2>
+            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+              The Izenzo Trade Gates are modular. Each gate can operate as a distinct module, while
+              transaction data, approvals and evidence flow forwards and backwards through Trading,
+              Compliance, Execution, Finality and Memory. This is enabled by AI, agentic AI and AI+,
+              which facilitate a connective network across the Gates.
             </p>
-            <div className="mt-8 grid gap-px overflow-hidden rounded-md border border-border bg-border sm:grid-cols-2 lg:grid-cols-5">
-              {SPINE.map((stage, i) => {
-                const Icon = STAGE_ICONS[i] ?? GitBranch;
-                return (
-                  <div key={stage.key} className="bg-background p-5">
-                    <Icon className="h-4 w-4 text-muted-foreground" />
-                    <h3 className="mt-3 text-sm font-semibold">{stage.label}</h3>
-                    <ul className="mt-3 space-y-1.5">
-                      {stage.steps.map((s) => (
-                        <li key={s.key} className="text-xs text-muted-foreground">
-                          {s.label}
-                        </li>
-                      ))}
-                    </ul>
+            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+              {GATES.map((gate) => (
+                <div
+                  key={gate.n}
+                  className="flex min-h-[216px] flex-col rounded-2xl border border-border bg-background p-5 shadow-sm transition-shadow hover:shadow-md"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-[11px] text-muted-foreground">{gate.n}</span>
+                    <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-muted-foreground">
+                      {gate.status}
+                    </span>
                   </div>
-                );
-              })}
+                  <h3 className="mt-4 text-lg font-semibold tracking-tight">{gate.name}</h3>
+                  <p className="mt-1.5 flex-1 text-[13.5px] leading-relaxed text-muted-foreground">
+                    {gate.blurb}
+                  </p>
+                  <p
+                    className={
+                      gate.locked
+                        ? "mt-4 flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground"
+                        : "mt-4 text-[13px] font-semibold text-success"
+                    }
+                  >
+                    {gate.locked && <Lock className="h-3 w-3" />}
+                    {gate.foot}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
         </section>

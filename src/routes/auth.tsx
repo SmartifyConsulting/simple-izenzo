@@ -120,7 +120,7 @@ function AuthPage() {
             Intent is sealed before anything moves.
           </p>
           <p className="mt-3 text-sm leading-relaxed opacity-70">
-            Trading, compliance and governance, execution, finality, memory. One spine, one record.
+            Trading, compliance and governance, execution, finality, memory. One set of Trade Gates, one record.
           </p>
         </div>
         <p className="text-xs opacity-50">Izenzo</p>
@@ -132,7 +132,7 @@ function AuthPage() {
             {signup ? "Create your account" : "Sign in"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {signup ? "Open a seat on the Izenzo spine." : "Welcome back."}
+            {signup ? "Open a seat on the Izenzo Trade Gates." : "Welcome back."}
           </p>
 
           <form onSubmit={onSubmit} className="mt-7 space-y-4">
