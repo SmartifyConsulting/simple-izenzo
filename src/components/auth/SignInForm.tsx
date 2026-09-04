@@ -14,8 +14,8 @@ function safeNext(next: string | undefined) {
   return "/dashboard";
 }
 
-/** The account-creation form, shared between the standalone /auth page and the home page hero. */
-export function SignUpForm({
+/** The sign-in form, shared between the standalone /auth page and the home page hero. */
+export function SignInForm({
   next,
   className,
   hideHeader = false,
@@ -29,38 +29,16 @@ export function SignUpForm({
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
-
-  const rules = [
-    { ok: password.length >= 8, label: "At least 8 characters" },
-    { ok: /[A-Za-z]/.test(password) && /\d/.test(password), label: "A letter and a number" },
-    {
-      ok: password.length > 0 && password.toLowerCase() !== email.split("@")[0]?.toLowerCase(),
-      label: "Not your email name",
-    },
-  ];
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setMessage("");
-    if (rules.some((r) => !r.ok)) {
-      setMessage("Please meet all the password requirements.");
-      return;
-    }
     setBusy(true);
     try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}${safeNext(next)}`,
-          data: { full_name: fullName },
-        },
-      });
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      toast.success("Account created");
       navigate({ to: safeNext(next), replace: true });
     } catch (err) {
       const msg = mapAuthError((err as Error).message);
@@ -89,26 +67,16 @@ export function SignUpForm({
     <div className={className}>
       {!hideHeader && (
         <>
-          <h2 className="text-xl font-semibold tracking-tight">Create your account</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Open a seat on the Izenzo Trading Gateway.</p>
+          <h2 className="text-xl font-semibold tracking-tight">Sign in</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Welcome back.</p>
         </>
       )}
 
       <form onSubmit={onSubmit} className={hideHeader ? "space-y-4" : "mt-7 space-y-4"}>
         <div className="space-y-1.5">
-          <Label htmlFor="hero-name">Full name</Label>
+          <Label htmlFor="signin-email">Email</Label>
           <Input
-            id="hero-name"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            autoComplete="name"
-            required
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="hero-email">Email</Label>
-          <Input
-            id="hero-email"
+            id="signin-email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -117,21 +85,19 @@ export function SignUpForm({
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="hero-password">Password</Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="signin-password">Password</Label>
+            <Link to="/forgot-password" tabIndex={-1} className="text-xs text-muted-foreground hover:text-foreground">
+              Forgot password?
+            </Link>
+          </div>
           <PasswordInput
-            id="hero-password"
+            id="signin-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            autoComplete="new-password"
+            autoComplete="current-password"
             required
           />
-          <ul className="mt-2 space-y-1">
-            {rules.map((r) => (
-              <li key={r.label} className={"text-xs " + (r.ok ? "text-success" : "text-muted-foreground")}>
-                {r.ok ? "✓" : "•"} {r.label}
-              </li>
-            ))}
-          </ul>
         </div>
 
         {message && (
@@ -141,7 +107,7 @@ export function SignUpForm({
         )}
 
         <Button type="submit" className="w-full" disabled={busy}>
-          Create account
+          Sign in
         </Button>
       </form>
 
@@ -157,9 +123,9 @@ export function SignUpForm({
 
       {!hideFooterLink && (
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          Already have an account?{" "}
-          <Link to="/auth" search={{ mode: "signin", next }} className="font-medium text-foreground hover:underline">
-            Sign in
+          No account yet?{" "}
+          <Link to="/auth" search={{ mode: "signup", next }} className="font-medium text-foreground hover:underline">
+            Create one
           </Link>
         </p>
       )}

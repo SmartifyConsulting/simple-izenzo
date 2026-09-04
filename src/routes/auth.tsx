@@ -1,14 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { PasswordInput } from "@/components/PasswordInput";
-import { SignUpForm } from "@/components/auth/SignUpForm";
-import { mapAuthError, useAuth } from "@/lib/auth";
+import { useEffect } from "react";
+import { AuthTabs } from "@/components/auth/AuthTabs";
+import { useAuth } from "@/lib/auth";
 
 type Search = { mode?: "signin" | "signup" | undefined; next?: string | undefined };
 
@@ -37,47 +30,10 @@ function AuthPage() {
   const { mode, next } = Route.useSearch();
   const navigate = useNavigate();
   const { session, loading } = useAuth();
-  const signup = mode === "signup";
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
 
   useEffect(() => {
     if (!loading && session) navigate({ to: safeNext(next), replace: true });
   }, [loading, session, next, navigate]);
-
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setMessage("");
-    setBusy(true);
-    try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      navigate({ to: safeNext(next), replace: true });
-    } catch (err) {
-      const msg = mapAuthError((err as Error).message);
-      setMessage(msg);
-      toast.error(msg);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function google() {
-    setBusy(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) {
-      setBusy(false);
-      toast.error(mapAuthError(String(result.error)));
-      return;
-    }
-    if (result.redirected) return;
-    navigate({ to: safeNext(next), replace: true });
-  }
 
   return (
     <div className="flex min-h-screen">
@@ -100,78 +56,7 @@ function AuthPage() {
       </div>
 
       <div className="flex flex-1 items-center justify-center px-5 py-12">
-        {signup ? (
-          <SignUpForm next={next} className="w-full max-w-sm" />
-        ) : (
-          <div className="w-full max-w-sm">
-            <h1 className="text-xl font-semibold tracking-tight">Sign in</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Welcome back.</p>
-
-            <form onSubmit={onSubmit} className="mt-7 space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="email"
-                  required
-                />
-              </div>
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
-                  <Link
-                    to="/forgot-password"
-                    tabIndex={-1}
-                    className="text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
-                <PasswordInput
-                  id="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="current-password"
-                  required
-                />
-              </div>
-
-              {message && (
-                <p aria-live="polite" className="text-sm text-destructive">
-                  {message}
-                </p>
-              )}
-
-              <Button type="submit" className="w-full" disabled={busy}>
-                Sign in
-              </Button>
-            </form>
-
-            <div className="my-5 flex items-center gap-3">
-              <span className="h-px flex-1 bg-border" />
-              <span className="text-xs text-muted-foreground">or</span>
-              <span className="h-px flex-1 bg-border" />
-            </div>
-
-            <Button variant="outline" className="w-full" onClick={google} disabled={busy}>
-              Continue with Google
-            </Button>
-
-            <p className="mt-6 text-center text-sm text-muted-foreground">
-              No account yet?{" "}
-              <Link
-                to="/auth"
-                search={{ mode: "signup", next }}
-                className="font-medium text-foreground hover:underline"
-              >
-                Create one
-              </Link>
-            </p>
-          </div>
-        )}
+        <AuthTabs next={next} defaultTab={mode} className="w-full max-w-sm" />
       </div>
     </div>
   );

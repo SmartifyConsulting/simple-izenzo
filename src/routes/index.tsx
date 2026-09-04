@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Gauge } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SignUpForm } from "@/components/auth/SignUpForm";
+import { AuthTabs } from "@/components/auth/AuthTabs";
 import { SPINE, type StageKey } from "@/lib/spine";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
@@ -228,7 +228,7 @@ function Landing() {
                 </Link>
               </div>
             ) : (
-              <SignUpForm className="w-full max-w-sm rounded-2xl bg-background p-8 shadow-xl" />
+              <AuthTabs className="w-full max-w-sm rounded-2xl bg-background p-8 shadow-xl" />
             )}
           </div>
         </section>
@@ -239,8 +239,10 @@ function Landing() {
             <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">
               The Izenzo Trading Gateway is modular. Each gate can operate as a distinct module, while
               transaction data, approvals and evidence flow forwards and backwards through Trading,
-              Compliance, Execution, Finality and Memory. This is enabled by AI, agentic AI and AI+,
-              which facilitate a connective network across the Gates.
+              Compliance, Execution, Finality and Memory.
+              <br />
+              This is enabled by AI, agentic AI and AI+, which facilitate a connective network across
+              the Gates.
             </p>
             <p className="mt-8 flex items-center gap-1.5 whitespace-nowrap text-xs font-medium text-muted-foreground">
               <Gauge className="h-3.5 w-3.5 shrink-0" />
