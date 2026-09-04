@@ -149,6 +149,7 @@ function TokensTab() {
   const qc = useQueryClient();
   const [issue, setIssue] = useState({ orgId: "", amount: "1" });
   const [nudge, setNudge] = useState({ orgId: "", title: "", body: "" });
+  const [countryFilter, setCountryFilter] = useState("");
 
   const { data: orgs = [] } = useQuery({
     queryKey: ["admin-orgs"],
@@ -158,6 +159,15 @@ function TokensTab() {
       return data ?? [];
     },
   });
+
+  const countries = Array.from(new Set(orgs.map((o) => o.country).filter(Boolean))) as string[];
+  const filteredOrgs = countryFilter ? orgs.filter((o) => o.country === countryFilter) : orgs;
+
+  function nudgeRow(orgId: string) {
+    setNudge((n) => ({ ...n, orgId }));
+    document.getElementById("nudge-message")?.focus();
+    document.getElementById("nudge-form")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
 
   async function issueTokens(e: React.FormEvent) {
     e.preventDefault();
@@ -197,71 +207,123 @@ function TokensTab() {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      <form onSubmit={issueTokens} className="rounded-md border border-border p-5">
-        <h2 className="text-sm font-semibold">Issue tokens</h2>
-        <div className="mt-4 space-y-3">
-          <div className="space-y-1.5">
-            <Label>Organisation</Label>
-            <select
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-              value={issue.orgId}
-              onChange={(e) => setIssue({ ...issue, orgId: e.target.value })}
-            >
-              <option value="">Choose…</option>
-              {orgs.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.name} — {o.credits} tokens
-                </option>
-              ))}
-            </select>
+    <div className="space-y-6">
+      <div className="grid gap-6 lg:grid-cols-2">
+        <form onSubmit={issueTokens} className="rounded-md border border-border p-5">
+          <h2 className="text-sm font-semibold">Issue tokens</h2>
+          <div className="mt-4 space-y-3">
+            <div className="space-y-1.5">
+              <Label>Organisation</Label>
+              <select
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={issue.orgId}
+                onChange={(e) => setIssue({ ...issue, orgId: e.target.value })}
+              >
+                <option value="">Choose…</option>
+                {orgs.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name} — {o.credits} tokens
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Tokens</Label>
+              <Input
+                type="number"
+                min="1"
+                value={issue.amount}
+                onChange={(e) => setIssue({ ...issue, amount: e.target.value })}
+              />
+            </div>
+            <Button size="sm" type="submit">
+              Issue
+            </Button>
           </div>
-          <div className="space-y-1.5">
-            <Label>Tokens</Label>
-            <Input
-              type="number"
-              min="1"
-              value={issue.amount}
-              onChange={(e) => setIssue({ ...issue, amount: e.target.value })}
-            />
-          </div>
-          <Button size="sm" type="submit">
-            Issue
-          </Button>
-        </div>
-      </form>
+        </form>
 
-      <form onSubmit={sendNudge} className="rounded-md border border-border p-5">
-        <h2 className="text-sm font-semibold">Nudge</h2>
-        <div className="mt-4 space-y-3">
+        <form id="nudge-form" onSubmit={sendNudge} className="rounded-md border border-border p-5">
+          <h2 className="text-sm font-semibold">Nudge</h2>
+          <p className="text-xs text-muted-foreground">Sends to everyone, or pick one organisation below.</p>
+          <div className="mt-4 space-y-3">
+            <div className="space-y-1.5">
+              <Label>Organisation</Label>
+              <select
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={nudge.orgId}
+                onChange={(e) => setNudge({ ...nudge, orgId: e.target.value })}
+              >
+                <option value="">Everyone</option>
+                {orgs.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Message</Label>
+              <Input
+                id="nudge-message"
+                required
+                value={nudge.title}
+                onChange={(e) => setNudge({ ...nudge, title: e.target.value })}
+              />
+            </div>
+            <Button size="sm" type="submit" variant="outline">
+              Send nudge
+            </Button>
+          </div>
+        </form>
+      </div>
+
+      <div className="rounded-md border border-border">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-5">
+          <div>
+            <h2 className="text-sm font-semibold">Organisations</h2>
+            <p className="text-xs text-muted-foreground">{filteredOrgs.length} of {orgs.length}</p>
+          </div>
           <div className="space-y-1.5">
-            <Label>Organisation</Label>
+            <Label className="text-xs">Filter by country</Label>
             <select
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-              value={nudge.orgId}
-              onChange={(e) => setNudge({ ...nudge, orgId: e.target.value })}
+              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+              value={countryFilter}
+              onChange={(e) => setCountryFilter(e.target.value)}
             >
-              <option value="">Everyone</option>
-              {orgs.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.name}
+              <option value="">All countries</option>
+              {countries.map((c) => (
+                <option key={c} value={c}>
+                  {c}
                 </option>
               ))}
             </select>
           </div>
-          <div className="space-y-1.5">
-            <Label>Message</Label>
-            <Input
-              required
-              value={nudge.title}
-              onChange={(e) => setNudge({ ...nudge, title: e.target.value })}
-            />
-          </div>
-          <Button size="sm" type="submit" variant="outline">
-            Send nudge
-          </Button>
         </div>
-      </form>
+        {filteredOrgs.length === 0 ? (
+          <p className="p-6 text-sm text-muted-foreground">No organisations match this filter.</p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {filteredOrgs.map((o) => (
+              <li key={o.id} className="flex items-center justify-between gap-3 p-4 text-sm">
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{o.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {[o.country, o.sector].filter(Boolean).join(" · ") || "No details"}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Badge variant="secondary" className="font-normal">
+                    {o.credits} token{o.credits === 1 ? "" : "s"}
+                  </Badge>
+                  <Button size="sm" variant="outline" onClick={() => nudgeRow(o.id)}>
+                    Nudge
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
