@@ -73,14 +73,27 @@ function groupByMonth<T extends { created_at: string }>(rows: T[]): [string, T[]
 }
 
 function Credits() {
-  const { org, orgs, refresh } = useAuth();
+  const { org, orgs, roles, refresh } = useAuth();
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [amount, setAmount] = useState(1);
   const [orgFilter, setOrgFilter] = useState("all");
+  const isAdmin = roles.includes("admin");
 
-  const orgIds = orgs.map((o) => o.id);
-  const orgName = useMemo(() => new Map(orgs.map((o) => [o.id, o.name])), [orgs]);
+  const { data: allOrgs = [] } = useQuery({
+    queryKey: ["all-orgs-for-ledger"],
+    enabled: isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("organisations").select("id, name").order("name");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  // Admins can filter across every organisation; everyone else, only the ones they belong to.
+  const selectableOrgs = isAdmin ? allOrgs : orgs;
+  const orgIds = selectableOrgs.map((o) => o.id);
+  const orgName = useMemo(() => new Map(selectableOrgs.map((o) => [o.id, o.name])), [selectableOrgs]);
 
   const { data: ledger = [] } = useQuery({
     queryKey: ["credit_ledger", orgIds.join(",")],
@@ -287,26 +300,24 @@ function Credits() {
                 </span>
               </p>
             </div>
-            {orgs.length > 1 && (
-              <div className="space-y-1">
-                <label className="block text-right text-xs font-medium text-muted-foreground">
-                  Organisation
-                </label>
-                <Select value={orgFilter} onValueChange={setOrgFilter}>
-                  <SelectTrigger className="h-9 w-[220px] text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All organisations</SelectItem>
-                    {orgs.map((o) => (
-                      <SelectItem key={o.id} value={o.id}>
-                        {o.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            <div className="space-y-1">
+              <label className="block text-right text-xs font-medium text-muted-foreground">
+                Organisation
+              </label>
+              <Select value={orgFilter} onValueChange={setOrgFilter}>
+                <SelectTrigger className="h-9 w-[220px] text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All organisations</SelectItem>
+                  {selectableOrgs.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>
+                      {o.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="mt-3 overflow-hidden rounded-md border border-border">
             {filteredLedger.length === 0 ? (
@@ -334,7 +345,7 @@ function Credits() {
                               <th className="px-4 py-2 font-medium">Value</th>
                               <th className="px-4 py-2 font-medium">Reason</th>
                               <th className="px-4 py-2 font-medium">Deal</th>
-                              {orgFilter === "all" && orgs.length > 1 && (
+                              {orgFilter === "all" && selectableOrgs.length > 1 && (
                                 <th className="px-4 py-2 font-medium">Organisation</th>
                               )}
                               <th className="px-4 py-2 font-medium">When</th>
@@ -361,7 +372,7 @@ function Credits() {
                                 </td>
                                 <td className="px-4 py-2.5">{row.reason}</td>
                                 <td className="px-4 py-2.5 text-muted-foreground">{row.dealTitle ?? "—"}</td>
-                                {orgFilter === "all" && orgs.length > 1 && (
+                                {orgFilter === "all" && selectableOrgs.length > 1 && (
                                   <td className="px-4 py-2.5 text-muted-foreground">
                                     {orgName.get(row.org_id) ?? "—"}
                                   </td>
