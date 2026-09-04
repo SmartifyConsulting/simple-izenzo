@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { when } from "@/lib/tx";
 import { TOKEN_PRICE_USD } from "@/lib/spine";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/credits")({
   head: () => ({
@@ -139,7 +140,8 @@ function Credits() {
                         <span className="flex flex-1 items-center justify-between pr-3">
                           <span>{month}</span>
                           <span className="font-mono text-xs tabular-nums text-white/70">
-                            {net > 0 ? `+${net}` : net} · {rows.length} movement{rows.length === 1 ? "" : "s"}
+                            {net > 0 ? `+${net}` : net} tokens (USD {Math.abs(net) * TOKEN_PRICE_USD}) ·{" "}
+                            {rows.length} movement{rows.length === 1 ? "" : "s"}
                           </span>
                         </span>
                       </AccordionTrigger>
@@ -148,6 +150,7 @@ function Credits() {
                           <thead className="border-y border-border bg-muted/50 text-left">
                             <tr>
                               <th className="px-4 py-2 font-medium">Movement</th>
+                              <th className="px-4 py-2 font-medium">Value</th>
                               <th className="px-4 py-2 font-medium">Reason</th>
                               <th className="px-4 py-2 font-medium">When</th>
                             </tr>
@@ -155,8 +158,21 @@ function Credits() {
                           <tbody className="divide-y divide-border">
                             {rows.map((row) => (
                               <tr key={row.id}>
-                                <td className="px-4 py-2.5 font-mono tabular-nums">
+                                <td
+                                  className={cn(
+                                    "px-4 py-2.5 font-mono tabular-nums",
+                                    row.delta > 0 ? "text-success" : "text-destructive",
+                                  )}
+                                >
                                   {row.delta > 0 ? `+${row.delta}` : row.delta}
+                                </td>
+                                <td
+                                  className={cn(
+                                    "px-4 py-2.5 font-mono tabular-nums",
+                                    row.delta > 0 ? "text-success" : "text-destructive",
+                                  )}
+                                >
+                                  {row.delta < 0 ? "-" : "+"}USD {Math.abs(row.delta) * TOKEN_PRICE_USD}
                                 </td>
                                 <td className="px-4 py-2.5">{row.reason}</td>
                                 <td className="px-4 py-2.5 text-muted-foreground">{when(row.created_at)}</td>
