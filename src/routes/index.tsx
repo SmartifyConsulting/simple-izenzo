@@ -63,32 +63,36 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
-function GateCard({
-  gate,
-  staggerMs,
-}: {
-  gate: (typeof GATES)[number];
-  staggerMs: number;
-}) {
-  const steps = SPINE.find((s) => s.key === gate.stageKey)?.steps ?? [];
-  const [active, setActive] = useState(0);
+/** Cycles focus across the gates, and the active step within whichever gate has focus. */
+function useGateFocusCycle(stepMs = 1100) {
+  const [gateIdx, setGateIdx] = useState(0);
+  const [stepIdx, setStepIdx] = useState(0);
 
   useEffect(() => {
-    if (steps.length <= 1) return;
-    let interval: ReturnType<typeof setInterval>;
-    const timeout = setTimeout(() => {
-      interval = setInterval(() => {
-        setActive((i) => (i + 1) % steps.length);
-      }, 1700);
-    }, staggerMs);
-    return () => {
-      clearTimeout(timeout);
-      clearInterval(interval);
-    };
-  }, [steps.length, staggerMs]);
+    const steps = SPINE.find((s) => s.key === GATES[gateIdx]!.stageKey)?.steps ?? [];
+    const id = setInterval(() => {
+      setStepIdx((prev) => {
+        if (prev + 1 >= steps.length) {
+          setGateIdx((g) => (g + 1) % GATES.length);
+          return 0;
+        }
+        return prev + 1;
+      });
+    }, stepMs);
+    return () => clearInterval(id);
+  }, [gateIdx, stepMs]);
 
+  return { gateIdx, stepIdx };
+}
+
+function GateCard({ gate, focused }: { gate: (typeof GATES)[number]; focused: boolean }) {
   return (
-    <div className="flex min-h-[216px] flex-col rounded-2xl border border-border bg-background p-5 shadow-sm">
+    <div
+      className={cn(
+        "flex min-h-[190px] flex-col rounded-2xl border bg-background p-5 shadow-sm transition-all duration-500",
+        focused ? "border-primary/40 shadow-md opacity-100" : "border-border opacity-40",
+      )}
+    >
       <div className="flex items-center justify-between">
         <span className="font-mono text-[11px] text-muted-foreground">{gate.n}</span>
         <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-muted-foreground">
@@ -97,30 +101,52 @@ function GateCard({
       </div>
       <h3 className="mt-4 text-lg font-semibold tracking-tight">{gate.name}</h3>
       <p className="mt-1.5 flex-1 text-[13.5px] leading-relaxed text-muted-foreground">{gate.blurb}</p>
+    </div>
+  );
+}
 
-      {steps.length > 0 && steps[active] && (
-        <div className="mt-4">
-          <p key={active} className="animate-in fade-in text-[13px] font-semibold text-primary duration-500">
-            {steps[active].label}
-          </p>
-          <div className="mt-2 flex gap-1">
-            {steps.map((s, i) => (
+function GateStepStrip({ gate, stepIdx }: { gate: (typeof GATES)[number]; stepIdx: number }) {
+  const steps = SPINE.find((s) => s.key === gate.stageKey)?.steps ?? [];
+  return (
+    <div className="mt-4 rounded-xl border border-border bg-background p-4">
+      <p className="label-caps">
+        {gate.n} · {gate.name.toUpperCase()}
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+        {steps.map((s, i) => {
+          const done = i < stepIdx;
+          const isCurrent = i === stepIdx;
+          return (
+            <span
+              key={s.key}
+              className={cn(
+                "flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors duration-500",
+                isCurrent
+                  ? "bg-primary text-primary-foreground"
+                  : done
+                    ? "text-foreground"
+                    : "text-muted-foreground/50",
+              )}
+            >
               <span
-                key={s.key}
                 className={cn(
-                  "h-1 flex-1 rounded-full transition-colors duration-500",
-                  i === active ? "bg-primary" : "bg-muted",
+                  "h-1.5 w-1.5 shrink-0 rounded-full",
+                  isCurrent ? "bg-primary-foreground" : "bg-current",
                 )}
               />
-            ))}
-          </div>
-        </div>
-      )}
+              {s.label}
+            </span>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
 function Landing() {
+  const { gateIdx, stepIdx } = useGateFocusCycle();
+  const focusedGate = GATES[gateIdx]!;
+
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur">
@@ -185,9 +211,11 @@ function Landing() {
             </p>
             <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
               {GATES.map((gate, i) => (
-                <GateCard key={gate.n} gate={gate} staggerMs={i * 220} />
+                <GateCard key={gate.n} gate={gate} focused={i === gateIdx} />
               ))}
             </div>
+
+            <GateStepStrip gate={focusedGate} stepIdx={stepIdx} />
           </div>
         </section>
 
