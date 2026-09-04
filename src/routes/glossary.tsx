@@ -8,12 +8,12 @@ export const Route = createFileRoute("/glossary")({
       {
         name: "description",
         content:
-          "Plain definitions of the Izenzo terms: the Trade Gates, Proof of Intent, WaD, finality, memory and the token gates.",
+          "Plain definitions of the Izenzo terms: the Trading Gateway, Proof of Intent, WaD, finality, memory and the token gates.",
       },
       { property: "og:title", content: "Terms & Glossary — Izenzo" },
       {
         property: "og:description",
-        content: "Plain definitions of the Izenzo terms used across the Izenzo Trade Gates.",
+        content: "Plain definitions of the Izenzo terms used across the Izenzo Trading Gateway.",
       },
     ],
   }),
@@ -22,7 +22,7 @@ export const Route = createFileRoute("/glossary")({
 
 const TERMS: { term: string; body: string }[] = [
   {
-    term: "Izenzo Trade Gates",
+    term: "The Izenzo Trading Gateway",
     body: "The single ordered path a transaction follows: Trading, Compliance & Governance, Execution, Finality, Memory. Steps are written once and never rewritten.",
   },
   {

@@ -58,7 +58,7 @@ export const Route = createFileRoute("/")({
       {
         property: "og:description",
         content:
-          "The Izenzo Trade Gates record every step: trading, compliance and governance, execution, finality and memory.",
+          "The Izenzo Trading Gateway records every step: trading, compliance and governance, execution, finality and memory.",
       },
     ],
   }),
@@ -101,7 +101,7 @@ function Landing() {
             A transaction is not a conversation. It is a record.
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground">
-            Izenzo carries a trade through the Izenzo Trade Gates. Every step is written once,
+            Izenzo carries a trade through the Izenzo Trading Gateway. Every step is written once,
             attributed to a person, timestamped and fingerprinted. Intent is sealed before anything
             moves, and the record can be read forward and backward for as long as it matters.
           </p>
@@ -121,9 +121,9 @@ function Landing() {
 
         <section className="border-y border-border bg-muted/40">
           <div className="mx-auto max-w-6xl px-5 py-14">
-            <h2 className="text-lg font-semibold tracking-tight">Izenzo Trade Gates</h2>
+            <h2 className="text-lg font-semibold tracking-tight">The Izenzo Trading Gateway</h2>
             <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-              The Izenzo Trade Gates are modular. Each gate can operate as a distinct module, while
+              The Izenzo Trading Gateway is modular. Each gate can operate as a distinct module, while
               transaction data, approvals and evidence flow forwards and backwards through Trading,
               Compliance, Execution, Finality and Memory. This is enabled by AI, agentic AI and AI+,
               which facilitate a connective network across the Gates.

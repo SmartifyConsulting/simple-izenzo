@@ -20,7 +20,7 @@ export function SpineRail({
 
   return (
     <nav className="lg:sticky lg:top-20">
-      <p className="label-caps px-1">Trade Gates</p>
+      <p className="label-caps px-1">Trading Gateway</p>
       <ol className="mt-3 space-y-5">
         {SPINE.map((stage) => {
           const locked = lockReason(stage.key as StageKey, stage.steps[0]!.key, tx);

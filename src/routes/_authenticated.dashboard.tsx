@@ -13,9 +13,9 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
       { title: "Dashboard — Izenzo" },
-      { name: "description", content: "Your live transactions and where each one sits on the Trade Gates." },
+      { name: "description", content: "Your live transactions and where each one sits on the Trading Gateway." },
       { property: "og:title", content: "Dashboard — Izenzo" },
-      { property: "og:description", content: "Your live transactions across the Izenzo Trade Gates." },
+      { property: "og:description", content: "Your live transactions across the Izenzo Trading Gateway." },
     ],
   }),
   component: Dashboard,
@@ -104,7 +104,7 @@ function Dashboard() {
                 <tr className="text-left">
                   <th className="px-4 py-2.5 font-medium">Transaction</th>
                   <th className="hidden px-4 py-2.5 font-medium sm:table-cell">Value</th>
-                  <th className="px-4 py-2.5 font-medium">On the Trade Gates</th>
+                  <th className="px-4 py-2.5 font-medium">On the Trading Gateway</th>
                   <th className="hidden px-4 py-2.5 font-medium md:table-cell">Opened</th>
                   <th className="w-10" />
                 </tr>
