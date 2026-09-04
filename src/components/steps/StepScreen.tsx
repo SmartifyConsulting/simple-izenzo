@@ -601,7 +601,7 @@ function AiStep({ tx, reload, kind }: Props & { kind: "ai" | "ai_plus" }) {
     const { data: userData } = await supabase.auth.getUser();
     await supabase
       .from("ai_proposals")
-      .update({ adopted_by: userData.user?.id, adopted_at: new Date().toISOString() })
+      .update({ adopted_by: userData.user?.id ?? null, adopted_at: new Date().toISOString() })
       .eq("id", id);
     await recordEvent({
       transactionId: tx.id,
@@ -1355,7 +1355,7 @@ function FinalityStep({ tx, step, reload }: Props) {
         const cfg = FINALITY_FIELD[step]!;
         await supabase
           .from("finality_records")
-          .update({ [cfg.field]: value })
+          .update({ [cfg.field]: value } as never)
           .eq("id", rec.id);
         await recordEvent({
           transactionId: tx.id,
