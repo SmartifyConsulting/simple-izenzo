@@ -182,7 +182,7 @@ function Landing() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-sidebar-foreground/55">
                 Trading · Compliance · Execution · Finality · Memory
               </p>
-              <h1 className="mt-4 text-4xl font-semibold leading-[1.1] tracking-tight sm:text-5xl">
+              <h1 className="mt-4 text-4xl font-semibold leading-[1.1] tracking-tight text-white sm:text-5xl">
                 A transaction is not a conversation. It is a record.
               </h1>
               <p className="mt-5 max-w-lg text-base leading-relaxed text-sidebar-foreground/75">
@@ -204,9 +204,9 @@ function Landing() {
             </div>
           </div>
 
-          <div className="flex flex-1 items-center justify-center bg-background px-5 py-16 sm:py-20">
+          <div className="flex flex-1 items-center justify-center bg-sidebar px-5 py-16 sm:py-20">
             {user ? (
-              <div className="w-full max-w-sm text-center">
+              <div className="w-full max-w-sm rounded-2xl bg-background p-8 text-center shadow-xl">
                 <p className="text-sm text-muted-foreground">You already have a seat.</p>
                 <Link to="/dashboard" className="mt-4 inline-block">
                   <Button size="lg" className="gap-2">
@@ -215,7 +215,7 @@ function Landing() {
                 </Link>
               </div>
             ) : (
-              <SignUpForm className="w-full max-w-sm" />
+              <SignUpForm className="w-full max-w-sm rounded-2xl bg-background p-8 shadow-xl" />
             )}
           </div>
         </section>
@@ -245,28 +245,30 @@ function Landing() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-6xl px-5 py-16">
-          <div className="grid gap-8 md:grid-cols-3">
-            <div>
-              <h3 className="text-sm font-semibold">Proof of Intent is a gate</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Nothing past Trading opens until a person confirms intent and the Proof of Intent is
-                sealed. One token, USD 10, charged on the server, not hidden in the interface.
-              </p>
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold">WaD before execution</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Who and Domicile — KYC, KYB, UBO, sanctions and PEP — must clear before execution can
-                begin. Three further tokens, USD 30.
-              </p>
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold">AI proposes, people decide</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                AI and AI+ read the record and put forward proposals. They are stored as proposals.
-                A person adopts them, and that adoption is itself an event.
-              </p>
+        <section className="bg-sidebar text-white">
+          <div className="mx-auto max-w-6xl px-5 py-16">
+            <div className="grid gap-8 md:grid-cols-3">
+              <div>
+                <h3 className="text-sm font-semibold text-white">Proof of Intent is a gate</h3>
+                <p className="mt-2 text-sm leading-relaxed text-white/70">
+                  Nothing past Trading opens until a person confirms intent and the Proof of Intent is
+                  sealed. One token, USD 10, charged on the server, not hidden in the interface.
+                </p>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-white">WaD before execution</h3>
+                <p className="mt-2 text-sm leading-relaxed text-white/70">
+                  Without a Doubt — KYC, KYB, UBO, sanctions and PEP — must clear before execution can
+                  begin. Three further tokens, USD 30.
+                </p>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-white">AI proposes, people decide</h3>
+                <p className="mt-2 text-sm leading-relaxed text-white/70">
+                  AI and AI+ read the record and put forward proposals. They are stored as proposals.
+                  A person adopts them, and that adoption is itself an event.
+                </p>
+              </div>
             </div>
           </div>
         </section>

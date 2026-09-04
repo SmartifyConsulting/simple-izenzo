@@ -58,7 +58,7 @@ const TERMS: { term: string; body: string }[] = [
     body: "The unit of account for gated actions. One token is USD 10. Tokens are drawn from the organisation's balance and every movement is written to the ledger.",
   },
   {
-    term: "WaD — Who and Domicile",
+    term: "WaD — Without a Doubt",
     body: "The compliance and governance control: KYC, KYB, UBO, sanctions and PEP screening, plus authority to act. It costs 3 further tokens (USD 30) and must clear before Execution opens.",
   },
   {

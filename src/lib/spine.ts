@@ -33,7 +33,7 @@ export const SPINE: StageDef[] = [
     key: "compliance",
     label: "Compliance Gate",
     steps: [
-      { key: "wad", label: "WaD Case", blurb: "Who and Domicile: KYC, KYB, UBO, sanctions and PEP. 3 tokens (USD 30)." },
+      { key: "wad", label: "WaD Case", blurb: "Without a Doubt: KYC, KYB, UBO, sanctions and PEP. 3 tokens (USD 30)." },
     ],
   },
   {

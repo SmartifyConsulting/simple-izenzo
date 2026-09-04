@@ -1203,7 +1203,7 @@ function WadStep({ tx, reload }: Props) {
     return (
       <Panel title="WaD — cleared" description={`Cleared ${when(tx.wad_completed_at)}`}>
         <p className="text-sm text-muted-foreground">
-          Who and Domicile has cleared. Execution is open.
+          Without a Doubt has cleared. Execution is open.
         </p>
       </Panel>
     );
@@ -1211,7 +1211,7 @@ function WadStep({ tx, reload }: Props) {
 
   return (
     <Panel
-      title="Who and Domicile"
+      title="Without a Doubt"
       description={`KYC, KYB, UBO, sanctions and PEP. Costs ${WAD_COST} tokens (USD 30) on decision.`}
       footer={
         <div className="flex flex-wrap justify-end gap-2">
