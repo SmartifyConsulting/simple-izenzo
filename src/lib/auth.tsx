@@ -105,7 +105,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               bumpedTokens.add(token);
               const provider = (s.user.app_metadata as { provider?: string })?.provider ?? "email";
               await supabase.rpc("bump_login_count");
-              if (provider !== "email") await supabase.rpc("mark_email_verified_if_oauth");
+              if (provider !== "email" || s.user.email_confirmed_at) {
+                await supabase.rpc("mark_email_verified");
+              }
             }
           }
           await load(s?.user?.id);

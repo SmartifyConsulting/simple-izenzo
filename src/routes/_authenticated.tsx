@@ -27,12 +27,14 @@ function RequireEmailVerified() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   const provider = (user?.app_metadata as { provider?: string } | undefined)?.provider ?? "email";
+  const nativelyConfirmed = Boolean(user?.email_confirmed_at);
   const mustVerify =
     !loading &&
     !!profile &&
     provider === "email" &&
     (profile.login_count ?? 0) >= 2 &&
-    !profile.email_verified_at;
+    !profile.email_verified_at &&
+    !nativelyConfirmed;
 
   const needsOrg = !loading && !!profile && !profile.org_id;
   const onOrgSetup = pathname.startsWith("/account/organisations");
