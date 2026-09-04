@@ -128,7 +128,7 @@ function Credits() {
     <AppShell title="Tokens" description="One token is USD 10">
       <div className="max-w-3xl space-y-8">
         <div className="rounded-md border border-border p-5">
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="label-caps">Balance</p>
               <p className="mt-1 text-3xl font-semibold tabular-nums">{org?.credits ?? 0}</p>
@@ -143,49 +143,47 @@ function Credits() {
                   ≈ {homeValue.formatted} {homeValue.code}
                 </p>
               )}
-            </div>
-          </div>
 
-          <div className="mt-5 border-t border-border pt-5">
-            <p className="text-sm font-semibold">Buy tokens</p>
-            <div className="mt-3 flex flex-wrap items-end gap-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Amount</label>
-                <Select value={pack} onValueChange={setPack}>
-                  <SelectTrigger className="h-9 w-[160px] text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PACKS.map((n) => (
-                      <SelectItem key={n} value={String(n)}>
-                        {n} token{n === 1 ? "" : "s"} — USD {n * TOKEN_PRICE_USD}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="custom">Custom amount…</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {pack === "custom" && (
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Tokens</label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={customAmount}
-                    onChange={(e) => setCustomAmount(e.target.value)}
-                    className="h-9 w-28 text-sm"
-                  />
+              <p className="mt-4 text-sm font-semibold">Buy tokens</p>
+              <div className="mt-2 flex flex-wrap items-end justify-end gap-2">
+                <div className="space-y-1.5 text-left">
+                  <label className="text-xs font-medium text-muted-foreground">Amount</label>
+                  <Select value={pack} onValueChange={setPack}>
+                    <SelectTrigger className="h-9 w-[160px] text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PACKS.map((n) => (
+                        <SelectItem key={n} value={String(n)}>
+                          {n} token{n === 1 ? "" : "s"} — USD {n * TOKEN_PRICE_USD}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="custom">Custom amount…</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+                {pack === "custom" && (
+                  <div className="space-y-1.5 text-left">
+                    <label className="text-xs font-medium text-muted-foreground">Tokens</label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={customAmount}
+                      onChange={(e) => setCustomAmount(e.target.value)}
+                      className="h-9 w-28 text-sm"
+                    />
+                  </div>
+                )}
+                <Button size="sm" disabled={busy || !org || selectedAmount <= 0} onClick={buy}>
+                  Buy {selectedAmount > 0 ? `— USD ${selectedAmount * TOKEN_PRICE_USD}` : ""}
+                </Button>
+              </div>
+              {!org && (
+                <p className="mt-2 max-w-[220px] text-xs text-muted-foreground">
+                  Add your organisation details before buying tokens.
+                </p>
               )}
-              <Button size="sm" disabled={busy || !org || selectedAmount <= 0} onClick={buy}>
-                Buy {selectedAmount > 0 ? `— USD ${selectedAmount * TOKEN_PRICE_USD}` : ""}
-              </Button>
             </div>
-            {!org && (
-              <p className="mt-3 text-sm text-muted-foreground">
-                Add your organisation details before buying tokens.
-              </p>
-            )}
           </div>
         </div>
 
