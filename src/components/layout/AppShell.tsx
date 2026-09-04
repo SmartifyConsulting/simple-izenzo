@@ -22,6 +22,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import { Logo } from "@/components/Logo";
 
 type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; seats?: string[] };
 
@@ -41,11 +42,8 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
-      <Link to="/dashboard" className="flex h-42 items-center gap-2 border-b border-sidebar-border px-4">
-        <span className="flex h-36 w-36 shrink-0 items-center justify-center rounded-xl bg-sidebar-primary text-[66px] font-bold text-sidebar-primary-foreground">
-          IZ
-        </span>
-        <span className="text-sm font-semibold text-sidebar-primary">Izenzo</span>
+      <Link to="/dashboard" className="flex h-42 items-center border-b border-sidebar-border px-6">
+        <Logo onDark className="h-16 w-auto" />
       </Link>
 
       <div className="flex items-center gap-2.5 px-4 py-4">

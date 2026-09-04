@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/PasswordInput";
 import { mapAuthError } from "@/lib/auth";
+import { Logo } from "@/components/Logo";
 
 export const Route = createFileRoute("/reset-password")({
   head: () => ({
@@ -62,11 +63,8 @@ function ResetPassword() {
   return (
     <div className="flex min-h-screen items-center justify-center px-5 py-12">
       <div className="w-full max-w-sm">
-        <Link to="/" className="flex items-center gap-2">
-          <span className="flex h-6 w-6 items-center justify-center rounded bg-foreground text-[11px] font-bold text-background">
-            IZ
-          </span>
-          <span className="text-sm font-semibold">Izenzo</span>
+        <Link to="/">
+          <Logo />
         </Link>
         <h1 className="mt-8 text-xl font-semibold tracking-tight">Choose a new password</h1>
 
