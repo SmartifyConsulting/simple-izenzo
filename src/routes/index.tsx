@@ -130,9 +130,11 @@ function Landing() {
             </p>
             <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
               {GATES.map((gate) => (
-                <div
+                <Link
                   key={gate.n}
-                  className="flex min-h-[216px] flex-col rounded-2xl border border-border bg-background p-5 shadow-sm transition-shadow hover:shadow-md"
+                  to="/auth"
+                  search={{ mode: "signup" }}
+                  className="flex min-h-[216px] flex-col rounded-2xl border border-border bg-background p-5 text-left shadow-sm transition-shadow hover:shadow-md hover:border-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-[11px] text-muted-foreground">{gate.n}</span>
@@ -154,7 +156,7 @@ function Landing() {
                     {gate.locked && <Lock className="h-3 w-3" />}
                     {gate.foot}
                   </p>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
