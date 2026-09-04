@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SPINE, type StageKey } from "@/lib/spine";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth";
 
 const GATES: { n: string; name: string; status: string; blurb: string; stageKey: StageKey }[] = [
   {
@@ -63,33 +64,58 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
-function GateCard({
-  gate,
-  selected,
-  onSelect,
-}: {
-  gate: (typeof GATES)[number];
-  selected: boolean;
-  onSelect: () => void;
-}) {
+const GATE_CARD_CLASS =
+  "flex min-h-[190px] flex-col rounded-2xl border-2 bg-background p-5 text-left shadow-sm transition-all";
+const GATE_CARD_SELECTED = "border-primary bg-primary/[0.06] shadow-lg ring-4 ring-primary/15";
+const GATE_CARD_IDLE = "border-border hover:border-foreground/30";
+
+function GateCardInner({ gate, selected }: { gate: (typeof GATES)[number]; selected: boolean }) {
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      aria-pressed={selected}
-      className={cn(
-        "flex min-h-[190px] flex-col rounded-2xl border bg-background p-5 text-left shadow-sm transition-colors",
-        selected ? "border-primary/40 shadow-md" : "border-border hover:border-foreground/20",
-      )}
-    >
+    <>
       <div className="flex items-center justify-between">
-        <span className="font-mono text-[11px] text-muted-foreground">{gate.n}</span>
+        <span
+          className={cn(
+            "font-mono text-[11px]",
+            selected ? "text-primary" : "text-muted-foreground",
+          )}
+        >
+          {gate.n}
+        </span>
         <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-muted-foreground">
           {gate.status}
         </span>
       </div>
       <h3 className="mt-4 text-lg font-semibold tracking-tight">{gate.name}</h3>
       <p className="mt-1.5 flex-1 text-[13.5px] leading-relaxed text-muted-foreground">{gate.blurb}</p>
+    </>
+  );
+}
+
+/** Signed out: click toggles the step preview below. Signed in: click opens the gate for real. */
+function GateCard({
+  gate,
+  selected,
+  onSelect,
+  href,
+}: {
+  gate: (typeof GATES)[number];
+  selected: boolean;
+  onSelect: () => void;
+  href?: "/transactions/new" | "/dashboard" | undefined;
+}) {
+  const className = cn(GATE_CARD_CLASS, selected ? GATE_CARD_SELECTED : GATE_CARD_IDLE);
+
+  if (href) {
+    return (
+      <Link to={href} className={className}>
+        <GateCardInner gate={gate} selected={selected} />
+      </Link>
+    );
+  }
+
+  return (
+    <button type="button" onClick={onSelect} aria-pressed={selected} className={className}>
+      <GateCardInner gate={gate} selected={selected} />
     </button>
   );
 }
@@ -118,6 +144,7 @@ function GateStepStrip({ gate }: { gate: (typeof GATES)[number] }) {
 
 function Landing() {
   const [selectedGate, setSelectedGate] = useState<number | null>(null);
+  const { user } = useAuth();
 
   return (
     <div className="min-h-screen bg-background">
@@ -188,11 +215,12 @@ function Landing() {
                   gate={gate}
                   selected={i === selectedGate}
                   onSelect={() => setSelectedGate((cur) => (cur === i ? null : i))}
+                  href={user ? (gate.stageKey === "trading" ? "/transactions/new" : "/dashboard") : undefined}
                 />
               ))}
             </div>
 
-            {selectedGate !== null && <GateStepStrip gate={GATES[selectedGate]!} />}
+            {!user && selectedGate !== null && <GateStepStrip gate={GATES[selectedGate]!} />}
           </div>
         </section>
 
