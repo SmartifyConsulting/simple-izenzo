@@ -23,7 +23,7 @@ export const Route = createFileRoute("/glossary")({
 const TERMS: { term: string; body: string }[] = [
   {
     term: "The Izenzo Trading Gateway",
-    body: "The single ordered path a transaction follows: Trading, Compliance & Governance, Execution, Finality, Memory. Steps are written once and never rewritten.",
+    body: "The single ordered path a transaction follows: Trading Gate, Compliance Gate, Execution Gate, Finality Gate, Memory Gate. Steps are written once and never rewritten.",
   },
   {
     term: "Bid / Offer",

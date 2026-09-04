@@ -15,7 +15,7 @@ export type StageDef = {
 export const SPINE: StageDef[] = [
   {
     key: "trading",
-    label: "Trading",
+    label: "Trading Gate",
     steps: [
       { key: "bid-offer", label: "Bid / Offer", blurb: "Record the opening bid or offer and its terms." },
       { key: "documents", label: "Other Docs", blurb: "Attach supporting documents with a fingerprint." },
@@ -31,14 +31,14 @@ export const SPINE: StageDef[] = [
   },
   {
     key: "compliance",
-    label: "Compliance & Governance",
+    label: "Compliance Gate",
     steps: [
       { key: "wad", label: "WaD Case", blurb: "Who and Domicile: KYC, KYB, UBO, sanctions and PEP. 3 tokens (USD 30)." },
     ],
   },
   {
     key: "execution",
-    label: "Execution",
+    label: "Execution Gate",
     steps: [
       { key: "entry", label: "Execution Entry", blurb: "Open execution and record the entry position." },
       { key: "preparation", label: "Project Preparation", blurb: "Concept, pre-feasibility and feasibility." },
@@ -49,7 +49,7 @@ export const SPINE: StageDef[] = [
   },
   {
     key: "finality",
-    label: "Finality",
+    label: "Finality Gate",
     steps: [
       { key: "entry", label: "Finality Entry", blurb: "Open the finality record." },
       { key: "type", label: "Finality Type", blurb: "Completion, termination, novation or lapse." },
@@ -61,7 +61,7 @@ export const SPINE: StageDef[] = [
   },
   {
     key: "memory",
-    label: "Memory",
+    label: "Memory Gate",
     steps: [
       { key: "ledger", label: "Memory Ledger", blurb: "Read the transaction forward and backward." },
     ],

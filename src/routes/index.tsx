@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 const GATES = [
   {
     n: "01",
-    name: "Trading",
+    name: "Trading Gate",
     status: "NOT STARTED",
     blurb: "Bid and offer, deal documents, counterparties, counter, confirm intent, POI.",
     foot: "Discover Counterparty →",
@@ -13,7 +13,7 @@ const GATES = [
   },
   {
     n: "02",
-    name: "Compliance",
+    name: "Compliance Gate",
     status: "NOT STARTED",
     blurb: "WaD — Without a Doubt. KYC, KYB, UBO, PEP, AML/sanctions before Execution.",
     foot: "Locked · needs POI",
@@ -21,7 +21,7 @@ const GATES = [
   },
   {
     n: "03",
-    name: "Execution",
+    name: "Execution Gate",
     status: "NOT STARTED",
     blurb: "Project preparation, bankability, implementation, stakeholder entry/exit.",
     foot: "Locked · needs WaD pass",
@@ -29,7 +29,7 @@ const GATES = [
   },
   {
     n: "04",
-    name: "Finality",
+    name: "Finality Gate",
     status: "NOT STARTED",
     blurb: "Type, change/value event, evidence, validation and the finality record.",
     foot: "Locked · needs Execution complete",
@@ -37,7 +37,7 @@ const GATES = [
   },
   {
     n: "05",
-    name: "Memory",
+    name: "Memory Gate",
     status: "EMPTY",
     blurb: "Attributable record and Capital Deployment Assessment — hash-chained.",
     foot: "View ledger →",
