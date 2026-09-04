@@ -10,7 +10,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { money, when, type Transaction } from "@/lib/tx";
-import { SPINE, stageOf, stepDef } from "@/lib/spine";
+import { SPINE, stageOf, stepDef, type StageKey } from "@/lib/spine";
+import { cn } from "@/lib/utils";
+
+const STAGE_BADGE_CLASS: Record<StageKey, string> = {
+  trading: "bg-info/15 text-info",
+  compliance: "bg-warning/20 text-warning",
+  execution: "bg-[oklch(0.55_0.14_310)]/15 text-[oklch(0.55_0.14_310)]",
+  finality: "bg-[oklch(0.5_0.13_35)]/15 text-[oklch(0.5_0.13_35)]",
+  memory: "bg-success/15 text-success",
+};
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -199,7 +208,7 @@ function Dashboard() {
                       {money(t.price, t.currency)}
                     </td>
                     <td className="px-4 py-3">
-                      <Badge variant="secondary" className="font-normal">
+                      <Badge variant="outline" className={cn("font-normal border-transparent", STAGE_BADGE_CLASS[t.stage])}>
                         {stageOf(t.stage)?.label} · {stepDef(t.stage, t.step)?.label ?? t.step}
                       </Badge>
                     </td>

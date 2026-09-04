@@ -26,11 +26,7 @@ import { cn } from "@/lib/utils";
 
 type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; seats?: string[] };
 
-const NAV: NavItem[] = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/inbox", label: "Inbox", icon: Inbox },
-  { to: "/admin", label: "Administration", icon: ShieldCheck, seats: ["admin"] },
-];
+const NAV: NavItem[] = [{ to: "/inbox", label: "Inbox", icon: Inbox }];
 
 function greeting() {
   const hour = new Date().getHours();
@@ -46,12 +42,12 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
-      <div className="flex h-14 items-center gap-2 border-b border-sidebar-border px-4">
+      <Link to="/dashboard" className="flex h-14 items-center gap-2 border-b border-sidebar-border px-4">
         <span className="flex h-6 w-6 items-center justify-center rounded bg-sidebar-primary text-[11px] font-bold text-sidebar-primary-foreground">
           IZ
         </span>
         <span className="text-sm font-semibold text-sidebar-primary">Izenzo</span>
-      </div>
+      </Link>
 
       <div className="flex items-center gap-2.5 px-4 py-4">
         {org?.avatar_url && (
@@ -129,6 +125,11 @@ function AvatarMenu() {
         <DropdownMenuItem onClick={() => navigate({ to: "/account/billing" })}>
           <Receipt className="mr-2 h-3.5 w-3.5" /> Billing History
         </DropdownMenuItem>
+        {roles.includes("admin") && (
+          <DropdownMenuItem onClick={() => navigate({ to: "/admin" })}>
+            <ShieldCheck className="mr-2 h-3.5 w-3.5" /> Administration
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={async () => {
@@ -198,7 +199,7 @@ export function AppShell({
           {org && (
             <Link
               to="/credits"
-              className="flex shrink-0 items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+              className="flex shrink-0 items-center gap-1.5 rounded-full bg-success px-2.5 py-1 text-xs font-medium text-white transition-opacity hover:opacity-90"
             >
               <Coins className="h-3.5 w-3.5" />
               {org.credits} token{org.credits === 1 ? "" : "s"}
