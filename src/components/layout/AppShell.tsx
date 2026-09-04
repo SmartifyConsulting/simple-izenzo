@@ -29,7 +29,6 @@ type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; seats?
 const NAV: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/inbox", label: "Inbox", icon: Inbox },
-  { to: "/credits", label: "Tokens", icon: Coins },
   { to: "/admin", label: "Administration", icon: ShieldCheck, seats: ["admin"] },
 ];
 
@@ -158,7 +157,7 @@ export function AppShell({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const { profile } = useAuth();
+  const { profile, org } = useAuth();
   const firstName = (profile?.full_name ?? profile?.email ?? "").split(/[\s@]/)[0];
 
   return (
@@ -196,6 +195,15 @@ export function AppShell({
             )}
           </div>
           {actions}
+          {org && (
+            <Link
+              to="/credits"
+              className="flex shrink-0 items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+            >
+              <Coins className="h-3.5 w-3.5" />
+              {org.credits} token{org.credits === 1 ? "" : "s"}
+            </Link>
+          )}
           <AvatarMenu />
         </header>
         <main className="flex-1 px-4 pb-6 pt-10 sm:px-6 sm:pt-12">{children}</main>
