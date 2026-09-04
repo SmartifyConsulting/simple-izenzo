@@ -414,47 +414,92 @@ export type Database = {
           },
         ]
       }
+      org_portfolio_items: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          org_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          org_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          org_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_portfolio_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organisations: {
         Row: {
           address: string | null
+          avatar_url: string | null
           country: string | null
           created_at: string
           created_by: string | null
           credits: number
           id: string
           name: string
+          offerings: string | null
           registration_no: string | null
           sector: string | null
           updated_at: string
+          website: string | null
         }
         Insert: {
           address?: string | null
+          avatar_url?: string | null
           country?: string | null
           created_at?: string
           created_by?: string | null
           credits?: number
           id?: string
           name: string
+          offerings?: string | null
           registration_no?: string | null
           sector?: string | null
           updated_at?: string
+          website?: string | null
         }
         Update: {
           address?: string | null
+          avatar_url?: string | null
           country?: string | null
           created_at?: string
           created_by?: string | null
           credits?: number
           id?: string
           name?: string
+          offerings?: string | null
           registration_no?: string | null
           sector?: string | null
           updated_at?: string
+          website?: string | null
         }
         Relationships: []
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           created_at: string
           email: string | null
           email_verified_at: string | null
@@ -466,6 +511,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string
           email?: string | null
           email_verified_at?: string | null
@@ -477,6 +523,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string
           email?: string | null
           email_verified_at?: string | null

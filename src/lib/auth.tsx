@@ -10,6 +10,7 @@ export type Profile = {
   seat: string;
   login_count?: number | null;
   email_verified_at?: string | null;
+  avatar_url?: string | null;
 };
 
 export type Org = {
@@ -20,6 +21,9 @@ export type Org = {
   sector: string | null;
   address: string | null;
   credits: number;
+  avatar_url?: string | null;
+  offerings?: string | null;
+  website?: string | null;
 };
 
 type AuthValue = {

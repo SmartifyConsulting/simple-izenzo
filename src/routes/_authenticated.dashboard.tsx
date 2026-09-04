@@ -1,9 +1,12 @@
+import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Plus, ArrowUpRight } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { money, when, type Transaction } from "@/lib/tx";
@@ -23,6 +26,9 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 function Dashboard() {
   const { org, profile } = useAuth();
+  const [titleFilter, setTitleFilter] = useState("");
+  const [stageFilter, setStageFilter] = useState("all");
+  const [valueSort, setValueSort] = useState<"none" | "asc" | "desc">("none");
 
   const { data: txs = [], isLoading } = useQuery({
     queryKey: ["transactions", org?.id],
@@ -40,6 +46,26 @@ function Dashboard() {
     stage: s.label,
     n: txs.filter((t) => t.stage === s.key).length,
   }));
+
+  const filteredTxs = useMemo(() => {
+    let rows = txs;
+    if (titleFilter.trim()) {
+      const q = titleFilter.trim().toLowerCase();
+      rows = rows.filter(
+        (t) => t.title.toLowerCase().includes(q) || (t.commodity ?? "").toLowerCase().includes(q),
+      );
+    }
+    if (stageFilter !== "all") {
+      rows = rows.filter((t) => t.stage === stageFilter);
+    }
+    if (valueSort !== "none") {
+      rows = [...rows].sort((a, b) => {
+        const diff = (a.price ?? 0) - (b.price ?? 0);
+        return valueSort === "asc" ? diff : -diff;
+      });
+    }
+    return rows;
+  }, [txs, titleFilter, stageFilter, valueSort]);
 
   return (
     <AppShell
@@ -68,17 +94,19 @@ function Dashboard() {
         </div>
       )}
 
-      <div className="grid gap-px overflow-hidden rounded-md border border-border bg-border sm:grid-cols-3 lg:grid-cols-6">
-        <div className="bg-background p-4">
-          <p className="label-caps">Tokens</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums">{org?.credits ?? 0}</p>
-        </div>
-        {counts.map((c) => (
-          <div key={c.stage} className="bg-background p-4">
-            <p className="label-caps truncate">{c.stage}</p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums">{c.n}</p>
+      <div className="overflow-x-auto rounded-md border border-border">
+        <div className="grid w-max min-w-full grid-cols-6 divide-x divide-border">
+          <div className="min-w-[140px] bg-background p-4">
+            <p className="label-caps">Tokens</p>
+            <p className="mt-1 text-2xl font-semibold tabular-nums">{org?.credits ?? 0}</p>
           </div>
-        ))}
+          {counts.map((c) => (
+            <div key={c.stage} className="min-w-[140px] bg-background p-4">
+              <p className="label-caps truncate">{c.stage}</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums">{c.n}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       <section className="mt-8">
@@ -102,15 +130,57 @@ function Dashboard() {
             <table className="w-full text-sm">
               <thead className="border-b border-border bg-muted/50">
                 <tr className="text-left">
-                  <th className="px-4 py-2.5 font-medium">Transaction</th>
-                  <th className="hidden px-4 py-2.5 font-medium sm:table-cell">Value</th>
-                  <th className="px-4 py-2.5 font-medium">On the Trading Gateway</th>
+                  <th className="px-4 py-2.5 font-medium">
+                    <span className="block">Transaction</span>
+                    <Input
+                      value={titleFilter}
+                      onChange={(e) => setTitleFilter(e.target.value)}
+                      placeholder="Filter…"
+                      className="mt-1.5 h-7 w-full max-w-[180px] text-xs font-normal"
+                    />
+                  </th>
+                  <th className="hidden px-4 py-2.5 font-medium sm:table-cell">
+                    <span className="block">Value</span>
+                    <Select value={valueSort} onValueChange={(v) => setValueSort(v as typeof valueSort)}>
+                      <SelectTrigger className="mt-1.5 h-7 w-full max-w-[130px] text-xs font-normal">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Unsorted</SelectItem>
+                        <SelectItem value="asc">Low to high</SelectItem>
+                        <SelectItem value="desc">High to low</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </th>
+                  <th className="px-4 py-2.5 font-medium">
+                    <span className="block">On the Trading Gateway</span>
+                    <Select value={stageFilter} onValueChange={setStageFilter}>
+                      <SelectTrigger className="mt-1.5 h-7 w-full max-w-[160px] text-xs font-normal">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All gates</SelectItem>
+                        {SPINE.map((s) => (
+                          <SelectItem key={s.key} value={s.key}>
+                            {s.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </th>
                   <th className="hidden px-4 py-2.5 font-medium md:table-cell">Opened</th>
                   <th className="w-10" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {txs.map((t) => (
+                {filteredTxs.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="p-6 text-center text-sm text-muted-foreground">
+                      No transactions match these filters.
+                    </td>
+                  </tr>
+                )}
+                {filteredTxs.map((t) => (
                   <tr key={t.id} className="hover:bg-muted/40">
                     <td className="px-4 py-3">
                       <Link

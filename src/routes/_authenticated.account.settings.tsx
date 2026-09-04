@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/AppShell";
+import { AvatarUpload } from "@/components/AvatarUpload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,21 +47,48 @@ function SettingsPage() {
     }
   }
 
+  async function onAvatarUploaded(url: string) {
+    if (!profile) return;
+    const { error } = await supabase.from("profiles").update({ avatar_url: url }).eq("id", profile.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    await refresh();
+  }
+
   return (
     <AppShell title="Settings" description="Your name and account details">
-      <form onSubmit={save} className="max-w-md space-y-4 rounded-md border border-border p-5">
-        <div className="space-y-1.5">
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" value={profile?.email ?? ""} disabled />
+      <div className="max-w-md space-y-6">
+        <div className="rounded-md border border-border p-5">
+          <Label>Profile picture</Label>
+          <div className="mt-3">
+            {profile && (
+              <AvatarUpload
+                url={profile.avatar_url}
+                fallback={(profile.full_name ?? profile.email ?? "?").slice(0, 2).toUpperCase()}
+                folder="users"
+                ownerId={profile.id}
+                onUploaded={onAvatarUploaded}
+              />
+            )}
+          </div>
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="full_name">Full name</Label>
-          <Input id="full_name" value={fullName} onChange={(e) => setFullName(e.target.value)} />
-        </div>
-        <Button type="submit" size="sm" disabled={busy}>
-          Save
-        </Button>
-      </form>
+
+        <form onSubmit={save} className="space-y-4 rounded-md border border-border p-5">
+          <div className="space-y-1.5">
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" value={profile?.email ?? ""} disabled />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="full_name">Full name</Label>
+            <Input id="full_name" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+          </div>
+          <Button type="submit" size="sm" disabled={busy}>
+            Save
+          </Button>
+        </form>
+      </div>
     </AppShell>
   );
 }

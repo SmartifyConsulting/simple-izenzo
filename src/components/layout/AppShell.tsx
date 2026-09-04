@@ -54,14 +54,21 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
         <span className="text-sm font-semibold text-sidebar-primary">Izenzo</span>
       </div>
 
-      <div className="px-4 py-4">
-        <p className="label-caps text-sidebar-foreground/50">Organisation</p>
-        <p className="mt-1 truncate text-sm font-medium text-sidebar-primary">
-          {org?.name ?? "Not set up yet"}
-        </p>
-        <p className="mt-0.5 text-xs text-sidebar-foreground/60">
-          {org ? `${org.credits} token${org.credits === 1 ? "" : "s"}` : "Add your details"}
-        </p>
+      <div className="flex items-center gap-2.5 px-4 py-4">
+        {org?.avatar_url && (
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sidebar-accent">
+            <img src={org.avatar_url} alt="" className="h-full w-full object-cover" />
+          </span>
+        )}
+        <div className="min-w-0">
+          <p className="label-caps text-sidebar-foreground/50">Organisation</p>
+          <p className="truncate text-sm font-medium text-sidebar-primary">
+            {org?.name ?? "Not set up yet"}
+          </p>
+          <p className="mt-0.5 text-xs text-sidebar-foreground/60">
+            {org ? `${org.credits} token${org.credits === 1 ? "" : "s"}` : "Add your details"}
+          </p>
+        </div>
       </div>
 
       <nav className="flex-1 space-y-0.5 px-2">
@@ -97,8 +104,12 @@ function AvatarMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button className="flex shrink-0 items-center gap-2 rounded-full hover:opacity-80">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-sidebar text-[11px] font-semibold text-sidebar-foreground">
-            {(profile?.full_name ?? profile?.email ?? "?").slice(0, 2).toUpperCase()}
+          <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-sidebar text-[11px] font-semibold text-sidebar-foreground">
+            {profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
+            ) : (
+              (profile?.full_name ?? profile?.email ?? "?").slice(0, 2).toUpperCase()
+            )}
           </span>
         </button>
       </DropdownMenuTrigger>
@@ -172,16 +183,18 @@ export function AppShell({
             </SheetContent>
           </Sheet>
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-sm font-semibold tracking-tight">{title}</h1>
+            {firstName && (
+              <p className="truncate text-lg font-semibold tracking-tight sm:text-xl">
+                {greeting()}, {firstName}
+              </p>
+            )}
+            <h1 className="truncate text-sm font-semibold tracking-tight text-muted-foreground">
+              {title}
+            </h1>
             {description && (
               <p className="truncate text-xs text-muted-foreground">{description}</p>
             )}
           </div>
-          {firstName && (
-            <p className="hidden shrink-0 text-sm text-muted-foreground sm:block">
-              {greeting()}, <span className="font-medium text-foreground">{firstName}</span>
-            </p>
-          )}
           {actions}
           <AvatarMenu />
         </header>
