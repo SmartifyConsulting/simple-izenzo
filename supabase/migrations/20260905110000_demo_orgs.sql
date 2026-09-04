@@ -1,5 +1,11 @@
 -- Demo data: attach 4 organisations to the current demo user (georgia.adams@smartify.co.za)
 -- with realistic details and several months of token ledger activity, for a richer demo.
+--
+-- Safe to run standalone even if the earlier avatars/offerings migration hasn't applied yet.
+ALTER TABLE public.organisations ADD COLUMN IF NOT EXISTS avatar_url text;
+ALTER TABLE public.organisations ADD COLUMN IF NOT EXISTS offerings text;
+ALTER TABLE public.organisations ADD COLUMN IF NOT EXISTS website text;
+
 DO $$
 DECLARE
   v_user_id uuid;
