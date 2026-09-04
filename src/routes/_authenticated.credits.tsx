@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { when } from "@/lib/tx";
@@ -25,6 +26,21 @@ export const Route = createFileRoute("/_authenticated/credits")({
 });
 
 const PACKS = [1, 4, 10, 25];
+
+function monthKey(iso: string) {
+  return new Date(iso).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+}
+
+function groupByMonth<T extends { created_at: string }>(rows: T[]): [string, T[]][] {
+  const groups = new Map<string, T[]>();
+  for (const row of rows) {
+    const key = monthKey(row.created_at);
+    const bucket = groups.get(key);
+    if (bucket) bucket.push(row);
+    else groups.set(key, [row]);
+  }
+  return Array.from(groups.entries());
+}
 
 function Credits() {
   const { org, refresh } = useAuth();
@@ -114,26 +130,45 @@ function Credits() {
             {ledger.length === 0 ? (
               <p className="p-6 text-sm text-muted-foreground">Nothing recorded yet.</p>
             ) : (
-              <table className="w-full text-sm">
-                <thead className="border-b border-border bg-muted/50 text-left">
-                  <tr>
-                    <th className="px-4 py-2.5 font-medium">Movement</th>
-                    <th className="px-4 py-2.5 font-medium">Reason</th>
-                    <th className="px-4 py-2.5 font-medium">When</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {ledger.map((row) => (
-                    <tr key={row.id}>
-                      <td className="px-4 py-2.5 font-mono tabular-nums">
-                        {row.delta > 0 ? `+${row.delta}` : row.delta}
-                      </td>
-                      <td className="px-4 py-2.5">{row.reason}</td>
-                      <td className="px-4 py-2.5 text-muted-foreground">{when(row.created_at)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <Accordion type="multiple" defaultValue={[monthKey(new Date().toISOString())]}>
+                {groupByMonth(ledger).map(([month, rows]) => {
+                  const net = rows.reduce((sum, r) => sum + r.delta, 0);
+                  return (
+                    <AccordionItem key={month} value={month} className="border-border last:border-b-0">
+                      <AccordionTrigger className="bg-sidebar px-4 py-3 text-sm font-medium text-white hover:no-underline [&>svg]:text-white/70">
+                        <span className="flex flex-1 items-center justify-between pr-3">
+                          <span>{month}</span>
+                          <span className="font-mono text-xs tabular-nums text-white/70">
+                            {net > 0 ? `+${net}` : net} · {rows.length} movement{rows.length === 1 ? "" : "s"}
+                          </span>
+                        </span>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-0 pb-0">
+                        <table className="w-full text-sm">
+                          <thead className="border-y border-border bg-muted/50 text-left">
+                            <tr>
+                              <th className="px-4 py-2 font-medium">Movement</th>
+                              <th className="px-4 py-2 font-medium">Reason</th>
+                              <th className="px-4 py-2 font-medium">When</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border">
+                            {rows.map((row) => (
+                              <tr key={row.id}>
+                                <td className="px-4 py-2.5 font-mono tabular-nums">
+                                  {row.delta > 0 ? `+${row.delta}` : row.delta}
+                                </td>
+                                <td className="px-4 py-2.5">{row.reason}</td>
+                                <td className="px-4 py-2.5 text-muted-foreground">{when(row.created_at)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </AccordionContent>
+                    </AccordionItem>
+                  );
+                })}
+              </Accordion>
             )}
           </div>
         </div>

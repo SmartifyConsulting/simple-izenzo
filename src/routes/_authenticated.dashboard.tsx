@@ -7,11 +7,27 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { money, when, type Transaction } from "@/lib/tx";
 import { SPINE, stageOf, stepDef, type StageKey } from "@/lib/spine";
 import { cn } from "@/lib/utils";
+
+function monthKey(iso: string) {
+  return new Date(iso).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+}
+
+function groupByMonth<T extends { created_at: string }>(rows: T[]): [string, T[]][] {
+  const groups = new Map<string, T[]>();
+  for (const row of rows) {
+    const key = monthKey(row.created_at);
+    const bucket = groups.get(key);
+    if (bucket) bucket.push(row);
+    else groups.set(key, [row]);
+  }
+  return Array.from(groups.entries());
+}
 
 const STAGE_BADGE_CLASS: Record<StageKey, string> = {
   trading: "bg-info/15 text-info",
@@ -120,6 +136,50 @@ function Dashboard() {
 
       <section className="mt-8">
         <h2 className="text-sm font-semibold">Transactions</h2>
+
+        {txs.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-end gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Transaction</label>
+              <Input
+                value={titleFilter}
+                onChange={(e) => setTitleFilter(e.target.value)}
+                placeholder="Filter…"
+                className="h-8 w-[180px] text-xs"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Value</label>
+              <Select value={valueSort} onValueChange={(v) => setValueSort(v as typeof valueSort)}>
+                <SelectTrigger className="h-8 w-[140px] text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Unsorted</SelectItem>
+                  <SelectItem value="asc">Low to high</SelectItem>
+                  <SelectItem value="desc">High to low</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">On the Trading Gateway</label>
+              <Select value={stageFilter} onValueChange={setStageFilter}>
+                <SelectTrigger className="h-8 w-[170px] text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All gates</SelectItem>
+                  {SPINE.map((s) => (
+                    <SelectItem key={s.key} value={s.key}>
+                      {s.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
+
         <div className="mt-3 overflow-hidden rounded-md border border-border">
           {isLoading ? (
             <p className="p-6 text-sm text-muted-foreground">Loading…</p>
@@ -135,99 +195,80 @@ function Dashboard() {
                 </Button>
               </Link>
             </div>
+          ) : filteredTxs.length === 0 ? (
+            <p className="p-6 text-center text-sm text-muted-foreground">
+              No transactions match these filters.
+            </p>
           ) : (
-            <table className="w-full text-sm">
-              <thead className="border-b border-border bg-muted/50">
-                <tr className="text-left">
-                  <th className="px-4 py-2.5 font-medium">
-                    <span className="block">Transaction</span>
-                    <Input
-                      value={titleFilter}
-                      onChange={(e) => setTitleFilter(e.target.value)}
-                      placeholder="Filter…"
-                      className="mt-1.5 h-7 w-full max-w-[180px] text-xs font-normal"
-                    />
-                  </th>
-                  <th className="hidden px-4 py-2.5 font-medium sm:table-cell">
-                    <span className="block">Value</span>
-                    <Select value={valueSort} onValueChange={(v) => setValueSort(v as typeof valueSort)}>
-                      <SelectTrigger className="mt-1.5 h-7 w-full max-w-[130px] text-xs font-normal">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Unsorted</SelectItem>
-                        <SelectItem value="asc">Low to high</SelectItem>
-                        <SelectItem value="desc">High to low</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </th>
-                  <th className="px-4 py-2.5 font-medium">
-                    <span className="block">On the Trading Gateway</span>
-                    <Select value={stageFilter} onValueChange={setStageFilter}>
-                      <SelectTrigger className="mt-1.5 h-7 w-full max-w-[160px] text-xs font-normal">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All gates</SelectItem>
-                        {SPINE.map((s) => (
-                          <SelectItem key={s.key} value={s.key}>
-                            {s.label}
-                          </SelectItem>
+            <Accordion type="multiple" defaultValue={[monthKey(new Date().toISOString())]}>
+              {groupByMonth(filteredTxs).map(([month, rows]) => (
+                <AccordionItem key={month} value={month} className="border-border last:border-b-0">
+                  <AccordionTrigger className="bg-sidebar px-4 py-3 text-sm font-medium text-white hover:no-underline [&>svg]:text-white/70">
+                    <span className="flex flex-1 items-center justify-between pr-3">
+                      <span>{month}</span>
+                      <span className="text-xs font-normal text-white/70">
+                        {rows.length} transaction{rows.length === 1 ? "" : "s"}
+                      </span>
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-0 pb-0">
+                    <table className="w-full text-sm">
+                      <thead className="border-y border-border bg-muted/50 text-left">
+                        <tr>
+                          <th className="px-4 py-2 font-medium">Transaction</th>
+                          <th className="hidden px-4 py-2 font-medium sm:table-cell">Value</th>
+                          <th className="px-4 py-2 font-medium">On the Trading Gateway</th>
+                          <th className="hidden px-4 py-2 font-medium md:table-cell">Opened</th>
+                          <th className="w-10" />
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {rows.map((t) => (
+                          <tr key={t.id} className="hover:bg-muted/40">
+                            <td className="px-4 py-3">
+                              <Link
+                                to="/tx/$id/$stage/$step"
+                                params={{ id: t.id, stage: t.stage, step: t.step }}
+                                className="font-medium hover:underline"
+                              >
+                                {t.title}
+                              </Link>
+                              <p className="text-xs text-muted-foreground">
+                                {t.commodity ?? "—"}
+                                {t.org_id !== profile?.org_id ? " · incoming" : ""}
+                              </p>
+                            </td>
+                            <td className="hidden px-4 py-3 tabular-nums sm:table-cell">
+                              {money(t.price, t.currency)}
+                            </td>
+                            <td className="px-4 py-3">
+                              <Badge
+                                variant="outline"
+                                className={cn("font-normal border-transparent", STAGE_BADGE_CLASS[t.stage])}
+                              >
+                                {stageOf(t.stage)?.label} · {stepDef(t.stage, t.step)?.label ?? t.step}
+                              </Badge>
+                            </td>
+                            <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
+                              {when(t.created_at)}
+                            </td>
+                            <td className="px-2 py-3">
+                              <Link
+                                to="/tx/$id/$stage/$step"
+                                params={{ id: t.id, stage: t.stage, step: t.step }}
+                                className="text-muted-foreground hover:text-foreground"
+                              >
+                                <ArrowUpRight className="h-4 w-4" />
+                              </Link>
+                            </td>
+                          </tr>
                         ))}
-                      </SelectContent>
-                    </Select>
-                  </th>
-                  <th className="hidden px-4 py-2.5 font-medium md:table-cell">Opened</th>
-                  <th className="w-10" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {filteredTxs.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="p-6 text-center text-sm text-muted-foreground">
-                      No transactions match these filters.
-                    </td>
-                  </tr>
-                )}
-                {filteredTxs.map((t) => (
-                  <tr key={t.id} className="hover:bg-muted/40">
-                    <td className="px-4 py-3">
-                      <Link
-                        to="/tx/$id/$stage/$step"
-                        params={{ id: t.id, stage: t.stage, step: t.step }}
-                        className="font-medium hover:underline"
-                      >
-                        {t.title}
-                      </Link>
-                      <p className="text-xs text-muted-foreground">
-                        {t.commodity ?? "—"}
-                        {t.org_id !== profile?.org_id ? " · incoming" : ""}
-                      </p>
-                    </td>
-                    <td className="hidden px-4 py-3 tabular-nums sm:table-cell">
-                      {money(t.price, t.currency)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge variant="outline" className={cn("font-normal border-transparent", STAGE_BADGE_CLASS[t.stage])}>
-                        {stageOf(t.stage)?.label} · {stepDef(t.stage, t.step)?.label ?? t.step}
-                      </Badge>
-                    </td>
-                    <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
-                      {when(t.created_at)}
-                    </td>
-                    <td className="px-2 py-3">
-                      <Link
-                        to="/tx/$id/$stage/$step"
-                        params={{ id: t.id, stage: t.stage, step: t.step }}
-                        className="text-muted-foreground hover:text-foreground"
-                      >
-                        <ArrowUpRight className="h-4 w-4" />
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      </tbody>
+                    </table>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
           )}
         </div>
       </section>
