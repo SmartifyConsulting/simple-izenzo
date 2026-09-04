@@ -171,18 +171,25 @@ function Landing() {
             <span className="text-sm font-semibold tracking-tight">Izenzo</span>
           </Link>
           <nav className="flex items-center gap-1">
+            <Link to="/about">
+              <Button variant="ghost" size="sm">
+                About Us
+              </Button>
+            </Link>
+            <Link to="/demo">
+              <Button variant="ghost" size="sm">
+                Request a Demo
+              </Button>
+            </Link>
             <Link to="/glossary">
               <Button variant="ghost" size="sm">
                 Glossary
               </Button>
             </Link>
-            <Link to="/auth">
+            <Link to="/contact">
               <Button variant="ghost" size="sm">
-                Sign in
+                Contact Us
               </Button>
-            </Link>
-            <Link to="/auth" search={{ mode: "signup" }}>
-              <Button size="sm">Create account</Button>
             </Link>
           </nav>
         </div>

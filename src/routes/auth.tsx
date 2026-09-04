@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { AuthTabs } from "@/components/auth/AuthTabs";
 import { useAuth } from "@/lib/auth";
@@ -36,28 +36,8 @@ function AuthPage() {
   }, [loading, session, next, navigate]);
 
   return (
-    <div className="flex min-h-screen">
-      <div className="hidden flex-1 flex-col justify-between bg-sidebar p-10 text-sidebar-foreground lg:flex">
-        <Link to="/" className="flex items-center gap-2">
-          <span className="flex h-6 w-6 items-center justify-center rounded bg-sidebar-primary text-[11px] font-bold text-sidebar-primary-foreground">
-            IZ
-          </span>
-          <span className="text-sm font-semibold">Izenzo</span>
-        </Link>
-        <div className="max-w-sm">
-          <p className="text-xl font-medium leading-snug text-sidebar-primary">
-            Intent is sealed before anything moves.
-          </p>
-          <p className="mt-3 text-sm leading-relaxed opacity-70">
-            Trading, compliance and governance, execution, finality, memory. One Trading Gateway, one record.
-          </p>
-        </div>
-        <p className="text-xs opacity-50">Izenzo</p>
-      </div>
-
-      <div className="flex flex-1 items-center justify-center px-5 py-12">
-        <AuthTabs next={next} defaultTab={mode} className="w-full max-w-sm" />
-      </div>
+    <div className="flex min-h-screen items-center justify-center bg-muted/40 px-5 py-12">
+      <AuthTabs next={next} defaultTab={mode} className="w-full max-w-sm rounded-2xl border border-border bg-background p-8 shadow-sm" />
     </div>
   );
 }
