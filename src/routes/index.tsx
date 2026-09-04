@@ -1,38 +1,40 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SignUpForm } from "@/components/auth/SignUpForm";
 import { SPINE, type StageKey } from "@/lib/spine";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 
-const GATES: { n: string; name: string; status: string; blurb: string; stageKey: StageKey }[] = [
+type GateStatus = "IN PROGRESS" | "LOCKED" | "EMPTY";
+
+const GATES: { n: string; name: string; status: GateStatus; blurb: string; stageKey: StageKey }[] = [
   {
     n: "01",
     name: "Trading Gate",
-    status: "NOT STARTED",
+    status: "IN PROGRESS",
     blurb: "Bid and offer, deal documents, counterparties, counter, confirm intent, POI.",
     stageKey: "trading",
   },
   {
     n: "02",
     name: "Compliance Gate",
-    status: "NOT STARTED",
+    status: "LOCKED",
     blurb: "WaD — Without a Doubt. KYC, KYB, UBO, PEP, AML/sanctions before Execution.",
     stageKey: "compliance",
   },
   {
     n: "03",
     name: "Execution Gate",
-    status: "NOT STARTED",
+    status: "LOCKED",
     blurb: "Project preparation, bankability, implementation, stakeholder entry/exit.",
     stageKey: "execution",
   },
   {
     n: "04",
     name: "Finality Gate",
-    status: "NOT STARTED",
+    status: "LOCKED",
     blurb: "Type, change/value event, evidence, validation and the finality record.",
     stageKey: "finality",
   },
@@ -44,6 +46,12 @@ const GATES: { n: string; name: string; status: string; blurb: string; stageKey:
     stageKey: "memory",
   },
 ];
+
+const STATUS_BADGE_CLASS: Record<GateStatus, string> = {
+  "IN PROGRESS": "bg-warning/20 text-warning-foreground",
+  LOCKED: "bg-muted text-muted-foreground",
+  EMPTY: "bg-muted text-muted-foreground",
+};
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -82,7 +90,12 @@ function GateCardInner({ gate, selected }: { gate: (typeof GATES)[number]; selec
         >
           {gate.n}
         </span>
-        <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-muted-foreground">
+        <span
+          className={cn(
+            "rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide",
+            STATUS_BADGE_CLASS[gate.status],
+          )}
+        >
           {gate.status}
         </span>
       </div>
@@ -222,10 +235,7 @@ function Landing() {
 
         <section className="border-y border-border bg-muted/40">
           <div className="mx-auto max-w-6xl px-5 py-14">
-            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-              <h2 className="text-lg font-semibold tracking-tight">The Izenzo Trading Gateway</h2>
-              <p className="text-xs font-medium text-muted-foreground">Only pay for what you use</p>
-            </div>
+            <h2 className="text-lg font-semibold tracking-tight">The Izenzo Trading Gateway</h2>
             <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">
               The Izenzo Trading Gateway is modular. Each gate can operate as a distinct module, while
               transaction data, approvals and evidence flow forwards and backwards through Trading,
@@ -234,13 +244,22 @@ function Landing() {
             </p>
             <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
               {GATES.map((gate, i) => (
-                <GateCard
-                  key={gate.n}
-                  gate={gate}
-                  selected={i === selectedGate}
-                  onSelect={() => setSelectedGate((cur) => (cur === i ? null : i))}
-                  href={user ? (gate.stageKey === "trading" ? "/transactions/new" : "/dashboard") : undefined}
-                />
+                <div key={gate.n} className="flex flex-col">
+                  <div className="mb-2 flex h-4 items-center gap-1 text-xs font-medium text-muted-foreground">
+                    {i === GATES.length - 1 && (
+                      <>
+                        <Star className="h-3 w-3 shrink-0 fill-current" />
+                        Only pay for what you use
+                      </>
+                    )}
+                  </div>
+                  <GateCard
+                    gate={gate}
+                    selected={i === selectedGate}
+                    onSelect={() => setSelectedGate((cur) => (cur === i ? null : i))}
+                    href={user ? (gate.stageKey === "trading" ? "/transactions/new" : "/dashboard") : undefined}
+                  />
+                </div>
               ))}
             </div>
 
