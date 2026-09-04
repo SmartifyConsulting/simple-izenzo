@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { money, when, type Transaction } from "@/lib/tx";
+import { money, whenDate, type Transaction } from "@/lib/tx";
 import { SPINE, stageOf, stepDef, type StageKey } from "@/lib/spine";
 import { cn } from "@/lib/utils";
 
@@ -195,7 +195,7 @@ function Dashboard() {
               </Select>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">On the Trading Gateway</label>
+              <label className="text-xs font-medium text-muted-foreground">Gate</label>
               <Select value={stageFilter} onValueChange={setStageFilter}>
                 <SelectTrigger className="h-8 w-[170px] text-xs">
                   <SelectValue />
@@ -266,7 +266,7 @@ function Dashboard() {
                         <tr>
                           <th className="px-4 py-2 font-medium">Transaction</th>
                           <th className="hidden px-4 py-2 font-medium sm:table-cell">Value</th>
-                          <th className="px-4 py-2 font-medium">On the Trading Gateway</th>
+                          <th className="px-4 py-2 font-medium">Gate</th>
                           {orgFilter === "all" && selectableOrgs.length > 1 && (
                             <th className="hidden px-4 py-2 font-medium lg:table-cell">Organisation</th>
                           )}
@@ -315,7 +315,7 @@ function Dashboard() {
                               </td>
                             )}
                             <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
-                              {when(t.created_at)}
+                              {whenDate(t.created_at)}
                             </td>
                             <td className="px-2 py-3">
                               <Link

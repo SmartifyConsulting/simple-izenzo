@@ -86,6 +86,7 @@ export function money(value: number | null | undefined, currency = "USD") {
   return new Intl.NumberFormat("en-GB", {
     style: "currency",
     currency,
+    currencyDisplay: "narrowSymbol",
     maximumFractionDigits: 2,
   }).format(value);
 }
@@ -103,5 +104,14 @@ export function when(iso: string | null | undefined) {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+  });
+}
+
+export function whenDate(iso: string | null | undefined) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
   });
 }
