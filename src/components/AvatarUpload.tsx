@@ -50,7 +50,7 @@ export function AvatarUpload({
         onClick={() => inputRef.current?.click()}
         disabled={busy}
         className={cn(
-          "group relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-sm font-semibold text-muted-foreground",
+          "group relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-sidebar text-sm font-semibold text-sidebar-foreground",
           size,
         )}
       >
