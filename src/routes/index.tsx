@@ -181,7 +181,7 @@ function Landing() {
   return (
     <div className="min-h-screen bg-background">
       <SiteHeader
-        logoClassName="h-[1.875rem]"
+        logoClassName="h-[3.75rem]"
         containerClassName="max-w-none px-6 sm:px-10 lg:px-16"
         logoVariant="blue"
       />

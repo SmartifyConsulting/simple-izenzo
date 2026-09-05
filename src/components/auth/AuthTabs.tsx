@@ -15,7 +15,7 @@ export function AuthTabs({
   return (
     <div className={className}>
       <div className="mb-5 flex items-center gap-2">
-        <span className="flex h-7 w-7 items-center justify-center rounded bg-foreground text-[11px] font-bold text-background">
+        <span className="flex h-7 w-7 items-center justify-center rounded bg-sidebar text-[11px] font-bold text-sidebar-foreground">
           IZ
         </span>
         <div>
