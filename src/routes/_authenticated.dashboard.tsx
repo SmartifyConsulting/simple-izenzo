@@ -11,7 +11,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { money, whenDate, type Transaction } from "@/lib/tx";
-import { SPINE, stageOf, stepDef, type StageKey } from "@/lib/spine";
+import { SPINE, stepDef, type StageKey } from "@/lib/spine";
 import { cn } from "@/lib/utils";
 
 function monthKey(iso: string) {
@@ -28,6 +28,14 @@ function groupByMonth<T extends { created_at: string }>(rows: T[]): [string, T[]
   }
   return Array.from(groups.entries());
 }
+
+const STAGE_ABBR: Record<StageKey, string> = {
+  trading: "TG",
+  compliance: "CG",
+  execution: "EG",
+  finality: "FG",
+  memory: "MG",
+};
 
 const STAGE_BADGE_CLASS: Record<StageKey, string> = {
   trading: "bg-info text-white",
@@ -109,7 +117,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 });
 
 function Dashboard() {
-  const { org, orgs, profile, roles } = useAuth();
+  const { org, orgs, profile } = useAuth();
   const { stage } = Route.useSearch();
   const [titleFilter, setTitleFilter] = useState("");
   const [stageFilter, setStageFilter] = useState<string>(stage ?? "all");
@@ -119,26 +127,11 @@ function Dashboard() {
   }, [stage]);
   const [valueSort, setValueSort] = useState<"none" | "asc" | "desc">("none");
   const [orgFilter, setOrgFilter] = useState("all");
-  const isAdmin = roles.includes("admin");
 
-  const { data: allOrgs = [] } = useQuery({
-    queryKey: ["all-orgs-for-transactions"],
-    enabled: isAdmin,
-    queryFn: async () => {
-      const { data, error } = await supabase.from("organisations").select("id, name").order("name");
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
-  const selectableOrgs = isAdmin ? allOrgs : orgs;
-  const orgName = useMemo(() => new Map(selectableOrgs.map((o) => [o.id, o.name])), [selectableOrgs]);
+  const orgName = useMemo(() => new Map(orgs.map((o) => [o.id, o.name])), [orgs]);
   const orgBadgeClass = useMemo(
-    () =>
-      new Map(
-        selectableOrgs.map((o, i) => [o.id, ORG_BADGE_PALETTE[i % ORG_BADGE_PALETTE.length]]),
-      ),
-    [selectableOrgs],
+    () => new Map(orgs.map((o, i) => [o.id, ORG_BADGE_PALETTE[i % ORG_BADGE_PALETTE.length]])),
+    [orgs],
   );
 
   const { data: txs = [], isLoading } = useQuery({
@@ -195,12 +188,12 @@ function Dashboard() {
         </div>
       )}
 
-      <h1 className="text-lg font-semibold tracking-tight">Dashboard</h1>
+      <h1 className="text-lg font-semibold tracking-tight">Overview</h1>
 
-      <div className="mt-3 overflow-hidden rounded-md border border-border">
-        <div className="flex items-center gap-2 bg-sidebar px-5 py-3 text-white">
+      <div className="mt-3 overflow-hidden rounded-xl border border-border shadow-sm">
+        <div className="flex items-center gap-2 bg-gradient-to-r from-sidebar to-sidebar/90 px-5 py-3.5 text-white">
           <Sparkles className="h-4 w-4" />
-          <h2 className="text-sm font-semibold">AI Overview</h2>
+          <h2 className="text-sm font-semibold tracking-tight">Your Trades at a Glance</h2>
         </div>
         <div className="grid gap-5 bg-background p-5 sm:grid-cols-3">
           <div>
@@ -228,7 +221,7 @@ function Dashboard() {
 
       <section className="mt-8">
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <h2 className="text-sm font-semibold">Trades</h2>
+          <h2 className="text-lg font-semibold tracking-tight">Trades</h2>
           <Link to="/transactions/new">
             <Button size="sm" className="gap-2">
               <Plus className="h-3.5 w-3.5" /> New Trade
@@ -284,7 +277,7 @@ function Dashboard() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All organisations</SelectItem>
-                  {selectableOrgs.map((o) => (
+                  {orgs.map((o) => (
                     <SelectItem key={o.id} value={o.id}>
                       {o.name}
                     </SelectItem>
@@ -295,7 +288,7 @@ function Dashboard() {
           </div>
         )}
 
-        <div className="mt-3 overflow-hidden rounded-md border border-border">
+        <div className="mt-3 overflow-hidden rounded-xl border border-border shadow-sm">
           {isLoading ? (
             <p className="p-6 text-sm text-muted-foreground">Loading…</p>
           ) : txs.length === 0 ? (
@@ -318,7 +311,7 @@ function Dashboard() {
             <Accordion type="multiple" defaultValue={[monthKey(new Date().toISOString())]}>
               {groupByMonth(filteredTxs).map(([month, rows]) => (
                 <AccordionItem key={month} value={month} className="border-border last:border-b-0">
-                  <AccordionTrigger className="bg-sidebar px-4 py-3 text-sm font-medium text-white hover:no-underline [&>svg]:text-white/70">
+                  <AccordionTrigger className="bg-gradient-to-r from-sidebar to-sidebar/90 px-5 py-3.5 text-sm font-medium text-white hover:no-underline [&>svg]:text-white/70">
                     <span className="flex flex-1 items-center justify-between pr-3">
                       <span>{month}</span>
                       <span className="text-xs font-normal text-white/70">
@@ -333,7 +326,7 @@ function Dashboard() {
                           <th className="px-4 py-2 font-medium">Transaction</th>
                           <th className="hidden px-4 py-2 font-medium sm:table-cell">Value</th>
                           <th className="px-4 py-2 font-medium">Gate</th>
-                          {orgFilter === "all" && selectableOrgs.length > 1 && (
+                          {orgFilter === "all" && orgs.length > 1 && (
                             <th className="hidden px-4 py-2 font-medium lg:table-cell">Organisation</th>
                           )}
                           <th className="hidden px-4 py-2 font-medium md:table-cell">Opened</th>
@@ -364,10 +357,10 @@ function Dashboard() {
                                 variant="outline"
                                 className={cn("font-normal border-transparent", STAGE_BADGE_CLASS[t.stage])}
                               >
-                                {stageOf(t.stage)?.label} · {stepDef(t.stage, t.step)?.label ?? t.step}
+                                {STAGE_ABBR[t.stage]} · {stepDef(t.stage, t.step)?.label ?? t.step}
                               </Badge>
                             </td>
-                            {orgFilter === "all" && selectableOrgs.length > 1 && (
+                            {orgFilter === "all" && orgs.length > 1 && (
                               <td className="hidden px-4 py-3 lg:table-cell">
                                 <Badge
                                   variant="outline"

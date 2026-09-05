@@ -55,8 +55,8 @@ function NavLink({
       className={cn(
         "flex items-center gap-2.5 rounded px-2.5 py-2 text-sm transition-colors",
         active
-          ? "bg-sidebar-accent text-sidebar-accent-foreground"
-          : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+          ? "bg-sidebar-accent text-white"
+          : "text-white/90 hover:bg-sidebar-accent/60 hover:text-white",
       )}
     >
       <Icon className="h-4 w-4 shrink-0" />
@@ -89,7 +89,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: (() => void) | undefined }) 
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
       <Link to="/dashboard" className="flex h-42 items-center px-3">
-        <Logo onDark className="h-[2.625rem] w-auto" />
+        <Logo onDark className="h-[1.96875rem] w-auto" />
       </Link>
 
       <nav className="flex-1 space-y-0.5 px-2 py-3">
@@ -106,9 +106,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: (() => void) | undefined }) 
           onClick={() => setGatewayOpen((v) => !v)}
           className={cn(
             "flex w-full items-center gap-2.5 rounded px-2.5 py-2 text-sm transition-colors",
-            onGateway
-              ? "text-sidebar-accent-foreground"
-              : "text-sidebar-foreground/75 hover:text-sidebar-accent-foreground",
+            onGateway ? "text-white" : "text-white/90 hover:text-white",
           )}
         >
           <ChevronRight className={cn("h-4 w-4 shrink-0 transition-transform", gatewayOpen && "rotate-90")} />
@@ -125,13 +123,13 @@ function SidebarBody({ onNavigate }: { onNavigate?: (() => void) | undefined }) 
                 className={cn(
                   "flex items-center justify-between gap-2 truncate rounded px-2.5 py-1.5 text-sm transition-colors",
                   search.stage === s.key
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+                    ? "bg-sidebar-accent text-white"
+                    : "text-white/80 hover:bg-sidebar-accent/60 hover:text-white",
                 )}
               >
                 <span className="truncate">{s.label}</span>
                 {Boolean(gateCounts[s.key]) && (
-                  <span className="shrink-0 rounded-full bg-sidebar-foreground/15 px-1.5 py-0.5 text-[11px] font-medium leading-none">
+                  <span className="shrink-0 rounded-full bg-white px-1.5 py-0.5 text-[11px] font-semibold leading-none text-info">
                     {gateCounts[s.key]}
                   </span>
                 )}
@@ -248,19 +246,19 @@ export function AppShell({
                 <SidebarBody onNavigate={() => setOpen(false)} />
               </SheetContent>
             </Sheet>
-            <div className="grid w-full grid-cols-1 items-center lg:grid-cols-[1fr_5fr_5fr_1fr]">
-              <div className="flex min-w-0 items-center gap-3 lg:col-start-2 lg:col-span-2">
+            <div className="grid h-full w-full grid-cols-1 lg:grid-cols-[1fr_5fr_5fr_1fr]">
+              <div className="flex min-w-0 items-start gap-3 pt-7 lg:col-start-2 lg:col-span-2">
                 <div className="min-w-0 flex-1">
                   {firstName && (
                     <p
-                      className="truncate text-[2.025rem] tracking-tight sm:text-[2.25rem]"
+                      className="truncate text-[2.025rem] leading-none tracking-tight sm:text-[2.25rem]"
                       style={{ fontFamily: "var(--font-greeting)", fontWeight: 700 }}
                     >
                       {greeting()}, {firstName}
                     </p>
                   )}
                   {title && (
-                    <h1 className="mt-1.5 truncate text-sm font-semibold tracking-tight text-muted-foreground">
+                    <h1 className="mt-2 truncate text-sm font-semibold tracking-tight text-muted-foreground">
                       {title}
                     </h1>
                   )}
@@ -268,22 +266,24 @@ export function AppShell({
                     <p className="mt-0.5 truncate text-xs text-muted-foreground">{description}</p>
                   )}
                 </div>
-                {actions}
+                {actions && <div className="self-center">{actions}</div>}
                 {org && (
                   <Link
                     to="/credits"
-                    className="flex shrink-0 items-center gap-1.5 rounded-full bg-success px-2.5 py-1 text-xs font-medium text-white transition-opacity hover:opacity-90"
+                    className="flex shrink-0 items-center gap-1.5 self-center rounded-full bg-success px-2.5 py-1 text-xs font-medium text-white transition-opacity hover:opacity-90"
                   >
                     <Coins className="h-3.5 w-3.5" />
                     {org.credits} token{org.credits === 1 ? "" : "s"}
                   </Link>
                 )}
-                <AvatarMenu />
+                <div className="self-center">
+                  <AvatarMenu />
+                </div>
               </div>
             </div>
           </div>
         </header>
-        <main className="flex-1 px-4 pb-6 pt-[2cm] sm:px-6">
+        <main className="flex-1 px-4 pb-6 pt-2 sm:px-6">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_5fr_5fr_1fr]">
             <div className="lg:col-start-2 lg:col-span-2">{children}</div>
           </div>
