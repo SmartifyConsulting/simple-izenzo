@@ -145,14 +145,14 @@ function Dashboard() {
 
       <h1 className="text-lg font-semibold tracking-tight">Dashboard</h1>
 
-      <div className="mt-3 overflow-x-auto rounded-md border border-border">
-        <div className="grid w-max min-w-full grid-cols-6 divide-x divide-border">
-          <div className="min-w-[140px] bg-background p-4">
+      <div className="mt-3 overflow-hidden rounded-md border border-border">
+        <div className="grid grid-cols-3 divide-x divide-y divide-border sm:grid-cols-6 sm:divide-y-0">
+          <div className="bg-background p-4">
             <p className="label-caps">Tokens</p>
             <p className="mt-1 text-2xl font-semibold tabular-nums">{org?.credits ?? 0}</p>
           </div>
           {counts.map((c) => (
-            <div key={c.stage} className="min-w-[140px] bg-background p-4">
+            <div key={c.stage} className="bg-background p-4">
               <p className="label-caps truncate">{c.stage}</p>
               <p className="mt-1 text-2xl font-semibold tabular-nums">{c.n}</p>
             </div>
