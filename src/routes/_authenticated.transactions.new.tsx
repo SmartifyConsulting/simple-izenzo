@@ -1,10 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { recordEvent } from "@/lib/tx";
@@ -22,9 +23,15 @@ export const Route = createFileRoute("/_authenticated/transactions/new")({
 });
 
 function NewTransaction() {
-  const { org } = useAuth();
+  const { org, orgs } = useAuth();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
+  const [orgId, setOrgId] = useState(org?.id ?? "");
+
+  useEffect(() => {
+    if (org?.id) setOrgId((cur) => cur || org.id);
+  }, [org?.id]);
+
   const [form, setForm] = useState({
     title: "",
     commodity: "",
@@ -38,7 +45,7 @@ function NewTransaction() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!org) {
+    if (!orgId) {
       toast.error("Add your organisation details first");
       return;
     }
@@ -47,7 +54,7 @@ function NewTransaction() {
       const { data, error } = await supabase
         .from("transactions")
         .insert({
-          org_id: org.id,
+          org_id: orgId,
           title: form.title,
           commodity: form.commodity || null,
           quantity: form.quantity ? Number(form.quantity) : null,
@@ -90,6 +97,23 @@ function NewTransaction() {
             </p>
           </div>
           <div className="grid gap-4 p-5 sm:grid-cols-2">
+            {orgs.length > 1 && (
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="org">Trading as</Label>
+                <Select value={orgId} onValueChange={setOrgId}>
+                  <SelectTrigger id="org">
+                    <SelectValue placeholder="Select an organisation" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {orgs.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>
+                        {o.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="title">Transaction title</Label>
               <Input

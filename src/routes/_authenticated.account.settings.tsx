@@ -63,7 +63,8 @@ function SettingsPage() {
       <div className="grid gap-6 lg:grid-cols-[380px_1fr] lg:items-start">
         <div className="space-y-6">
           <div className="rounded-md border border-border p-5">
-            <Label>Profile picture</Label>
+            <h2 className="text-sm font-semibold">Profile picture</h2>
+            <p className="text-xs text-muted-foreground">Shown across your account</p>
             <div className="mt-3">
               {profile && (
                 <AvatarUpload

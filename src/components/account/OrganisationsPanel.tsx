@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Check, Plus, Trash2 } from "lucide-react";
+import { Check, Pencil, Plus, Trash2 } from "lucide-react";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,15 +21,15 @@ const EMPTY_FORM = {
 };
 
 export function OrganisationsPanel() {
-  const { org, orgs, profile, refresh, switchOrg } = useAuth();
+  const { org, orgs, profile, refresh, switchOrg, loading } = useAuth();
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [creating, setCreating] = useState(orgs.length === 0);
+  const [creating, setCreating] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (orgs.length === 0) setCreating(true);
-  }, [orgs.length]);
+    if (!loading && orgs.length === 0) setCreating(true);
+  }, [loading, orgs.length]);
 
   function startEdit(o: (typeof orgs)[number]) {
     setEditingId(o.id);
@@ -113,60 +113,64 @@ export function OrganisationsPanel() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-sm font-semibold">Organizations</h2>
-        <p className="text-xs text-muted-foreground">Every organisation attached to your seat</p>
-      </div>
-
-      {orgs.length > 0 && (
-        <div className="space-y-3">
-          {orgs.map((o) => (
-            <div
-              key={o.id}
-              className="flex items-center justify-between rounded-md border border-border p-5"
-            >
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-xs font-semibold text-muted-foreground">
-                  {o.avatar_url ? (
-                    <img src={o.avatar_url} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    o.name.slice(0, 2).toUpperCase()
-                  )}
-                </span>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="truncate text-sm font-semibold">{o.name}</p>
-                    {org?.id === o.id && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[11px] font-medium text-success">
-                        <Check className="h-3 w-3" /> Active
-                      </span>
-                    )}
-                  </div>
-                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                    {[o.country, o.sector].filter(Boolean).join(" · ") || "No details yet"} ·{" "}
-                    {o.credits} token{o.credits === 1 ? "" : "s"}
-                  </p>
-                </div>
-              </div>
-              <div className="flex shrink-0 gap-2">
-                {org?.id !== o.id && (
-                  <Button size="sm" variant="outline" onClick={() => makeActive(o.id)}>
-                    Set active
-                  </Button>
-                )}
-                <Button size="sm" variant="ghost" onClick={() => startEdit(o)}>
-                  Edit
-                </Button>
-              </div>
-            </div>
-          ))}
+      <div className="rounded-md border border-border">
+        <div className="flex items-start justify-between p-5">
+          <div>
+            <h2 className="text-sm font-semibold">Organizations</h2>
+            <p className="text-xs text-muted-foreground">Every organisation attached to your seat</p>
+          </div>
           {!showForm && (
-            <Button size="sm" variant="outline" className="gap-2" onClick={startCreate}>
-              <Plus className="h-3.5 w-3.5" /> Add organisation
+            <Button size="icon" variant="outline" className="h-8 w-8 shrink-0" onClick={startCreate}>
+              <Plus className="h-4 w-4" />
+              <span className="sr-only">Add organisation</span>
             </Button>
           )}
         </div>
-      )}
+
+        {orgs.length > 0 && (
+          <div className="border-t border-border">
+            {orgs.map((o) => (
+              <div key={o.id} className="flex items-center justify-between p-5">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-xs font-semibold text-muted-foreground">
+                    {o.avatar_url ? (
+                      <img src={o.avatar_url} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      o.name.slice(0, 2).toUpperCase()
+                    )}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-sm font-semibold">{o.name}</p>
+                      {org?.id === o.id && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[11px] font-medium text-success">
+                          <Check className="h-3 w-3" /> Active
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                      {[o.country, o.sector].filter(Boolean).join(" · ") || "No details yet"}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {o.credits} token{o.credits === 1 ? "" : "s"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  {org?.id !== o.id && (
+                    <Button size="sm" variant="outline" onClick={() => makeActive(o.id)}>
+                      Set active
+                    </Button>
+                  )}
+                  <Button size="sm" variant="ghost" onClick={() => startEdit(o)}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {showForm && (
         <form onSubmit={save} className="rounded-md border border-border">
