@@ -42,8 +42,8 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
-      <Link to="/dashboard" className="flex h-42 items-center px-6">
-        <Logo onDark className="h-16 w-auto" />
+      <Link to="/dashboard" className="flex h-42 items-center px-3">
+        <Logo onDark className="h-[2.625rem] w-auto" />
       </Link>
 
       <div className="flex items-center gap-2.5 px-4 py-4">
@@ -157,7 +157,7 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen bg-background">
-      <aside className="hidden w-60 shrink-0 border-r border-sidebar-border lg:block">
+      <aside className="hidden w-72 shrink-0 border-r border-sidebar-border lg:block">
         <div className="sticky top-0 h-screen">
           <SidebarBody />
         </div>
@@ -171,7 +171,7 @@ export function AppShell({
                 <Menu className="h-4 w-4" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-64 p-0">
+            <SheetContent side="left" className="w-72 p-0">
               <SheetTitle className="sr-only">Menu</SheetTitle>
               <SidebarBody onNavigate={() => setOpen(false)} />
             </SheetContent>

@@ -13,7 +13,7 @@ export function Logo({
   variant?: "white" | "blue" | undefined;
 }) {
   const src = variant === "blue" ? "/izenzo-logo-blue.png" : "/izenzo-logo.png";
-  const img = <img src={src} alt="Izenzo" className={cn("h-5 w-auto", className)} />;
+  const img = <img src={src} alt="Izenzo" className={cn("h-5 w-auto shrink-0", className)} />;
 
   if (onDark || variant === "blue") return img;
 
