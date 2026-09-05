@@ -69,7 +69,7 @@ function TxStepPage() {
         </Link>
       }
     >
-      <div className="grid gap-8 lg:grid-cols-[240px_minmax(0,1fr)]">
+      <div className="grid gap-10 lg:grid-cols-[260px_minmax(0,1fr)]">
         <SpineRail tx={tx} currentStage={stage} currentStep={step} />
 
         <div>

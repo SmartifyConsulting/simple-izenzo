@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, ArrowUpRight } from "lucide-react";
+import { Plus, ArrowUpRight, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +37,47 @@ const STAGE_BADGE_CLASS: Record<StageKey, string> = {
   memory: "bg-success text-white",
 };
 
+const STALE_DAYS = 14;
+const RECENT_DAYS = 7;
+
+function daysSince(iso: string) {
+  return (Date.now() - new Date(iso).getTime()) / (1000 * 60 * 60 * 24);
+}
+
+/** A deterministic summary computed from the loaded transactions — not a live model call. */
+function buildOverview(txs: Transaction[]) {
+  const changed = txs.filter((t) => daysSince(t.created_at) <= RECENT_DAYS);
+  const stale = txs.filter((t) => t.stage === "trading" && daysSince(t.created_at) > STALE_DAYS);
+  const sealed = txs.filter((t) => t.poi_sealed_at && daysSince(t.poi_sealed_at) <= RECENT_DAYS);
+
+  const byStage = SPINE.map((s) => ({ label: s.label, n: txs.filter((t) => t.stage === s.key).length }));
+  const busiest = byStage.reduce((a, b) => (b.n > a.n ? b : a), byStage[0]!);
+
+  const changes: string[] = [];
+  if (changed.length > 0) {
+    changes.push(`${changed.length} trade${changed.length === 1 ? "" : "s"} opened in the last ${RECENT_DAYS} days.`);
+  }
+  if (sealed.length > 0) {
+    changes.push(`${sealed.length} Proof of Intent seal${sealed.length === 1 ? "" : "s"} completed this week.`);
+  }
+  if (changes.length === 0) changes.push("No new activity in the last week.");
+
+  const attention: string[] = [];
+  if (stale.length > 0) {
+    attention.push(
+      `${stale.length} trade${stale.length === 1 ? "" : "s"} ha${stale.length === 1 ? "s" : "ve"} sat in Trading Gate for over ${STALE_DAYS} days without a Proof of Intent.`,
+    );
+  }
+  if (attention.length === 0) attention.push("Nothing is stalled right now.");
+
+  const recommendation =
+    busiest.n > 0
+      ? `Focus on ${busiest.label} next — it holds the most open trades (${busiest.n}).`
+      : "Open your first trade to get started.";
+
+  return { changes, attention, recommendation };
+}
+
 const ORG_BADGE_PALETTE = [
   "bg-[oklch(0.5_0.19_260)] text-white",
   "bg-[oklch(0.55_0.2_150)] text-white",
@@ -46,7 +87,16 @@ const ORG_BADGE_PALETTE = [
   "bg-[oklch(0.5_0.16_200)] text-white",
 ];
 
+type Search = { stage?: StageKey | undefined };
+
 export const Route = createFileRoute("/_authenticated/dashboard")({
+  validateSearch: (search: Record<string, unknown>): Search => ({
+    stage: (["trading", "compliance", "execution", "finality", "memory"] as const).includes(
+      search["stage"] as StageKey,
+    )
+      ? (search["stage"] as StageKey)
+      : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Dashboard — Izenzo" },
@@ -60,8 +110,13 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 function Dashboard() {
   const { org, orgs, profile, roles } = useAuth();
+  const { stage } = Route.useSearch();
   const [titleFilter, setTitleFilter] = useState("");
-  const [stageFilter, setStageFilter] = useState("all");
+  const [stageFilter, setStageFilter] = useState<string>(stage ?? "all");
+
+  useEffect(() => {
+    if (stage) setStageFilter(stage);
+  }, [stage]);
   const [valueSort, setValueSort] = useState<"none" | "asc" | "desc">("none");
   const [orgFilter, setOrgFilter] = useState("all");
   const isAdmin = roles.includes("admin");
@@ -98,10 +153,7 @@ function Dashboard() {
     },
   });
 
-  const counts = SPINE.map((s) => ({
-    stage: s.label,
-    n: txs.filter((t) => t.stage === s.key).length,
-  }));
+  const overview = useMemo(() => buildOverview(txs), [txs]);
 
   const filteredTxs = useMemo(() => {
     let rows = txs;
@@ -127,7 +179,7 @@ function Dashboard() {
   }, [txs, titleFilter, stageFilter, orgFilter, valueSort]);
 
   return (
-    <AppShell description={org?.name ?? "Set up your organisation to begin"}>
+    <AppShell>
       {!org && (
         <div className="mb-6 rounded-md border border-border bg-muted/40 p-5">
           <h2 className="text-sm font-semibold">Set up your organisation</h2>
@@ -146,23 +198,37 @@ function Dashboard() {
       <h1 className="text-lg font-semibold tracking-tight">Dashboard</h1>
 
       <div className="mt-3 overflow-hidden rounded-md border border-border">
-        <div className="grid grid-cols-3 divide-x divide-y divide-border sm:grid-cols-6 sm:divide-y-0">
-          <div className="bg-background p-4">
-            <p className="label-caps">Tokens</p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums">{org?.credits ?? 0}</p>
+        <div className="flex items-center gap-2 bg-sidebar px-5 py-3 text-white">
+          <Sparkles className="h-4 w-4" />
+          <h2 className="text-sm font-semibold">AI Overview</h2>
+        </div>
+        <div className="grid gap-5 bg-background p-5 sm:grid-cols-3">
+          <div>
+            <p className="label-caps">What's changed</p>
+            <ul className="mt-1.5 space-y-1 text-sm text-muted-foreground">
+              {overview.changes.map((c) => (
+                <li key={c}>{c}</li>
+              ))}
+            </ul>
           </div>
-          {counts.map((c) => (
-            <div key={c.stage} className="bg-background p-4">
-              <p className="label-caps truncate">{c.stage}</p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums">{c.n}</p>
-            </div>
-          ))}
+          <div>
+            <p className="label-caps">Needs your attention</p>
+            <ul className="mt-1.5 space-y-1 text-sm text-muted-foreground">
+              {overview.attention.map((a) => (
+                <li key={a}>{a}</li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <p className="label-caps">Recommendation</p>
+            <p className="mt-1.5 text-sm text-muted-foreground">{overview.recommendation}</p>
+          </div>
         </div>
       </div>
 
       <section className="mt-8">
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <h2 className="text-sm font-semibold">Transactions</h2>
+          <h2 className="text-sm font-semibold">Trades</h2>
           <Link to="/transactions/new">
             <Button size="sm" className="gap-2">
               <Plus className="h-3.5 w-3.5" /> New Trade

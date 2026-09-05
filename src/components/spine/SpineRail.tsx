@@ -21,7 +21,7 @@ export function SpineRail({
   return (
     <nav className="lg:sticky lg:top-20">
       <p className="label-caps px-1">Trading Gateway</p>
-      <ol className="mt-3 space-y-5">
+      <ol className="mt-4 space-y-6">
         {SPINE.map((stage) => {
           const locked = lockReason(stage.key as StageKey, stage.steps[0]!.key, tx);
           const isOpen = openStage === stage.key;
@@ -49,7 +49,7 @@ export function SpineRail({
                 {locked && <Lock className="h-3 w-3 text-muted-foreground" />}
               </button>
               {isOpen && (
-              <ul className="mt-1.5 border-l border-border">
+              <ul className="mt-2 border-l border-border">
                 {stage.steps.map((step) => {
                   const idx = stepIndex(stage.key, step.key);
                   const done = currentIdx > idx;
@@ -60,7 +60,7 @@ export function SpineRail({
                   const inner = (
                     <span
                       className={cn(
-                        "group -ml-px flex items-center gap-2 border-l-2 py-1.5 pl-3 pr-2 text-[13px] transition-colors",
+                        "group -ml-px flex items-center gap-2 border-l-2 py-2 pl-3.5 pr-2 text-sm transition-colors",
                         isCurrent
                           ? "border-foreground font-medium text-foreground"
                           : "border-transparent text-muted-foreground",

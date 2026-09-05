@@ -1,3 +1,7 @@
+/* Gotham is a paid commercial font with no free CDN distribution — Montserrat Bold is used
+ * as the closest freely-licensed substitute for the greeting. Swap this import if a
+ * licensed Gotham font file becomes available. */
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&display=swap");
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
@@ -17,6 +21,8 @@
   --font-sans: "Manrope Variable", "Manrope", system-ui, -apple-system, sans-serif;
   --font-heading: "Sora Variable", "Sora", system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* Substitute for Gotham Bold — see import note above. */
+  --font-greeting: "Montserrat", "Sora Variable", system-ui, sans-serif;
 
 
   --radius-sm: calc(var(--radius) - 2px);

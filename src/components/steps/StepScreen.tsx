@@ -45,19 +45,19 @@ function Panel({
 }) {
   return (
     <div className="rounded-md border border-border">
-      <div className="border-b border-border px-5 py-3">
-        <h2 className="text-sm font-semibold">{title}</h2>
-        {description && <p className="text-xs text-muted-foreground">{description}</p>}
+      <div className="border-b border-border px-6 py-4">
+        <h2 className="text-base font-semibold">{title}</h2>
+        {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
       </div>
-      <div className="p-5">{children}</div>
-      {footer && <div className="border-t border-border px-5 py-3">{footer}</div>}
+      <div className="p-6">{children}</div>
+      {footer && <div className="border-t border-border px-6 py-4">{footer}</div>}
     </div>
   );
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       <Label>{label}</Label>
       {children}
     </div>
@@ -73,12 +73,12 @@ function Empty({ text }: { text: string }) {
 export function StepScreen(props: Props) {
   const def = stepDef(props.stage, props.step);
   return (
-    <div className="space-y-6">
-      <header className="space-y-3">
+    <div className="space-y-8">
+      <header className="space-y-5">
         <GateStepper tx={props.tx} stage={props.stage} step={props.step} />
         <div>
-          <h2 className="text-lg font-semibold tracking-tight">{def?.label ?? props.step}</h2>
-          {def?.blurb && <p className="mt-1 text-sm text-muted-foreground">{def.blurb}</p>}
+          <h2 className="text-2xl font-semibold tracking-tight">{def?.label ?? props.step}</h2>
+          {def?.blurb && <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{def.blurb}</p>}
         </div>
       </header>
       <Body {...props} />
@@ -100,7 +100,7 @@ function GateStepper({ tx, stage, step }: { tx: Transaction; stage: StageKey; st
       <p className="label-caps">
         {String(gateNumber).padStart(2, "0")} · {gate.label.toUpperCase()}
       </p>
-      <div className="mt-3 flex flex-wrap items-center gap-1 rounded-xl border border-border bg-muted/40 p-1.5">
+      <div className="mt-3 flex flex-wrap items-center gap-1.5 rounded-xl border border-border bg-muted/40 p-2">
         {gate.steps.map((s) => {
           const idx = stepIndex(stage, s.key);
           const done = currentIdx > idx;
@@ -110,7 +110,7 @@ function GateStepper({ tx, stage, step }: { tx: Transaction; stage: StageKey; st
           const inner = (
             <span
               className={cn(
-                "flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors",
+                "flex items-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition-colors",
                 isCurrent
                   ? "bg-primary text-primary-foreground"
                   : locked

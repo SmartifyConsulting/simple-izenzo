@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
-  LayoutDashboard,
   Coins,
   Inbox,
   ShieldCheck,
@@ -9,8 +8,13 @@ import {
   LogOut,
   Settings,
   Receipt,
-  Check,
+  LayoutDashboard,
+  ChevronRight,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { SPINE, type StageKey } from "@/lib/spine";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -22,12 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { useAuth } from "@/lib/auth";
-import { cn } from "@/lib/utils";
 import { Logo } from "@/components/Logo";
-
-type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; seats?: string[] };
-
-const NAV: NavItem[] = [{ to: "/inbox", label: "Inbox", icon: Inbox }];
 
 function greeting() {
   const hour = new Date().getHours();
@@ -36,74 +35,56 @@ function greeting() {
   return "Good evening";
 }
 
-function OrgList({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
-  const { org, orgs, switchOrg } = useAuth();
-  const navigate = useNavigate();
-
-  function selectOrg(id: string, active: boolean) {
-    if (!active) switchOrg(id);
-    navigate({ to: "/dashboard" });
-    onNavigate?.();
-  }
-
-  if (orgs.length === 0) {
-    return (
-      <div className="px-4 py-4">
-        <p className="label-caps text-sidebar-foreground/50">Organisation</p>
-        <p className="mt-1 text-sm font-medium text-sidebar-primary">Not set up yet</p>
-        <p className="mt-0.5 text-xs text-sidebar-foreground/60">Add your details</p>
-      </div>
-    );
-  }
-
+function NavLink({
+  to,
+  icon: Icon,
+  label,
+  active,
+  onClick,
+}: {
+  to: "/dashboard" | "/inbox" | "/credits";
+  icon: typeof LayoutDashboard;
+  label: string;
+  active: boolean;
+  onClick?: (() => void) | undefined;
+}) {
   return (
-    <div className="px-2 py-3">
-      <p className="label-caps px-2 text-sidebar-foreground/50">
-        Organisation{orgs.length > 1 ? "s" : ""}
-      </p>
-      <div className="mt-1.5 space-y-0.5">
-        {orgs.map((o) => {
-          const active = o.id === org?.id;
-          return (
-            <button
-              key={o.id}
-              type="button"
-              onClick={() => selectOrg(o.id, active)}
-              className={cn(
-                "flex w-full items-center gap-2.5 rounded px-2 py-2 text-left transition-colors",
-                active
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
-              )}
-            >
-              {o.avatar_url ? (
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sidebar-accent">
-                  <img src={o.avatar_url} alt="" className="h-full w-full object-cover" />
-                </span>
-              ) : (
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-[10px] font-semibold">
-                  {o.name.slice(0, 2).toUpperCase()}
-                </span>
-              )}
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium">{o.name}</span>
-                <span className="block text-xs text-sidebar-foreground/60">
-                  {o.credits} token{o.credits === 1 ? "" : "s"}
-                </span>
-              </span>
-              {active && <Check className="h-3.5 w-3.5 shrink-0" />}
-            </button>
-          );
-        })}
-      </div>
-    </div>
+    <Link
+      to={to}
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-2.5 rounded px-2.5 py-2 text-sm transition-colors",
+        active
+          ? "bg-sidebar-accent text-sidebar-accent-foreground"
+          : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+      )}
+    >
+      <Icon className="h-4 w-4 shrink-0" />
+      {label}
+    </Link>
   );
 }
 
-function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
-  const { roles } = useAuth();
+function SidebarBody({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const items = NAV.filter((n) => !n.seats || n.seats.some((r) => roles.includes(r)));
+  const search = useRouterState({ select: (s) => s.location.search as { stage?: string } });
+  const [gatewayOpen, setGatewayOpen] = useState(true);
+
+  const onGateway = pathname === "/dashboard" && Boolean(search.stage);
+
+  const { data: gateCounts = {} } = useQuery({
+    queryKey: ["sidebar-gate-counts"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("transactions").select("stage");
+      if (error) throw error;
+      const counts: Partial<Record<StageKey, number>> = {};
+      for (const row of data ?? []) {
+        const stage = row.stage as StageKey;
+        counts[stage] = (counts[stage] ?? 0) + 1;
+      }
+      return counts;
+    },
+  });
 
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
@@ -111,28 +92,68 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
         <Logo onDark className="h-[2.625rem] w-auto" />
       </Link>
 
-      <OrgList onNavigate={onNavigate} />
+      <nav className="flex-1 space-y-0.5 px-2 py-3">
+        <NavLink
+          to="/dashboard"
+          icon={LayoutDashboard}
+          label="Trades"
+          active={pathname === "/dashboard" && !search.stage}
+          onClick={onNavigate}
+        />
 
-      <nav className="flex-1 space-y-0.5 px-2">
-        {items.map((item) => {
-          const active = pathname.startsWith(item.to);
-          return (
-            <Link
-              key={item.to}
-              to={item.to}
-              onClick={onNavigate}
-              className={cn(
-                "flex items-center gap-2.5 rounded px-2.5 py-2 text-sm transition-colors",
-                active
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
-              )}
-            >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          );
-        })}
+        <button
+          type="button"
+          onClick={() => setGatewayOpen((v) => !v)}
+          className={cn(
+            "flex w-full items-center gap-2.5 rounded px-2.5 py-2 text-sm transition-colors",
+            onGateway
+              ? "text-sidebar-accent-foreground"
+              : "text-sidebar-foreground/75 hover:text-sidebar-accent-foreground",
+          )}
+        >
+          <ChevronRight className={cn("h-4 w-4 shrink-0 transition-transform", gatewayOpen && "rotate-90")} />
+          Gateway
+        </button>
+        {gatewayOpen && (
+          <div className="ml-3 space-y-0.5 border-l border-sidebar-border pl-3">
+            {SPINE.map((s) => (
+              <Link
+                key={s.key}
+                to="/dashboard"
+                search={{ stage: s.key }}
+                onClick={onNavigate}
+                className={cn(
+                  "flex items-center justify-between gap-2 truncate rounded px-2.5 py-1.5 text-sm transition-colors",
+                  search.stage === s.key
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+                )}
+              >
+                <span className="truncate">{s.label}</span>
+                {Boolean(gateCounts[s.key]) && (
+                  <span className="shrink-0 rounded-full bg-sidebar-foreground/15 px-1.5 py-0.5 text-[11px] font-medium leading-none">
+                    {gateCounts[s.key]}
+                  </span>
+                )}
+              </Link>
+            ))}
+          </div>
+        )}
+
+        <NavLink
+          to="/inbox"
+          icon={Inbox}
+          label="Inbox"
+          active={pathname.startsWith("/inbox")}
+          onClick={onNavigate}
+        />
+        <NavLink
+          to="/credits"
+          icon={Coins}
+          label="Token Management"
+          active={pathname.startsWith("/credits")}
+          onClick={onNavigate}
+        />
       </nav>
     </div>
   );
@@ -214,44 +235,53 @@ export function AppShell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-42 items-center gap-3 bg-background/95 px-4 backdrop-blur sm:px-6">
-          <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="lg:hidden">
-                <Menu className="h-4 w-4" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-72 p-0">
-              <SheetTitle className="sr-only">Menu</SheetTitle>
-              <SidebarBody onNavigate={() => setOpen(false)} />
-            </SheetContent>
-          </Sheet>
-          <div className="min-w-0 flex-1">
-            {firstName && (
-              <p className="truncate text-[2.025rem] font-semibold tracking-tight sm:text-[2.25rem]">
-                {greeting()}, {firstName}
-              </p>
-            )}
-            {title && (
-              <h1 className="truncate text-sm font-semibold tracking-tight text-muted-foreground">
-                {title}
-              </h1>
-            )}
-            {description && (
-              <p className="truncate text-xs text-muted-foreground">{description}</p>
-            )}
+        <header className="sticky top-0 z-30 h-42 bg-background/95 backdrop-blur">
+          <div className="flex h-full items-center gap-3 px-4 sm:px-6">
+            <Sheet open={open} onOpenChange={setOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="lg:hidden">
+                  <Menu className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-72 p-0">
+                <SheetTitle className="sr-only">Menu</SheetTitle>
+                <SidebarBody onNavigate={() => setOpen(false)} />
+              </SheetContent>
+            </Sheet>
+            <div className="grid w-full grid-cols-1 items-center lg:grid-cols-[1fr_5fr_5fr_1fr]">
+              <div className="flex min-w-0 items-center gap-3 lg:col-start-2 lg:col-span-2">
+                <div className="min-w-0 flex-1">
+                  {firstName && (
+                    <p
+                      className="truncate text-[2.025rem] tracking-tight sm:text-[2.25rem]"
+                      style={{ fontFamily: "var(--font-greeting)", fontWeight: 700 }}
+                    >
+                      {greeting()}, {firstName}
+                    </p>
+                  )}
+                  {title && (
+                    <h1 className="mt-1.5 truncate text-sm font-semibold tracking-tight text-muted-foreground">
+                      {title}
+                    </h1>
+                  )}
+                  {description && (
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">{description}</p>
+                  )}
+                </div>
+                {actions}
+                {org && (
+                  <Link
+                    to="/credits"
+                    className="flex shrink-0 items-center gap-1.5 rounded-full bg-success px-2.5 py-1 text-xs font-medium text-white transition-opacity hover:opacity-90"
+                  >
+                    <Coins className="h-3.5 w-3.5" />
+                    {org.credits} token{org.credits === 1 ? "" : "s"}
+                  </Link>
+                )}
+                <AvatarMenu />
+              </div>
+            </div>
           </div>
-          {actions}
-          {org && (
-            <Link
-              to="/credits"
-              className="flex shrink-0 items-center gap-1.5 rounded-full bg-success px-2.5 py-1 text-xs font-medium text-white transition-opacity hover:opacity-90"
-            >
-              <Coins className="h-3.5 w-3.5" />
-              {org.credits} token{org.credits === 1 ? "" : "s"}
-            </Link>
-          )}
-          <AvatarMenu />
         </header>
         <main className="flex-1 px-4 pb-6 pt-[2cm] sm:px-6">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_5fr_5fr_1fr]">
