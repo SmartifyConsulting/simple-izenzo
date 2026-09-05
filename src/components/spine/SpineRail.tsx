@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Check, Lock, Circle, Dot, ChevronRight } from "lucide-react";
 import { SPINE, lockReason, stepIndex, type StageKey } from "@/lib/spine";
@@ -16,7 +16,38 @@ export function SpineRail({
 }) {
   const currentIdx = stepIndex(tx.stage, tx.step);
   const viewingIdx = stepIndex(currentStage, currentStep);
-  const [openStage, setOpenStage] = useState<string | null>(null);
+  const [openStages, setOpenStages] = useState<Set<string>>(() => new Set([currentStage, tx.stage]));
+
+  // Auto-expand whichever gate is being viewed, or is the transaction's active gate —
+  // e.g. arriving via a nav link straight into a gate opens it without an extra click.
+  useEffect(() => {
+    setOpenStages((prev) => {
+      if (prev.has(currentStage) && prev.has(tx.stage)) return prev;
+      const next = new Set(prev);
+      next.add(currentStage);
+      next.add(tx.stage);
+      return next;
+    });
+  }, [currentStage, tx.stage]);
+
+  function isGateComplete(stageKey: string) {
+    const def = SPINE.find((s) => s.key === stageKey);
+    if (!def) return true;
+    const lastIdx = stepIndex(stageKey, def.steps[def.steps.length - 1]!.key);
+    return currentIdx > lastIdx;
+  }
+
+  function toggleStage(stageKey: string, isOpen: boolean) {
+    // The transaction's active, unfinished gate stays expanded until every step in it
+    // is complete — it can't be collapsed away by accident.
+    if (isOpen && stageKey === tx.stage && !isGateComplete(stageKey)) return;
+    setOpenStages((prev) => {
+      const next = new Set(prev);
+      if (isOpen) next.delete(stageKey);
+      else next.add(stageKey);
+      return next;
+    });
+  }
 
   return (
     <nav className="lg:sticky lg:top-20">
@@ -24,12 +55,12 @@ export function SpineRail({
       <ol className="mt-4 space-y-6">
         {SPINE.map((stage) => {
           const locked = lockReason(stage.key as StageKey, stage.steps[0]!.key, tx);
-          const isOpen = openStage === stage.key;
+          const isOpen = openStages.has(stage.key);
           return (
             <li key={stage.key}>
               <button
                 type="button"
-                onClick={() => setOpenStage(isOpen ? null : stage.key)}
+                onClick={() => toggleStage(stage.key, isOpen)}
                 className="flex w-full items-center gap-1.5 px-1 text-left"
               >
                 <ChevronRight
