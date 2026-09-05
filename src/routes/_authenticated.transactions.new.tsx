@@ -55,6 +55,8 @@ function NewTransaction() {
         .from("transactions")
         .insert({
           org_id: orgId,
+          stage: "trading",
+          step: "bid-offer",
           title: form.title,
           commodity: form.commodity || null,
           quantity: form.quantity ? Number(form.quantity) : null,
