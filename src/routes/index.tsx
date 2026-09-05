@@ -50,9 +50,9 @@ const GATES: { n: string; name: string; status: GateStatus; blurb: string; stage
 ];
 
 const STATUS_BADGE_CLASS: Record<GateStatus, string> = {
-  "IN PROGRESS": "bg-warning/20 text-warning-foreground",
-  LOCKED: "bg-muted text-muted-foreground",
-  EMPTY: "bg-muted text-muted-foreground",
+  "IN PROGRESS": "bg-warning text-white",
+  LOCKED: "bg-muted-foreground text-white",
+  EMPTY: "bg-muted-foreground text-white",
 };
 
 type Search = { next?: string | undefined };
@@ -183,6 +183,7 @@ function Landing() {
       <SiteHeader
         logoClassName="h-[1.875rem]"
         containerClassName="max-w-none px-6 sm:px-10 lg:px-16"
+        logoVariant="blue"
       />
 
       <main>

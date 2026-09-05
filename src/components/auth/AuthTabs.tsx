@@ -1,7 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SignInForm } from "@/components/auth/SignInForm";
 import { SignUpForm } from "@/components/auth/SignUpForm";
-import { Logo } from "@/components/Logo";
 
 /** Sign in and sign up as tabs of one form, shared between /auth and the home page hero. */
 export function AuthTabs({
@@ -16,7 +15,9 @@ export function AuthTabs({
   return (
     <div className={className}>
       <div className="mb-5 flex items-center gap-2">
-        <Logo />
+        <span className="flex h-7 w-7 items-center justify-center rounded bg-foreground text-[11px] font-bold text-background">
+          IZ
+        </span>
         <div>
           <p className="text-sm font-semibold leading-tight">Izenzo Trading Gateway</p>
           <p className="text-xs text-muted-foreground">Governance infrastructure for institutional trade</p>

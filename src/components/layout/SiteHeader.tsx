@@ -7,15 +7,17 @@ import { cn } from "@/lib/utils";
 export function SiteHeader({
   logoClassName,
   containerClassName,
+  logoVariant,
 }: {
   logoClassName?: string | undefined;
   containerClassName?: string | undefined;
+  logoVariant?: "white" | "blue" | undefined;
 }) {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur">
       <div className={cn("mx-auto flex h-14 max-w-6xl items-center px-5", containerClassName)}>
         <Link to="/">
-          <Logo className={logoClassName} />
+          <Logo className={logoClassName} variant={logoVariant} />
         </Link>
       </div>
     </header>
