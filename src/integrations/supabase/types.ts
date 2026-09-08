@@ -1010,6 +1010,249 @@ export type Database = {
         }
         Relationships: []
       }
+      refund_requests: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          confirmation_method: string | null
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          currency: string
+          id: string
+          org_id: string
+          payfast_reference: string | null
+          reason: string
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          requested_by: string
+          status: string
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          confirmation_method?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          org_id: string
+          payfast_reference?: string | null
+          reason: string
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          requested_by?: string
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          confirmation_method?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          org_id?: string
+          payfast_reference?: string | null
+          reason?: string
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          requested_by?: string
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "refund_requests_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      refund_events: {
+        Row: {
+          actor_id: string
+          created_at: string
+          event_type: string
+          id: string
+          new_status: string | null
+          note: string | null
+          previous_status: string | null
+          refund_id: string
+        }
+        Insert: {
+          actor_id?: string
+          created_at?: string
+          event_type: string
+          id?: string
+          new_status?: string | null
+          note?: string | null
+          previous_status?: string | null
+          refund_id: string
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          new_status?: string | null
+          note?: string | null
+          previous_status?: string | null
+          refund_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "refund_events_refund_id_fkey"
+            columns: ["refund_id"]
+            isOneToOne: false
+            referencedRelation: "refund_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      settlement_mismatches: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          description: string
+          evidence: string | null
+          id: string
+          izenzo_amount: number
+          payfast_amount: number
+          raised_by: string
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          description: string
+          evidence?: string | null
+          id?: string
+          izenzo_amount: number
+          payfast_amount: number
+          raised_by?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          description?: string
+          evidence?: string | null
+          id?: string
+          izenzo_amount?: number
+          payfast_amount?: number
+          raised_by?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      archive_move_candidates: {
+        Row: {
+          dismiss_reason: string | null
+          dismissed_at: string | null
+          dismissed_by: string | null
+          eligible_reason: string
+          entity_id: string
+          entity_type: string
+          flagged_at: string
+          flagged_by: string
+          id: string
+        }
+        Insert: {
+          dismiss_reason?: string | null
+          dismissed_at?: string | null
+          dismissed_by?: string | null
+          eligible_reason: string
+          entity_id: string
+          entity_type: string
+          flagged_at?: string
+          flagged_by?: string
+          id?: string
+        }
+        Update: {
+          dismiss_reason?: string | null
+          dismissed_at?: string | null
+          dismissed_by?: string | null
+          eligible_reason?: string
+          entity_id?: string
+          entity_type?: string
+          flagged_at?: string
+          flagged_by?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      archive_moves: {
+        Row: {
+          approved_at: string
+          approved_by: string
+          candidate_id: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          records_moved: number
+          retention_basis: string
+          retrieval_route: string
+        }
+        Insert: {
+          approved_at?: string
+          approved_by?: string
+          candidate_id?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          records_moved?: number
+          retention_basis: string
+          retrieval_route: string
+        }
+        Update: {
+          approved_at?: string
+          approved_by?: string
+          candidate_id?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          records_moved?: number
+          retention_basis?: string
+          retrieval_route?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "archive_moves_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "archive_move_candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       auditor_access_events: {
         Row: {
           actor_id: string
@@ -2406,6 +2649,62 @@ export type Database = {
       admin_add_forensic_finding: {
         Args: { p_finding: string; p_record_id: string }
         Returns: string
+      }
+      request_refund: {
+        Args: {
+          p_amount: number
+          p_currency?: string
+          p_org_id: string
+          p_reason: string
+          p_transaction_id?: string
+        }
+        Returns: string
+      }
+      admin_approve_refund_for_processing: {
+        Args: { p_id: string; p_note?: string }
+        Returns: undefined
+      }
+      admin_confirm_refund_complete: {
+        Args: { p_confirmation_method: string; p_id: string; p_payfast_reference?: string }
+        Returns: undefined
+      }
+      admin_reject_refund: {
+        Args: { p_id: string; p_reason: string }
+        Returns: undefined
+      }
+      admin_report_settlement_mismatch: {
+        Args: {
+          p_description: string
+          p_evidence?: string
+          p_izenzo_amount: number
+          p_payfast_amount: number
+        }
+        Returns: string
+      }
+      admin_resolve_settlement_mismatch: {
+        Args: { p_id: string; p_resolution_note: string }
+        Returns: undefined
+      }
+      admin_set_mismatch_under_review: {
+        Args: { p_id: string }
+        Returns: undefined
+      }
+      admin_flag_archive_candidate: {
+        Args: { p_eligible_reason: string; p_entity_id: string; p_entity_type: string }
+        Returns: string
+      }
+      admin_approve_archive_move: {
+        Args: {
+          p_candidate_id: string
+          p_records_moved?: number
+          p_retention_basis: string
+          p_retrieval_route: string
+        }
+        Returns: string
+      }
+      admin_dismiss_archive_candidate: {
+        Args: { p_id: string; p_reason?: string }
+        Returns: undefined
       }
       admin_api_suspend_key: { Args: { p_id: string }; Returns: undefined }
       admin_case_approve_decision: {

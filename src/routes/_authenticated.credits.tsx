@@ -6,6 +6,9 @@ import { Minus, Plus, Handshake, FileCheck } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { supabase } from "@/integrations/supabase/client";
@@ -385,7 +388,113 @@ function Credits() {
             )}
           </div>
         </div>
+
+        <RefundSection orgId={org?.id ?? null} />
       </div>
     </AppShell>
+  );
+}
+
+const REFUND_STATUS_LABEL: Record<string, string> = {
+  requested: "Requested",
+  approved_for_processing: "Approved — processing",
+  confirmed_complete: "Complete",
+  rejected: "Rejected",
+};
+
+function RefundSection({ orgId }: { orgId: string | null }) {
+  const qc = useQueryClient();
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ amount: "", reason: "" });
+
+  const { data: refunds = [] } = useQuery({
+    queryKey: ["my-refund-requests", orgId],
+    enabled: Boolean(orgId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("refund_requests")
+        .select("*")
+        .eq("org_id", orgId!)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!orgId) return;
+    const amount = Number(form.amount);
+    if (!amount || amount <= 0 || !form.reason.trim()) {
+      toast.error("A positive amount and a reason are required.");
+      return;
+    }
+    const { error } = await supabase.rpc("request_refund", {
+      p_org_id: orgId,
+      p_amount: amount,
+      p_reason: form.reason,
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Refund requested — an admin will review it");
+    setShowForm(false);
+    setForm({ amount: "", reason: "" });
+    await qc.invalidateQueries({ queryKey: ["my-refund-requests", orgId] });
+  }
+
+  if (!orgId) return null;
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-border">
+      <div className="flex items-center justify-between bg-sidebar px-5 py-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.09em] text-white">Refunds</p>
+        <Button size="sm" variant="secondary" onClick={() => setShowForm((v) => !v)}>
+          {showForm ? "Close" : "Request refund"}
+        </Button>
+      </div>
+      <div className="p-5">
+        {showForm && (
+          <form onSubmit={submit} className="mb-4 space-y-3 rounded-md border border-border p-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>Amount (ZAR)</Label>
+                <Input type="number" min={0.01} step="0.01" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Reason</Label>
+              <Textarea rows={2} value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              A refund is never processed automatically. An admin reviews every request, and it is
+              only marked complete once a named admin confirms the money actually moved.
+            </p>
+            <div className="text-right">
+              <Button type="submit" size="sm">
+                Submit request
+              </Button>
+            </div>
+          </form>
+        )}
+        {refunds.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No refund requests yet.</p>
+        ) : (
+          <ul className="space-y-2">
+            {refunds.map((r) => (
+              <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border p-3 text-xs">
+                <span>
+                  {r.currency} {r.amount} — {r.reason}
+                </span>
+                <Badge variant="secondary" className="font-normal">
+                  {REFUND_STATUS_LABEL[r.status] ?? r.status}
+                </Badge>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
   );
 }

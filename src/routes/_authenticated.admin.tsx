@@ -63,6 +63,7 @@ function AdminPage() {
           <TabsTrigger value="api-keys">API Keys</TabsTrigger>
           <TabsTrigger value="support">Support</TabsTrigger>
           <TabsTrigger value="auditors">Auditors</TabsTrigger>
+          <TabsTrigger value="payments">Payments</TabsTrigger>
           <TabsTrigger value="reporting">Reporting</TabsTrigger>
         </TabsList>
         <TabsContent value="users" className="mt-6">
@@ -94,6 +95,9 @@ function AdminPage() {
         </TabsContent>
         <TabsContent value="auditors" className="mt-6">
           <AuditorsTab />
+        </TabsContent>
+        <TabsContent value="payments" className="mt-6">
+          <PaymentsTab />
         </TabsContent>
         <TabsContent value="reporting" className="mt-6">
           <ReportingTab />
@@ -2774,6 +2778,368 @@ function AuditorsTab() {
                       Add
                     </Button>
                   </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PaymentsTab() {
+  const qc = useQueryClient();
+  const [mismatchForm, setMismatchForm] = useState({ description: "", izenzoAmount: "", payfastAmount: "", evidence: "" });
+  const [candidateForm, setCandidateForm] = useState({ entityType: "", entityId: "", eligibleReason: "" });
+
+  const { data: refunds = [] } = useQuery({
+    queryKey: ["admin-refund-requests"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("refund_requests")
+        .select("*, organisations(name)")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: mismatches = [] } = useQuery({
+    queryKey: ["admin-settlement-mismatches"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("settlement_mismatches")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: candidates = [] } = useQuery({
+    queryKey: ["admin-archive-candidates"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("archive_move_candidates")
+        .select("*, archive_moves(*)")
+        .order("flagged_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  async function refreshRefunds() {
+    await qc.invalidateQueries({ queryKey: ["admin-refund-requests"] });
+  }
+  async function refreshMismatches() {
+    await qc.invalidateQueries({ queryKey: ["admin-settlement-mismatches"] });
+  }
+  async function refreshCandidates() {
+    await qc.invalidateQueries({ queryKey: ["admin-archive-candidates"] });
+  }
+
+  async function approveForProcessing(id: string) {
+    const { error } = await supabase.rpc("admin_approve_refund_for_processing", { p_id: id });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Approved for processing — not yet complete");
+    await refreshRefunds();
+  }
+
+  async function confirmComplete(id: string) {
+    const method = window.prompt("Confirmation method (e.g. PayFast dashboard, bank statement):");
+    if (!method) return;
+    const reference = window.prompt("PayFast reference (optional):");
+    const { error } = await supabase.rpc("admin_confirm_refund_complete", {
+      p_id: id,
+      p_confirmation_method: method,
+      ...(reference ? { p_payfast_reference: reference } : {}),
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Refund confirmed complete");
+    await refreshRefunds();
+  }
+
+  async function rejectRefund(id: string) {
+    const reason = window.prompt("Rejection reason (required):");
+    if (!reason) return;
+    const { error } = await supabase.rpc("admin_reject_refund", { p_id: id, p_reason: reason });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Refund rejected");
+    await refreshRefunds();
+  }
+
+  async function reportMismatch(e: React.FormEvent) {
+    e.preventDefault();
+    if (!mismatchForm.description.trim() || !mismatchForm.izenzoAmount || !mismatchForm.payfastAmount) {
+      toast.error("Description and both amounts are required.");
+      return;
+    }
+    const { error } = await supabase.rpc("admin_report_settlement_mismatch", {
+      p_description: mismatchForm.description,
+      p_izenzo_amount: Number(mismatchForm.izenzoAmount),
+      p_payfast_amount: Number(mismatchForm.payfastAmount),
+      ...(mismatchForm.evidence ? { p_evidence: mismatchForm.evidence } : {}),
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Settlement mismatch recorded — admin review required");
+    setMismatchForm({ description: "", izenzoAmount: "", payfastAmount: "", evidence: "" });
+    await refreshMismatches();
+  }
+
+  async function setUnderReview(id: string) {
+    const { error } = await supabase.rpc("admin_set_mismatch_under_review", { p_id: id });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Marked under review");
+    await refreshMismatches();
+  }
+
+  async function resolveMismatch(id: string) {
+    const note = window.prompt("Resolution note (required):");
+    if (!note) return;
+    const { error } = await supabase.rpc("admin_resolve_settlement_mismatch", { p_id: id, p_resolution_note: note });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Mismatch resolved");
+    await refreshMismatches();
+  }
+
+  async function flagCandidate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!candidateForm.entityType.trim() || !candidateForm.entityId.trim() || !candidateForm.eligibleReason.trim()) {
+      toast.error("Entity type, entity ID and eligibility reason are required.");
+      return;
+    }
+    const { error } = await supabase.rpc("admin_flag_archive_candidate", {
+      p_entity_type: candidateForm.entityType,
+      p_entity_id: candidateForm.entityId,
+      p_eligible_reason: candidateForm.eligibleReason,
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Candidate flagged for archiving — nothing moved yet");
+    setCandidateForm({ entityType: "", entityId: "", eligibleReason: "" });
+    await refreshCandidates();
+  }
+
+  async function approveMove(id: string) {
+    const retentionBasis = window.prompt("Retention basis (required):");
+    if (!retentionBasis) return;
+    const retrievalRoute = window.prompt("Retrieval route (required):");
+    if (!retrievalRoute) return;
+    const { error } = await supabase.rpc("admin_approve_archive_move", {
+      p_candidate_id: id,
+      p_retention_basis: retentionBasis,
+      p_retrieval_route: retrievalRoute,
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Archive move approved and recorded");
+    await refreshCandidates();
+  }
+
+  async function dismissCandidate(id: string) {
+    const reason = window.prompt("Dismissal reason (optional):") ?? undefined;
+    const { error } = await supabase.rpc("admin_dismiss_archive_candidate", { p_id: id, p_reason: reason ?? "" });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Candidate dismissed");
+    await refreshCandidates();
+  }
+
+  return (
+    <div className="space-y-8">
+      <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm text-warning">
+        Nothing here moves money automatically. A refund is only "complete" once a named admin
+        explicitly confirms it — never inferred from approval alone. Settlement mismatches always
+        require a human decision; there is no auto-refund or auto-credit path anywhere.
+      </div>
+
+      <div>
+        <h2 className="text-sm font-semibold">Refund requests</h2>
+        {refunds.length === 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground">No refund requests yet.</p>
+        ) : (
+          <ul className="mt-2 space-y-2">
+            {refunds.map((r) => {
+              const orgName = (r as { organisations?: { name?: string } | null }).organisations?.name;
+              return (
+                <li key={r.id} className="rounded-md border border-border p-3 text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span>
+                      <span className="font-medium">{orgName}</span> · {r.currency} {r.amount} — {r.reason}
+                    </span>
+                    <Badge variant="outline" className="font-normal">
+                      {r.status}
+                    </Badge>
+                  </div>
+                  {r.status === "confirmed_complete" && (
+                    <p className="mt-1 text-muted-foreground">
+                      Confirmed via {r.confirmation_method} {r.payfast_reference ? `(ref ${r.payfast_reference})` : ""}
+                    </p>
+                  )}
+                  {r.status === "requested" && (
+                    <div className="mt-1.5 flex gap-1.5">
+                      <Button size="sm" variant="outline" onClick={() => approveForProcessing(r.id)}>
+                        Approve for processing
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => rejectRefund(r.id)}>
+                        Reject
+                      </Button>
+                    </div>
+                  )}
+                  {r.status === "approved_for_processing" && (
+                    <div className="mt-1.5 flex gap-1.5">
+                      <Button size="sm" onClick={() => confirmComplete(r.id)}>
+                        Confirm complete
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => rejectRefund(r.id)}>
+                        Reject
+                      </Button>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
+      <div>
+        <h2 className="text-sm font-semibold">Settlement mismatches</h2>
+        <form onSubmit={reportMismatch} className="mt-2 grid gap-3 rounded-md border border-border p-4 sm:grid-cols-2">
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label>Description</Label>
+            <Textarea rows={2} value={mismatchForm.description} onChange={(e) => setMismatchForm({ ...mismatchForm, description: e.target.value })} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Izenzo amount</Label>
+            <Input type="number" step="0.01" value={mismatchForm.izenzoAmount} onChange={(e) => setMismatchForm({ ...mismatchForm, izenzoAmount: e.target.value })} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>PayFast amount</Label>
+            <Input type="number" step="0.01" value={mismatchForm.payfastAmount} onChange={(e) => setMismatchForm({ ...mismatchForm, payfastAmount: e.target.value })} />
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label>Evidence (optional)</Label>
+            <Textarea rows={2} value={mismatchForm.evidence} onChange={(e) => setMismatchForm({ ...mismatchForm, evidence: e.target.value })} />
+          </div>
+          <div className="sm:col-span-2 text-right">
+            <Button type="submit" size="sm">
+              Record mismatch
+            </Button>
+          </div>
+        </form>
+
+        {mismatches.length > 0 && (
+          <ul className="mt-3 space-y-2">
+            {mismatches.map((m) => (
+              <li key={m.id} className="rounded-md border border-border p-3 text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span>
+                    {m.description} — Izenzo {m.izenzo_amount} vs PayFast {m.payfast_amount}
+                  </span>
+                  <Badge variant={m.status === "resolved" ? "secondary" : "destructive"} className="font-normal">
+                    {m.status}
+                  </Badge>
+                </div>
+                {m.resolution_note && <p className="mt-1 text-muted-foreground">Resolution: {m.resolution_note}</p>}
+                {m.status === "detected" && (
+                  <Button size="sm" variant="outline" className="mt-1.5" onClick={() => setUnderReview(m.id)}>
+                    Mark under review
+                  </Button>
+                )}
+                {m.status === "under_review" && (
+                  <Button size="sm" className="mt-1.5" onClick={() => resolveMismatch(m.id)}>
+                    Resolve
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div>
+        <h2 className="text-sm font-semibold">Cold-storage archiving</h2>
+        <form onSubmit={flagCandidate} className="mt-2 grid gap-3 rounded-md border border-border p-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label>Entity type</Label>
+            <Input value={candidateForm.entityType} onChange={(e) => setCandidateForm({ ...candidateForm, entityType: e.target.value })} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Entity ID</Label>
+            <Input value={candidateForm.entityId} onChange={(e) => setCandidateForm({ ...candidateForm, entityId: e.target.value })} />
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label>Eligibility reason (dry-run flag)</Label>
+            <Textarea rows={2} value={candidateForm.eligibleReason} onChange={(e) => setCandidateForm({ ...candidateForm, eligibleReason: e.target.value })} />
+          </div>
+          <div className="sm:col-span-2 text-right">
+            <Button type="submit" size="sm">
+              Flag candidate
+            </Button>
+          </div>
+        </form>
+
+        {candidates.length > 0 && (
+          <ul className="mt-3 space-y-2">
+            {candidates.map((c) => {
+              const moves = (c as { archive_moves?: { id: string; approved_at: string }[] }).archive_moves ?? [];
+              const moved = moves.length > 0;
+              return (
+                <li key={c.id} className="rounded-md border border-border p-3 text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span>
+                      {c.entity_type} · {c.entity_id} — {c.eligible_reason}
+                    </span>
+                    {moved ? (
+                      <Badge variant="secondary" className="font-normal">
+                        moved
+                      </Badge>
+                    ) : c.dismissed_at ? (
+                      <Badge variant="secondary" className="font-normal">
+                        dismissed
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="font-normal">
+                        pending
+                      </Badge>
+                    )}
+                  </div>
+                  {!moved && !c.dismissed_at && (
+                    <div className="mt-1.5 flex gap-1.5">
+                      <Button size="sm" onClick={() => approveMove(c.id)}>
+                        Approve move
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => dismissCandidate(c.id)}>
+                        Dismiss
+                      </Button>
+                    </div>
+                  )}
                 </li>
               );
             })}
