@@ -85,8 +85,9 @@ const ADMIN_GROUPS: { id: string; label: string; tabs: AdminTab[] }[] = [
 ];
 
 function AdminPage() {
-  const { roles } = useAuth();
+  const { roles, user } = useAuth();
   const isAdmin = roles.includes("admin");
+  const isSuperuser = (user?.email ?? "").toLowerCase() === SUPERUSER_EMAIL;
 
   if (!isAdmin) {
     return (
@@ -98,17 +99,22 @@ function AdminPage() {
     );
   }
 
+  const groups = ADMIN_GROUPS.map((g) => ({
+    ...g,
+    tabs: g.tabs.filter((t) => !t.superuserOnly || isSuperuser),
+  })).filter((g) => g.tabs.length > 0);
+
   return (
     <AppShell title="System Admin" description="Users, tokens and reporting for the whole book">
       <Tabs defaultValue="platform">
         <TabsList>
-          {ADMIN_GROUPS.map((g) => (
+          {groups.map((g) => (
             <TabsTrigger key={g.id} value={g.id}>
               {g.label}
             </TabsTrigger>
           ))}
         </TabsList>
-        {ADMIN_GROUPS.map((g) => (
+        {groups.map((g) => (
           <TabsContent key={g.id} value={g.id} className="mt-6">
             <Tabs defaultValue={g.tabs[0]!.value}>
               <TabsList>
