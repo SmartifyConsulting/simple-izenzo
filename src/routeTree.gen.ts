@@ -25,6 +25,7 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.
 import { Route as AuthenticatedAuditorRouteImport } from './routes/_authenticated.auditor'
 import { Route as AuthenticatedCreditsRouteImport } from './routes/_authenticated.credits'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
+import { Route as AuthenticatedDiscoverRouteImport } from './routes/_authenticated.discover'
 import { Route as AuthenticatedFacilitationRouteImport } from './routes/_authenticated.facilitation'
 import { Route as AuthenticatedFunderRouteImport } from './routes/_authenticated.funder'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated.inbox'
@@ -121,6 +122,11 @@ const AuthenticatedCreditsRoute = AuthenticatedCreditsRouteImport.update({
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedDiscoverRoute = AuthenticatedDiscoverRouteImport.update({
+  id: '/discover',
+  path: '/discover',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedFacilitationRoute =
@@ -236,6 +242,7 @@ export interface FileRoutesByFullPath {
   '/auditor': typeof AuthenticatedAuditorRoute
   '/credits': typeof AuthenticatedCreditsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/discover': typeof AuthenticatedDiscoverRoute
   '/facilitation': typeof AuthenticatedFacilitationRoute
   '/funder': typeof AuthenticatedFunderRoute
   '/inbox': typeof AuthenticatedInboxRoute
@@ -271,6 +278,7 @@ export interface FileRoutesByTo {
   '/auditor': typeof AuthenticatedAuditorRoute
   '/credits': typeof AuthenticatedCreditsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/discover': typeof AuthenticatedDiscoverRoute
   '/facilitation': typeof AuthenticatedFacilitationRoute
   '/funder': typeof AuthenticatedFunderRoute
   '/inbox': typeof AuthenticatedInboxRoute
@@ -308,6 +316,7 @@ export interface FileRoutesById {
   '/_authenticated/auditor': typeof AuthenticatedAuditorRoute
   '/_authenticated/credits': typeof AuthenticatedCreditsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/discover': typeof AuthenticatedDiscoverRoute
   '/_authenticated/facilitation': typeof AuthenticatedFacilitationRoute
   '/_authenticated/funder': typeof AuthenticatedFunderRoute
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
@@ -345,6 +354,7 @@ export interface FileRouteTypes {
     | '/auditor'
     | '/credits'
     | '/dashboard'
+    | '/discover'
     | '/facilitation'
     | '/funder'
     | '/inbox'
@@ -380,6 +390,7 @@ export interface FileRouteTypes {
     | '/auditor'
     | '/credits'
     | '/dashboard'
+    | '/discover'
     | '/facilitation'
     | '/funder'
     | '/inbox'
@@ -416,6 +427,7 @@ export interface FileRouteTypes {
     | '/_authenticated/auditor'
     | '/_authenticated/credits'
     | '/_authenticated/dashboard'
+    | '/_authenticated/discover'
     | '/_authenticated/facilitation'
     | '/_authenticated/funder'
     | '/_authenticated/inbox'
@@ -571,6 +583,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/discover': {
+      id: '/_authenticated/discover'
+      path: '/discover'
+      fullPath: '/discover'
+      preLoaderRoute: typeof AuthenticatedDiscoverRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/facilitation': {
       id: '/_authenticated/facilitation'
       path: '/facilitation'
@@ -705,6 +724,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAuditorRoute: typeof AuthenticatedAuditorRoute
   AuthenticatedCreditsRoute: typeof AuthenticatedCreditsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedDiscoverRoute: typeof AuthenticatedDiscoverRoute
   AuthenticatedFacilitationRoute: typeof AuthenticatedFacilitationRoute
   AuthenticatedFunderRoute: typeof AuthenticatedFunderRoute
   AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
@@ -722,6 +742,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAuditorRoute: AuthenticatedAuditorRoute,
   AuthenticatedCreditsRoute: AuthenticatedCreditsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedDiscoverRoute: AuthenticatedDiscoverRoute,
   AuthenticatedFacilitationRoute: AuthenticatedFacilitationRoute,
   AuthenticatedFunderRoute: AuthenticatedFunderRoute,
   AuthenticatedInboxRoute: AuthenticatedInboxRoute,

@@ -27,6 +27,9 @@ import {
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
+import { useLayoutPreference, setLayoutPreference } from "@/lib/layoutPreference";
+import { SidebarShell } from "@/components/layout/SidebarShell";
+import { ChevronDown } from "lucide-react";
 
 type NavTo =
   | "/dashboard"
@@ -171,7 +174,19 @@ function AvatarMenu() {
   );
 }
 
-export function AppShell({
+export function AppShell(props: {
+  title?: string;
+  description?: string;
+  actions?: ReactNode;
+  children: ReactNode;
+  wide?: boolean;
+}) {
+  const [layout] = useLayoutPreference();
+  if (layout === "sidebar") return <SidebarShell {...props} />;
+  return <ClassicShell {...props} />;
+}
+
+function ClassicShell({
   title,
   description,
   actions,
@@ -206,6 +221,19 @@ export function AppShell({
               {org.credits} token{org.credits === 1 ? "" : "s"}
             </Link>
           )}
+          <DropdownMenu>
+            <DropdownMenuTrigger className="hidden shrink-0 items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground outline-none hover:text-foreground sm:flex">
+              Layout <ChevronDown className="h-3 w-3" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setLayoutPreference("classic")}>
+                Classic top header (this one)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLayoutPreference("sidebar")}>
+                Sidebar
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <AvatarMenu />
         </div>
       </header>
