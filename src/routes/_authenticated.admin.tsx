@@ -140,8 +140,6 @@ const SUPERUSER_EMAIL = "georgia.adams@smartify.co.za";
 
 function UsersTab() {
   const qc = useQueryClient();
-  const { profile } = useAuth();
-  const isSystemAdmin = profile?.email === SUPERUSER_EMAIL;
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"created" | "accessed">("created");
 
@@ -235,12 +233,12 @@ function UsersTab() {
           {filteredUsers.map((u) => {
             const isUserAdmin = adminIds.has(u.id);
             return (
-              <li key={u.id} className="flex items-center justify-between gap-3 p-4 text-sm">
-                <div className="min-w-0">
+              <li key={u.id} className="flex items-center gap-3 p-4 text-sm">
+                <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{u.full_name ?? u.email}</p>
                   <p className="truncate text-xs text-muted-foreground">{u.email}</p>
                 </div>
-                <div className="hidden shrink-0 gap-8 text-xs text-muted-foreground sm:flex">
+                <div className="hidden shrink-0 text-xs text-muted-foreground sm:grid sm:grid-cols-[7rem_7rem]">
                   <span title={new Date(u.created_at).toLocaleString()}>
                     <span className="block text-[10px] uppercase tracking-wide">Created</span>
                     {when(u.created_at)}
@@ -258,20 +256,9 @@ function UsersTab() {
                       admin
                     </Badge>
                   )}
-                  {isSystemAdmin ? (
-                    <Button size="sm" variant="outline" onClick={() => toggleAdmin(u.id, isUserAdmin, u.email)}>
-                      {isUserAdmin ? "Revoke admin" : "Make admin"}
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled
-                      title="Only the system administrator can grant or revoke admin access"
-                    >
-                      {isUserAdmin ? "Revoke admin" : "Make admin"}
-                    </Button>
-                  )}
+                  <Button size="sm" variant="outline" onClick={() => toggleAdmin(u.id, isUserAdmin, u.email)}>
+                    {isUserAdmin ? "Revoke admin" : "Make admin"}
+                  </Button>
                 </div>
               </li>
             );
