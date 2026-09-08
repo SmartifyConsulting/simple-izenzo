@@ -56,17 +56,6 @@ export function TradingBoard() {
     },
   });
 
-  const { data: tickerNames = [] } = useQuery({
-    queryKey: ["board-ticker-names"],
-    queryFn: async () => {
-      const { data } = await supabase.from("organisations").select("name").limit(24);
-      const names = (data ?? []).map((o) => o.name).filter(Boolean);
-      return names.length > 0
-        ? names
-        : ["Meridian Metals", "Atlas Ferroalloys", "Baltic Ore Partners", "Gulf Commodity Holdings", "Cape Bulk Commodities"];
-    },
-  });
-
   const txById = useMemo(() => new Map(txs.map((t) => [t.id, t])), [txs]);
 
   const { buys, sells, matchedBuys, matchedSells } = useMemo(() => {
@@ -122,8 +111,8 @@ export function TradingBoard() {
         ))}
       </Lane>
 
-      <MatchLane title="Buy Matches" tone="terracotta" matched={matchedBuys} txById={txById} tickerNames={tickerNames} />
-      <MatchLane title="Sell Matches" tone="teal" matched={matchedSells} txById={txById} tickerNames={tickerNames} />
+      <MatchLane title="Buy Matches" tone="terracotta" matched={matchedBuys} txById={txById} />
+      <MatchLane title="Sell Matches" tone="teal" matched={matchedSells} txById={txById} />
 
       <Lane
         title="Bid to Sell"
@@ -221,17 +210,14 @@ function MatchLane({
   tone,
   matched,
   txById,
-  tickerNames,
 }: {
   title: string;
   tone: "terracotta" | "teal";
   matched: BidOfferRow[];
   txById: Map<string, TxRow>;
-  tickerNames: string[];
 }) {
   const color = tone === "terracotta" ? "var(--terracotta)" : "var(--teal)";
   const colorFg = tone === "terracotta" ? "var(--terracotta-foreground)" : "var(--teal-foreground)";
-  const doubled = [...tickerNames, ...tickerNames];
 
   return (
     <div className="flex min-h-[420px] flex-col bg-muted/20">
@@ -250,22 +236,12 @@ function MatchLane({
         )}
       </div>
 
-      {matched.length > 0 && (
-        <div className="space-y-2 border-b border-border px-4 py-3">
-          {matched.map((bo) => (
-            <BidCard key={bo.id} bo={bo} tx={txById.get(bo.transaction_id)} tone={tone} />
-          ))}
-        </div>
-      )}
-
-      <div className="relative flex-1 overflow-hidden">
-        <div className="animate-marquee-up absolute inset-x-0 top-0 space-y-3 px-4" style={{ animationDuration: `${doubled.length * 2.2}s` }}>
-          {doubled.map((name, i) => (
-            <p key={i} className="truncate text-xs text-muted-foreground/70">
-              {name}
-            </p>
-          ))}
-        </div>
+      <div className="flex-1 space-y-2 px-4 py-3">
+        {matched.length === 0 ? (
+          <EmptyLane label="No matches yet" />
+        ) : (
+          matched.map((bo) => <BidCard key={bo.id} bo={bo} tx={txById.get(bo.transaction_id)} tone={tone} />)
+        )}
       </div>
     </div>
   );
