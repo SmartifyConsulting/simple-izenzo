@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       ai_proposals: {
         Row: {
           adopted_at: string | null
@@ -58,92 +79,17 @@ export type Database = {
           },
         ]
       }
-      ai_suggestions: {
-        Row: {
-          confidence: string
-          created_at: string
-          created_by: string
-          id: string
-          manual_creation_reason: string | null
-          reviewed_at: string | null
-          reviewed_by: string | null
-          reviewer_note: string | null
-          rejection_note: string | null
-          rejection_reason: string | null
-          related_transaction_id: string | null
-          assigned_reviewer_id: string | null
-          source_references: string | null
-          source_summary: string
-          source_timestamp: string | null
-          status: string
-          suggested_name: string
-          suggestion_type: string
-          summary: string
-          updated_at: string
-        }
-        Insert: {
-          confidence: string
-          created_at?: string
-          created_by?: string
-          id?: string
-          manual_creation_reason?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          reviewer_note?: string | null
-          rejection_note?: string | null
-          rejection_reason?: string | null
-          related_transaction_id?: string | null
-          assigned_reviewer_id?: string | null
-          source_references?: string | null
-          source_summary: string
-          source_timestamp?: string | null
-          status?: string
-          suggested_name: string
-          suggestion_type: string
-          summary: string
-          updated_at?: string
-        }
-        Update: {
-          confidence?: string
-          created_at?: string
-          created_by?: string
-          id?: string
-          manual_creation_reason?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          reviewer_note?: string | null
-          rejection_note?: string | null
-          rejection_reason?: string | null
-          related_transaction_id?: string | null
-          assigned_reviewer_id?: string | null
-          source_references?: string | null
-          source_summary?: string
-          source_timestamp?: string | null
-          status?: string
-          suggested_name?: string
-          suggestion_type?: string
-          summary?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ai_suggestions_related_transaction_id_fkey"
-            columns: ["related_transaction_id"]
-            isOneToOne: false
-            referencedRelation: "transactions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       ai_suggestion_events: {
         Row: {
           actor_id: string
           created_at: string
           event_type: string
           id: string
-          new_status: string | null
+          new_status: Database["public"]["Enums"]["ai_suggestion_status"] | null
           note: string | null
-          previous_status: string | null
+          previous_status:
+            | Database["public"]["Enums"]["ai_suggestion_status"]
+            | null
           reason: string | null
           suggestion_id: string
         }
@@ -152,9 +98,13 @@ export type Database = {
           created_at?: string
           event_type: string
           id?: string
-          new_status?: string | null
+          new_status?:
+            | Database["public"]["Enums"]["ai_suggestion_status"]
+            | null
           note?: string | null
-          previous_status?: string | null
+          previous_status?:
+            | Database["public"]["Enums"]["ai_suggestion_status"]
+            | null
           reason?: string | null
           suggestion_id: string
         }
@@ -163,9 +113,13 @@ export type Database = {
           created_at?: string
           event_type?: string
           id?: string
-          new_status?: string | null
+          new_status?:
+            | Database["public"]["Enums"]["ai_suggestion_status"]
+            | null
           note?: string | null
-          previous_status?: string | null
+          previous_status?:
+            | Database["public"]["Enums"]["ai_suggestion_status"]
+            | null
           reason?: string | null
           suggestion_id?: string
         }
@@ -179,380 +133,318 @@ export type Database = {
           },
         ]
       }
-      compliance_cases: {
+      ai_suggestions: {
         Row: {
-          assigned_analyst_id: string | null
-          case_type: string
+          assigned_reviewer_id: string | null
+          confidence: Database["public"]["Enums"]["ai_suggestion_confidence"]
           created_at: string
           created_by: string
-          decided_at: string | null
-          decided_by: string | null
-          final_decision: string | null
-          final_decision_note: string | null
           id: string
-          priority: string
-          proposed_decision: string | null
-          proposed_decision_at: string | null
-          proposed_decision_by: string | null
-          proposed_decision_note: string | null
-          status: string
-          subject_counterparty_id: string | null
-          subject_org_id: string | null
-          subject_transaction_id: string | null
+          manual_creation_reason: string | null
+          rejection_note: string | null
+          rejection_reason:
+            | Database["public"]["Enums"]["ai_suggestion_rejection_reason"]
+            | null
+          related_transaction_id: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewer_note: string | null
+          source_references: string | null
+          source_summary: string
+          source_timestamp: string | null
+          status: Database["public"]["Enums"]["ai_suggestion_status"]
+          suggested_name: string
+          suggestion_type: Database["public"]["Enums"]["ai_suggestion_type"]
           summary: string
-          title: string
           updated_at: string
         }
         Insert: {
-          assigned_analyst_id?: string | null
-          case_type: string
+          assigned_reviewer_id?: string | null
+          confidence: Database["public"]["Enums"]["ai_suggestion_confidence"]
           created_at?: string
           created_by?: string
-          decided_at?: string | null
-          decided_by?: string | null
-          final_decision?: string | null
-          final_decision_note?: string | null
           id?: string
-          priority?: string
-          proposed_decision?: string | null
-          proposed_decision_at?: string | null
-          proposed_decision_by?: string | null
-          proposed_decision_note?: string | null
-          status?: string
-          subject_counterparty_id?: string | null
-          subject_org_id?: string | null
-          subject_transaction_id?: string | null
+          manual_creation_reason?: string | null
+          rejection_note?: string | null
+          rejection_reason?:
+            | Database["public"]["Enums"]["ai_suggestion_rejection_reason"]
+            | null
+          related_transaction_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_note?: string | null
+          source_references?: string | null
+          source_summary: string
+          source_timestamp?: string | null
+          status?: Database["public"]["Enums"]["ai_suggestion_status"]
+          suggested_name: string
+          suggestion_type: Database["public"]["Enums"]["ai_suggestion_type"]
           summary: string
-          title: string
           updated_at?: string
         }
         Update: {
-          assigned_analyst_id?: string | null
-          case_type?: string
+          assigned_reviewer_id?: string | null
+          confidence?: Database["public"]["Enums"]["ai_suggestion_confidence"]
           created_at?: string
           created_by?: string
-          decided_at?: string | null
-          decided_by?: string | null
-          final_decision?: string | null
-          final_decision_note?: string | null
           id?: string
-          priority?: string
-          proposed_decision?: string | null
-          proposed_decision_at?: string | null
-          proposed_decision_by?: string | null
-          proposed_decision_note?: string | null
-          status?: string
-          subject_counterparty_id?: string | null
-          subject_org_id?: string | null
-          subject_transaction_id?: string | null
+          manual_creation_reason?: string | null
+          rejection_note?: string | null
+          rejection_reason?:
+            | Database["public"]["Enums"]["ai_suggestion_rejection_reason"]
+            | null
+          related_transaction_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_note?: string | null
+          source_references?: string | null
+          source_summary?: string
+          source_timestamp?: string | null
+          status?: Database["public"]["Enums"]["ai_suggestion_status"]
+          suggested_name?: string
+          suggestion_type?: Database["public"]["Enums"]["ai_suggestion_type"]
           summary?: string
-          title?: string
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "compliance_cases_subject_counterparty_id_fkey"
-            columns: ["subject_counterparty_id"]
-            isOneToOne: false
-            referencedRelation: "counterparties"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "compliance_cases_subject_transaction_id_fkey"
-            columns: ["subject_transaction_id"]
+            foreignKeyName: "ai_suggestions_related_transaction_id_fkey"
+            columns: ["related_transaction_id"]
             isOneToOne: false
             referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "compliance_cases_subject_org_id_fkey"
-            columns: ["subject_org_id"]
-            isOneToOne: false
-            referencedRelation: "organisations"
-            referencedColumns: ["id"]
-          },
         ]
       }
-      compliance_case_events: {
+      api_keys: {
         Row: {
-          actor_id: string
-          case_id: string
+          commercial_owner: string | null
+          compliance_owner: string | null
           created_at: string
-          event_type: string
+          created_by: string
+          environment: Database["public"]["Enums"]["api_key_environment"]
+          expires_at: string
           id: string
-          new_status: string | null
-          note: string | null
-          previous_status: string | null
+          ip_allowlist: string[]
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          monthly_allowance: number
+          name: string
+          org_id: string
+          revoke_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          scopes: string[]
+          status: Database["public"]["Enums"]["api_key_status"]
         }
         Insert: {
-          actor_id?: string
-          case_id: string
+          commercial_owner?: string | null
+          compliance_owner?: string | null
           created_at?: string
-          event_type: string
+          created_by?: string
+          environment: Database["public"]["Enums"]["api_key_environment"]
+          expires_at: string
           id?: string
-          new_status?: string | null
-          note?: string | null
-          previous_status?: string | null
+          ip_allowlist?: string[]
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          monthly_allowance?: number
+          name: string
+          org_id: string
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          scopes?: string[]
+          status?: Database["public"]["Enums"]["api_key_status"]
         }
         Update: {
-          actor_id?: string
-          case_id?: string
+          commercial_owner?: string | null
+          compliance_owner?: string | null
           created_at?: string
-          event_type?: string
+          created_by?: string
+          environment?: Database["public"]["Enums"]["api_key_environment"]
+          expires_at?: string
           id?: string
-          new_status?: string | null
-          note?: string | null
-          previous_status?: string | null
+          ip_allowlist?: string[]
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          monthly_allowance?: number
+          name?: string
+          org_id?: string
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          scopes?: string[]
+          status?: Database["public"]["Enums"]["api_key_status"]
         }
         Relationships: [
           {
-            foreignKeyName: "compliance_case_events_case_id_fkey"
-            columns: ["case_id"]
-            isOneToOne: false
-            referencedRelation: "compliance_cases"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      facilitation_cases: {
-        Row: {
-          authority_confirmed: boolean
-          closed_at: string | null
-          closure_reason: string | null
-          compliance_hold: boolean
-          compliance_hold_reason: string | null
-          contact_identifier: string
-          counterparty_name: string
-          counterparty_role: string | null
-          country: string | null
-          created_at: string
-          final_outcome: string | null
-          id: string
-          org_id: string | null
-          owner_assigned_at: string | null
-          owner_id: string | null
-          product_service: string | null
-          purpose: string | null
-          requester_id: string
-          sector: string | null
-          source_evidence: string
-          status: string
-          transaction_id: string | null
-          updated_at: string
-        }
-        Insert: {
-          authority_confirmed?: boolean
-          closed_at?: string | null
-          closure_reason?: string | null
-          compliance_hold?: boolean
-          compliance_hold_reason?: string | null
-          contact_identifier: string
-          counterparty_name: string
-          counterparty_role?: string | null
-          country?: string | null
-          created_at?: string
-          final_outcome?: string | null
-          id?: string
-          org_id?: string | null
-          owner_assigned_at?: string | null
-          owner_id?: string | null
-          product_service?: string | null
-          purpose?: string | null
-          requester_id?: string
-          sector?: string | null
-          source_evidence: string
-          status?: string
-          transaction_id?: string | null
-          updated_at?: string
-        }
-        Update: {
-          authority_confirmed?: boolean
-          closed_at?: string | null
-          closure_reason?: string | null
-          compliance_hold?: boolean
-          compliance_hold_reason?: string | null
-          contact_identifier?: string
-          counterparty_name?: string
-          counterparty_role?: string | null
-          country?: string | null
-          created_at?: string
-          final_outcome?: string | null
-          id?: string
-          org_id?: string | null
-          owner_assigned_at?: string | null
-          owner_id?: string | null
-          product_service?: string | null
-          purpose?: string | null
-          requester_id?: string
-          sector?: string | null
-          source_evidence?: string
-          status?: string
-          transaction_id?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "facilitation_cases_org_id_fkey"
+            foreignKeyName: "api_keys_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organisations"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "facilitation_cases_transaction_id_fkey"
-            columns: ["transaction_id"]
-            isOneToOne: false
-            referencedRelation: "transactions"
-            referencedColumns: ["id"]
-          },
         ]
       }
-      facilitation_case_events: {
+      api_request_logs: {
         Row: {
-          actor_id: string
-          case_id: string
+          api_key_id: string | null
+          billable: boolean
+          correlation_id: string | null
           created_at: string
-          event_type: string
+          endpoint: string
+          environment: Database["public"]["Enums"]["api_key_environment"]
+          error_code: string | null
           id: string
-          note: string | null
+          latency_ms: number
+          log_hash: string
+          method: string
+          org_id: string | null
+          previous_log_hash: string | null
+          rate_limit_decision: string
+          request_id: string
+          request_payload_hash: string | null
+          response_status: number
+          scopes_evaluated: string[]
+          source_ip: string | null
+          token_cost: number
+          user_agent: string | null
         }
         Insert: {
-          actor_id?: string
-          case_id: string
+          api_key_id?: string | null
+          billable?: boolean
+          correlation_id?: string | null
           created_at?: string
-          event_type: string
+          endpoint: string
+          environment: Database["public"]["Enums"]["api_key_environment"]
+          error_code?: string | null
           id?: string
-          note?: string | null
+          latency_ms: number
+          log_hash: string
+          method: string
+          org_id?: string | null
+          previous_log_hash?: string | null
+          rate_limit_decision?: string
+          request_id: string
+          request_payload_hash?: string | null
+          response_status: number
+          scopes_evaluated?: string[]
+          source_ip?: string | null
+          token_cost?: number
+          user_agent?: string | null
         }
         Update: {
-          actor_id?: string
-          case_id?: string
+          api_key_id?: string | null
+          billable?: boolean
+          correlation_id?: string | null
           created_at?: string
-          event_type?: string
+          endpoint?: string
+          environment?: Database["public"]["Enums"]["api_key_environment"]
+          error_code?: string | null
           id?: string
-          note?: string | null
+          latency_ms?: number
+          log_hash?: string
+          method?: string
+          org_id?: string | null
+          previous_log_hash?: string | null
+          rate_limit_decision?: string
+          request_id?: string
+          request_payload_hash?: string | null
+          response_status?: number
+          scopes_evaluated?: string[]
+          source_ip?: string | null
+          token_cost?: number
+          user_agent?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "facilitation_case_events_case_id_fkey"
-            columns: ["case_id"]
+            foreignKeyName: "api_request_logs_api_key_id_fkey"
+            columns: ["api_key_id"]
             isOneToOne: false
-            referencedRelation: "facilitation_cases"
+            referencedRelation: "api_keys"
             referencedColumns: ["id"]
           },
         ]
       }
-      registry_companies: {
+      api_webhook_deliveries: {
         Row: {
-          claimed_org_id: string | null
-          country: string
+          attempt: number
           created_at: string
-          created_by: string | null
+          endpoint_id: string
+          event_type: string
           id: string
-          import_batch_id: string | null
-          legal_name: string
-          licence_ref: string | null
-          observed_date: string | null
-          readiness_state: string
-          registration_no: string | null
-          sector: string | null
-          source_name: string | null
-          source_type: string
-          trading_name: string | null
-          updated_at: string
-        }
-        Insert: {
-          claimed_org_id?: string | null
-          country: string
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          import_batch_id?: string | null
-          legal_name: string
-          licence_ref?: string | null
-          observed_date?: string | null
-          readiness_state?: string
-          registration_no?: string | null
-          sector?: string | null
-          source_name?: string | null
-          source_type?: string
-          trading_name?: string | null
-          updated_at?: string
-        }
-        Update: {
-          claimed_org_id?: string | null
-          country?: string
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          import_batch_id?: string | null
-          legal_name?: string
-          licence_ref?: string | null
-          observed_date?: string | null
-          readiness_state?: string
-          registration_no?: string | null
-          sector?: string | null
-          source_name?: string | null
-          source_type?: string
-          trading_name?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "registry_companies_claimed_org_id_fkey"
-            columns: ["claimed_org_id"]
-            isOneToOne: false
-            referencedRelation: "organisations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      registry_claims: {
-        Row: {
-          claimant_id: string
-          claimant_role: string
-          company_id: string
-          created_at: string
-          decision_reason: string | null
-          evidence_note: string | null
-          evidence_url: string | null
-          id: string
-          reviewed_at: string | null
-          reviewed_by: string | null
+          payload: Json
+          response_status: number | null
+          signature: string
           status: string
         }
         Insert: {
-          claimant_id?: string
-          claimant_role: string
-          company_id: string
+          attempt?: number
           created_at?: string
-          decision_reason?: string | null
-          evidence_note?: string | null
-          evidence_url?: string | null
+          endpoint_id: string
+          event_type: string
           id?: string
-          reviewed_at?: string | null
-          reviewed_by?: string | null
+          payload: Json
+          response_status?: number | null
+          signature: string
           status?: string
         }
         Update: {
-          claimant_id?: string
-          claimant_role?: string
-          company_id?: string
+          attempt?: number
           created_at?: string
-          decision_reason?: string | null
-          evidence_note?: string | null
-          evidence_url?: string | null
+          endpoint_id?: string
+          event_type?: string
           id?: string
-          reviewed_at?: string | null
-          reviewed_by?: string | null
+          payload?: Json
+          response_status?: number | null
+          signature?: string
           status?: string
         }
         Relationships: [
           {
-            foreignKeyName: "registry_claims_company_id_fkey"
-            columns: ["company_id"]
+            foreignKeyName: "api_webhook_deliveries_endpoint_id_fkey"
+            columns: ["endpoint_id"]
             isOneToOne: false
-            referencedRelation: "registry_companies"
+            referencedRelation: "api_webhook_endpoints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_webhook_endpoints: {
+        Row: {
+          active: boolean
+          api_key_id: string
+          created_at: string
+          id: string
+          secret: string
+          url: string
+        }
+        Insert: {
+          active?: boolean
+          api_key_id: string
+          created_at?: string
+          id?: string
+          secret: string
+          url: string
+        }
+        Update: {
+          active?: boolean
+          api_key_id?: string
+          created_at?: string
+          id?: string
+          secret?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_webhook_endpoints_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
             referencedColumns: ["id"]
           },
         ]
@@ -607,425 +499,161 @@ export type Database = {
           },
         ]
       }
-      funder_orgs: {
-        Row: { created_at: string; id: string; name: string }
-        Insert: { created_at?: string; id?: string; name: string }
-        Update: { created_at?: string; id?: string; name?: string }
-        Relationships: []
-      }
-      funder_org_members: {
+      compliance_case_events: {
         Row: {
+          actor_id: string
+          case_id: string
           created_at: string
-          funder_org_id: string
-          funder_role: string
+          event_type: string
           id: string
-          user_id: string
+          new_status:
+            | Database["public"]["Enums"]["compliance_case_status"]
+            | null
+          note: string | null
+          previous_status:
+            | Database["public"]["Enums"]["compliance_case_status"]
+            | null
         }
         Insert: {
+          actor_id?: string
+          case_id: string
           created_at?: string
-          funder_org_id: string
-          funder_role?: string
+          event_type: string
           id?: string
-          user_id: string
+          new_status?:
+            | Database["public"]["Enums"]["compliance_case_status"]
+            | null
+          note?: string | null
+          previous_status?:
+            | Database["public"]["Enums"]["compliance_case_status"]
+            | null
         }
         Update: {
+          actor_id?: string
+          case_id?: string
           created_at?: string
-          funder_org_id?: string
-          funder_role?: string
+          event_type?: string
           id?: string
-          user_id?: string
+          new_status?:
+            | Database["public"]["Enums"]["compliance_case_status"]
+            | null
+          note?: string | null
+          previous_status?:
+            | Database["public"]["Enums"]["compliance_case_status"]
+            | null
         }
         Relationships: [
           {
-            foreignKeyName: "funder_org_members_funder_org_id_fkey"
-            columns: ["funder_org_id"]
+            foreignKeyName: "compliance_case_events_case_id_fkey"
+            columns: ["case_id"]
             isOneToOne: false
-            referencedRelation: "funder_orgs"
+            referencedRelation: "compliance_cases"
             referencedColumns: ["id"]
           },
         ]
       }
-      funder_releases: {
+      compliance_cases: {
         Row: {
-          compliance_summary: Json
-          consent_basis: string
-          counterparty_id: string
+          assigned_analyst_id: string | null
+          case_type: Database["public"]["Enums"]["compliance_case_type"]
           created_at: string
-          expiry: string
-          funder_org_id: string
+          created_by: string
+          decided_at: string | null
+          decided_by: string | null
+          final_decision:
+            | Database["public"]["Enums"]["compliance_case_decision"]
+            | null
+          final_decision_note: string | null
           id: string
-          pack_version: string
-          permissions: string
-          reason: string
-          released_by: string
-          released_document_ids: string[]
-          released_fields: Json
-          revoke_reason: string | null
-          revoked_at: string | null
-          revoked_by: string | null
-          transaction_id: string | null
+          priority: Database["public"]["Enums"]["compliance_case_priority"]
+          proposed_decision:
+            | Database["public"]["Enums"]["compliance_case_decision"]
+            | null
+          proposed_decision_at: string | null
+          proposed_decision_by: string | null
+          proposed_decision_note: string | null
+          status: Database["public"]["Enums"]["compliance_case_status"]
+          subject_counterparty_id: string | null
+          subject_org_id: string | null
+          subject_transaction_id: string | null
+          summary: string
+          title: string
+          updated_at: string
         }
         Insert: {
-          compliance_summary?: Json
-          consent_basis: string
-          counterparty_id: string
+          assigned_analyst_id?: string | null
+          case_type: Database["public"]["Enums"]["compliance_case_type"]
           created_at?: string
-          expiry: string
-          funder_org_id: string
+          created_by?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          final_decision?:
+            | Database["public"]["Enums"]["compliance_case_decision"]
+            | null
+          final_decision_note?: string | null
           id?: string
-          pack_version?: string
-          permissions?: string
-          reason: string
-          released_by?: string
-          released_document_ids?: string[]
-          released_fields: Json
-          revoke_reason?: string | null
-          revoked_at?: string | null
-          revoked_by?: string | null
-          transaction_id?: string | null
+          priority?: Database["public"]["Enums"]["compliance_case_priority"]
+          proposed_decision?:
+            | Database["public"]["Enums"]["compliance_case_decision"]
+            | null
+          proposed_decision_at?: string | null
+          proposed_decision_by?: string | null
+          proposed_decision_note?: string | null
+          status?: Database["public"]["Enums"]["compliance_case_status"]
+          subject_counterparty_id?: string | null
+          subject_org_id?: string | null
+          subject_transaction_id?: string | null
+          summary: string
+          title: string
+          updated_at?: string
         }
         Update: {
-          compliance_summary?: Json
-          consent_basis?: string
-          counterparty_id?: string
+          assigned_analyst_id?: string | null
+          case_type?: Database["public"]["Enums"]["compliance_case_type"]
           created_at?: string
-          expiry?: string
-          funder_org_id?: string
+          created_by?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          final_decision?:
+            | Database["public"]["Enums"]["compliance_case_decision"]
+            | null
+          final_decision_note?: string | null
           id?: string
-          pack_version?: string
-          permissions?: string
-          reason?: string
-          released_by?: string
-          released_document_ids?: string[]
-          released_fields?: Json
-          revoke_reason?: string | null
-          revoked_at?: string | null
-          revoked_by?: string | null
-          transaction_id?: string | null
+          priority?: Database["public"]["Enums"]["compliance_case_priority"]
+          proposed_decision?:
+            | Database["public"]["Enums"]["compliance_case_decision"]
+            | null
+          proposed_decision_at?: string | null
+          proposed_decision_by?: string | null
+          proposed_decision_note?: string | null
+          status?: Database["public"]["Enums"]["compliance_case_status"]
+          subject_counterparty_id?: string | null
+          subject_org_id?: string | null
+          subject_transaction_id?: string | null
+          summary?: string
+          title?: string
+          updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "funder_releases_funder_org_id_fkey"
-            columns: ["funder_org_id"]
-            isOneToOne: false
-            referencedRelation: "funder_orgs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "funder_releases_counterparty_id_fkey"
-            columns: ["counterparty_id"]
+            foreignKeyName: "compliance_cases_subject_counterparty_id_fkey"
+            columns: ["subject_counterparty_id"]
             isOneToOne: false
             referencedRelation: "counterparties"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "funder_releases_transaction_id_fkey"
-            columns: ["transaction_id"]
-            isOneToOne: false
-            referencedRelation: "transactions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      funder_release_events: {
-        Row: {
-          actor_id: string
-          created_at: string
-          event_type: string
-          id: string
-          note: string | null
-          release_id: string
-        }
-        Insert: {
-          actor_id?: string
-          created_at?: string
-          event_type: string
-          id?: string
-          note?: string | null
-          release_id: string
-        }
-        Update: {
-          actor_id?: string
-          created_at?: string
-          event_type?: string
-          id?: string
-          note?: string | null
-          release_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "funder_release_events_release_id_fkey"
-            columns: ["release_id"]
-            isOneToOne: false
-            referencedRelation: "funder_releases"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      api_keys: {
-        Row: {
-          commercial_owner: string | null
-          compliance_owner: string | null
-          created_at: string
-          created_by: string
-          environment: string
-          expires_at: string
-          id: string
-          ip_allowlist: string[]
-          key_hash: string
-          key_prefix: string
-          last_used_at: string | null
-          monthly_allowance: number
-          name: string
-          org_id: string
-          revoke_reason: string | null
-          revoked_at: string | null
-          revoked_by: string | null
-          scopes: string[]
-          status: string
-        }
-        Insert: {
-          commercial_owner?: string | null
-          compliance_owner?: string | null
-          created_at?: string
-          created_by?: string
-          environment: string
-          expires_at: string
-          id?: string
-          ip_allowlist?: string[]
-          key_hash: string
-          key_prefix: string
-          last_used_at?: string | null
-          monthly_allowance?: number
-          name: string
-          org_id: string
-          revoke_reason?: string | null
-          revoked_at?: string | null
-          revoked_by?: string | null
-          scopes?: string[]
-          status?: string
-        }
-        Update: {
-          commercial_owner?: string | null
-          compliance_owner?: string | null
-          created_at?: string
-          created_by?: string
-          environment?: string
-          expires_at?: string
-          id?: string
-          ip_allowlist?: string[]
-          key_hash?: string
-          key_prefix?: string
-          last_used_at?: string | null
-          monthly_allowance?: number
-          name?: string
-          org_id?: string
-          revoke_reason?: string | null
-          revoked_at?: string | null
-          revoked_by?: string | null
-          scopes?: string[]
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "api_keys_org_id_fkey"
-            columns: ["org_id"]
+            foreignKeyName: "compliance_cases_subject_org_id_fkey"
+            columns: ["subject_org_id"]
             isOneToOne: false
             referencedRelation: "organisations"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      api_request_logs: {
-        Row: {
-          api_key_id: string | null
-          billable: boolean
-          correlation_id: string | null
-          created_at: string
-          endpoint: string
-          environment: string
-          error_code: string | null
-          id: string
-          latency_ms: number
-          log_hash: string
-          method: string
-          org_id: string | null
-          previous_log_hash: string | null
-          rate_limit_decision: string
-          request_id: string
-          request_payload_hash: string | null
-          response_status: number
-          scopes_evaluated: string[]
-          source_ip: string | null
-          token_cost: number
-          user_agent: string | null
-        }
-        Insert: {
-          api_key_id?: string | null
-          billable?: boolean
-          correlation_id?: string | null
-          created_at?: string
-          endpoint: string
-          environment: string
-          error_code?: string | null
-          id?: string
-          latency_ms: number
-          log_hash: string
-          method: string
-          org_id?: string | null
-          previous_log_hash?: string | null
-          rate_limit_decision?: string
-          request_id: string
-          request_payload_hash?: string | null
-          response_status: number
-          scopes_evaluated?: string[]
-          source_ip?: string | null
-          token_cost?: number
-          user_agent?: string | null
-        }
-        Update: {
-          api_key_id?: string | null
-          billable?: boolean
-          correlation_id?: string | null
-          created_at?: string
-          endpoint?: string
-          environment?: string
-          error_code?: string | null
-          id?: string
-          latency_ms?: number
-          log_hash?: string
-          method?: string
-          org_id?: string | null
-          previous_log_hash?: string | null
-          rate_limit_decision?: string
-          request_id?: string
-          request_payload_hash?: string | null
-          response_status?: number
-          scopes_evaluated?: string[]
-          source_ip?: string | null
-          token_cost?: number
-          user_agent?: string | null
-        }
-        Relationships: [
           {
-            foreignKeyName: "api_request_logs_api_key_id_fkey"
-            columns: ["api_key_id"]
+            foreignKeyName: "compliance_cases_subject_transaction_id_fkey"
+            columns: ["subject_transaction_id"]
             isOneToOne: false
-            referencedRelation: "api_keys"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      api_webhook_endpoints: {
-        Row: {
-          active: boolean
-          api_key_id: string
-          created_at: string
-          id: string
-          secret: string
-          url: string
-        }
-        Insert: {
-          active?: boolean
-          api_key_id: string
-          created_at?: string
-          id?: string
-          secret: string
-          url: string
-        }
-        Update: {
-          active?: boolean
-          api_key_id?: string
-          created_at?: string
-          id?: string
-          secret?: string
-          url?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "api_webhook_endpoints_api_key_id_fkey"
-            columns: ["api_key_id"]
-            isOneToOne: false
-            referencedRelation: "api_keys"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      api_webhook_deliveries: {
-        Row: {
-          attempt: number
-          created_at: string
-          endpoint_id: string
-          event_type: string
-          id: string
-          payload: Json
-          response_status: number | null
-          signature: string
-          status: string
-        }
-        Insert: {
-          attempt?: number
-          created_at?: string
-          endpoint_id: string
-          event_type: string
-          id?: string
-          payload: Json
-          response_status?: number | null
-          signature: string
-          status?: string
-        }
-        Update: {
-          attempt?: number
-          created_at?: string
-          endpoint_id?: string
-          event_type?: string
-          id?: string
-          payload?: Json
-          response_status?: number | null
-          signature?: string
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "api_webhook_deliveries_endpoint_id_fkey"
-            columns: ["endpoint_id"]
-            isOneToOne: false
-            referencedRelation: "api_webhook_endpoints"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      funder_decisions: {
-        Row: {
-          decided_by: string
-          decision: string
-          created_at: string
-          id: string
-          note: string | null
-          release_id: string
-        }
-        Insert: {
-          decided_by?: string
-          decision: string
-          created_at?: string
-          id?: string
-          note?: string | null
-          release_id: string
-        }
-        Update: {
-          decided_by?: string
-          decision?: string
-          created_at?: string
-          id?: string
-          note?: string | null
-          release_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "funder_decisions_release_id_fkey"
-            columns: ["release_id"]
-            isOneToOne: false
-            referencedRelation: "funder_releases"
+            referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
         ]
@@ -1038,9 +666,13 @@ export type Database = {
           jurisdiction: string | null
           media_flags: Json
           name: string
-          rating_band: string | null
+          rating_band:
+            | Database["public"]["Enums"]["counterparty_rating_band"]
+            | null
           rating_computed_at: string | null
-          rating_override: string | null
+          rating_override:
+            | Database["public"]["Enums"]["counterparty_rating_band"]
+            | null
           rating_override_at: string | null
           rating_override_by: string | null
           rating_override_expiry: string | null
@@ -1060,9 +692,13 @@ export type Database = {
           jurisdiction?: string | null
           media_flags?: Json
           name: string
-          rating_band?: string | null
+          rating_band?:
+            | Database["public"]["Enums"]["counterparty_rating_band"]
+            | null
           rating_computed_at?: string | null
-          rating_override?: string | null
+          rating_override?:
+            | Database["public"]["Enums"]["counterparty_rating_band"]
+            | null
           rating_override_at?: string | null
           rating_override_by?: string | null
           rating_override_expiry?: string | null
@@ -1082,9 +718,13 @@ export type Database = {
           jurisdiction?: string | null
           media_flags?: Json
           name?: string
-          rating_band?: string | null
+          rating_band?:
+            | Database["public"]["Enums"]["counterparty_rating_band"]
+            | null
           rating_computed_at?: string | null
-          rating_override?: string | null
+          rating_override?:
+            | Database["public"]["Enums"]["counterparty_rating_band"]
+            | null
           rating_override_at?: string | null
           rating_override_by?: string | null
           rating_override_expiry?: string | null
@@ -1240,6 +880,140 @@ export type Database = {
           },
         ]
       }
+      facilitation_case_events: {
+        Row: {
+          actor_id: string
+          case_id: string
+          created_at: string
+          event_type: string
+          id: string
+          note: string | null
+        }
+        Insert: {
+          actor_id?: string
+          case_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          note?: string | null
+        }
+        Update: {
+          actor_id?: string
+          case_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facilitation_case_events_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "facilitation_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      facilitation_cases: {
+        Row: {
+          authority_confirmed: boolean
+          closed_at: string | null
+          closure_reason: string | null
+          compliance_hold: boolean
+          compliance_hold_reason: string | null
+          contact_identifier: string
+          counterparty_name: string
+          counterparty_role: string | null
+          country: string | null
+          created_at: string
+          final_outcome:
+            | Database["public"]["Enums"]["facilitation_outcome"]
+            | null
+          id: string
+          org_id: string | null
+          owner_assigned_at: string | null
+          owner_id: string | null
+          product_service: string | null
+          purpose: string | null
+          requester_id: string
+          sector: string | null
+          source_evidence: string
+          status: Database["public"]["Enums"]["facilitation_status"]
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          authority_confirmed?: boolean
+          closed_at?: string | null
+          closure_reason?: string | null
+          compliance_hold?: boolean
+          compliance_hold_reason?: string | null
+          contact_identifier: string
+          counterparty_name: string
+          counterparty_role?: string | null
+          country?: string | null
+          created_at?: string
+          final_outcome?:
+            | Database["public"]["Enums"]["facilitation_outcome"]
+            | null
+          id?: string
+          org_id?: string | null
+          owner_assigned_at?: string | null
+          owner_id?: string | null
+          product_service?: string | null
+          purpose?: string | null
+          requester_id?: string
+          sector?: string | null
+          source_evidence: string
+          status?: Database["public"]["Enums"]["facilitation_status"]
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          authority_confirmed?: boolean
+          closed_at?: string | null
+          closure_reason?: string | null
+          compliance_hold?: boolean
+          compliance_hold_reason?: string | null
+          contact_identifier?: string
+          counterparty_name?: string
+          counterparty_role?: string | null
+          country?: string | null
+          created_at?: string
+          final_outcome?:
+            | Database["public"]["Enums"]["facilitation_outcome"]
+            | null
+          id?: string
+          org_id?: string | null
+          owner_assigned_at?: string | null
+          owner_id?: string | null
+          product_service?: string | null
+          purpose?: string | null
+          requester_id?: string
+          sector?: string | null
+          source_evidence?: string
+          status?: Database["public"]["Enums"]["facilitation_status"]
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facilitation_cases_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facilitation_cases_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       finality_records: {
         Row: {
           change_event: string | null
@@ -1283,6 +1057,208 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "finality_records_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      funder_decisions: {
+        Row: {
+          created_at: string
+          decided_by: string
+          decision: Database["public"]["Enums"]["funder_decision_type"]
+          id: string
+          note: string | null
+          release_id: string
+        }
+        Insert: {
+          created_at?: string
+          decided_by?: string
+          decision: Database["public"]["Enums"]["funder_decision_type"]
+          id?: string
+          note?: string | null
+          release_id: string
+        }
+        Update: {
+          created_at?: string
+          decided_by?: string
+          decision?: Database["public"]["Enums"]["funder_decision_type"]
+          id?: string
+          note?: string | null
+          release_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funder_decisions_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "funder_releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      funder_org_members: {
+        Row: {
+          created_at: string
+          funder_org_id: string
+          funder_role: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          funder_org_id: string
+          funder_role?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          funder_org_id?: string
+          funder_role?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funder_org_members_funder_org_id_fkey"
+            columns: ["funder_org_id"]
+            isOneToOne: false
+            referencedRelation: "funder_orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      funder_orgs: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      funder_release_events: {
+        Row: {
+          actor_id: string
+          created_at: string
+          event_type: string
+          id: string
+          note: string | null
+          release_id: string
+        }
+        Insert: {
+          actor_id?: string
+          created_at?: string
+          event_type: string
+          id?: string
+          note?: string | null
+          release_id: string
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          note?: string | null
+          release_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funder_release_events_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "funder_releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      funder_releases: {
+        Row: {
+          compliance_summary: Json
+          consent_basis: string
+          counterparty_id: string
+          created_at: string
+          expiry: string
+          funder_org_id: string
+          id: string
+          pack_version: string
+          permissions: Database["public"]["Enums"]["release_permission"]
+          reason: string
+          released_by: string
+          released_document_ids: string[]
+          released_fields: Json
+          revoke_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          transaction_id: string | null
+        }
+        Insert: {
+          compliance_summary?: Json
+          consent_basis: string
+          counterparty_id: string
+          created_at?: string
+          expiry: string
+          funder_org_id: string
+          id?: string
+          pack_version?: string
+          permissions?: Database["public"]["Enums"]["release_permission"]
+          reason: string
+          released_by?: string
+          released_document_ids?: string[]
+          released_fields: Json
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          transaction_id?: string | null
+        }
+        Update: {
+          compliance_summary?: Json
+          consent_basis?: string
+          counterparty_id?: string
+          created_at?: string
+          expiry?: string
+          funder_org_id?: string
+          id?: string
+          pack_version?: string
+          permissions?: Database["public"]["Enums"]["release_permission"]
+          reason?: string
+          released_by?: string
+          released_document_ids?: string[]
+          released_fields?: Json
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funder_releases_counterparty_id_fkey"
+            columns: ["counterparty_id"]
+            isOneToOne: false
+            referencedRelation: "counterparties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funder_releases_funder_org_id_fkey"
+            columns: ["funder_org_id"]
+            isOneToOne: false
+            referencedRelation: "funder_orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funder_releases_transaction_id_fkey"
             columns: ["transaction_id"]
             isOneToOne: false
             referencedRelation: "transactions"
@@ -1360,41 +1336,6 @@ export type Database = {
           },
         ]
       }
-      org_portfolio_items: {
-        Row: {
-          created_at: string
-          description: string | null
-          id: string
-          image_url: string | null
-          org_id: string
-          title: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          image_url?: string | null
-          org_id: string
-          title: string
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          image_url?: string | null
-          org_id?: string
-          title?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "org_portfolio_items_org_id_fkey"
-            columns: ["org_id"]
-            isOneToOne: false
-            referencedRelation: "organisations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       organisations: {
         Row: {
           address: string | null
@@ -1445,7 +1386,6 @@ export type Database = {
       }
       profiles: {
         Row: {
-          avatar_url: string | null
           created_at: string
           email: string | null
           email_verified_at: string | null
@@ -1457,7 +1397,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          avatar_url?: string | null
           created_at?: string
           email?: string | null
           email_verified_at?: string | null
@@ -1469,7 +1408,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          avatar_url?: string | null
           created_at?: string
           email?: string | null
           email_verified_at?: string | null
@@ -1484,6 +1422,121 @@ export type Database = {
           {
             foreignKeyName: "profiles_org_id_fkey"
             columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      registry_claims: {
+        Row: {
+          claimant_id: string
+          claimant_role: string
+          company_id: string
+          created_at: string
+          decision_reason: string | null
+          evidence_note: string | null
+          evidence_url: string | null
+          id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["registry_claim_status"]
+        }
+        Insert: {
+          claimant_id?: string
+          claimant_role: string
+          company_id: string
+          created_at?: string
+          decision_reason?: string | null
+          evidence_note?: string | null
+          evidence_url?: string | null
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["registry_claim_status"]
+        }
+        Update: {
+          claimant_id?: string
+          claimant_role?: string
+          company_id?: string
+          created_at?: string
+          decision_reason?: string | null
+          evidence_note?: string | null
+          evidence_url?: string | null
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["registry_claim_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "registry_claims_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "registry_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      registry_companies: {
+        Row: {
+          claimed_org_id: string | null
+          country: string
+          created_at: string
+          created_by: string | null
+          id: string
+          import_batch_id: string | null
+          legal_name: string
+          licence_ref: string | null
+          observed_date: string | null
+          readiness_state: Database["public"]["Enums"]["registry_readiness_state"]
+          registration_no: string | null
+          sector: string | null
+          source_name: string | null
+          source_type: string
+          trading_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          claimed_org_id?: string | null
+          country: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          import_batch_id?: string | null
+          legal_name: string
+          licence_ref?: string | null
+          observed_date?: string | null
+          readiness_state?: Database["public"]["Enums"]["registry_readiness_state"]
+          registration_no?: string | null
+          sector?: string | null
+          source_name?: string | null
+          source_type?: string
+          trading_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          claimed_org_id?: string | null
+          country?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          import_batch_id?: string | null
+          legal_name?: string
+          licence_ref?: string | null
+          observed_date?: string | null
+          readiness_state?: Database["public"]["Enums"]["registry_readiness_state"]
+          registration_no?: string | null
+          sector?: string | null
+          source_name?: string | null
+          source_type?: string
+          trading_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "registry_companies_claimed_org_id_fkey"
+            columns: ["claimed_org_id"]
             isOneToOne: false
             referencedRelation: "organisations"
             referencedColumns: ["id"]
@@ -1756,126 +1809,99 @@ export type Database = {
       }
       admin_ai_suggestion_create: {
         Args: {
-          p_confidence: string
+          p_confidence: Database["public"]["Enums"]["ai_suggestion_confidence"]
           p_reason: string
-          p_related_transaction_id: string | null
-          p_source_references?: string | null
+          p_related_transaction_id: string
+          p_source_references?: string
           p_source_summary: string
-          p_source_timestamp?: string | null
+          p_source_timestamp?: string
           p_suggested_name: string
-          p_suggestion_type: string
+          p_suggestion_type: Database["public"]["Enums"]["ai_suggestion_type"]
           p_summary: string
         }
         Returns: string
       }
       admin_ai_suggestion_reject: {
-        Args: { p_id: string; p_note?: string | null; p_reason: string }
+        Args: {
+          p_id: string
+          p_note?: string
+          p_reason: Database["public"]["Enums"]["ai_suggestion_rejection_reason"]
+        }
         Returns: undefined
       }
       admin_ai_suggestion_set_status: {
         Args: {
-          p_assigned_reviewer_id?: string | null
+          p_assigned_reviewer_id?: string
           p_id: string
-          p_note?: string | null
-          p_status: string
+          p_note?: string
+          p_status: Database["public"]["Enums"]["ai_suggestion_status"]
         }
-        Returns: undefined
-      }
-      admin_case_create: {
-        Args: {
-          p_case_type: string
-          p_priority?: string
-          p_subject_counterparty_id?: string | null
-          p_subject_org_id?: string | null
-          p_subject_transaction_id?: string | null
-          p_summary: string
-          p_title: string
-        }
-        Returns: string
-      }
-      admin_case_assign: {
-        Args: { p_analyst_id: string; p_id: string }
-        Returns: undefined
-      }
-      admin_case_propose_decision: {
-        Args: { p_decision: string; p_id: string; p_note: string }
-        Returns: undefined
-      }
-      admin_case_approve_decision: {
-        Args: { p_id: string; p_note?: string | null }
-        Returns: undefined
-      }
-      admin_case_reject_proposal: {
-        Args: { p_id: string; p_note: string }
-        Returns: undefined
-      }
-      admin_funder_create_org: {
-        Args: { p_name: string }
-        Returns: string
-      }
-      admin_funder_add_member: {
-        Args: { p_funder_org_id: string; p_funder_role?: string; p_user_id: string }
-        Returns: undefined
-      }
-      admin_funder_create_release: {
-        Args: {
-          p_compliance_summary?: Json
-          p_consent_basis: string
-          p_counterparty_id: string
-          p_expiry: string
-          p_funder_org_id: string
-          p_permissions?: string
-          p_reason: string
-          p_released_fields: Json
-          p_transaction_id?: string | null
-        }
-        Returns: string
-      }
-      admin_funder_revoke_release: {
-        Args: { p_id: string; p_reason: string }
-        Returns: undefined
-      }
-      funder_record_view: {
-        Args: { p_release_id: string }
-        Returns: undefined
-      }
-      funder_record_decision: {
-        Args: { p_decision: string; p_note?: string | null; p_release_id: string }
         Returns: undefined
       }
       admin_api_create_key: {
         Args: {
-          p_commercial_owner?: string | null
-          p_compliance_owner?: string | null
-          p_environment: string
+          p_commercial_owner?: string
+          p_compliance_owner?: string
+          p_environment: Database["public"]["Enums"]["api_key_environment"]
           p_name: string
           p_org_id: string
           p_scopes?: string[]
         }
-        Returns: { id: string; raw_key: string }[]
+        Returns: {
+          id: string
+          raw_key: string
+        }[]
       }
-      admin_api_suspend_key: {
-        Args: { p_id: string }
-        Returns: undefined
-      }
-      admin_api_reactivate_key: {
-        Args: { p_id: string }
-        Returns: undefined
-      }
+      admin_api_reactivate_key: { Args: { p_id: string }; Returns: undefined }
       admin_api_revoke_key: {
         Args: { p_id: string; p_reason: string }
         Returns: undefined
       }
       admin_api_rotate_key: {
         Args: { p_id: string }
-        Returns: { id: string; raw_key: string }[]
+        Returns: {
+          id: string
+          raw_key: string
+        }[]
       }
-      admin_override_counterparty_rating: {
+      admin_api_suspend_key: { Args: { p_id: string }; Returns: undefined }
+      admin_case_approve_decision: {
+        Args: { p_id: string; p_note?: string }
+        Returns: undefined
+      }
+      admin_case_assign: {
+        Args: { p_analyst_id: string; p_id: string }
+        Returns: undefined
+      }
+      admin_case_create: {
         Args: {
-          p_counterparty_id: string
-          p_expiry?: string | null
-          p_override: string
-          p_reason: string
+          p_case_type: Database["public"]["Enums"]["compliance_case_type"]
+          p_priority?: Database["public"]["Enums"]["compliance_case_priority"]
+          p_subject_counterparty_id?: string
+          p_subject_org_id?: string
+          p_subject_transaction_id?: string
+          p_summary: string
+          p_title: string
+        }
+        Returns: string
+      }
+      admin_case_propose_decision: {
+        Args: {
+          p_decision: Database["public"]["Enums"]["compliance_case_decision"]
+          p_id: string
+          p_note: string
+        }
+        Returns: undefined
+      }
+      admin_case_reject_proposal: {
+        Args: { p_id: string; p_note: string }
+        Returns: undefined
+      }
+      admin_decide_registry_claim: {
+        Args: {
+          p_claim_id: string
+          p_decision: Database["public"]["Enums"]["registry_claim_status"]
+          p_reason?: string
         }
         Returns: undefined
       }
@@ -1884,22 +1910,58 @@ export type Database = {
         Returns: undefined
       }
       admin_facilitation_close: {
-        Args: { p_case_id: string; p_outcome: string; p_reason: string }
+        Args: {
+          p_case_id: string
+          p_outcome: Database["public"]["Enums"]["facilitation_outcome"]
+          p_reason: string
+        }
         Returns: undefined
       }
       admin_facilitation_set_compliance_hold: {
-        Args: { p_case_id: string; p_hold: boolean; p_reason?: string | null }
+        Args: { p_case_id: string; p_hold: boolean; p_reason?: string }
         Returns: undefined
       }
       admin_facilitation_set_status: {
-        Args: { p_case_id: string; p_note?: string | null; p_status: string }
+        Args: {
+          p_case_id: string
+          p_note?: string
+          p_status: Database["public"]["Enums"]["facilitation_status"]
+        }
         Returns: undefined
       }
-      admin_decide_registry_claim: {
+      admin_funder_add_member: {
         Args: {
-          p_claim_id: string
-          p_decision: string
-          p_reason?: string | null
+          p_funder_org_id: string
+          p_funder_role?: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      admin_funder_create_org: { Args: { p_name: string }; Returns: string }
+      admin_funder_create_release: {
+        Args: {
+          p_compliance_summary?: Json
+          p_consent_basis: string
+          p_counterparty_id: string
+          p_expiry: string
+          p_funder_org_id: string
+          p_permissions?: Database["public"]["Enums"]["release_permission"]
+          p_reason: string
+          p_released_fields: Json
+          p_transaction_id?: string
+        }
+        Returns: string
+      }
+      admin_funder_revoke_release: {
+        Args: { p_id: string; p_reason: string }
+        Returns: undefined
+      }
+      admin_override_counterparty_rating: {
+        Args: {
+          p_counterparty_id: string
+          p_expiry?: string
+          p_override: Database["public"]["Enums"]["counterparty_rating_band"]
+          p_reason: string
         }
         Returns: undefined
       }
@@ -1907,15 +1969,22 @@ export type Database = {
         Args: {
           p_country: string
           p_legal_name: string
-          p_readiness_state?: string
-          p_registration_no?: string | null
-          p_sector?: string | null
-          p_source_name?: string | null
+          p_readiness_state?: Database["public"]["Enums"]["registry_readiness_state"]
+          p_registration_no?: string
+          p_sector?: string
+          p_source_name?: string
         }
         Returns: string
       }
       admin_registry_set_readiness: {
-        Args: { p_company_id: string; p_state: string }
+        Args: {
+          p_company_id: string
+          p_state: Database["public"]["Enums"]["registry_readiness_state"]
+        }
+        Returns: undefined
+      }
+      admin_set_setting: {
+        Args: { p_key: string; p_value: Json }
         Returns: undefined
       }
       atomic_token_adjust: {
@@ -1923,13 +1992,23 @@ export type Database = {
           p_delta: number
           p_org_id: string
           p_reason: string
-          p_transaction_id?: string | null
+          p_transaction_id?: string
         }
         Returns: number
       }
       bump_login_count: { Args: never; Returns: number }
       can_access_tx: { Args: { _tx: string }; Returns: boolean }
+      current_funder_org_id: { Args: never; Returns: string }
       current_org_id: { Args: never; Returns: string }
+      funder_record_decision: {
+        Args: {
+          p_decision: Database["public"]["Enums"]["funder_decision_type"]
+          p_note?: string
+          p_release_id: string
+        }
+        Returns: undefined
+      }
+      funder_record_view: { Args: { p_release_id: string }; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1937,11 +2016,95 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_billing_available: { Args: never; Returns: boolean }
+      is_test_mode_bypass_enabled: { Args: never; Returns: boolean }
       mark_email_verified: { Args: never; Returns: undefined }
       mark_email_verified_if_oauth: { Args: never; Returns: undefined }
     }
     Enums: {
-      app_role: "party" | "counterparty" | "admin"
+      ai_suggestion_confidence: "low" | "medium" | "high"
+      ai_suggestion_rejection_reason:
+        | "duplicate"
+        | "weak_source"
+        | "wrong_jurisdiction"
+        | "poor_counterparty_fit"
+        | "compliance_concern"
+        | "insufficient_evidence"
+        | "already_known"
+        | "not_commercially_useful"
+        | "other"
+      ai_suggestion_status:
+        | "new"
+        | "under_review"
+        | "needs_more_research"
+        | "approved"
+        | "rejected"
+        | "archived"
+      ai_suggestion_type:
+        | "suggested_buyer"
+        | "suggested_supplier"
+        | "public_source_research_note"
+      api_key_environment: "sandbox" | "production"
+      api_key_status: "active" | "suspended" | "revoked"
+      app_role: "party" | "counterparty" | "admin" | "funder"
+      compliance_case_decision: "approve" | "reject" | "no_action"
+      compliance_case_priority: "low" | "medium" | "high" | "urgent"
+      compliance_case_status:
+        | "open"
+        | "under_review"
+        | "decision_proposed"
+        | "closed_approved"
+        | "closed_rejected"
+        | "closed_no_action"
+      compliance_case_type:
+        | "kyc_review"
+        | "aml_alert"
+        | "counterparty_dispute"
+        | "transaction_review"
+        | "other"
+      counterparty_rating_band: "trusted" | "neutral" | "flagged"
+      facilitation_outcome:
+        | "converted_to_known_counterparty"
+        | "ready_for_next_step"
+        | "ready_for_poi_review"
+        | "counterparty_declined"
+        | "no_response"
+        | "invalid_details"
+        | "duplicate_merged"
+        | "blocked_by_compliance"
+        | "cancelled_by_requester"
+        | "closed_by_admin"
+        | "unable_to_contact"
+      facilitation_status:
+        | "new_unassigned"
+        | "triage_in_progress"
+        | "more_information_needed"
+        | "compliance_review_required"
+        | "outreach_approved"
+        | "contact_attempted"
+        | "counterparty_responded"
+        | "profile_verification_in_progress"
+        | "ready_for_poi"
+        | "closed"
+      funder_decision_type: "recommend_fund" | "decline" | "request_more_info"
+      registry_claim_status:
+        | "submitted"
+        | "more_information_required"
+        | "approved"
+        | "rejected"
+      registry_readiness_state:
+        | "seed_only"
+        | "sample_only"
+        | "demo_only"
+        | "licence_pending"
+        | "provider_pending"
+        | "quarantined"
+        | "duplicate_unresolved"
+        | "disputed"
+        | "privacy_hold"
+        | "public_search_ready"
+        | "demo_ready"
+      release_permission: "view" | "view_and_download"
       spine_stage:
         | "trading"
         | "compliance"
@@ -2075,7 +2238,98 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["party", "counterparty", "admin"],
+      ai_suggestion_confidence: ["low", "medium", "high"],
+      ai_suggestion_rejection_reason: [
+        "duplicate",
+        "weak_source",
+        "wrong_jurisdiction",
+        "poor_counterparty_fit",
+        "compliance_concern",
+        "insufficient_evidence",
+        "already_known",
+        "not_commercially_useful",
+        "other",
+      ],
+      ai_suggestion_status: [
+        "new",
+        "under_review",
+        "needs_more_research",
+        "approved",
+        "rejected",
+        "archived",
+      ],
+      ai_suggestion_type: [
+        "suggested_buyer",
+        "suggested_supplier",
+        "public_source_research_note",
+      ],
+      api_key_environment: ["sandbox", "production"],
+      api_key_status: ["active", "suspended", "revoked"],
+      app_role: ["party", "counterparty", "admin", "funder"],
+      compliance_case_decision: ["approve", "reject", "no_action"],
+      compliance_case_priority: ["low", "medium", "high", "urgent"],
+      compliance_case_status: [
+        "open",
+        "under_review",
+        "decision_proposed",
+        "closed_approved",
+        "closed_rejected",
+        "closed_no_action",
+      ],
+      compliance_case_type: [
+        "kyc_review",
+        "aml_alert",
+        "counterparty_dispute",
+        "transaction_review",
+        "other",
+      ],
+      counterparty_rating_band: ["trusted", "neutral", "flagged"],
+      facilitation_outcome: [
+        "converted_to_known_counterparty",
+        "ready_for_next_step",
+        "ready_for_poi_review",
+        "counterparty_declined",
+        "no_response",
+        "invalid_details",
+        "duplicate_merged",
+        "blocked_by_compliance",
+        "cancelled_by_requester",
+        "closed_by_admin",
+        "unable_to_contact",
+      ],
+      facilitation_status: [
+        "new_unassigned",
+        "triage_in_progress",
+        "more_information_needed",
+        "compliance_review_required",
+        "outreach_approved",
+        "contact_attempted",
+        "counterparty_responded",
+        "profile_verification_in_progress",
+        "ready_for_poi",
+        "closed",
+      ],
+      funder_decision_type: ["recommend_fund", "decline", "request_more_info"],
+      registry_claim_status: [
+        "submitted",
+        "more_information_required",
+        "approved",
+        "rejected",
+      ],
+      registry_readiness_state: [
+        "seed_only",
+        "sample_only",
+        "demo_only",
+        "licence_pending",
+        "provider_pending",
+        "quarantined",
+        "duplicate_unresolved",
+        "disputed",
+        "privacy_hold",
+        "public_search_ready",
+        "demo_ready",
+      ],
+      release_permission: ["view", "view_and_download"],
       spine_stage: ["trading", "compliance", "execution", "finality", "memory"],
     },
   },
