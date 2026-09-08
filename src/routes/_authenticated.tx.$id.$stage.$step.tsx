@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { money, type Transaction } from "@/lib/tx";
-import { lockReason, stageOf, type StageKey } from "@/lib/spine";
+import { lockReason, stageOf, stepDef, type StageKey } from "@/lib/spine";
 
 export const Route = createFileRoute("/_authenticated/tx/$id/$stage/$step")({
   head: () => ({
@@ -93,6 +93,17 @@ function TxStepPage() {
               </Badge>
             )}
           </div>
+
+          <header className="mb-5">
+            <h1 className="text-2xl font-semibold tracking-tight">
+              {stepDef(stage as StageKey, step)?.label ?? step}
+            </h1>
+            {stepDef(stage as StageKey, step)?.blurb && (
+              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                {stepDef(stage as StageKey, step)?.blurb}
+              </p>
+            )}
+          </header>
 
           {locked && !isPast ? (
             <div className="rounded-md border border-border bg-muted/40 p-5">

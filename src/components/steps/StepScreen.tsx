@@ -20,7 +20,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { sealProofOfIntent, completeWad, runAiProposal, searchCounterparties } from "@/lib/izenzo.functions";
 import { advance, fingerprintOf, money, recordEvent, shortHash, when, type Transaction, type TxEvent } from "@/lib/tx";
-import { stepDef, POI_COST, WAD_COST, type StageKey } from "@/lib/spine";
+import { POI_COST, WAD_COST, type StageKey } from "@/lib/spine";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { routeIdentityVerification } from "@/lib/identityRouting";
@@ -74,13 +74,8 @@ function Empty({ text }: { text: string }) {
 /* ---------- entry ---------- */
 
 export function StepScreen(props: Props) {
-  const def = stepDef(props.stage, props.step);
   return (
     <div className="space-y-8">
-      <header>
-        <h2 className="text-2xl font-semibold tracking-tight">{def?.label ?? props.step}</h2>
-        {def?.blurb && <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{def.blurb}</p>}
-      </header>
       <Body {...props} />
     </div>
   );
