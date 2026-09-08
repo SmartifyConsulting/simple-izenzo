@@ -36,8 +36,7 @@ const DECISION_LABEL: Record<string, string> = {
 };
 
 function FunderWorkspace() {
-  const { roles, signOut } = useAuth();
-  const navigate = useNavigate();
+  const { roles } = useAuth();
   const qc = useQueryClient();
   const isFunder = roles.includes("funder") || roles.includes("admin");
   const download = useServerFn(downloadEvidencePack);
