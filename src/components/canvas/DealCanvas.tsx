@@ -135,7 +135,6 @@ export function DealCanvas({ tx, reload }: { tx: Transaction; reload: () => void
 
       <Dialog open={panel !== null} onOpenChange={(v) => !v && setPanel(null)}>
         <DialogContent
-          showCloseButton={false}
           className="glass max-h-[88vh] w-[min(1000px,94vw)] overflow-y-auto p-0 sm:max-w-[min(1000px,94vw)]"
         >
           {panel && (
@@ -175,14 +174,7 @@ function PanelBody({
           <DialogTitle className="truncate text-lg tracking-tight">{def?.label ?? step}</DialogTitle>
           <DialogDescription className="mt-1 text-[13px]">{def?.blurb}</DialogDescription>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close"
-          className="rounded-full border border-border p-1.5 text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <X className="h-4 w-4" />
-        </button>
+        
       </div>
       {locked ? (
         <p className="rounded-xl border border-border bg-white/5 p-4 text-sm text-muted-foreground">{locked}.</p>
