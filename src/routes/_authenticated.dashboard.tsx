@@ -1,10 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
-import { DealCanvas } from "@/components/canvas/DealCanvas";
+import { CanvasStart, DealCanvas } from "@/components/canvas/DealCanvas";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import type { Transaction } from "@/lib/tx";
@@ -23,6 +23,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 function Dashboard() {
   const { org } = useAuth();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const { data: txs = [], isLoading, refetch } = useQuery({
     queryKey: ["transactions", org?.id],
@@ -36,29 +37,34 @@ function Dashboard() {
     },
   });
 
-  const latestOpenTx = useMemo(() => txs.find((t) => t.status === "open") ?? txs[0], [txs]);
+  const activeTx = useMemo(() => {
+    if (selectedId) {
+      const picked = txs.find((t) => t.id === selectedId);
+      if (picked) return picked;
+    }
+    return txs.find((t) => t.status === "open") ?? txs[0];
+  }, [txs, selectedId]);
 
   return (
-    <AppShell>
+    <AppShell
+      wide
+      actions={
+        <Link to="/transactions/new">
+          <Button size="sm" variant="ghost" className="gap-2">
+            <Plus className="h-3.5 w-3.5" /> New bid or offer
+          </Button>
+        </Link>
+      }
+    >
       {isLoading && <p className="text-sm text-muted-foreground">Opening the canvas…</p>}
 
-      {!isLoading && !latestOpenTx && (
-        <div className="rounded-md border border-border bg-muted/40 p-8 text-center">
-          <p className="text-sm font-medium">No transactions yet</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Every transaction starts with a bid or an offer.
-          </p>
-          <Link to="/transactions/new">
-            <Button size="sm" className="mt-4 gap-2">
-              <Plus className="h-3.5 w-3.5" /> Open the first one
-            </Button>
-          </Link>
-        </div>
-      )}
+      {!isLoading && !activeTx && <CanvasStart />}
 
-      {latestOpenTx && (
+      {activeTx && (
         <DealCanvas
-          tx={latestOpenTx}
+          tx={activeTx}
+          deals={txs}
+          onSelectDeal={setSelectedId}
           reload={() => {
             void refetch();
           }}

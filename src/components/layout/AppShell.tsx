@@ -176,19 +176,22 @@ export function AppShell({
   description,
   actions,
   children,
+  wide,
 }: {
   title?: string;
   description?: string;
   actions?: ReactNode;
   children: ReactNode;
+  wide?: boolean;
 }) {
   const { profile, org } = useAuth();
   const firstName = (profile?.full_name ?? profile?.email ?? "").split(/[\s@]/)[0];
+  const width = wide ? "max-w-[1680px]" : "max-w-7xl";
 
   return (
     <div className="ink-grid min-h-screen bg-background">
       <header className="sticky top-0 z-30 border-b border-border bg-background/70 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6">
+        <div className={cn("mx-auto flex h-16 items-center gap-3 px-4 sm:px-6", width)}>
           <Link to="/dashboard" className="shrink-0">
             <Logo onDark className="h-7 w-auto" />
           </Link>
@@ -207,12 +210,22 @@ export function AppShell({
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 pb-14 pt-6 sm:px-6">
-        <div className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4">
+      <main className={cn("mx-auto px-4 pb-14 sm:px-6", width, wide ? "pt-4" : "pt-6")}>
+        <div
+          className={cn(
+            "grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4",
+            wide ? "mb-3" : "mb-6",
+          )}
+        >
           <div className="min-w-0">
             {firstName && (
               <p
-                className="truncate text-[1.75rem] leading-[1.15] tracking-tight sm:text-[2rem]"
+                className={cn(
+                  "truncate leading-[1.15] tracking-tight",
+                  wide
+                    ? "text-[1.15rem] sm:text-[1.3rem]"
+                    : "text-[1.75rem] sm:text-[2rem]",
+                )}
                 style={{ fontFamily: "var(--font-greeting)", fontWeight: 700 }}
               >
                 {greeting()}, {firstName}
