@@ -56,6 +56,7 @@ function AdminPage() {
           <TabsTrigger value="registry">Registry</TabsTrigger>
           <TabsTrigger value="facilitation">Facilitation</TabsTrigger>
           <TabsTrigger value="ai-suggestions">AI Suggestions</TabsTrigger>
+          <TabsTrigger value="compliance-cases">Compliance Cases</TabsTrigger>
           <TabsTrigger value="reporting">Reporting</TabsTrigger>
         </TabsList>
         <TabsContent value="users" className="mt-6">
@@ -72,6 +73,9 @@ function AdminPage() {
         </TabsContent>
         <TabsContent value="ai-suggestions" className="mt-6">
           <AiSuggestionsTab />
+        </TabsContent>
+        <TabsContent value="compliance-cases" className="mt-6">
+          <ComplianceCasesTab />
         </TabsContent>
         <TabsContent value="reporting" className="mt-6">
           <ReportingTab />
@@ -1033,6 +1037,312 @@ function AiSuggestionsTab() {
                         <Button size="sm" variant="ghost" onClick={() => archive(s.id)}>
                           Archive
                         </Button>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const CASE_TYPES = ["kyc_review", "aml_alert", "counterparty_dispute", "transaction_review", "other"] as const;
+const CASE_PRIORITIES = ["low", "medium", "high", "urgent"] as const;
+
+function ComplianceCasesTab() {
+  const qc = useQueryClient();
+  const { profile } = useAuth();
+  const [showForm, setShowForm] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("open");
+  const [form, setForm] = useState({
+    caseType: "kyc_review",
+    priority: "medium",
+    title: "",
+    summary: "",
+    counterpartyId: "",
+  });
+
+  const { data: cases = [], isLoading } = useQuery({
+    queryKey: ["admin-compliance-cases"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("compliance_cases")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: cpOptions = [] } = useQuery({
+    queryKey: ["admin-cp-options"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("counterparties")
+        .select("id, name")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  async function refresh() {
+    await qc.invalidateQueries({ queryKey: ["admin-compliance-cases"] });
+  }
+
+  async function createCase(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.title.trim() || !form.summary.trim() || !form.counterpartyId) {
+      toast.error("Title, summary and a subject counterparty are required.");
+      return;
+    }
+    const { error } = await supabase.rpc("admin_case_create", {
+      p_case_type: form.caseType,
+      p_title: form.title,
+      p_summary: form.summary,
+      p_priority: form.priority,
+      p_subject_counterparty_id: form.counterpartyId,
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Case created");
+    setShowForm(false);
+    setForm({ caseType: "kyc_review", priority: "medium", title: "", summary: "", counterpartyId: "" });
+    await refresh();
+  }
+
+  async function assignToMe(id: string) {
+    if (!profile) return;
+    const { error } = await supabase.rpc("admin_case_assign", { p_id: id, p_analyst_id: profile.id });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Assigned to you");
+    await refresh();
+  }
+
+  async function proposeDecision(id: string) {
+    const decision = window.prompt("Propose decision (approve / reject / no_action):");
+    if (!decision || !["approve", "reject", "no_action"].includes(decision)) {
+      if (decision) toast.error("Not a valid decision");
+      return;
+    }
+    const note = window.prompt("Note (required):");
+    if (!note) return;
+    const { error } = await supabase.rpc("admin_case_propose_decision", {
+      p_id: id,
+      p_decision: decision,
+      p_note: note,
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Decision proposed — awaiting a different admin to check it");
+    await refresh();
+  }
+
+  async function approveDecision(id: string) {
+    const note = window.prompt("Note (optional):") ?? undefined;
+    const { error } = await supabase.rpc("admin_case_approve_decision", { p_id: id, p_note: note || null });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Decision approved — case closed");
+    await refresh();
+  }
+
+  async function sendBack(id: string) {
+    const note = window.prompt("Why is this being sent back? (required)");
+    if (!note) return;
+    const { error } = await supabase.rpc("admin_case_reject_proposal", { p_id: id, p_note: note });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Sent back for rework");
+    await refresh();
+  }
+
+  const visible = cases.filter((c) => {
+    if (statusFilter === "open")
+      return !["closed_approved", "closed_rejected", "closed_no_action"].includes(c.status);
+    if (statusFilter === "all") return true;
+    return c.status === statusFilter;
+  });
+
+  return (
+    <div>
+      <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm text-warning">
+        A proposed decision must be checked and approved by a different admin than the one who
+        proposed it. The proposing admin cannot approve their own case — this is enforced by the
+        database, not just hidden in the UI.
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold">Compliance Case Management</h2>
+        <div className="flex items-center gap-2">
+          <select
+            className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="open">Open</option>
+            <option value="all">All</option>
+            <option value="under_review">Under review</option>
+            <option value="decision_proposed">Decision proposed</option>
+            <option value="closed_approved">Closed — approved</option>
+            <option value="closed_rejected">Closed — rejected</option>
+            <option value="closed_no_action">Closed — no action</option>
+          </select>
+          <Button size="sm" onClick={() => setShowForm((v) => !v)}>
+            {showForm ? "Close" : "New case"}
+          </Button>
+        </div>
+      </div>
+
+      {showForm && (
+        <form onSubmit={createCase} className="mt-4 space-y-3 rounded-md border border-border p-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>Case type</Label>
+              <select
+                className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                value={form.caseType}
+                onChange={(e) => setForm({ ...form, caseType: e.target.value })}
+              >
+                {CASE_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Priority</Label>
+              <select
+                className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                value={form.priority}
+                onChange={(e) => setForm({ ...form, priority: e.target.value })}
+              >
+                {CASE_PRIORITIES.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Subject counterparty</Label>
+              <select
+                className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                value={form.counterpartyId}
+                onChange={(e) => setForm({ ...form, counterpartyId: e.target.value })}
+              >
+                <option value="">— select —</option>
+                {cpOptions.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Title</Label>
+              <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Summary</Label>
+              <Textarea rows={2} value={form.summary} onChange={(e) => setForm({ ...form, summary: e.target.value })} />
+            </div>
+          </div>
+          <div className="text-right">
+            <Button type="submit" size="sm">
+              Create case
+            </Button>
+          </div>
+        </form>
+      )}
+
+      <div className="mt-4">
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground">Loading…</p>
+        ) : visible.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No cases match this filter.</p>
+        ) : (
+          <ul className="space-y-3">
+            {visible.map((c) => {
+              const isProposer = c.proposed_decision_by === profile?.id;
+              return (
+                <li key={c.id} className="rounded-md border border-border p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-semibold">{c.title}</p>
+                        <Badge variant="secondary" className="font-normal">
+                          {c.case_type}
+                        </Badge>
+                        <Badge variant="secondary" className="font-normal capitalize">
+                          {c.priority}
+                        </Badge>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">{c.summary}</p>
+                      {c.status === "decision_proposed" && (
+                        <div className="mt-1.5 rounded-md bg-muted/40 p-2.5 text-xs text-muted-foreground">
+                          <p>
+                            Proposed decision: <span className="font-medium">{c.proposed_decision}</span>
+                          </p>
+                          <p className="mt-1">{c.proposed_decision_note}</p>
+                          {isProposer && (
+                            <p className="mt-1 text-warning">
+                              You proposed this decision — a different admin must check it.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      {c.final_decision && (
+                        <p className="mt-1.5 text-xs text-muted-foreground">
+                          Final decision: <span className="font-medium">{c.final_decision}</span> —{" "}
+                          {c.final_decision_note}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+                      <Badge variant="outline" className="font-normal">
+                        {c.status}
+                      </Badge>
+                      {!["closed_approved", "closed_rejected", "closed_no_action"].includes(c.status) && (
+                        <>
+                          {!c.assigned_analyst_id && (
+                            <Button size="sm" variant="outline" onClick={() => assignToMe(c.id)}>
+                              Assign to me
+                            </Button>
+                          )}
+                          {c.status !== "decision_proposed" && (
+                            <Button size="sm" variant="outline" onClick={() => proposeDecision(c.id)}>
+                              Propose decision
+                            </Button>
+                          )}
+                          {c.status === "decision_proposed" && !isProposer && (
+                            <>
+                              <Button size="sm" variant="outline" onClick={() => sendBack(c.id)}>
+                                Send back
+                              </Button>
+                              <Button size="sm" onClick={() => approveDecision(c.id)}>
+                                Approve
+                              </Button>
+                            </>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>

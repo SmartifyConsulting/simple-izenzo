@@ -179,6 +179,141 @@ export type Database = {
           },
         ]
       }
+      compliance_cases: {
+        Row: {
+          assigned_analyst_id: string | null
+          case_type: string
+          created_at: string
+          created_by: string
+          decided_at: string | null
+          decided_by: string | null
+          final_decision: string | null
+          final_decision_note: string | null
+          id: string
+          priority: string
+          proposed_decision: string | null
+          proposed_decision_at: string | null
+          proposed_decision_by: string | null
+          proposed_decision_note: string | null
+          status: string
+          subject_counterparty_id: string | null
+          subject_org_id: string | null
+          subject_transaction_id: string | null
+          summary: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_analyst_id?: string | null
+          case_type: string
+          created_at?: string
+          created_by?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          final_decision?: string | null
+          final_decision_note?: string | null
+          id?: string
+          priority?: string
+          proposed_decision?: string | null
+          proposed_decision_at?: string | null
+          proposed_decision_by?: string | null
+          proposed_decision_note?: string | null
+          status?: string
+          subject_counterparty_id?: string | null
+          subject_org_id?: string | null
+          subject_transaction_id?: string | null
+          summary: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_analyst_id?: string | null
+          case_type?: string
+          created_at?: string
+          created_by?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          final_decision?: string | null
+          final_decision_note?: string | null
+          id?: string
+          priority?: string
+          proposed_decision?: string | null
+          proposed_decision_at?: string | null
+          proposed_decision_by?: string | null
+          proposed_decision_note?: string | null
+          status?: string
+          subject_counterparty_id?: string | null
+          subject_org_id?: string | null
+          subject_transaction_id?: string | null
+          summary?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_cases_subject_counterparty_id_fkey"
+            columns: ["subject_counterparty_id"]
+            isOneToOne: false
+            referencedRelation: "counterparties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_cases_subject_transaction_id_fkey"
+            columns: ["subject_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_cases_subject_org_id_fkey"
+            columns: ["subject_org_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compliance_case_events: {
+        Row: {
+          actor_id: string
+          case_id: string
+          created_at: string
+          event_type: string
+          id: string
+          new_status: string | null
+          note: string | null
+          previous_status: string | null
+        }
+        Insert: {
+          actor_id?: string
+          case_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          new_status?: string | null
+          note?: string | null
+          previous_status?: string | null
+        }
+        Update: {
+          actor_id?: string
+          case_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          new_status?: string | null
+          note?: string | null
+          previous_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_case_events_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       facilitation_cases: {
         Row: {
           authority_confirmed: boolean
@@ -1221,6 +1356,34 @@ export type Database = {
           p_note?: string | null
           p_status: string
         }
+        Returns: undefined
+      }
+      admin_case_create: {
+        Args: {
+          p_case_type: string
+          p_priority?: string
+          p_subject_counterparty_id?: string | null
+          p_subject_org_id?: string | null
+          p_subject_transaction_id?: string | null
+          p_summary: string
+          p_title: string
+        }
+        Returns: string
+      }
+      admin_case_assign: {
+        Args: { p_analyst_id: string; p_id: string }
+        Returns: undefined
+      }
+      admin_case_propose_decision: {
+        Args: { p_decision: string; p_id: string; p_note: string }
+        Returns: undefined
+      }
+      admin_case_approve_decision: {
+        Args: { p_id: string; p_note?: string | null }
+        Returns: undefined
+      }
+      admin_case_reject_proposal: {
+        Args: { p_id: string; p_note: string }
         Returns: undefined
       }
       admin_override_counterparty_rating: {
