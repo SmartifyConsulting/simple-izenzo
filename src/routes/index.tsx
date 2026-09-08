@@ -186,7 +186,7 @@ function Landing() {
       <SiteHeader
         logoClassName="h-[3.75rem]"
         containerClassName="max-w-none h-[4.55rem] px-6 sm:px-10 lg:px-16"
-        logoVariant="blue"
+        logoVariant="white"
       />
 
       <main>
