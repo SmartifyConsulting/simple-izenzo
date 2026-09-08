@@ -233,11 +233,12 @@ export function FlightSearchBoard() {
           ))}
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-5">
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label>Commodity or asset</Label>
-            <Input placeholder="e.g. Copper cathode" value={commodity} onChange={(e) => setCommodity(e.target.value)} />
-          </div>
+        <div className="mt-4 space-y-1.5">
+          <Label>Commodity or asset</Label>
+          <Input placeholder="e.g. Copper cathode" value={commodity} onChange={(e) => setCommodity(e.target.value)} />
+        </div>
+
+        <div className="mt-3 grid gap-3 sm:grid-cols-4">
           <div className="space-y-1.5">
             <Label>Quantity</Label>
             <Input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
@@ -249,6 +250,22 @@ export function FlightSearchBoard() {
           <div className="space-y-1.5">
             <Label>Price (optional)</Label>
             <Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Country</Label>
+            <Select value={country} onValueChange={setCountry}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="any">Any country</SelectItem>
+                {COUNTRIES.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -301,23 +318,7 @@ export function FlightSearchBoard() {
           )}
         </div>
 
-        <div className="mt-4 flex flex-wrap items-end gap-3">
-          <div className="min-w-[200px] flex-1 space-y-1.5">
-            <Label>Country</Label>
-            <Select value={country} onValueChange={setCountry}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="any">Any country</SelectItem>
-                {COUNTRIES.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="mt-4 flex justify-end">
           <Button onClick={submit} disabled={submitting} className="gap-2">
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
             Submit
