@@ -1,15 +1,11 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 import { Plus, TrendingUp, TrendingDown, Handshake } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { BidWizard } from "@/components/guided/BidWizard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { money } from "@/lib/tx";
-import { recordEvent } from "@/lib/tx";
 import { cn } from "@/lib/utils";
 
 type BidOfferRow = {
@@ -150,7 +146,7 @@ export function TradingBoard() {
         ))}
       </Lane>
 
-      <NewBidDialog
+      <BidWizard
         direction={dialogDirection}
         onClose={() => setDialogDirection(null)}
         onCreated={onCreated}
@@ -272,145 +268,5 @@ function MatchLane({
         </div>
       </div>
     </div>
-  );
-}
-
-function NewBidDialog({
-  direction,
-  onClose,
-  onCreated,
-}: {
-  direction: "bid" | "offer" | null;
-  onClose: () => void;
-  onCreated: () => void;
-}) {
-  const { org } = useAuth();
-  const [form, setForm] = useState({ commodity: "", quantity: "", unit: "tonnes", price: "", currency: "USD" });
-  const [busy, setBusy] = useState(false);
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!org) {
-      toast.error("Add your organisation details first");
-      return;
-    }
-    if (!direction) return;
-    setBusy(true);
-    try {
-      const { data: tx, error: txErr } = await supabase
-        .from("transactions")
-        .insert({
-          org_id: org.id,
-          stage: "trading",
-          step: "bid-offer",
-          title: form.commodity || (direction === "bid" ? "New buy bid" : "New sell offer"),
-          commodity: form.commodity || null,
-          quantity: form.quantity ? Number(form.quantity) : null,
-          unit: form.unit || null,
-          price: form.price ? Number(form.price) : null,
-          currency: form.currency || "USD",
-        })
-        .select()
-        .single();
-      if (txErr) throw txErr;
-
-      const { error: boErr } = await supabase.from("bid_offers").insert({
-        transaction_id: tx.id,
-        direction,
-        price: form.price ? Number(form.price) : 0,
-        quantity: form.quantity ? Number(form.quantity) : 0,
-        unit: form.unit || "",
-        currency: form.currency || "USD",
-        terms: "",
-      });
-      if (boErr) throw boErr;
-
-      await recordEvent({
-        transactionId: tx.id,
-        stage: "trading",
-        step: "bid-offer",
-        action: direction === "bid" ? "bid_placed" : "offer_placed",
-        summary: `${direction === "bid" ? "Bid" : "Offer"} placed: ${form.commodity || tx.title}`,
-        payload: { ...form },
-      });
-
-      toast.success(direction === "bid" ? "Bid to buy created" : "Bid to sell created");
-      setForm({ commodity: "", quantity: "", unit: "tonnes", price: "", currency: "USD" });
-      onCreated();
-      onClose();
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Dialog open={direction !== null} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="w-[min(420px,92vw)]">
-        <DialogTitle>{direction === "bid" ? "New Bid to Buy" : "New Bid to Sell"}</DialogTitle>
-        <DialogDescription className="text-xs">
-          A compact starting point — commodity, quantity and price. Everything else is added once
-          it's open.
-        </DialogDescription>
-        <form onSubmit={submit} className="mt-2 space-y-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="board-commodity">Commodity or asset</Label>
-            <Input
-              id="board-commodity"
-              autoFocus
-              value={form.commodity}
-              onChange={(e) => setForm({ ...form, commodity: e.target.value })}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="board-qty">Quantity</Label>
-              <Input
-                id="board-qty"
-                type="number"
-                step="any"
-                value={form.quantity}
-                onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="board-unit">Unit</Label>
-              <Input id="board-unit" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="board-price">Price</Label>
-              <Input
-                id="board-price"
-                type="number"
-                step="any"
-                value={form.price}
-                onChange={(e) => setForm({ ...form, price: e.target.value })}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="board-currency">Currency</Label>
-              <Input
-                id="board-currency"
-                value={form.currency}
-                onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase() })}
-              />
-            </div>
-          </div>
-          <Button
-            type="submit"
-            disabled={busy}
-            className={cn(
-              "w-full",
-              direction === "offer" && "bg-[var(--teal)] text-[var(--teal-foreground)] hover:opacity-90",
-            )}
-          >
-            {direction === "bid" ? "Create Bid to Buy" : "Create Bid to Sell"}
-          </Button>
-        </form>
-      </DialogContent>
-    </Dialog>
   );
 }

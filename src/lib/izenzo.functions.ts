@@ -420,3 +420,52 @@ export const runAiProposal = createServerFn({ method: "POST" })
 
     return { output, id: proposal?.id ?? null };
   });
+
+const DOC_TYPES = ["identity", "term_sheet", "specification", "certificate", "contract", "other"] as const;
+
+function classifyByFilename(filename: string): (typeof DOC_TYPES)[number] {
+  const n = filename.toLowerCase();
+  if (/passport|id[\s_-]?card|driver|national[\s_-]?id|kyc/.test(n)) return "identity";
+  if (/contract|agreement|sale/.test(n)) return "contract";
+  if (/term[\s_-]?sheet/.test(n)) return "term_sheet";
+  if (/cert/.test(n)) return "certificate";
+  if (/spec/.test(n)) return "specification";
+  return "other";
+}
+
+/** AI-assisted document classification for the compact Simple Mode bid wizard's upload step.
+ * Falls back to a filename heuristic if AI isn't configured, so uploads never block on it. */
+export const classifyDocument = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => z.object({ filename: z.string().min(1).max(300) }).parse(data))
+  .handler(async ({ data }) => {
+    const apiKey = process.env["LOVABLE_API_KEY"];
+    const fallback = classifyByFilename(data.filename);
+    if (!apiKey) return { docType: fallback, source: "heuristic" as const };
+
+    try {
+      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "google/gemini-3.7-flash",
+          messages: [
+            {
+              role: "system",
+              content: `Classify a trade-deal document by its filename alone into exactly one of: ${DOC_TYPES.join(", ")}. "identity" means a personal or entity ID/KYC document (passport, ID card, company registration). Respond with ONLY the single lowercase category word, nothing else.`,
+            },
+            { role: "user", content: data.filename },
+          ],
+        }),
+      });
+      if (!res.ok) return { docType: fallback, source: "heuristic" as const };
+      const json = (await res.json()) as { choices: { message: { content: string } }[] };
+      const guess = (json.choices?.[0]?.message?.content ?? "").trim().toLowerCase();
+      const docType = (DOC_TYPES as readonly string[]).includes(guess)
+        ? (guess as (typeof DOC_TYPES)[number])
+        : fallback;
+      return { docType, source: "ai" as const };
+    } catch {
+      return { docType: fallback, source: "heuristic" as const };
+    }
+  });
