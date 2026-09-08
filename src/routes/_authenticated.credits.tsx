@@ -145,17 +145,12 @@ function Credits() {
     }
     setBusy(true);
     try {
-      const { error } = await supabase
-        .from("organisations")
-        .update({ credits: (org.credits ?? 0) + n })
-        .eq("id", org.id);
-      if (error) throw error;
-      const { error: lErr } = await supabase.from("credit_ledger").insert({
-        org_id: org.id,
-        delta: n,
-        reason: `Purchased ${n} token${n === 1 ? "" : "s"}`,
+      const { error } = await supabase.rpc("atomic_token_adjust", {
+        p_org_id: org.id,
+        p_delta: n,
+        p_reason: `Purchased ${n} token${n === 1 ? "" : "s"}`,
       });
-      if (lErr) throw lErr;
+      if (error) throw error;
       await refresh();
       await qc.invalidateQueries({ queryKey: ["credit_ledger"] });
       toast.success(`${n} token${n === 1 ? "" : "s"} added`);

@@ -53,16 +53,13 @@ export const sealProofOfIntent = createServerFn({ method: "POST" })
       }),
     );
 
-    await supabase
-      .from("organisations")
-      .update({ credits: (org.credits ?? 0) - POI_COST })
-      .eq("id", org.id);
-    await supabase.from("credit_ledger").insert({
-      org_id: org.id,
-      delta: -POI_COST,
-      reason: "Proof of Intent sealed",
-      transaction_id: tx.id,
+    const { error: debitErr } = await supabase.rpc("atomic_token_adjust", {
+      p_org_id: org.id,
+      p_delta: -POI_COST,
+      p_reason: "Proof of Intent sealed",
+      p_transaction_id: tx.id,
     });
+    if (debitErr) throw new Error(debitErr.message);
     await supabase
       .from("transactions")
       .update({ poi_sealed_at: sealedAt, poi_hash: hash, stage: "compliance", step: "wad" })
@@ -117,16 +114,13 @@ export const completeWad = createServerFn({ method: "POST" })
     const now = new Date().toISOString();
     const fingerprint = await sha256(JSON.stringify({ tx: tx.id, checks: data.checks, now }));
 
-    await supabase
-      .from("organisations")
-      .update({ credits: (org.credits ?? 0) - WAD_COST })
-      .eq("id", org.id);
-    await supabase.from("credit_ledger").insert({
-      org_id: org.id,
-      delta: -WAD_COST,
-      reason: "WaD verification",
-      transaction_id: tx.id,
+    const { error: debitErr } = await supabase.rpc("atomic_token_adjust", {
+      p_org_id: org.id,
+      p_delta: -WAD_COST,
+      p_reason: "WaD verification",
+      p_transaction_id: tx.id,
     });
+    if (debitErr) throw new Error(debitErr.message);
 
     const record = {
       transaction_id: tx.id,

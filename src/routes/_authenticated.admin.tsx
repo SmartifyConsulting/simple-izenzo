@@ -175,14 +175,12 @@ function TokensTab() {
       const org = orgs.find((o) => o.id === issue.orgId);
       if (!org) throw new Error("Choose an organisation");
       const n = Number(issue.amount);
-      const { error } = await supabase
-        .from("organisations")
-        .update({ credits: (org.credits ?? 0) + n })
-        .eq("id", org.id);
+      const { error } = await supabase.rpc("atomic_token_adjust", {
+        p_org_id: org.id,
+        p_delta: n,
+        p_reason: "Issued by administrator",
+      });
       if (error) throw error;
-      await supabase
-        .from("credit_ledger")
-        .insert({ org_id: org.id, delta: n, reason: "Issued by administrator" });
       await qc.invalidateQueries({ queryKey: ["admin-orgs"] });
       toast.success("Tokens issued");
     } catch (err) {

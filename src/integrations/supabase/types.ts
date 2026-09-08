@@ -804,6 +804,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      atomic_token_adjust: {
+        Args: {
+          p_delta: number
+          p_org_id: string
+          p_reason: string
+          p_transaction_id?: string | null
+        }
+        Returns: number
+      }
       bump_login_count: { Args: never; Returns: number }
       can_access_tx: { Args: { _tx: string }; Returns: boolean }
       current_org_id: { Args: never; Returns: string }
