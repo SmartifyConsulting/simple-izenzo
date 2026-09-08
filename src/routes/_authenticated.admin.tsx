@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { History } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/AppShell";
@@ -94,11 +94,25 @@ const ADMIN_GROUPS: { id: string; label: string; tabs: AdminTab[] }[] = [
 ];
 
 function AdminPage() {
-  const { roles, user } = useAuth();
+  const { roles, user, loading, refresh } = useAuth();
   const isAdmin = roles.includes("admin");
   const isSuperuser = (user?.email ?? "").toLowerCase() === SUPERUSER_EMAIL;
   const search = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
+  const [rechecking, setRechecking] = useState(false);
+
+  useEffect(() => {
+    void refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (loading) {
+    return (
+      <AppShell title="System Admin">
+        <p className="text-sm text-muted-foreground">Checking your access…</p>
+      </AppShell>
+    );
+  }
 
   if (!isAdmin) {
     return (
@@ -106,6 +120,17 @@ function AdminPage() {
         <p className="text-sm text-muted-foreground">
           This area is for administrators. Your seat does not have that role.
         </p>
+        <Button
+          className="mt-4"
+          variant="outline"
+          disabled={rechecking}
+          onClick={() => {
+            setRechecking(true);
+            void refresh().finally(() => setRechecking(false));
+          }}
+        >
+          {rechecking ? "Rechecking…" : "Recheck my access"}
+        </Button>
       </AppShell>
     );
   }

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -61,8 +61,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [roles, setRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const uidRef = useRef<string | undefined>(undefined);
+
 
   async function load(uid: string | undefined) {
+    uidRef.current = uid;
     if (!uid) {
       setProfile(null);
       setOrg(null);
@@ -127,6 +130,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => sub.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const onFocus = () => {
+      if (document.visibilityState === "hidden") return;
+      if (!uidRef.current) return;
+      void load(uidRef.current);
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
   }, []);
 
   const value: AuthValue = {
