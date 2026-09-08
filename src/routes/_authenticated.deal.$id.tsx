@@ -13,7 +13,8 @@ export const Route = createFileRoute("/_authenticated/deal/$id")({
       { title: "Deal canvas — Izenzo" },
       {
         name: "description",
-        content: "Follow a deal down the live canvas: bidder on the left, responder on the right, proof at every gate.",
+        content:
+          "Follow a deal down the live canvas: bidder on the left, responder on the right, proof at every gate.",
       },
       { property: "og:title", content: "Deal canvas — Izenzo" },
       {
@@ -28,10 +29,18 @@ export const Route = createFileRoute("/_authenticated/deal/$id")({
 function DealCanvasPage() {
   const { id } = Route.useParams();
 
-  const { data: tx, isLoading, refetch } = useQuery({
+  const {
+    data: tx,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ["transaction", id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("transactions").select("*").eq("id", id).maybeSingle();
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
       if (error) throw error;
       return data as Transaction | null;
     },
@@ -49,7 +58,9 @@ function DealCanvasPage() {
       }
     >
       {isLoading && <p className="text-sm text-muted-foreground">Opening the canvas…</p>}
-      {!isLoading && !tx && <p className="text-sm text-muted-foreground">This deal is not available to you.</p>}
+      {!isLoading && !tx && (
+        <p className="text-sm text-muted-foreground">This deal is not available to you.</p>
+      )}
       {tx && (
         <DealCanvas
           tx={tx}

@@ -40,7 +40,10 @@ export function DealCanvas({ tx, reload }: { tx: Transaction; reload: () => void
 
   const open = (stage: StageKey, step: string) => setPanel({ stage, step });
 
-  const node = (n: NodeRef, opts?: { side?: "left" | "right" | "center"; note?: string; compact?: boolean; delay?: number }) => {
+  const node = (
+    n: NodeRef,
+    opts?: { side?: "left" | "right" | "center"; note?: string; compact?: boolean; delay?: number },
+  ) => {
     const def = stepDef(n.stage, n.step);
     return (
       <CanvasNode
@@ -59,7 +62,8 @@ export function DealCanvas({ tx, reload }: { tx: Transaction; reload: () => void
 
   const poi = Boolean(tx.poi_sealed_at);
   const wad = Boolean(tx.wad_completed_at);
-  const matching = tx.stage === "trading" && ["search", "ai", "ai-plus", "counterparties"].includes(tx.step);
+  const matching =
+    tx.stage === "trading" && ["search", "ai", "ai-plus", "counterparties"].includes(tx.step);
 
   return (
     <div className="ink-grid relative rounded-3xl border border-border p-4 sm:p-7">
@@ -80,12 +84,24 @@ export function DealCanvas({ tx, reload }: { tx: Transaction; reload: () => void
       {/* Paired opening lanes */}
       <div className="mt-3 grid grid-cols-2 gap-4 sm:gap-8">
         <div className="space-y-3">
-          {node({ stage: "trading", step: "bid-offer", label: "Bid", icon: ArrowLeftRight }, { side: "left", delay: 0 })}
-          {node({ stage: "trading", step: "documents", label: "Deal documents", icon: FileUp }, { side: "left", delay: 90 })}
+          {node(
+            { stage: "trading", step: "bid-offer", label: "Bid", icon: ArrowLeftRight },
+            { side: "left", delay: 0 },
+          )}
+          {node(
+            { stage: "trading", step: "documents", label: "Deal documents", icon: FileUp },
+            { side: "left", delay: 90 },
+          )}
         </div>
         <div className="space-y-3">
-          {node({ stage: "trading", step: "bid-offer", label: "Offer", icon: ArrowLeftRight }, { side: "right", delay: 45 })}
-          {node({ stage: "trading", step: "documents", label: "Deal documents", icon: FileUp }, { side: "right", delay: 135 })}
+          {node(
+            { stage: "trading", step: "bid-offer", label: "Offer", icon: ArrowLeftRight },
+            { side: "right", delay: 45 },
+          )}
+          {node(
+            { stage: "trading", step: "documents", label: "Deal documents", icon: FileUp },
+            { side: "right", delay: 135 },
+          )}
         </div>
       </div>
 
@@ -101,16 +117,25 @@ export function DealCanvas({ tx, reload }: { tx: Transaction; reload: () => void
 
       <div className="mx-auto max-w-2xl space-y-3">
         {node({ stage: "trading", step: "counterparties", icon: Users }, { side: "center" })}
-        {node({ stage: "trading", step: "media", label: "Background screening", icon: Newspaper }, { side: "center", compact: true, note: "runs quietly" })}
+        {node(
+          { stage: "trading", step: "media", label: "Background screening", icon: Newspaper },
+          { side: "center", compact: true, note: "runs quietly" },
+        )}
         {node({ stage: "trading", step: "choice", icon: MousePointerClick }, { side: "center" })}
         {node({ stage: "trading", step: "intent", icon: Handshake }, { side: "center" })}
-        {node({ stage: "trading", step: "poi", icon: ShieldCheck }, { side: "center", note: "1 token · USD 10" })}
+        {node(
+          { stage: "trading", step: "poi", icon: ShieldCheck },
+          { side: "center", note: "1 token · USD 10" },
+        )}
       </div>
 
       <GateBar label="Proof of Intent" cleared={poi} />
 
       <div className="mx-auto max-w-2xl">
-        {node({ stage: "compliance", step: "wad", icon: ShieldCheck }, { side: "center", note: "3 tokens · USD 30" })}
+        {node(
+          { stage: "compliance", step: "wad", icon: ShieldCheck },
+          { side: "center", note: "3 tokens · USD 30" },
+        )}
       </div>
 
       <GateBar label="Without a Doubt" cleared={wad} />
@@ -134,9 +159,7 @@ export function DealCanvas({ tx, reload }: { tx: Transaction; reload: () => void
       </div>
 
       <Dialog open={panel !== null} onOpenChange={(v) => !v && setPanel(null)}>
-        <DialogContent
-          className="glass max-h-[88vh] w-[min(1000px,94vw)] overflow-y-auto p-0 sm:max-w-[min(1000px,94vw)]"
-        >
+        <DialogContent className="glass max-h-[88vh] w-[min(1000px,94vw)] overflow-y-auto p-0 sm:max-w-[min(1000px,94vw)]">
           {panel && (
             <PanelBody
               tx={tx}
@@ -171,13 +194,16 @@ function PanelBody({
     <div className="p-5 sm:p-7">
       <div className="mb-5 flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <DialogTitle className="truncate text-lg tracking-tight">{def?.label ?? step}</DialogTitle>
+          <DialogTitle className="truncate text-lg tracking-tight">
+            {def?.label ?? step}
+          </DialogTitle>
           <DialogDescription className="mt-1 text-[13px]">{def?.blurb}</DialogDescription>
         </div>
-        
       </div>
       {locked ? (
-        <p className="rounded-xl border border-border bg-white/5 p-4 text-sm text-muted-foreground">{locked}.</p>
+        <p className="rounded-xl border border-border bg-white/5 p-4 text-sm text-muted-foreground">
+          {locked}.
+        </p>
       ) : (
         <StepScreen tx={tx} stage={stage} step={step} reload={reload} />
       )}

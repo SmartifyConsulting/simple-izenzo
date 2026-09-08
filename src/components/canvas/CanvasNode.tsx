@@ -34,7 +34,9 @@ export function CanvasNode({
       className={cn(
         "glass-node animate-node-rise group w-full text-left",
         compact ? "px-3.5 py-3" : "px-4 py-4",
-        locked ? "node-locked cursor-not-allowed" : "hover:-translate-y-0.5 hover:border-primary/50",
+        locked
+          ? "node-locked cursor-not-allowed"
+          : "hover:-translate-y-0.5 hover:border-primary/50",
         state === "active" && "node-active",
         side === "right" && "text-right",
       )}
@@ -66,10 +68,14 @@ export function CanvasNode({
             <span className="h-1.5 w-1.5 rounded-full bg-current" />
           )}
         </span>
-        <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold tracking-tight">{label}</span>
+        <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold tracking-tight">
+          {label}
+        </span>
       </span>
       {blurb && !compact && (
-        <span className="mt-1.5 block text-[12px] leading-relaxed text-muted-foreground">{blurb}</span>
+        <span className="mt-1.5 block text-[12px] leading-relaxed text-muted-foreground">
+          {blurb}
+        </span>
       )}
       {note && (
         <span className="mt-2 inline-block rounded-full bg-primary/12 px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-primary">

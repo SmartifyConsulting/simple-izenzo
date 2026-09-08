@@ -58,12 +58,25 @@ function useModules() {
     { to: "/inbox", label: "Inbox", icon: Inbox, blurb: "Requests waiting on you" },
     { to: "/credits", label: "Tokens", icon: Coins, blurb: "Balance and top-ups" },
     { to: "/registry", label: "Registry", icon: Building2, blurb: "Known businesses" },
-    { to: "/facilitation", label: "Unknown counterparty", icon: Search, blurb: "Find and surface a party" },
+    {
+      to: "/facilitation",
+      label: "Unknown counterparty",
+      icon: Search,
+      blurb: "Find and surface a party",
+    },
     { to: "/support", label: "Support", icon: LifeBuoy, blurb: "Talk to us" },
   ];
-  if (isFunder) modules.push({ to: "/funder", label: "Funder", icon: Banknote, blurb: "Funding positions" });
-  if (isAuditor) modules.push({ to: "/auditor", label: "Auditor", icon: ShieldAlert, blurb: "Read-only assurance" });
-  if (isAdmin) modules.push({ to: "/admin", label: "Admin", icon: ShieldCheck, blurb: "People and platform" });
+  if (isFunder)
+    modules.push({ to: "/funder", label: "Funder", icon: Banknote, blurb: "Funding positions" });
+  if (isAuditor)
+    modules.push({
+      to: "/auditor",
+      label: "Auditor",
+      icon: ShieldAlert,
+      blurb: "Read-only assurance",
+    });
+  if (isAdmin)
+    modules.push({ to: "/admin", label: "Admin", icon: ShieldCheck, blurb: "People and platform" });
   return modules;
 }
 
@@ -150,7 +163,9 @@ function AvatarMenu() {
           <LogOut className="mr-2 h-3.5 w-3.5" /> Sign out
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <p className="px-2 py-1.5 text-[11px] text-muted-foreground">{roles.join(" · ") || "party"} seat</p>
+        <p className="px-2 py-1.5 text-[11px] text-muted-foreground">
+          {roles.join(" · ") || "party"} seat
+        </p>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -203,8 +218,14 @@ export function AppShell({
                 {greeting()}, {firstName}
               </p>
             )}
-            {title && <h1 className="mt-2 truncate text-sm font-semibold tracking-tight text-muted-foreground">{title}</h1>}
-            {description && <p className="mt-1 truncate text-xs text-muted-foreground">{description}</p>}
+            {title && (
+              <h1 className="mt-2 truncate text-sm font-semibold tracking-tight text-muted-foreground">
+                {title}
+              </h1>
+            )}
+            {description && (
+              <p className="mt-1 truncate text-xs text-muted-foreground">{description}</p>
+            )}
           </div>
           {actions && <div>{actions}</div>}
         </div>
