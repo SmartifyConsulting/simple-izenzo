@@ -1,11 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
+import { downloadEvidencePack } from "@/lib/evidencePack.functions";
 
 export const Route = createFileRoute("/_authenticated/funder")({
   head: () => ({
@@ -38,6 +40,7 @@ function FunderWorkspace() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const isFunder = roles.includes("funder") || roles.includes("admin");
+  const download = useServerFn(downloadEvidencePack);
 
   const { data: releases = [], isLoading } = useQuery({
     queryKey: ["funder-releases"],
@@ -51,6 +54,25 @@ function FunderWorkspace() {
       return data ?? [];
     },
   });
+
+  const { data: packs = [] } = useQuery({
+    queryKey: ["funder-evidence-packs"],
+    enabled: isFunder,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("evidence_packs").select("*").is("revoked_at", null);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  async function handleDownload(packId: string) {
+    try {
+      const { url } = await download({ data: { packId } });
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  }
 
   async function recordView(id: string) {
     const { error } = await supabase.rpc("funder_record_view", { p_release_id: id });
@@ -179,6 +201,16 @@ function FunderWorkspace() {
                       <Button size="sm" variant="ghost" onClick={() => recordDecision(r.id, "decline")}>
                         Decline
                       </Button>
+                      {r.permissions === "view_and_download" &&
+                        packs.find((p) => p.funder_release_id === r.id) && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDownload(packs.find((p) => p.funder_release_id === r.id)!.id)}
+                          >
+                            Download evidence pack
+                          </Button>
+                        )}
                     </div>
                   </li>
                 );

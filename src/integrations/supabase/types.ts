@@ -499,6 +499,104 @@ export type Database = {
           },
         ]
       }
+      evidence_packs: {
+        Row: {
+          compliance_case_id: string | null
+          funder_release_id: string | null
+          id: string
+          issued_at: string
+          issued_by: string
+          pack_version: string
+          revoke_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          sha256_hash: string
+          source_type: string
+          storage_path: string
+          superseded_by_pack_id: string | null
+        }
+        Insert: {
+          compliance_case_id?: string | null
+          funder_release_id?: string | null
+          id?: string
+          issued_at?: string
+          issued_by?: string
+          pack_version?: string
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          sha256_hash: string
+          source_type: string
+          storage_path: string
+          superseded_by_pack_id?: string | null
+        }
+        Update: {
+          compliance_case_id?: string | null
+          funder_release_id?: string | null
+          id?: string
+          issued_at?: string
+          issued_by?: string
+          pack_version?: string
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          sha256_hash?: string
+          source_type?: string
+          storage_path?: string
+          superseded_by_pack_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_packs_compliance_case_id_fkey"
+            columns: ["compliance_case_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_packs_funder_release_id_fkey"
+            columns: ["funder_release_id"]
+            isOneToOne: false
+            referencedRelation: "funder_releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evidence_pack_events: {
+        Row: {
+          actor_id: string
+          created_at: string
+          event_type: string
+          id: string
+          note: string | null
+          pack_id: string
+        }
+        Insert: {
+          actor_id?: string
+          created_at?: string
+          event_type: string
+          id?: string
+          note?: string | null
+          pack_id: string
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          note?: string | null
+          pack_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_pack_events_pack_id_fkey"
+            columns: ["pack_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_packs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       compliance_case_events: {
         Row: {
           actor_id: string
@@ -2094,6 +2192,26 @@ export type Database = {
       }
       support_set_status: {
         Args: { p_status: string; p_ticket_id: string }
+        Returns: undefined
+      }
+      admin_issue_evidence_pack: {
+        Args: {
+          p_compliance_case_id?: string
+          p_funder_release_id?: string
+          p_pack_version?: string
+          p_sha256_hash: string
+          p_source_type: string
+          p_storage_path: string
+          p_supersedes_pack_id?: string
+        }
+        Returns: string
+      }
+      admin_revoke_evidence_pack: {
+        Args: { p_id: string; p_reason: string }
+        Returns: undefined
+      }
+      log_evidence_pack_download: {
+        Args: { p_id: string }
         Returns: undefined
       }
       admin_api_suspend_key: { Args: { p_id: string }; Returns: undefined }

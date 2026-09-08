@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/AppShell";
@@ -12,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { when, type Transaction } from "@/lib/tx";
+import { issueEvidencePack, downloadEvidencePack } from "@/lib/evidencePack.functions";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
@@ -1108,6 +1110,109 @@ function AiSuggestionsTab() {
 const CASE_TYPES = ["kyc_review", "aml_alert", "counterparty_dispute", "transaction_review", "other"] as const;
 const CASE_PRIORITIES = ["low", "medium", "high", "urgent"] as const;
 
+function EvidencePackPanel({
+  sourceType,
+  id,
+}: {
+  sourceType: "compliance_case" | "funder_release";
+  id: string;
+}) {
+  const qc = useQueryClient();
+  const issue = useServerFn(issueEvidencePack);
+  const download = useServerFn(downloadEvidencePack);
+  const [busy, setBusy] = useState(false);
+
+  const { data: packs = [] } = useQuery({
+    queryKey: ["evidence-packs", sourceType, id],
+    queryFn: async () => {
+      const column = sourceType === "compliance_case" ? "compliance_case_id" : "funder_release_id";
+      const { data, error } = await supabase
+        .from("evidence_packs")
+        .select("*")
+        .eq(column, id)
+        .order("issued_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  async function handleIssue(supersedesPackId?: string) {
+    setBusy(true);
+    try {
+      await issue({ data: { sourceType, id, ...(supersedesPackId ? { supersedesPackId } : {}) } });
+      toast.success("Evidence pack issued");
+      await qc.invalidateQueries({ queryKey: ["evidence-packs", sourceType, id] });
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDownload(packId: string) {
+    try {
+      const { url } = await download({ data: { packId } });
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  }
+
+  async function handleRevoke(packId: string) {
+    const reason = window.prompt("Revocation reason (required) — the original stays preserved, never edited:");
+    if (!reason) return;
+    const { error } = await supabase.rpc("admin_revoke_evidence_pack", { p_id: packId, p_reason: reason });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Pack revoked");
+    await qc.invalidateQueries({ queryKey: ["evidence-packs", sourceType, id] });
+  }
+
+  const activePack = packs.find((p) => !p.revoked_at);
+
+  return (
+    <div className="mt-2 rounded-md bg-muted/40 p-2.5 text-xs">
+      <p className="font-medium text-muted-foreground">Evidence pack</p>
+      {packs.length === 0 ? (
+        <Button size="sm" variant="outline" className="mt-1.5" disabled={busy} onClick={() => handleIssue()}>
+          Issue evidence pack
+        </Button>
+      ) : (
+        <ul className="mt-1.5 space-y-1">
+          {packs.map((p) => (
+            <li key={p.id} className="flex flex-wrap items-center gap-1.5">
+              <span>
+                {p.pack_version} · {p.sha256_hash.slice(0, 12)}… · issued {new Date(p.issued_at).toLocaleDateString()}
+              </span>
+              {p.revoked_at ? (
+                <Badge variant="secondary" className="font-normal">
+                  revoked
+                </Badge>
+              ) : (
+                <>
+                  <Button size="sm" variant="ghost" onClick={() => handleDownload(p.id)}>
+                    Download
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => handleRevoke(p.id)}>
+                    Revoke
+                  </Button>
+                </>
+              )}
+            </li>
+          ))}
+          {!activePack && (
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => handleIssue(packs[0]?.id)}>
+              Issue replacement pack
+            </Button>
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function ComplianceCasesTab() {
   const qc = useQueryClient();
   const { profile } = useAuth();
@@ -1372,6 +1477,9 @@ function ComplianceCasesTab() {
                           Final decision: <span className="font-medium">{c.final_decision}</span> —{" "}
                           {c.final_decision_note}
                         </p>
+                      )}
+                      {["closed_approved", "closed_rejected", "closed_no_action"].includes(c.status) && (
+                        <EvidencePackPanel sourceType="compliance_case" id={c.id} />
                       )}
                     </div>
                     <div className="flex shrink-0 flex-wrap items-center gap-1.5">
@@ -1778,31 +1886,36 @@ function FundersTab() {
               const orgName = (r as { funder_orgs?: { name?: string } | null }).funder_orgs?.name;
               const expired = new Date(r.expiry).getTime() < Date.now();
               return (
-                <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border p-3 text-xs">
-                  <span>
-                    <span className="font-medium">{orgName}</span> ← {cpName} · expires{" "}
-                    {new Date(r.expiry).toLocaleDateString()}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    {r.revoked_at ? (
-                      <Badge variant="secondary" className="font-normal">
-                        revoked
-                      </Badge>
-                    ) : expired ? (
-                      <Badge variant="secondary" className="font-normal">
-                        expired
-                      </Badge>
-                    ) : (
-                      <>
-                        <Badge variant="outline" className="font-normal">
-                          active
+                <li key={r.id} className="rounded-md border border-border p-3 text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span>
+                      <span className="font-medium">{orgName}</span> ← {cpName} · expires{" "}
+                      {new Date(r.expiry).toLocaleDateString()}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      {r.revoked_at ? (
+                        <Badge variant="secondary" className="font-normal">
+                          revoked
                         </Badge>
-                        <Button size="sm" variant="ghost" onClick={() => revokeRelease(r.id)}>
-                          Revoke
-                        </Button>
-                      </>
-                    )}
-                  </span>
+                      ) : expired ? (
+                        <Badge variant="secondary" className="font-normal">
+                          expired
+                        </Badge>
+                      ) : (
+                        <>
+                          <Badge variant="outline" className="font-normal">
+                            active
+                          </Badge>
+                          <Button size="sm" variant="ghost" onClick={() => revokeRelease(r.id)}>
+                            Revoke
+                          </Button>
+                        </>
+                      )}
+                    </span>
+                  </div>
+                  {!r.revoked_at && !expired && r.permissions === "view_and_download" && (
+                    <EvidencePackPanel sourceType="funder_release" id={r.id} />
+                  )}
                 </li>
               );
             })}
