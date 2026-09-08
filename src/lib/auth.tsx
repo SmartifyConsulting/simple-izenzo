@@ -65,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
   async function load(uid: string | undefined) {
+    uidRef.current = uid;
     if (!uid) {
       setProfile(null);
       setOrg(null);
