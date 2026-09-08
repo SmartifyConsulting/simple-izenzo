@@ -6,6 +6,30 @@ import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { useAuth } from "@/lib/auth";
 
+type Search = { next?: string | undefined };
+
+export const Route = createFileRoute("/")({
+  validateSearch: (search: Record<string, unknown>): Search => ({
+    next: typeof search["next"] === "string" ? (search["next"] as string) : undefined,
+  }),
+  head: () => ({
+    meta: [
+      { title: "Izenzo — Proof-backed trading, from intent to memory" },
+      {
+        name: "description",
+        content:
+          "Izenzo matches bidders with responders and records every step: trading, compliance, execution, finality and memory. Intent is sealed, not assumed.",
+      },
+      { property: "og:title", content: "Izenzo — Proof-backed trading" },
+      {
+        property: "og:description",
+        content:
+          "Izenzo records every step: trading, compliance and governance, execution, finality and memory.",
+      },
+    ],
+  }),
+  component: Landing,
+});
 
 function safeNext(next: string | undefined) {
   if (next && next.startsWith("/") && !next.startsWith("//")) return next;
