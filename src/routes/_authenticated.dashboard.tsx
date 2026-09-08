@@ -23,6 +23,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 function Dashboard() {
   const { org } = useAuth();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const { data: txs = [], isLoading, refetch } = useQuery({
     queryKey: ["transactions", org?.id],
