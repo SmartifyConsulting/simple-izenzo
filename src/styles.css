@@ -210,6 +210,22 @@
   transform: translateZ(0) scale(1.015);
 }
 
+@keyframes node-start-pulse {
+  0%,
+  100% {
+    border-color: color-mix(in oklab, var(--signal) 55%, transparent);
+    box-shadow: var(--glass-shadow), 0 0 0 0 color-mix(in oklab, var(--signal) 45%, transparent);
+  }
+  50% {
+    border-color: var(--signal);
+    box-shadow: var(--glass-shadow), 0 0 0 6px color-mix(in oklab, var(--signal) 0%, transparent);
+  }
+}
+
+@utility animate-node-start {
+  animation: node-start-pulse 1.8s ease-in-out infinite;
+}
+
 @utility node-locked {
   opacity: 0.42;
   filter: saturate(0.4);

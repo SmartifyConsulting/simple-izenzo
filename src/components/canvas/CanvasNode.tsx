@@ -37,7 +37,7 @@ export function CanvasNode({
         locked
           ? "node-locked cursor-not-allowed"
           : "hover:-translate-y-0.5 hover:border-primary/50",
-        state === "active" && "node-active",
+        state === "active" && "node-active animate-node-start",
         side === "right" && "text-right",
       )}
     >
