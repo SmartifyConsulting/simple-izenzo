@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -25,6 +25,23 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { routeIdentityVerification } from "@/lib/identityRouting";
 import { COUNTRIES } from "@/lib/countries";
+
+/** Server-side token gates (POI, WaD) throw "Not enough tokens…" when the org's balance is too
+ * low. Surface that specific failure with a direct link to the Buy Tokens screen instead of a
+ * plain error toast. */
+function reportGateError(err: unknown, navigate: ReturnType<typeof useNavigate>) {
+  const message = (err as Error).message;
+  if (message.toLowerCase().includes("not enough tokens")) {
+    toast.error(message, {
+      action: {
+        label: "Buy tokens",
+        onClick: () => navigate({ to: "/credits" }),
+      },
+    });
+  } else {
+    toast.error(message);
+  }
+}
 
 type Props = {
   tx: Transaction;
@@ -1078,6 +1095,7 @@ function IntentStep({ tx, reload }: Props) {
 
 function PoiStep({ tx, reload }: Props) {
   const seal = useServerFn(sealProofOfIntent);
+  const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
 
   async function doSeal() {
@@ -1087,7 +1105,7 @@ function PoiStep({ tx, reload }: Props) {
       reload();
       toast.success("Proof of Intent sealed");
     } catch (err) {
-      toast.error((err as Error).message);
+      reportGateError(err, navigate);
     } finally {
       setBusy(false);
     }
@@ -1251,6 +1269,7 @@ function StubProviderPanel({ tx }: { tx: Transaction }) {
 
 function WadStep({ tx, reload }: Props) {
   const complete = useServerFn(completeWad);
+  const navigate = useNavigate();
   const [checks, setChecks] = useState<Record<string, boolean>>({});
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
@@ -1285,7 +1304,7 @@ function WadStep({ tx, reload }: Props) {
       reload();
       toast.success(`WaD ${decision}`);
     } catch (err) {
-      toast.error((err as Error).message);
+      reportGateError(err, navigate);
     } finally {
       setBusy(false);
     }
