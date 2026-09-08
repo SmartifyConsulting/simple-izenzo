@@ -126,6 +126,12 @@
   --glass-border: hsl(220 13% 91%);
   --glass-shadow: 0 20px 50px -24px hsl(220 30% 20% / 18%), inset 0 1px 0 hsl(0 0% 100% / 60%);
   --signal: hsl(160 84% 39%);
+
+  /* Simple Mode trading board: buy = terracotta, sell = teal. */
+  --terracotta: hsl(14 62% 50%);
+  --terracotta-foreground: hsl(0 0% 100%);
+  --teal: hsl(178 62% 32%);
+  --teal-foreground: hsl(0 0% 100%);
 }
 
 
@@ -187,12 +193,9 @@
 
 @utility glass-node {
   position: relative;
-  background:
-    linear-gradient(160deg, oklch(1 0 0 / 9%), oklch(1 0 0 / 2%) 42%, oklch(0 0 0 / 12%)),
-    var(--glass-surface);
+  background: var(--color-card);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-2xl);
-  backdrop-filter: blur(16px) saturate(150%);
   box-shadow: var(--glass-shadow);
   transition:
     transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -265,4 +268,17 @@
 
 @utility animate-beam-sweep {
   animation: beam-sweep 2.6s ease-in-out infinite;
+}
+
+@keyframes marquee-up {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+@utility animate-marquee-up {
+  animation: marquee-up linear infinite;
 }

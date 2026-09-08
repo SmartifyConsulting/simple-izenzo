@@ -1,7 +1,6 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/layout/AppShell";
-import { CanvasNode, Connector } from "@/components/canvas/CanvasNode";
-import { NAV_DESTINATIONS } from "@/lib/navDestinations";
+import { TradingBoard } from "@/components/guided/TradingBoard";
 
 export const Route = createFileRoute("/_authenticated/guided")({
   head: () => ({
@@ -10,33 +9,16 @@ export const Route = createFileRoute("/_authenticated/guided")({
   component: Guided,
 });
 
-/** The simplified, icon-driven counterpart to the detailed sidebar nav — same destinations
- * (see src/lib/navDestinations.ts), presented as one guided animated flow instead of a list,
- * for showing the client two navigation styles side by side. */
+/** Simple Mode: a single-page trading board. Bid to Buy and Bid to Sell on the outside lanes,
+ * a live trader ticker in the middle two that resolves into pinned match cards (terracotta for
+ * buy matches, teal for sell matches) once a transaction has both sides. */
 function Guided() {
-  const navigate = useNavigate();
-
   return (
     <AppShell
       title="Simple Mode"
-      description="Everything on the Trading Gateway, one guided step at a time."
+      description="Buy on the left, sell on the right — matches aggregate in the middle as they happen."
     >
-      <div className="ink-grid mx-auto max-w-md rounded-3xl border border-border p-5 sm:p-7">
-        {NAV_DESTINATIONS.map((item, i) => (
-          <div key={item.label}>
-            <CanvasNode
-              label={item.label}
-              blurb={item.blurb}
-              state="open"
-              icon={item.icon}
-              side="center"
-              delay={i * 80}
-              onClick={() => navigate({ to: item.to })}
-            />
-            {i < NAV_DESTINATIONS.length - 1 && <Connector />}
-          </div>
-        ))}
-      </div>
+      <TradingBoard />
     </AppShell>
   );
 }

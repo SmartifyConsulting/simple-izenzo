@@ -108,7 +108,7 @@ export function GateBar({ label, cleared }: { label: string; cleared: boolean })
           "rounded-full border px-3 py-1 text-[10.5px] font-semibold uppercase tracking-[0.12em]",
           cleared
             ? "border-primary/50 bg-primary/12 text-primary"
-            : "border-border bg-white/5 text-muted-foreground",
+            : "border-border bg-muted text-muted-foreground",
         )}
       >
         {cleared ? `${label} · cleared` : `${label} · sealed shut`}
@@ -120,7 +120,7 @@ export function GateBar({ label, cleared }: { label: string; cleared: boolean })
 
 export function SearchBeam({ active }: { active: boolean }) {
   return (
-    <div className="relative my-3 h-12 overflow-hidden rounded-2xl border border-border bg-white/[0.03]">
+    <div className="relative my-3 h-12 overflow-hidden rounded-2xl border border-border bg-muted/40">
       <div className="absolute inset-y-0 left-0 right-0 flex items-center">
         <span className="h-px w-full bg-gradient-to-r from-transparent via-primary/45 to-transparent" />
       </div>
