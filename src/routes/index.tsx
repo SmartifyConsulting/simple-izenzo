@@ -190,16 +190,12 @@ function Landing() {
         <section className="flex flex-col lg:flex-row">
           <div className="flex flex-1 flex-col justify-center bg-sidebar px-6 py-16 text-sidebar-foreground sm:px-10 sm:py-20 lg:px-16">
             <div className="max-w-xl">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-sidebar-foreground/55">
-                Trading · Compliance · Execution · Finality · Memory
-              </p>
-              <h1 className="mt-4 text-4xl font-semibold leading-[1.1] tracking-tight text-white sm:text-5xl">
-                A transaction is not a conversation. It is a record.
+              <h1 className="text-4xl font-semibold leading-[1.1] tracking-tight text-white sm:text-5xl">
+                Match a bid to the right counterparty, with proof at every gate.
               </h1>
               <p className="mt-5 max-w-lg text-base leading-relaxed text-sidebar-foreground/75">
-                Izenzo carries a trade through the Izenzo Trading Gateway. Every step is written once,
-                attributed to a person, timestamped and fingerprinted. Intent is sealed before anything
-                moves, and the record can be read forward and backward for as long as it matters.
+                Bidders on the left, responders on the right. Each module opens as the deal moves, and
+                every choice is recorded as it happens.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <a href="mailto:support@izenzo.co.za?subject=Demo%20request&body=I%20would%20like%20to%20request%20a%20demo%20of%20the%20Izenzo%20Trading%20Gateway.">
