@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -22,18 +22,23 @@ const TOTAL = TRADING_STEPS.length;
  * behaviour stays identical — only steps 1 and 2 are bespoke to this compact flow. */
 export function BidWizard({
   direction,
+  openTxId,
   onClose,
   onCreated,
 }: {
   direction: "bid" | "offer" | null;
+  /** Open the wizard already on an existing transaction (e.g. after picking a flight-search
+   * result), skipping the "new bid" form entirely. */
+  openTxId?: string | null;
   onClose: () => void;
   onCreated: () => void;
 }) {
   const { org } = useAuth();
-  const qc = useQueryClient();
-  const [txId, setTxId] = useState<string | null>(null);
+  const [txId, setTxId] = useState<string | null>(openTxId ?? null);
   const [form, setForm] = useState({ commodity: "", quantity: "", unit: "tonnes", price: "", currency: "USD" });
   const [busy, setBusy] = useState(false);
+
+  if (openTxId && openTxId !== txId) setTxId(openTxId);
 
   const { data: tx, refetch } = useQuery({
     queryKey: ["wizard-tx", txId],
@@ -113,7 +118,7 @@ export function BidWizard({
   const stepNumber = txId ? currentIndex + 1 : 1;
 
   return (
-    <Dialog open={direction !== null} onOpenChange={(v) => !v && close()}>
+    <Dialog open={direction !== null || !!openTxId} onOpenChange={(v) => !v && close()}>
       <DialogContent className="max-h-[85vh] w-[min(840px,94vw)] max-w-[min(840px,94vw)] overflow-y-auto">
         <div className="flex items-center gap-2">
           <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[11px] font-bold text-primary">
@@ -124,7 +129,7 @@ export function BidWizard({
           </DialogTitle>
         </div>
         <DialogDescription className="text-xs">
-          {direction === "bid" ? "New Bid to Buy" : "New Bid to Sell"} — every step is recorded on
+          {direction === "bid" ? "New Bid to Buy" : direction === "offer" ? "New Bid to Sell" : "Continuing your trade"} — every step is recorded on
           the Trading Gateway.
         </DialogDescription>
 
