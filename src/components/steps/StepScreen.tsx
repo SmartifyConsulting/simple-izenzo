@@ -29,13 +29,14 @@ import { COUNTRIES } from "@/lib/countries";
 /** Server-side token gates (POI, WaD) throw "Not enough tokens…" when the org's balance is too
  * low. Surface that specific failure with a direct link to the Buy Tokens screen instead of a
  * plain error toast. */
-function reportGateError(err: unknown, navigate: ReturnType<typeof useNavigate>) {
+function reportGateError(err: unknown, navigate: ReturnType<typeof useNavigate>, tx: Transaction) {
   const message = (err as Error).message;
   if (message.toLowerCase().includes("not enough tokens")) {
+    const returnTo = `/tx/${tx.id}/${tx.stage}/${tx.step}`;
     toast.error(message, {
       action: {
         label: "Buy tokens",
-        onClick: () => navigate({ to: "/credits" }),
+        onClick: () => navigate({ to: "/credits", search: { returnTo } }),
       },
     });
   } else {
@@ -1098,6 +1099,20 @@ function PoiStep({ tx, reload }: Props) {
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
 
+  const { data: screened } = useQuery({
+    queryKey: ["background-screening", tx.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("transaction_events")
+        .select("id")
+        .eq("transaction_id", tx.id)
+        .eq("action", "media_scanned")
+        .limit(1)
+        .maybeSingle();
+      return Boolean(data);
+    },
+  });
+
   async function doSeal() {
     setBusy(true);
     try {
@@ -1105,7 +1120,7 @@ function PoiStep({ tx, reload }: Props) {
       reload();
       toast.success("Proof of Intent sealed");
     } catch (err) {
-      reportGateError(err, navigate);
+      reportGateError(err, navigate, tx);
     } finally {
       setBusy(false);
     }
@@ -1168,20 +1183,25 @@ function PoiStep({ tx, reload }: Props) {
       description={`This is a hard gate. It costs ${POI_COST} token (USD 10) and cannot be undone.`}
       footer={
         <div className="text-right">
-          <Button size="sm" onClick={doSeal} disabled={busy || !tx.intent_confirmed_at}>
+          <Button size="sm" onClick={doSeal} disabled={busy || !tx.intent_confirmed_at || !screened}>
             {busy ? "Sealing…" : "Seal Proof of Intent"}
           </Button>
         </div>
       }
     >
-      {tx.intent_confirmed_at ? (
+      {!tx.intent_confirmed_at ? (
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Lock className="h-3.5 w-3.5" /> Confirm intent first.
+        </p>
+      ) : !screened ? (
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Lock className="h-3.5 w-3.5" /> Run the background screening (Social &amp; News Media step)
+          before this can be sealed.
+        </p>
+      ) : (
         <p className="text-sm text-muted-foreground">
           Sealing writes the transaction state to an immutable record with a fingerprint. Compliance,
           execution, finality and memory stay locked until it exists.
-        </p>
-      ) : (
-        <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Lock className="h-3.5 w-3.5" /> Confirm intent first.
         </p>
       )}
     </Panel>
@@ -1304,7 +1324,7 @@ function WadStep({ tx, reload }: Props) {
       reload();
       toast.success(`WaD ${decision}`);
     } catch (err) {
-      reportGateError(err, navigate);
+      reportGateError(err, navigate, tx);
     } finally {
       setBusy(false);
     }

@@ -1,12 +1,13 @@
 import { type ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { LogOut, ChevronDown, Waypoints, ArrowLeftRight } from "lucide-react";
+import { ChevronDown, Waypoints, ArrowLeftRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
 import { setLayoutPreference } from "@/lib/layoutPreference";
 import { NAV_DESTINATIONS } from "@/lib/navDestinations";
 import { WorkspaceSwitcher } from "@/components/layout/WorkspaceSwitcher";
+import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,7 +26,7 @@ export function SidebarShell({
   actions?: ReactNode;
   children: ReactNode;
 }) {
-  const { profile, org, signOut } = useAuth();
+  const { profile, org } = useAuth();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isSimpleMode = pathname === "/guided" || pathname.startsWith("/guided/");
@@ -123,19 +124,9 @@ export function SidebarShell({
           )}
         </nav>
 
-        <div className="border-t border-border px-4 py-3">
-          <p className="truncate text-xs text-muted-foreground">{profile?.email}</p>
-          <div className="mt-2 flex items-center gap-3">
-            <button
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-              onClick={async () => {
-                await signOut();
-                navigate({ to: "/" });
-              }}
-            >
-              <LogOut className="h-3 w-3" /> Sign out
-            </button>
-          </div>
+        <div className="flex items-center gap-2.5 border-t border-border px-4 py-3">
+          <ProfileAvatarMenu />
+          <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{profile?.email}</p>
         </div>
       </aside>
 

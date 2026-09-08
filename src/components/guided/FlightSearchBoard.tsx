@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
@@ -23,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { BidWizard } from "@/components/guided/BidWizard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { advance, fingerprintOf, recordEvent } from "@/lib/tx";
+import { advance, fingerprintOf, money, recordEvent, when, type Transaction } from "@/lib/tx";
 import { discoverCounterpartiesByQuery, classifyDocument, runAiProposal } from "@/lib/izenzo.functions";
 import { COUNTRIES } from "@/lib/countries";
 import { cn } from "@/lib/utils";
@@ -92,6 +92,18 @@ export function FlightSearchBoard() {
 
   const [openTxId, setOpenTxId] = useState<string | null>(null);
   const [txId, setTxId] = useState<string | null>(null);
+
+  // Polls the transaction while the wizard is open so the sticky header can carry a live summary
+  // (Proof of Intent sealed, now in WaD Case, etc.) without threading state through the wizard.
+  const { data: liveTx } = useQuery({
+    queryKey: ["board-tx", txId],
+    enabled: !!txId,
+    refetchInterval: openTxId ? 2000 : false,
+    queryFn: async () => {
+      const { data } = await supabase.from("transactions").select("*").eq("id", txId).maybeSingle();
+      return data as Transaction | null;
+    },
+  });
 
   function addFiles(files: FileList | File[]) {
     const list = Array.from(files);
@@ -353,27 +365,56 @@ export function FlightSearchBoard() {
     direction === "bid" ? "Buying" : "Selling",
     commodity || "—",
     [quantity, unit].filter(Boolean).join(" "),
-    price ? `$${price}` : null,
+    price ? money(Number(price)) : null,
     country !== "any" ? country : null,
   ]
     .filter(Boolean)
     .join(" · ");
 
+  // A running summary of everything settled so far, shown on the sticky header once Proof of
+  // Intent seals so the deal's progress stays visible even while the wizard is closed.
+  const progressSummary = liveTx?.poi_sealed_at
+    ? [
+        `Proof of Intent sealed ${when(liveTx.poi_sealed_at)}`,
+        liveTx.wad_completed_at
+          ? `WaD cleared ${when(liveTx.wad_completed_at)}`
+          : liveTx.stage === "compliance"
+            ? "now in WaD Case review"
+            : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : "";
+
   return (
     <div>
       {phase !== "search" && (
-        <div className="sticky top-0 z-10 -mx-1 mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card/95 p-3 px-4 backdrop-blur">
-          <div className="flex items-center gap-2 text-sm">
-            {direction === "bid" ? (
-              <TrendingUp className="h-4 w-4 shrink-0 text-primary" />
-            ) : (
-              <TrendingDown className="h-4 w-4 shrink-0 text-[var(--teal)]" />
-            )}
-            <span className="font-medium">{searchSummary}</span>
+        <div className="sticky top-0 z-10 -mx-1 mb-4 rounded-2xl border border-border bg-card/95 p-3 px-4 backdrop-blur">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-sm">
+              {direction === "bid" ? (
+                <TrendingUp className="h-4 w-4 shrink-0 text-primary" />
+              ) : (
+                <TrendingDown className="h-4 w-4 shrink-0 text-[var(--teal)]" />
+              )}
+              <span className="font-medium">{searchSummary}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {txId && !openTxId && (
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setOpenTxId(txId)}>
+                  Continue trade
+                </Button>
+              )}
+              <Button size="sm" variant="ghost" className="gap-1.5" onClick={resetSearch}>
+                <ArrowLeft className="h-3.5 w-3.5" /> New search
+              </Button>
+            </div>
           </div>
-          <Button size="sm" variant="ghost" className="gap-1.5" onClick={resetSearch}>
-            <ArrowLeft className="h-3.5 w-3.5" /> New search
-          </Button>
+          {progressSummary && (
+            <p className="mt-1.5 flex items-center gap-1.5 text-xs text-success">
+              <Check className="h-3 w-3 shrink-0" /> {progressSummary}
+            </p>
+          )}
         </div>
       )}
 

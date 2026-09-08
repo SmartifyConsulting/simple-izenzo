@@ -1,8 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Minus, Plus, Handshake, FileCheck } from "lucide-react";
+import { Minus, Plus, Handshake, FileCheck, ArrowLeft } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,9 @@ import { cn } from "@/lib/utils";
 import { formatHomeCurrency } from "@/lib/currency";
 
 export const Route = createFileRoute("/_authenticated/credits")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    returnTo: typeof search.returnTo === "string" ? search.returnTo : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Tokens — Izenzo" },
@@ -77,6 +80,8 @@ function groupByMonth<T extends { created_at: string }>(rows: T[]): [string, T[]
 
 function Credits() {
   const { org, orgs, roles, refresh } = useAuth();
+  const { returnTo } = Route.useSearch();
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [amount, setAmount] = useState(1);
@@ -156,7 +161,11 @@ function Credits() {
       if (error) throw error;
       await refresh();
       await qc.invalidateQueries({ queryKey: ["credit_ledger"] });
-      toast.success(`${n} token${n === 1 ? "" : "s"} added`);
+      toast.success(`${n} token${n === 1 ? "" : "s"} added`, {
+        action: returnTo
+          ? { label: "Back to trade", onClick: () => navigate({ to: returnTo }) }
+          : undefined,
+      });
       setAmount(1);
     } catch (err) {
       toast.error((err as Error).message);
@@ -168,6 +177,18 @@ function Credits() {
   return (
     <AppShell title="Tokens" description="One token is USD 10">
       <div className="max-w-5xl space-y-8">
+        {returnTo && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
+            <p className="text-sm text-primary">
+              Buy the tokens you need, then jump straight back to the trade you were working on.
+            </p>
+            <Link to={returnTo}>
+              <Button size="sm" variant="outline" className="gap-1.5">
+                <ArrowLeft className="h-3.5 w-3.5" /> Back to trade
+              </Button>
+            </Link>
+          </div>
+        )}
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="overflow-hidden rounded-lg border border-border">
             <div className="bg-sidebar px-5 py-3">

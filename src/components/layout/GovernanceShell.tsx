@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Inbox, FileSearch, ShieldCheck, Activity, Bell, LogOut, ArrowLeftRight } from "lucide-react";
+import { Inbox, FileSearch, ShieldCheck, Activity, Bell, ArrowLeftRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
+import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
 
 const NAV = [
   { to: "/governance/triage", label: "Triage Queue", icon: Inbox },
@@ -28,7 +28,6 @@ export function GovernanceShell({
   actions?: ReactNode;
   children: ReactNode;
 }) {
-  const { profile, signOut } = useAuth();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
@@ -77,16 +76,7 @@ export function GovernanceShell({
         </nav>
 
         <div className="border-t border-border px-4 py-3">
-          <p className="truncate text-xs text-muted-foreground">{profile?.email}</p>
-          <button
-            className="mt-2 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-            onClick={async () => {
-              await signOut();
-              navigate({ to: "/" });
-            }}
-          >
-            <LogOut className="h-3 w-3" /> Sign out
-          </button>
+          <ProfileAvatarMenu />
         </div>
       </aside>
 

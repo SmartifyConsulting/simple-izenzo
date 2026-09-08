@@ -8,11 +8,11 @@ import {
   Database,
   BookOpen,
   Bell,
-  LogOut,
   ArrowLeftRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
+import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
 
 const NAV = [
   { to: "/developer/keys", label: "API Keys", icon: KeyRound },
@@ -38,7 +38,7 @@ export function DeveloperShell({
   actions?: ReactNode;
   children: ReactNode;
 }) {
-  const { profile, org, signOut } = useAuth();
+  const { org } = useAuth();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
@@ -88,16 +88,7 @@ export function DeveloperShell({
         </nav>
 
         <div className="border-t border-slate-800 px-4 py-3">
-          <p className="truncate text-[11px] text-slate-500">{profile?.email}</p>
-          <button
-            className="mt-2 flex items-center gap-1 text-xs text-slate-500 hover:text-slate-300"
-            onClick={async () => {
-              await signOut();
-              navigate({ to: "/" });
-            }}
-          >
-            <LogOut className="h-3 w-3" /> Sign out
-          </button>
+          <ProfileAvatarMenu />
         </div>
       </aside>
 

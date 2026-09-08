@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -10,11 +10,16 @@ import { DocumentUploadStep } from "@/components/guided/DocumentUploadStep";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { advance, recordEvent, type Transaction } from "@/lib/tx";
-import { FLAT_STEPS, stepIndex } from "@/lib/spine";
+import { FLAT_STEPS, type StageKey } from "@/lib/spine";
 import { cn } from "@/lib/utils";
 
-const TRADING_STEPS = FLAT_STEPS.filter((s) => s.stage === "trading");
-const TOTAL = TRADING_STEPS.length;
+/** Trading Gate steps plus the WaD compliance case, so the wizard can carry a Simple Mode deal
+ * straight from Bid/Offer through Proof of Intent into WaD without dropping back to the board. */
+const WIZARD_STEPS = [
+  ...FLAT_STEPS.filter((s) => s.stage === "trading"),
+  ...FLAT_STEPS.filter((s) => s.stage === "compliance"),
+];
+const TOTAL = WIZARD_STEPS.length;
 
 /** The Simple Mode bid wizard: a numbered modal that walks Bid/Offer -> Upload Docs -> Search ->
  * AI -> AI+ -> Counterparties -> Choice -> Social/News Media -> Intent -> Proof of Intent, all in
@@ -50,8 +55,18 @@ export function BidWizard({
     },
   });
 
-  const currentIndex = tx ? stepIndex("trading", tx.step) : -1;
-  const currentDef = currentIndex >= 0 ? TRADING_STEPS[currentIndex] : null;
+  const currentIndex = tx ? WIZARD_STEPS.findIndex((s) => s.stage === tx.stage && s.key === tx.step) : -1;
+  const currentDef = currentIndex >= 0 ? WIZARD_STEPS[currentIndex] : null;
+
+  // Once WaD clears, the deal moves into the Execution Gate, which this compact wizard doesn't
+  // walk — close it and hand back to the board rather than trying to render a stage it can't.
+  useEffect(() => {
+    if (tx?.stage === "execution") {
+      toast.success("WaD cleared — this deal has moved to the Execution Gate.");
+      close();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tx?.stage]);
 
   function close() {
     setTxId(null);
@@ -134,7 +149,7 @@ export function BidWizard({
         </DialogDescription>
 
         <div className="mt-1 flex gap-1">
-          {TRADING_STEPS.map((_, i) => (
+          {WIZARD_STEPS.map((_, i) => (
             <span
               key={i}
               className={cn(
@@ -204,7 +219,7 @@ export function BidWizard({
           ) : currentDef?.key === "documents" ? (
             <DocumentUploadStep transactionId={txId} onNext={() => void refetch()} />
           ) : tx ? (
-            <StepScreen tx={tx} stage="trading" step={tx.step} reload={() => void refetch()} />
+            <StepScreen tx={tx} stage={tx.stage as StageKey} step={tx.step} reload={() => void refetch()} />
           ) : (
             <p className="text-sm text-muted-foreground">Loading…</p>
           )}

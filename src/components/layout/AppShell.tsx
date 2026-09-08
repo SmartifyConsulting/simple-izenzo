@@ -1,14 +1,12 @@
 import { useState, type ReactNode } from "react";
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Coins, LogOut, Settings, LayoutGrid, ChevronDown } from "lucide-react";
+import { Link, useRouterState } from "@tanstack/react-router";
+import { Coins, LayoutGrid, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -18,6 +16,7 @@ import { useLayoutPreference, setLayoutPreference } from "@/lib/layoutPreference
 import { SidebarShell } from "@/components/layout/SidebarShell";
 import { useModules } from "@/lib/useModules";
 import { WorkspaceSwitcher } from "@/components/layout/WorkspaceSwitcher";
+import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
 
 function greeting() {
   const hour = new Date().getHours();
@@ -71,49 +70,6 @@ function ModuleLauncher() {
         </DialogContent>
       </Dialog>
     </>
-  );
-}
-
-function AvatarMenu() {
-  const { profile, roles, signOut } = useAuth();
-  const navigate = useNavigate();
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button className="flex shrink-0 items-center gap-2 rounded-full hover:opacity-80">
-          <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-border bg-muted text-[13px] font-semibold text-foreground">
-            {profile?.avatar_url ? (
-              <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
-            ) : (
-              (profile?.full_name ?? profile?.email ?? "?").slice(0, 2).toUpperCase()
-            )}
-          </span>
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-          {profile?.email}
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => navigate({ to: "/account/settings" })}>
-          <Settings className="mr-2 h-3.5 w-3.5" /> Settings
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={async () => {
-            await signOut();
-            navigate({ to: "/" });
-          }}
-        >
-          <LogOut className="mr-2 h-3.5 w-3.5" /> Sign out
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <p className="px-2 py-1.5 text-[11px] text-muted-foreground">
-          {roles.join(" · ") || "party"} seat
-        </p>
-      </DropdownMenuContent>
-    </DropdownMenu>
   );
 }
 
@@ -178,7 +134,7 @@ function ClassicShell({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <AvatarMenu />
+          <ProfileAvatarMenu />
         </div>
       </header>
 

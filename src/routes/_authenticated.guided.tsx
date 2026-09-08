@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/layout/AppShell";
 import { FlightSearchBoard } from "@/components/guided/FlightSearchBoard";
-import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
 import { ModulesShowcase } from "@/components/guided/ModulesShowcase";
 
 export const Route = createFileRoute("/_authenticated/guided")({
@@ -18,7 +17,6 @@ function Guided() {
     <AppShell
       title="Simple Mode"
       description="Search for a counterparty like a flight search — best matches first, then continue booking."
-      actions={<ProfileAvatarMenu />}
     >
       <FlightSearchBoard />
       <ModulesShowcase />
