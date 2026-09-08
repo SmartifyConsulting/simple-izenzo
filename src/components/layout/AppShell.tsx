@@ -1,19 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import {
-  Coins,
-  Inbox,
-  ShieldCheck,
-  LogOut,
-  Settings,
-  LayoutDashboard,
-  Building2,
-  Search,
-  LifeBuoy,
-  ShieldAlert,
-  Banknote,
-  LayoutGrid,
-} from "lucide-react";
+import { Coins, LogOut, Settings, LayoutGrid, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,58 +16,13 @@ import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
 import { useLayoutPreference, setLayoutPreference } from "@/lib/layoutPreference";
 import { SidebarShell } from "@/components/layout/SidebarShell";
-import { ChevronDown } from "lucide-react";
-
-type NavTo =
-  | "/dashboard"
-  | "/inbox"
-  | "/credits"
-  | "/registry"
-  | "/facilitation"
-  | "/support"
-  | "/auditor"
-  | "/funder"
-  | "/admin";
+import { useModules } from "@/lib/useModules";
 
 function greeting() {
   const hour = new Date().getHours();
   if (hour < 12) return "Good morning";
   if (hour < 18) return "Good afternoon";
   return "Good evening";
-}
-
-/** Modules reachable from the command bar. The sidebar is gone: everything opens from here. */
-function useModules() {
-  const { roles } = useAuth();
-  const isAdmin = roles.includes("admin");
-  const isAuditor = roles.includes("auditor") || isAdmin;
-  const isFunder = roles.includes("funder") || isAdmin;
-
-  const modules: { to: NavTo; label: string; icon: typeof Inbox; blurb: string }[] = [
-    { to: "/dashboard", label: "Deals", icon: LayoutDashboard, blurb: "Every live deal canvas" },
-    { to: "/inbox", label: "Inbox", icon: Inbox, blurb: "Requests waiting on you" },
-    { to: "/credits", label: "Tokens", icon: Coins, blurb: "Balance and top-ups" },
-    { to: "/registry", label: "Registry", icon: Building2, blurb: "Known businesses" },
-    {
-      to: "/facilitation",
-      label: "Unknown counterparty",
-      icon: Search,
-      blurb: "Find and surface a party",
-    },
-    { to: "/support", label: "Support", icon: LifeBuoy, blurb: "Talk to us" },
-  ];
-  if (isFunder)
-    modules.push({ to: "/funder", label: "Funder", icon: Banknote, blurb: "Funding positions" });
-  if (isAuditor)
-    modules.push({
-      to: "/auditor",
-      label: "Auditor",
-      icon: ShieldAlert,
-      blurb: "Read-only assurance",
-    });
-  if (isAdmin)
-    modules.push({ to: "/admin", label: "Admin", icon: ShieldCheck, blurb: "People and platform" });
-  return modules;
 }
 
 function ModuleLauncher() {
