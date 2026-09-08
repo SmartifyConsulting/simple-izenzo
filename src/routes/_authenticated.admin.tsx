@@ -190,19 +190,40 @@ function UsersTab() {
   }
 
   const q = search.trim().toLowerCase();
-  const filteredUsers = q
-    ? users.filter((u) => (u.full_name ?? "").toLowerCase().includes(q) || (u.email ?? "").toLowerCase().includes(q))
-    : users;
+  const stamp = (v: string | null | undefined) => (v ? new Date(v).getTime() : 0);
+  const filteredUsers = (
+    q
+      ? users.filter(
+          (u) =>
+            (u.full_name ?? "").toLowerCase().includes(q) || (u.email ?? "").toLowerCase().includes(q),
+        )
+      : users
+  )
+    .slice()
+    .sort((a, b) =>
+      sortBy === "created"
+        ? stamp(b.created_at) - stamp(a.created_at)
+        : stamp(b.last_accessed_at) - stamp(a.last_accessed_at),
+    );
 
   return (
     <div>
-      <div className="mb-3">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         <Input
           placeholder="Search by name or email…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-sm"
         />
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as "created" | "accessed")}
+          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+          aria-label="Sort users"
+        >
+          <option value="created">Newest created first</option>
+          <option value="accessed">Most recently accessed first</option>
+        </select>
       </div>
       <div className="overflow-hidden rounded-md border border-border">
       {filteredUsers.length === 0 ? (
@@ -217,6 +238,18 @@ function UsersTab() {
                 <div className="min-w-0">
                   <p className="truncate font-medium">{u.full_name ?? u.email}</p>
                   <p className="truncate text-xs text-muted-foreground">{u.email}</p>
+                </div>
+                <div className="hidden shrink-0 gap-8 text-xs text-muted-foreground sm:flex">
+                  <span title={new Date(u.created_at).toLocaleString()}>
+                    <span className="block text-[10px] uppercase tracking-wide">Created</span>
+                    {when(u.created_at)}
+                  </span>
+                  <span
+                    title={u.last_accessed_at ? new Date(u.last_accessed_at).toLocaleString() : "Never signed in"}
+                  >
+                    <span className="block text-[10px] uppercase tracking-wide">Last accessed</span>
+                    {u.last_accessed_at ? when(u.last_accessed_at) : "—"}
+                  </span>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   {isUserAdmin && (
