@@ -1,39 +1,17 @@
 import type { ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import {
-  LayoutDashboard,
-  Search,
-  Building2,
-  ArrowLeftRight,
-  ShieldCheck,
-  CreditCard,
-  Settings,
-  Bell,
-  LogOut,
-  ChevronDown,
-  ExternalLink,
-} from "lucide-react";
+import { LogOut, ChevronDown, ExternalLink, Waypoints } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
 import { setLayoutPreference } from "@/lib/layoutPreference";
+import { NAV_DESTINATIONS } from "@/lib/navDestinations";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-const NAV = [
-  { to: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { to: "/discover", label: "Counterparties", icon: Search },
-  { to: "/registry", label: "Company Register", icon: Building2 },
-  { to: "/dashboard", label: "My Trades", icon: ArrowLeftRight },
-  { to: "/account/settings", label: "Compliance", icon: ShieldCheck },
-  { to: "/credits", label: "Billing", icon: CreditCard },
-  { to: "/account/settings", label: "Settings", icon: Settings },
-  { to: "/inbox", label: "Notifications", icon: Bell },
-] as const;
 
 export function SidebarShell({
   title,
@@ -64,7 +42,7 @@ export function SidebarShell({
         </div>
 
         <nav className="flex-1 space-y-0.5 px-2 py-3">
-          {NAV.map((item) => {
+          {NAV_DESTINATIONS.slice(0, 4).map((item) => {
             const active = pathname === item.to || pathname.startsWith(item.to + "/");
             return (
               <Link
@@ -82,6 +60,45 @@ export function SidebarShell({
               </Link>
             );
           })}
+
+          <div className="my-3 border-t border-border" />
+
+          {NAV_DESTINATIONS.slice(4).map((item) => {
+            const active = pathname === item.to || pathname.startsWith(item.to + "/");
+            return (
+              <Link
+                key={item.label}
+                to={item.to}
+                className={cn(
+                  "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
+                  active
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                )}
+              >
+                <item.icon className="h-4 w-4" />
+                {item.label}
+              </Link>
+            );
+          })}
+
+          <div className="my-3 border-t border-border" />
+
+          <Link
+            to="/guided"
+            className={cn(
+              "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-semibold transition-colors",
+              pathname === "/guided"
+                ? "bg-primary/10 text-primary"
+                : "text-primary hover:bg-primary/10",
+            )}
+          >
+            <Waypoints className="h-4 w-4" />
+            Simple Mode
+          </Link>
+          <p className="px-2.5 pt-0.5 text-[11px] leading-snug text-muted-foreground">
+            Everything above, as a guided icon flow.
+          </p>
         </nav>
 
         <div className="border-t border-border px-4 py-3">

@@ -55,7 +55,7 @@ export function CanvasNode({
               ? "border-primary/50 bg-primary/15 text-primary"
               : state === "active"
                 ? "border-primary bg-primary/20 text-primary animate-signal-pulse"
-                : "border-border bg-white/5 text-muted-foreground",
+                : "border-border bg-muted text-muted-foreground",
           )}
         >
           {state === "done" ? (
