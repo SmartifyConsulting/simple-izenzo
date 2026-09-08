@@ -384,7 +384,7 @@ function Documents({ tx, reload }: Props) {
         summary: `${form.name} v${version}`,
         payload: { ...form, version, sha256: sha },
       });
-      await advance(tx.id, "trading", "media");
+      await advance(tx.id, "trading", "search");
       setForm({ name: "", doc_type: "other", notes: "" });
       await qc.invalidateQueries({ queryKey: ["documents", tx.id] });
       reload();
@@ -493,7 +493,7 @@ function MediaScan({ tx, reload }: Props) {
         summary: "Social and news media scan run",
         payload: {},
       });
-      await advance(tx.id, "trading", "search");
+      await advance(tx.id, "trading", "intent");
       reload();
     } catch (err) {
       toast.error((err as Error).message);
@@ -968,7 +968,7 @@ function ChoiceStep({ tx, reload }: Props) {
       summary: `Chose ${name}`,
       payload: { id, name },
     });
-    await advance(tx.id, "trading", "intent");
+    await advance(tx.id, "trading", "media");
     await qc.invalidateQueries({ queryKey: ["counterparties", tx.id] });
     reload();
     toast.success("Choice recorded");

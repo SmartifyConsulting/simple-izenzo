@@ -156,11 +156,11 @@ export function DealCanvas({
 
       <div className="mx-auto max-w-3xl space-y-3">
         {node({ stage: "trading", step: "counterparties", icon: Users }, { side: "center" })}
+        {node({ stage: "trading", step: "choice", icon: MousePointerClick }, { side: "center" })}
         {node(
           { stage: "trading", step: "media", label: "Background screening", icon: Newspaper },
           { side: "center", compact: true, note: "runs quietly" },
         )}
-        {node({ stage: "trading", step: "choice", icon: MousePointerClick }, { side: "center" })}
         {node({ stage: "trading", step: "intent", icon: Handshake }, { side: "center" })}
         {node(
           { stage: "trading", step: "poi", icon: ShieldCheck },

@@ -19,12 +19,12 @@ export const SPINE: StageDef[] = [
     steps: [
       { key: "bid-offer", label: "Bid / Offer", blurb: "Record the opening bid or offer and its terms." },
       { key: "documents", label: "Upload Docs", blurb: "Attach supporting documents with a fingerprint." },
-      { key: "media", label: "Social / News Media", blurb: "Scan open media for signals on the deal and parties." },
       { key: "search", label: "Search", blurb: "Run a structured search for possible counterparties." },
       { key: "ai", label: "AI", blurb: "AI reads the record and proposes. It never decides." },
       { key: "ai-plus", label: "AI+", blurb: "Deeper analysis: risk, pricing sanity, jurisdiction notes." },
       { key: "counterparties", label: "Counterparties", blurb: "Counterparties surfaced by search and AI." },
       { key: "choice", label: "Choice", blurb: "A person chooses the counterparty. Recorded as an event." },
+      { key: "media", label: "Social / News Media", blurb: "Scan open media for signals on the deal and parties." },
       { key: "intent", label: "Intent", blurb: "Confirm the intent to transact on the stated terms." },
       { key: "poi", label: "Proof of Intent", blurb: "Seal the Proof of Intent. Costs 1 token (USD 10)." },
     ],
