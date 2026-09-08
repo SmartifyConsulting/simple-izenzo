@@ -19,3 +19,11 @@ Verified before writing this plan: Jane has no company membership and no company
 - Data change: insert `org_members` row (user 541b5bdb…, org 11111111-0000-4000-8000-000000000001, role `member`) and set `profiles.org_id` for Jane. `current_org_id()` then resolves, unlocking the org-scoped RLS policies on transactions, documents, notifications, credit ledger.
 - Migration: `public.user_activity_log` (user_id, event_type, label, path, created_at) with GRANT INSERT/SELECT to `authenticated`, GRANT ALL to `service_role`, RLS on: insert allowed when `user_id = auth.uid()`, select restricted to `public.is_platform_superuser()`.
 - No UI changes required; existing `ActivityTracker` and `AuditLogTab` already target that table name.
+
+## Also: Funder screen loses the side menu
+
+Opening Funder from the menu drops you onto a page with no navigation, so there's no way back except the browser button. Confirmed: the Funder page builds its own bare header instead of using the standard app frame every other page uses.
+
+Fix: wrap the Funder page in the same app frame (title "Funder Workspace", with its existing content unchanged), so the left menu, top bar and avatar stay in place and its private header/sign-out block is removed.
+
+Technical: `src/routes/_authenticated.funder.tsx` renders a custom `Logo` + sign-out header; replace with `<AppShell title="Funder Workspace" description=...>` like `_authenticated.auditor.tsx`, including the loading/empty states.
