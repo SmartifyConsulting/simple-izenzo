@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { Logo } from "@/components/Logo";
+import { AppShell } from "@/components/layout/AppShell";
 import { downloadEvidencePack } from "@/lib/evidencePack.functions";
 
 export const Route = createFileRoute("/_authenticated/funder")({
@@ -36,8 +36,7 @@ const DECISION_LABEL: Record<string, string> = {
 };
 
 function FunderWorkspace() {
-  const { roles, signOut } = useAuth();
-  const navigate = useNavigate();
+  const { roles } = useAuth();
   const qc = useQueryClient();
   const isFunder = roles.includes("funder") || roles.includes("admin");
   const download = useServerFn(downloadEvidencePack);
@@ -99,40 +98,25 @@ function FunderWorkspace() {
 
   if (!isFunder) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-6">
+      <AppShell title="Funder Workspace">
         <p className="text-sm text-muted-foreground">This area is for funder seats only.</p>
-      </div>
+      </AppShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="flex items-center justify-between border-b border-border px-6 py-4">
-        <Logo className="h-6 w-auto" />
-        <div className="flex items-center gap-3">
-          <Badge variant="outline" className="font-normal">
-            Funder Workspace
-          </Badge>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={async () => {
-              await signOut();
-              navigate({ to: "/" });
-            }}
-          >
-            Sign out
-          </Button>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-3xl px-6 py-8">
+    <AppShell
+      title="Funder Workspace"
+      description="Released counterparty information and funding decisions"
+    >
+      <div className="max-w-3xl">
         <h1 className="text-lg font-semibold">Released counterparty information</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Only the fields, summary and documents an Izenzo admin has explicitly released to your
           organisation appear here. Nothing else about a counterparty, another funder's deals, or
           the wider platform is visible from this workspace.
         </p>
+
 
         <div className="mt-6">
           {isLoading ? (
@@ -218,7 +202,7 @@ function FunderWorkspace() {
             </ul>
           )}
         </div>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }
