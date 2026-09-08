@@ -420,22 +420,19 @@ export function FlightSearchBoard() {
 
       {phase === "search" && (
         <div className="rounded-2xl border border-border bg-card p-5">
-          <div className="grid gap-1 rounded-lg border border-border p-1 sm:grid-cols-2">
+          <div className="grid gap-1 rounded-lg p-1 sm:grid-cols-2">
             {(["bid", "offer"] as const).map((d) => (
               <button
                 key={d}
                 onClick={() => setDirection(d)}
                 className={cn(
-                  "flex items-center justify-center gap-1.5 rounded-md py-2 text-sm font-medium transition-colors",
-                  direction === d
-                    ? d === "bid"
-                      ? "bg-primary/10 text-primary"
-                      : "bg-[var(--teal)]/10 text-[var(--teal)]"
-                    : "text-muted-foreground hover:text-foreground",
+                  "group relative flex items-center justify-center gap-1.5 overflow-hidden rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground transition-transform",
+                  direction === d ? "ring-2 ring-primary-foreground/50" : "opacity-70",
                 )}
               >
-                {d === "bid" ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-                {d === "bid" ? "Buying" : "Selling"}
+                <span className="pointer-events-none absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/15" />
+                {d === "bid" ? <TrendingUp className="relative h-4 w-4" /> : <TrendingDown className="relative h-4 w-4" />}
+                <span className="relative">{d === "bid" ? "Buying" : "Selling"}</span>
               </button>
             ))}
           </div>

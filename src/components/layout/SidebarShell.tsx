@@ -1,10 +1,11 @@
 import { type ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
 import { setLayoutPreference } from "@/lib/layoutPreference";
+import { useSidebarCollapsed } from "@/lib/sidebarCollapse";
 import { NAV_DESTINATIONS } from "@/lib/navDestinations";
 import { WorkspaceSwitcher } from "@/components/layout/WorkspaceSwitcher";
 import { ViewSwitcher } from "@/components/layout/ViewSwitcher";
@@ -30,22 +31,49 @@ export function SidebarShell({
   const { profile, org } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isFocusedView = pathname.startsWith("/guided") || pathname.startsWith("/workflow");
+  const [collapsed, toggleCollapsed] = useSidebarCollapsed();
 
   return (
     <div className="flex min-h-screen bg-background">
-      <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r border-border bg-sidebar">
-        <div className="flex items-center justify-between border-b border-border px-4 py-4">
-          <Logo className="h-6" />
-          <LayoutSwitch />
+      <aside
+        className={cn(
+          "sticky top-0 flex h-screen shrink-0 flex-col border-r border-border bg-sidebar transition-[width] duration-200",
+          collapsed ? "w-16" : "w-60",
+        )}
+      >
+        <div className={cn("flex items-center border-b border-border py-4", collapsed ? "justify-center px-2" : "justify-between px-4")}>
+          {!collapsed && <Logo className="h-6" />}
+          {collapsed ? (
+            <button
+              onClick={toggleCollapsed}
+              title="Expand navigation"
+              className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+            >
+              <ChevronsRight className="h-4 w-4" />
+            </button>
+          ) : (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={toggleCollapsed}
+                title="Minimize navigation"
+                className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </button>
+              <LayoutSwitch />
+            </div>
+          )}
         </div>
 
-        <div className="border-b border-border p-2">
-          <WorkspaceSwitcher current={org?.name ?? "Trade Desk"} />
-        </div>
+        {!collapsed && (
+          <div className="border-b border-border p-2">
+            <WorkspaceSwitcher current={org?.name ?? "Trade Desk"} />
+          </div>
+        )}
 
-        <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-3">
+        <nav className={cn("flex-1 space-y-0.5 overflow-y-auto py-3", collapsed ? "px-2" : "px-2")}>
           {isFocusedView ? (
-            <ViewSwitcher variant="block" />
+            !collapsed && <ViewSwitcher variant="block" />
           ) : (
             <>
               {NAV_DESTINATIONS.slice(0, 4).map((item) => {
@@ -54,15 +82,17 @@ export function SidebarShell({
                   <Link
                     key={item.label}
                     to={item.to}
+                    title={collapsed ? item.label : undefined}
                     className={cn(
                       "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
+                      collapsed && "justify-center px-0",
                       active
                         ? "bg-primary/10 text-primary"
                         : "text-muted-foreground hover:bg-accent hover:text-foreground",
                     )}
                   >
-                    <item.icon className="h-4 w-4" />
-                    {item.label}
+                    <item.icon className="h-4 w-4 shrink-0" />
+                    {!collapsed && item.label}
                   </Link>
                 );
               })}
@@ -75,33 +105,39 @@ export function SidebarShell({
                   <Link
                     key={item.label}
                     to={item.to}
+                    title={collapsed ? item.label : undefined}
                     className={cn(
                       "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
+                      collapsed && "justify-center px-0",
                       active
                         ? "bg-primary/10 text-primary"
                         : "text-muted-foreground hover:bg-accent hover:text-foreground",
                     )}
                   >
-                    <item.icon className="h-4 w-4" />
-                    {item.label}
+                    <item.icon className="h-4 w-4 shrink-0" />
+                    {!collapsed && item.label}
                   </Link>
                 );
               })}
 
               <div className="my-3 border-t border-border" />
 
-              <ViewSwitcher variant="block" />
-              <p className="px-2.5 pt-1.5 text-[11px] leading-snug text-muted-foreground">
-                Simple Mode and Workflow View walk the same gates as a guided flow or a live
-                flowchart.
-              </p>
+              {!collapsed && (
+                <>
+                  <ViewSwitcher variant="block" />
+                  <p className="px-2.5 pt-1.5 text-[11px] leading-snug text-muted-foreground">
+                    Simple Mode and Workflow View walk the same gates as a guided flow or a live
+                    flowchart.
+                  </p>
+                </>
+              )}
             </>
           )}
         </nav>
 
-        <div className="flex items-center gap-2.5 border-t border-border px-4 py-3">
+        <div className={cn("flex items-center gap-2.5 border-t border-border py-3", collapsed ? "justify-center px-2" : "px-4")}>
           <ProfileAvatarMenu />
-          <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{profile?.email}</p>
+          {!collapsed && <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{profile?.email}</p>}
         </div>
       </aside>
 
