@@ -200,10 +200,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: (() => void) | undefined }) 
             adminAccess={isAdmin}
           />
         )}
-      </nav>
-
-      {isAdmin && (
-        <div className="border-t border-sidebar-border px-2 py-3">
+        {isAdmin && (
           <NavLink
             to="/admin"
             icon={ShieldCheck}
@@ -212,8 +209,8 @@ function SidebarBody({ onNavigate }: { onNavigate?: (() => void) | undefined }) 
             onClick={onNavigate}
             adminAccess
           />
-        </div>
-      )}
+        )}
+      </nav>
     </div>
   );
 }
@@ -249,11 +246,6 @@ function AvatarMenu() {
         <DropdownMenuItem onClick={() => navigate({ to: "/account/billing" })}>
           <Receipt className="mr-2 h-3.5 w-3.5" /> Billing History
         </DropdownMenuItem>
-        {roles.includes("admin") && (
-          <DropdownMenuItem onClick={() => navigate({ to: "/admin" })}>
-            <ShieldCheck className="mr-2 h-3.5 w-3.5" /> Administration
-          </DropdownMenuItem>
-        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={async () => {

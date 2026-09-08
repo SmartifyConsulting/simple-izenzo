@@ -194,12 +194,6 @@ async function probe(
       });
       return say(res, "Resend accepted the key.");
     }
-    case "postmark": {
-      const res = await fetch("https://api.postmarkapp.com/server", {
-        headers: { "X-Postmark-Server-Token": secrets["server_token"] ?? "", Accept: "application/json" },
-      });
-      return say(res, "Postmark accepted the token.");
-    }
     case "twilio": {
       const sid = config["account_sid"] ?? "";
       const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}.json`, {

@@ -165,17 +165,6 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
     testable: true,
   },
   {
-    id: "postmark",
-    name: "Postmark",
-    group: "Email & Notifications",
-    summary: "Alternative transactional email provider.",
-    fields: [
-      { key: "server_token", label: "Server token", secret: true },
-      { key: "from_address", label: "From address", secret: false },
-    ],
-    testable: true,
-  },
-  {
     id: "twilio",
     name: "Twilio",
     group: "Email & Notifications",
