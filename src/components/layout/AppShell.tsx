@@ -176,19 +176,22 @@ export function AppShell({
   description,
   actions,
   children,
+  wide,
 }: {
   title?: string;
   description?: string;
   actions?: ReactNode;
   children: ReactNode;
+  wide?: boolean;
 }) {
   const { profile, org } = useAuth();
   const firstName = (profile?.full_name ?? profile?.email ?? "").split(/[\s@]/)[0];
+  const width = wide ? "max-w-[1680px]" : "max-w-7xl";
 
   return (
     <div className="ink-grid min-h-screen bg-background">
       <header className="sticky top-0 z-30 border-b border-border bg-background/70 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6">
+        <div className={cn("mx-auto flex h-16 items-center gap-3 px-4 sm:px-6", width)}>
           <Link to="/dashboard" className="shrink-0">
             <Logo onDark className="h-7 w-auto" />
           </Link>
