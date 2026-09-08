@@ -58,6 +58,127 @@ export type Database = {
           },
         ]
       }
+      ai_suggestions: {
+        Row: {
+          confidence: string
+          created_at: string
+          created_by: string
+          id: string
+          manual_creation_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewer_note: string | null
+          rejection_note: string | null
+          rejection_reason: string | null
+          related_transaction_id: string | null
+          assigned_reviewer_id: string | null
+          source_references: string | null
+          source_summary: string
+          source_timestamp: string | null
+          status: string
+          suggested_name: string
+          suggestion_type: string
+          summary: string
+          updated_at: string
+        }
+        Insert: {
+          confidence: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          manual_creation_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_note?: string | null
+          rejection_note?: string | null
+          rejection_reason?: string | null
+          related_transaction_id?: string | null
+          assigned_reviewer_id?: string | null
+          source_references?: string | null
+          source_summary: string
+          source_timestamp?: string | null
+          status?: string
+          suggested_name: string
+          suggestion_type: string
+          summary: string
+          updated_at?: string
+        }
+        Update: {
+          confidence?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          manual_creation_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_note?: string | null
+          rejection_note?: string | null
+          rejection_reason?: string | null
+          related_transaction_id?: string | null
+          assigned_reviewer_id?: string | null
+          source_references?: string | null
+          source_summary?: string
+          source_timestamp?: string | null
+          status?: string
+          suggested_name?: string
+          suggestion_type?: string
+          summary?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_suggestions_related_transaction_id_fkey"
+            columns: ["related_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_suggestion_events: {
+        Row: {
+          actor_id: string
+          created_at: string
+          event_type: string
+          id: string
+          new_status: string | null
+          note: string | null
+          previous_status: string | null
+          reason: string | null
+          suggestion_id: string
+        }
+        Insert: {
+          actor_id?: string
+          created_at?: string
+          event_type: string
+          id?: string
+          new_status?: string | null
+          note?: string | null
+          previous_status?: string | null
+          reason?: string | null
+          suggestion_id: string
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          new_status?: string | null
+          note?: string | null
+          previous_status?: string | null
+          reason?: string | null
+          suggestion_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_suggestion_events_suggestion_id_fkey"
+            columns: ["suggestion_id"]
+            isOneToOne: false
+            referencedRelation: "ai_suggestions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       facilitation_cases: {
         Row: {
           authority_confirmed: boolean
@@ -1071,6 +1192,37 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_ai_suggestion_approve: {
+        Args: { p_id: string }
+        Returns: undefined
+      }
+      admin_ai_suggestion_create: {
+        Args: {
+          p_confidence: string
+          p_reason: string
+          p_related_transaction_id: string | null
+          p_source_references?: string | null
+          p_source_summary: string
+          p_source_timestamp?: string | null
+          p_suggested_name: string
+          p_suggestion_type: string
+          p_summary: string
+        }
+        Returns: string
+      }
+      admin_ai_suggestion_reject: {
+        Args: { p_id: string; p_note?: string | null; p_reason: string }
+        Returns: undefined
+      }
+      admin_ai_suggestion_set_status: {
+        Args: {
+          p_assigned_reviewer_id?: string | null
+          p_id: string
+          p_note?: string | null
+          p_status: string
+        }
+        Returns: undefined
+      }
       admin_override_counterparty_rating: {
         Args: {
           p_counterparty_id: string

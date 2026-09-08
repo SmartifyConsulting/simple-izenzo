@@ -6,6 +6,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,6 +55,7 @@ function AdminPage() {
           <TabsTrigger value="tokens">Tokens</TabsTrigger>
           <TabsTrigger value="registry">Registry</TabsTrigger>
           <TabsTrigger value="facilitation">Facilitation</TabsTrigger>
+          <TabsTrigger value="ai-suggestions">AI Suggestions</TabsTrigger>
           <TabsTrigger value="reporting">Reporting</TabsTrigger>
         </TabsList>
         <TabsContent value="users" className="mt-6">
@@ -67,6 +69,9 @@ function AdminPage() {
         </TabsContent>
         <TabsContent value="facilitation" className="mt-6">
           <FacilitationTab />
+        </TabsContent>
+        <TabsContent value="ai-suggestions" className="mt-6">
+          <AiSuggestionsTab />
         </TabsContent>
         <TabsContent value="reporting" className="mt-6">
           <ReportingTab />
@@ -658,6 +663,385 @@ function FacilitationTab() {
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+const AI_SUGGESTION_TYPES = ["suggested_buyer", "suggested_supplier", "public_source_research_note"] as const;
+const AI_CONFIDENCE = ["low", "medium", "high"] as const;
+const AI_REJECTION_REASONS = [
+  "duplicate",
+  "weak_source",
+  "wrong_jurisdiction",
+  "poor_counterparty_fit",
+  "compliance_concern",
+  "insufficient_evidence",
+  "already_known",
+  "not_commercially_useful",
+  "other",
+] as const;
+const AI_STALE_DAYS = 30;
+
+function AiSuggestionsTab() {
+  const qc = useQueryClient();
+  const { profile } = useAuth();
+  const [showForm, setShowForm] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("active");
+  const [form, setForm] = useState({
+    type: "suggested_buyer",
+    transactionId: "",
+    name: "",
+    summary: "",
+    confidence: "low",
+    sourceSummary: "",
+    sourceReferences: "",
+    reason: "",
+  });
+
+  const { data: suggestions = [], isLoading } = useQuery({
+    queryKey: ["admin-ai-suggestions"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ai_suggestions")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: txOptions = [] } = useQuery({
+    queryKey: ["admin-tx-options"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("id, title")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  async function refresh() {
+    await qc.invalidateQueries({ queryKey: ["admin-ai-suggestions"] });
+  }
+
+  async function createSuggestion(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.name.trim() || !form.summary.trim() || !form.sourceSummary.trim() || !form.reason.trim()) {
+      toast.error("Name, summary, source summary and a creation reason are all required.");
+      return;
+    }
+    const { error } = await supabase.rpc("admin_ai_suggestion_create", {
+      p_suggestion_type: form.type,
+      p_related_transaction_id: form.transactionId || null,
+      p_suggested_name: form.name,
+      p_summary: form.summary,
+      p_confidence: form.confidence,
+      p_source_summary: form.sourceSummary,
+      p_reason: form.reason,
+      p_source_references: form.sourceReferences || null,
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Suggestion created");
+    setShowForm(false);
+    setForm({
+      type: "suggested_buyer",
+      transactionId: "",
+      name: "",
+      summary: "",
+      confidence: "low",
+      sourceSummary: "",
+      sourceReferences: "",
+      reason: "",
+    });
+    await refresh();
+  }
+
+  async function approve(id: string) {
+    const { error } = await supabase.rpc("admin_ai_suggestion_approve", { p_id: id });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Approved — advisory only, requires human review before action");
+    await refresh();
+  }
+
+  async function reject(id: string) {
+    const reason = window.prompt(`Rejection reason (${AI_REJECTION_REASONS.join(" / ")}):`);
+    if (!reason || !(AI_REJECTION_REASONS as readonly string[]).includes(reason)) {
+      if (reason) toast.error("Not a valid reason");
+      return;
+    }
+    const note = reason === "other" ? window.prompt("Note (required for 'other'):") : window.prompt("Note (optional):");
+    if (reason === "other" && !note) return;
+    const { error } = await supabase.rpc("admin_ai_suggestion_reject", {
+      p_id: id,
+      p_reason: reason,
+      p_note: note,
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Rejected");
+    await refresh();
+  }
+
+  async function needsMoreResearch(id: string) {
+    const note = window.prompt("What research is needed? (required)");
+    if (!note) return;
+    const { error } = await supabase.rpc("admin_ai_suggestion_set_status", {
+      p_id: id,
+      p_status: "needs_more_research",
+      p_note: note,
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Marked as needing more research");
+    await refresh();
+  }
+
+  async function archive(id: string) {
+    const { error } = await supabase.rpc("admin_ai_suggestion_set_status", { p_id: id, p_status: "archived" });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Archived");
+    await refresh();
+  }
+
+  async function assignToMe(id: string) {
+    if (!profile) return;
+    const { error } = await supabase.rpc("admin_ai_suggestion_set_status", {
+      p_id: id,
+      p_status: "under_review",
+      p_assigned_reviewer_id: profile.id,
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Assigned to you");
+    await refresh();
+  }
+
+  const visible = suggestions.filter((s) => {
+    if (statusFilter === "active") return !["rejected", "archived"].includes(s.status);
+    if (statusFilter === "all") return true;
+    return s.status === statusFilter;
+  });
+
+  return (
+    <div>
+      <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm text-warning">
+        AI suggestions are advisory only. They do not create a POI, trigger outreach, modify a
+        match, verify a counterparty, or contact any counterparty unless reviewed and approved by
+        an authorised human user.
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold">AI Suggestion Review Queue</h2>
+        <div className="flex items-center gap-2">
+          <select
+            className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="active">Active</option>
+            <option value="all">All</option>
+            <option value="new">New</option>
+            <option value="under_review">Under review</option>
+            <option value="needs_more_research">Needs more research</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="archived">Archived</option>
+          </select>
+          <Button size="sm" onClick={() => setShowForm((v) => !v)}>
+            {showForm ? "Close" : "New suggestion"}
+          </Button>
+        </div>
+      </div>
+
+      {showForm && (
+        <form onSubmit={createSuggestion} className="mt-4 space-y-3 rounded-md border border-border p-4">
+          <p className="text-xs text-muted-foreground">
+            Manual creation by an admin requires a reason — suggestions may not otherwise exist
+            without a linked trade.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>Type</Label>
+              <select
+                className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                value={form.type}
+                onChange={(e) => setForm({ ...form, type: e.target.value })}
+              >
+                {AI_SUGGESTION_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Related trade</Label>
+              <select
+                className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                value={form.transactionId}
+                onChange={(e) => setForm({ ...form, transactionId: e.target.value })}
+              >
+                <option value="">— none —</option>
+                {txOptions.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Suggested name</Label>
+              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Summary</Label>
+              <Textarea rows={2} value={form.summary} onChange={(e) => setForm({ ...form, summary: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Confidence</Label>
+              <select
+                className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                value={form.confidence}
+                onChange={(e) => setForm({ ...form, confidence: e.target.value })}
+              >
+                {AI_CONFIDENCE.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Source references (optional)</Label>
+              <Input
+                value={form.sourceReferences}
+                onChange={(e) => setForm({ ...form, sourceReferences: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Source summary</Label>
+              <Textarea
+                rows={2}
+                value={form.sourceSummary}
+                onChange={(e) => setForm({ ...form, sourceSummary: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Reason for manual creation</Label>
+              <Input value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} />
+            </div>
+          </div>
+          <div className="text-right">
+            <Button type="submit" size="sm">
+              Create suggestion
+            </Button>
+          </div>
+        </form>
+      )}
+
+      <div className="mt-4">
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground">Loading…</p>
+        ) : visible.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No suggestions match this filter.</p>
+        ) : (
+          <ul className="space-y-3">
+            {visible.map((s) => {
+              const stale =
+                ["new", "under_review", "needs_more_research"].includes(s.status) &&
+                Date.now() - new Date(s.created_at).getTime() > AI_STALE_DAYS * 24 * 60 * 60 * 1000;
+              return (
+                <li key={s.id} className="rounded-md border border-border p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-semibold">{s.suggested_name}</p>
+                        <Badge variant="secondary" className="font-normal">
+                          {s.suggestion_type}
+                        </Badge>
+                        <Badge variant="secondary" className="font-normal capitalize">
+                          {s.confidence} confidence
+                        </Badge>
+                        {stale && (
+                          <Badge variant="secondary" className="font-normal text-warning">
+                            stale
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">{s.summary}</p>
+                      <details className="mt-1.5">
+                        <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+                          Source detail
+                        </summary>
+                        <div className="mt-1 rounded-md bg-muted/40 p-2.5 text-xs text-muted-foreground">
+                          <p>{s.source_summary}</p>
+                          <p className="mt-1">
+                            {s.source_references
+                              ? `References: ${s.source_references}`
+                              : "Source reference not available."}
+                          </p>
+                          {s.rejection_reason && (
+                            <p className="mt-1 text-destructive">
+                              Rejected — {s.rejection_reason}: {s.rejection_note}
+                            </p>
+                          )}
+                          {s.reviewer_note && <p className="mt-1">Reviewer note: {s.reviewer_note}</p>}
+                        </div>
+                      </details>
+                    </div>
+                    <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+                      <Badge variant="outline" className="font-normal">
+                        {s.status}
+                      </Badge>
+                      {!["approved", "rejected", "archived"].includes(s.status) && (
+                        <>
+                          {!s.assigned_reviewer_id && (
+                            <Button size="sm" variant="outline" onClick={() => assignToMe(s.id)}>
+                              Assign to me
+                            </Button>
+                          )}
+                          <Button size="sm" variant="outline" onClick={() => needsMoreResearch(s.id)}>
+                            Needs research
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => reject(s.id)}>
+                            Reject
+                          </Button>
+                          <Button size="sm" onClick={() => approve(s.id)}>
+                            Approve
+                          </Button>
+                        </>
+                      )}
+                      {!["archived"].includes(s.status) && s.status !== "new" && (
+                        <Button size="sm" variant="ghost" onClick={() => archive(s.id)}>
+                          Archive
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
