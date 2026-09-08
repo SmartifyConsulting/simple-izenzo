@@ -607,6 +607,196 @@ export type Database = {
           },
         ]
       }
+      funder_orgs: {
+        Row: { created_at: string; id: string; name: string }
+        Insert: { created_at?: string; id?: string; name: string }
+        Update: { created_at?: string; id?: string; name?: string }
+        Relationships: []
+      }
+      funder_org_members: {
+        Row: {
+          created_at: string
+          funder_org_id: string
+          funder_role: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          funder_org_id: string
+          funder_role?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          funder_org_id?: string
+          funder_role?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funder_org_members_funder_org_id_fkey"
+            columns: ["funder_org_id"]
+            isOneToOne: false
+            referencedRelation: "funder_orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      funder_releases: {
+        Row: {
+          compliance_summary: Json
+          consent_basis: string
+          counterparty_id: string
+          created_at: string
+          expiry: string
+          funder_org_id: string
+          id: string
+          pack_version: string
+          permissions: string
+          reason: string
+          released_by: string
+          released_document_ids: string[]
+          released_fields: Json
+          revoke_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          transaction_id: string | null
+        }
+        Insert: {
+          compliance_summary?: Json
+          consent_basis: string
+          counterparty_id: string
+          created_at?: string
+          expiry: string
+          funder_org_id: string
+          id?: string
+          pack_version?: string
+          permissions?: string
+          reason: string
+          released_by?: string
+          released_document_ids?: string[]
+          released_fields: Json
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          transaction_id?: string | null
+        }
+        Update: {
+          compliance_summary?: Json
+          consent_basis?: string
+          counterparty_id?: string
+          created_at?: string
+          expiry?: string
+          funder_org_id?: string
+          id?: string
+          pack_version?: string
+          permissions?: string
+          reason?: string
+          released_by?: string
+          released_document_ids?: string[]
+          released_fields?: Json
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funder_releases_funder_org_id_fkey"
+            columns: ["funder_org_id"]
+            isOneToOne: false
+            referencedRelation: "funder_orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funder_releases_counterparty_id_fkey"
+            columns: ["counterparty_id"]
+            isOneToOne: false
+            referencedRelation: "counterparties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funder_releases_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      funder_release_events: {
+        Row: {
+          actor_id: string
+          created_at: string
+          event_type: string
+          id: string
+          note: string | null
+          release_id: string
+        }
+        Insert: {
+          actor_id?: string
+          created_at?: string
+          event_type: string
+          id?: string
+          note?: string | null
+          release_id: string
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          note?: string | null
+          release_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funder_release_events_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "funder_releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      funder_decisions: {
+        Row: {
+          decided_by: string
+          decision: string
+          created_at: string
+          id: string
+          note: string | null
+          release_id: string
+        }
+        Insert: {
+          decided_by?: string
+          decision: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          release_id: string
+        }
+        Update: {
+          decided_by?: string
+          decision?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          release_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funder_decisions_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "funder_releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       counterparties: {
         Row: {
           chosen_at: string | null
@@ -1384,6 +1574,40 @@ export type Database = {
       }
       admin_case_reject_proposal: {
         Args: { p_id: string; p_note: string }
+        Returns: undefined
+      }
+      admin_funder_create_org: {
+        Args: { p_name: string }
+        Returns: string
+      }
+      admin_funder_add_member: {
+        Args: { p_funder_org_id: string; p_funder_role?: string; p_user_id: string }
+        Returns: undefined
+      }
+      admin_funder_create_release: {
+        Args: {
+          p_compliance_summary?: Json
+          p_consent_basis: string
+          p_counterparty_id: string
+          p_expiry: string
+          p_funder_org_id: string
+          p_permissions?: string
+          p_reason: string
+          p_released_fields: Json
+          p_transaction_id?: string | null
+        }
+        Returns: string
+      }
+      admin_funder_revoke_release: {
+        Args: { p_id: string; p_reason: string }
+        Returns: undefined
+      }
+      funder_record_view: {
+        Args: { p_release_id: string }
+        Returns: undefined
+      }
+      funder_record_decision: {
+        Args: { p_decision: string; p_note?: string | null; p_release_id: string }
         Returns: undefined
       }
       admin_override_counterparty_rating: {

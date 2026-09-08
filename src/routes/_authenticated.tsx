@@ -23,9 +23,24 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 function RequireEmailVerified() {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, roles } = useAuth();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  // Funder Workspace confinement (rebuild requirements section 9): a funder-only seat must never
+  // reach Trade Desk, Governance, Developer Centre, Marketplace, Billing, or HQ/Admin, even by
+  // direct URL entry. This is a UX-level redirect only — the real boundary enforced against a
+  // funder session bypassing the UI entirely (e.g. a raw API call) is the RLS policies on
+  // funder_releases/funder_release_events/funder_decisions, which scope every row to the caller's
+  // own funder_org_id regardless of what route they hit.
+  const isFunderOnly = !loading && roles.includes("funder") && !roles.includes("admin");
+  const onFunderWorkspace = pathname.startsWith("/funder");
+
+  useEffect(() => {
+    if (isFunderOnly && !onFunderWorkspace) navigate({ to: "/funder", replace: true });
+  }, [isFunderOnly, onFunderWorkspace, navigate]);
+
+  if (isFunderOnly && !onFunderWorkspace) return null;
 
   const provider = (user?.app_metadata as { provider?: string } | undefined)?.provider ?? "email";
   const nativelyConfirmed = Boolean(user?.email_confirmed_at);

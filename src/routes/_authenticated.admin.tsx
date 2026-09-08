@@ -57,6 +57,7 @@ function AdminPage() {
           <TabsTrigger value="facilitation">Facilitation</TabsTrigger>
           <TabsTrigger value="ai-suggestions">AI Suggestions</TabsTrigger>
           <TabsTrigger value="compliance-cases">Compliance Cases</TabsTrigger>
+          <TabsTrigger value="funders">Funders</TabsTrigger>
           <TabsTrigger value="reporting">Reporting</TabsTrigger>
         </TabsList>
         <TabsContent value="users" className="mt-6">
@@ -76,6 +77,9 @@ function AdminPage() {
         </TabsContent>
         <TabsContent value="compliance-cases" className="mt-6">
           <ComplianceCasesTab />
+        </TabsContent>
+        <TabsContent value="funders" className="mt-6">
+          <FundersTab />
         </TabsContent>
         <TabsContent value="reporting" className="mt-6">
           <ReportingTab />
@@ -1346,6 +1350,405 @@ function ComplianceCasesTab() {
                       )}
                     </div>
                   </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const RELEASE_FIELDS = [
+  "legal_name",
+  "trading_name",
+  "registration_number",
+  "country_of_incorporation",
+  "role_in_transaction",
+  "verified_status",
+  "business_contact",
+] as const;
+
+function FundersTab() {
+  const qc = useQueryClient();
+  const [newOrgName, setNewOrgName] = useState("");
+  const [memberForm, setMemberForm] = useState({ funderOrgId: "", email: "", funderRole: "funder_user" });
+  const [releaseForm, setReleaseForm] = useState({
+    funderOrgId: "",
+    counterpartyId: "",
+    fields: [] as string[],
+    consentBasis: "",
+    reason: "",
+    expiryDays: "30",
+    permissions: "view",
+    verifiedStatus: "",
+    riskBand: "",
+  });
+
+  const { data: funderOrgs = [] } = useQuery({
+    queryKey: ["admin-funder-orgs"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("funder_orgs").select("*").order("name");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: releases = [] } = useQuery({
+    queryKey: ["admin-funder-releases"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("funder_releases")
+        .select("*, counterparties(name), funder_orgs(name)")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: cpOptions = [] } = useQuery({
+    queryKey: ["admin-cp-options"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("counterparties")
+        .select("id, name")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  async function refreshOrgs() {
+    await qc.invalidateQueries({ queryKey: ["admin-funder-orgs"] });
+  }
+  async function refreshReleases() {
+    await qc.invalidateQueries({ queryKey: ["admin-funder-releases"] });
+  }
+
+  async function createOrg(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newOrgName.trim()) return;
+    const { error } = await supabase.rpc("admin_funder_create_org", { p_name: newOrgName });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Funder org created");
+    setNewOrgName("");
+    await refreshOrgs();
+  }
+
+  async function addMember(e: React.FormEvent) {
+    e.preventDefault();
+    if (!memberForm.funderOrgId || !memberForm.email.trim()) {
+      toast.error("Select a funder org and enter the user's email.");
+      return;
+    }
+    const { data: profileRow, error: lookupError } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("email", memberForm.email.trim())
+      .maybeSingle();
+    if (lookupError) {
+      toast.error(lookupError.message);
+      return;
+    }
+    if (!profileRow) {
+      toast.error("No user found with that email — they must sign up first.");
+      return;
+    }
+    const { error } = await supabase.rpc("admin_funder_add_member", {
+      p_funder_org_id: memberForm.funderOrgId,
+      p_user_id: profileRow.id,
+      p_funder_role: memberForm.funderRole,
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Funder member added");
+    setMemberForm({ funderOrgId: "", email: "", funderRole: "funder_user" });
+  }
+
+  async function createRelease(e: React.FormEvent) {
+    e.preventDefault();
+    if (!releaseForm.funderOrgId || !releaseForm.counterpartyId || releaseForm.fields.length === 0) {
+      toast.error("Funder org, counterparty and at least one field are required.");
+      return;
+    }
+    if (!releaseForm.consentBasis.trim() || !releaseForm.reason.trim()) {
+      toast.error("Consent basis and reason are required.");
+      return;
+    }
+    const fieldsObj = Object.fromEntries(releaseForm.fields.map((f) => [f, true]));
+    const summary: Record<string, string> = {};
+    if (releaseForm.verifiedStatus.trim()) summary["verification_status"] = releaseForm.verifiedStatus.trim();
+    if (releaseForm.riskBand.trim()) summary["risk_band"] = releaseForm.riskBand.trim();
+    const expiry = new Date(Date.now() + Number(releaseForm.expiryDays) * 24 * 60 * 60 * 1000).toISOString();
+
+    const { error } = await supabase.rpc("admin_funder_create_release", {
+      p_funder_org_id: releaseForm.funderOrgId,
+      p_counterparty_id: releaseForm.counterpartyId,
+      p_released_fields: fieldsObj,
+      p_consent_basis: releaseForm.consentBasis,
+      p_reason: releaseForm.reason,
+      p_expiry: expiry,
+      p_compliance_summary: summary,
+      p_permissions: releaseForm.permissions,
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Release created");
+    setReleaseForm({
+      funderOrgId: "",
+      counterpartyId: "",
+      fields: [],
+      consentBasis: "",
+      reason: "",
+      expiryDays: "30",
+      permissions: "view",
+      verifiedStatus: "",
+      riskBand: "",
+    });
+    await refreshReleases();
+  }
+
+  async function revokeRelease(id: string) {
+    const reason = window.prompt("Revocation reason (required):");
+    if (!reason) return;
+    const { error } = await supabase.rpc("admin_funder_revoke_release", { p_id: id, p_reason: reason });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Release revoked");
+    await refreshReleases();
+  }
+
+  return (
+    <div className="space-y-8">
+      <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm text-warning">
+        Counterparty information is hidden from every funder until it is explicitly released here,
+        field by field. There is no "release everything" shortcut. Funders can never see another
+        funder's deals or anything outside their own workspace.
+      </div>
+
+      <div>
+        <h2 className="text-sm font-semibold">Funder organisations</h2>
+        <form onSubmit={createOrg} className="mt-2 flex items-end gap-2">
+          <div className="flex-1 space-y-1.5">
+            <Label>New funder org name</Label>
+            <Input value={newOrgName} onChange={(e) => setNewOrgName(e.target.value)} />
+          </div>
+          <Button type="submit" size="sm">
+            Create
+          </Button>
+        </form>
+        <ul className="mt-3 flex flex-wrap gap-1.5">
+          {funderOrgs.map((o) => (
+            <Badge key={o.id} variant="secondary" className="font-normal">
+              {o.name}
+            </Badge>
+          ))}
+        </ul>
+      </div>
+
+      <div>
+        <h2 className="text-sm font-semibold">Add a funder org member</h2>
+        <form onSubmit={addMember} className="mt-2 grid gap-3 rounded-md border border-border p-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label>Funder org</Label>
+            <select
+              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+              value={memberForm.funderOrgId}
+              onChange={(e) => setMemberForm({ ...memberForm, funderOrgId: e.target.value })}
+            >
+              <option value="">— select —</option>
+              {funderOrgs.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Funder-side role</Label>
+            <select
+              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+              value={memberForm.funderRole}
+              onChange={(e) => setMemberForm({ ...memberForm, funderRole: e.target.value })}
+            >
+              <option value="funder_user">Funder user</option>
+              <option value="funder_admin">Funder admin (own org only)</option>
+            </select>
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label>User email (must already have an Izenzo account)</Label>
+            <Input value={memberForm.email} onChange={(e) => setMemberForm({ ...memberForm, email: e.target.value })} />
+          </div>
+          <div className="sm:col-span-2 text-right">
+            <Button type="submit" size="sm">
+              Add member
+            </Button>
+          </div>
+        </form>
+      </div>
+
+      <div>
+        <h2 className="text-sm font-semibold">Release counterparty information</h2>
+        <form onSubmit={createRelease} className="mt-2 space-y-3 rounded-md border border-border p-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>Funder org</Label>
+              <select
+                className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                value={releaseForm.funderOrgId}
+                onChange={(e) => setReleaseForm({ ...releaseForm, funderOrgId: e.target.value })}
+              >
+                <option value="">— select —</option>
+                {funderOrgs.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Counterparty</Label>
+              <select
+                className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                value={releaseForm.counterpartyId}
+                onChange={(e) => setReleaseForm({ ...releaseForm, counterpartyId: e.target.value })}
+              >
+                <option value="">— select —</option>
+                {cpOptions.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <Label>Fields to release (explicit, minimum necessary only)</Label>
+            <div className="mt-1.5 grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+              {RELEASE_FIELDS.map((f) => (
+                <label key={f} className="flex items-center gap-1.5 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={releaseForm.fields.includes(f)}
+                    onChange={(e) =>
+                      setReleaseForm({
+                        ...releaseForm,
+                        fields: e.target.checked
+                          ? [...releaseForm.fields, f]
+                          : releaseForm.fields.filter((x) => x !== f),
+                      })
+                    }
+                  />
+                  {f.replace(/_/g, " ")}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>Verified status (compliance summary, optional)</Label>
+              <Input
+                value={releaseForm.verifiedStatus}
+                onChange={(e) => setReleaseForm({ ...releaseForm, verifiedStatus: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Risk band (compliance summary, optional)</Label>
+              <Input
+                value={releaseForm.riskBand}
+                onChange={(e) => setReleaseForm({ ...releaseForm, riskBand: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Permissions</Label>
+              <select
+                className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                value={releaseForm.permissions}
+                onChange={(e) => setReleaseForm({ ...releaseForm, permissions: e.target.value })}
+              >
+                <option value="view">View only</option>
+                <option value="view_and_download">View and download</option>
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Expiry (days from now)</Label>
+              <Input
+                type="number"
+                min={1}
+                value={releaseForm.expiryDays}
+                onChange={(e) => setReleaseForm({ ...releaseForm, expiryDays: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Consent basis</Label>
+              <Input
+                value={releaseForm.consentBasis}
+                onChange={(e) => setReleaseForm({ ...releaseForm, consentBasis: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Reason</Label>
+              <Input value={releaseForm.reason} onChange={(e) => setReleaseForm({ ...releaseForm, reason: e.target.value })} />
+            </div>
+          </div>
+
+          <div className="text-right">
+            <Button type="submit" size="sm">
+              Create release
+            </Button>
+          </div>
+        </form>
+      </div>
+
+      <div>
+        <h2 className="text-sm font-semibold">Active and past releases</h2>
+        {releases.length === 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground">No releases yet.</p>
+        ) : (
+          <ul className="mt-2 space-y-2">
+            {releases.map((r) => {
+              const cpName = (r as { counterparties?: { name?: string } | null }).counterparties?.name;
+              const orgName = (r as { funder_orgs?: { name?: string } | null }).funder_orgs?.name;
+              const expired = new Date(r.expiry).getTime() < Date.now();
+              return (
+                <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border p-3 text-xs">
+                  <span>
+                    <span className="font-medium">{orgName}</span> ← {cpName} · expires{" "}
+                    {new Date(r.expiry).toLocaleDateString()}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    {r.revoked_at ? (
+                      <Badge variant="secondary" className="font-normal">
+                        revoked
+                      </Badge>
+                    ) : expired ? (
+                      <Badge variant="secondary" className="font-normal">
+                        expired
+                      </Badge>
+                    ) : (
+                      <>
+                        <Badge variant="outline" className="font-normal">
+                          active
+                        </Badge>
+                        <Button size="sm" variant="ghost" onClick={() => revokeRelease(r.id)}>
+                          Revoke
+                        </Button>
+                      </>
+                    )}
+                  </span>
                 </li>
               );
             })}
