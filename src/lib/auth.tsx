@@ -61,6 +61,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [roles, setRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const uidRef = useRef<string | undefined>(undefined);
+
 
   async function load(uid: string | undefined) {
     if (!uid) {
