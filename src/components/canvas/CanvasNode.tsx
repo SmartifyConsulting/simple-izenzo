@@ -32,12 +32,14 @@ export function CanvasNode({
       onClick={onClick}
       style={{ animationDelay: `${delay}ms` }}
       className={cn(
-        "glass-node animate-node-rise group w-full text-left",
+        "glass-node group w-full text-left",
+        state === "active" ? "animate-node-rise-active" : "animate-node-rise",
         compact ? "px-3.5 py-3" : "px-4 py-4",
         locked
           ? "node-locked cursor-not-allowed"
           : "hover:-translate-y-0.5 hover:border-primary/50",
-        state === "active" && "node-active animate-node-start",
+        state === "active" && "node-active",
+        state === "done" && "node-done",
         side === "right" && "text-right",
       )}
     >

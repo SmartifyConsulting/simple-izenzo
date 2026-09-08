@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   FileUp,
   Radar,
@@ -87,30 +87,7 @@ export function DealCanvas({
       </div>
 
       {deals && deals.length > 1 && onSelectDeal && (
-        <div className="mb-6 flex gap-2 overflow-x-auto pb-1">
-          {deals.map((d) => {
-            const def = stepDef(d.stage, d.step);
-            const current = d.id === tx.id;
-            return (
-              <button
-                key={d.id}
-                type="button"
-                onClick={() => onSelectDeal(d.id)}
-                className={cn(
-                  "glass-node w-[220px] shrink-0 px-3.5 py-2.5 text-left transition-transform hover:-translate-y-0.5",
-                  current && "node-active",
-                )}
-              >
-                <span className="block truncate text-[13px] font-semibold tracking-tight">
-                  {d.title}
-                </span>
-                <span className="mt-0.5 block truncate text-[11.5px] text-muted-foreground">
-                  {money(d.price, d.currency)} · {def?.label ?? d.step}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        <DealTicker deals={deals} currentId={tx.id} onSelectDeal={onSelectDeal} />
       )}
 
 
@@ -210,6 +187,78 @@ export function DealCanvas({
           )}
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+/** The deal ticker at the top of the canvas: stays put when every deal already fits the row's
+ * width, and only starts auto-scrolling once there are more deals than fit — never shows a
+ * scrollbar either way. */
+function DealTicker({
+  deals,
+  currentId,
+  onSelectDeal,
+}: {
+  deals: Transaction[];
+  currentId: string;
+  onSelectDeal: (id: string) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [overflowing, setOverflowing] = useState(false);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    const content = contentRef.current;
+    if (!container || !content) return;
+    const check = () => setOverflowing(content.scrollWidth > container.clientWidth + 1);
+    check();
+    const observer = new ResizeObserver(check);
+    observer.observe(container);
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [deals.length]);
+
+  const renderDeal = (d: Transaction, idx: number, cloneKey?: string) => {
+    const def = stepDef(d.stage, d.step);
+    const current = d.id === currentId;
+    return (
+      <button
+        key={cloneKey ?? d.id}
+        type="button"
+        onClick={() => onSelectDeal(d.id)}
+        className={cn(
+          "glass-node w-[220px] shrink-0 px-3.5 py-2.5 text-left transition-transform hover:-translate-y-0.5",
+          current && "node-active",
+        )}
+        tabIndex={cloneKey ? -1 : 0}
+        aria-hidden={cloneKey ? true : undefined}
+      >
+        <span className="block truncate text-[13px] font-semibold tracking-tight">{d.title}</span>
+        <span className="mt-0.5 block truncate text-[11.5px] text-muted-foreground">
+          {money(d.price, d.currency)} · {def?.label ?? d.step}
+        </span>
+      </button>
+    );
+  };
+
+  return (
+    <div ref={containerRef} className="mb-6 overflow-hidden">
+      <div
+        className={cn(
+          "flex w-max gap-2 pb-1",
+          overflowing && "animate-marquee-left hover:[animation-play-state:paused]",
+        )}
+      >
+        <div ref={contentRef} className="flex gap-2">
+          {deals.map((d, i) => renderDeal(d, i))}
+        </div>
+        {overflowing && (
+          <div className="flex gap-2" aria-hidden>
+            {deals.map((d, i) => renderDeal(d, i, `clone-${d.id}`))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

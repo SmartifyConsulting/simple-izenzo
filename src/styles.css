@@ -226,9 +226,23 @@
   animation: node-start-pulse 1.8s ease-in-out infinite;
 }
 
+/* Combines the one-shot mount rise with the infinite pulse in a single `animation` shorthand —
+ * applying animate-node-rise and animate-node-start as two separate classes doesn't work because
+ * each sets the whole `animation` property, so whichever utility lands later in the stylesheet
+ * silently replaces the other's animation instead of the two coexisting. */
+@utility animate-node-rise-active {
+  animation:
+    node-rise 420ms cubic-bezier(0.22, 1, 0.36, 1) both,
+    node-start-pulse 1.8s ease-in-out infinite;
+}
+
 @utility node-locked {
   opacity: 0.42;
   filter: saturate(0.4);
+}
+
+@utility node-done {
+  filter: saturate(0.5) opacity(0.68);
 }
 
 @utility ink-grid {
@@ -320,4 +334,17 @@
 
 @utility animate-marquee-up {
   animation: marquee-up linear infinite;
+}
+
+@keyframes marquee-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@utility animate-marquee-left {
+  animation: marquee-left 55s linear infinite;
 }

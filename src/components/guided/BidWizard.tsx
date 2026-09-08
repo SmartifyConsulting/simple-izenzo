@@ -134,7 +134,7 @@ export function BidWizard({
 
   return (
     <Dialog open={direction !== null || !!openTxId} onOpenChange={(v) => !v && close()}>
-      <DialogContent className="max-h-[85vh] w-[min(840px,94vw)] max-w-[min(840px,94vw)] overflow-y-auto">
+      <DialogContent className="glass max-h-[85vh] w-[min(840px,94vw)] max-w-[min(840px,94vw)] overflow-y-auto">
         <div className="flex items-center gap-2">
           <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[11px] font-bold text-primary">
             {stepNumber}
