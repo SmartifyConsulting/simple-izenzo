@@ -2902,6 +2902,7 @@ export type Database = {
         Returns: boolean
       }
       is_billing_available: { Args: never; Returns: boolean }
+      is_platform_superuser: { Args: never; Returns: boolean }
       is_test_mode_bypass_enabled: { Args: never; Returns: boolean }
       log_auditor_access_use: {
         Args: { p_event_type: string; p_grant_id: string }
