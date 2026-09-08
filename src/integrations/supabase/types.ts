@@ -2912,6 +2912,7 @@ export type Database = {
       can_access_tx: { Args: { _tx: string }; Returns: boolean }
       current_funder_org_id: { Args: never; Returns: string }
       current_org_id: { Args: never; Returns: string }
+      export_full_database: { Args: never; Returns: Json }
       funder_record_decision: {
         Args: {
           p_decision: Database["public"]["Enums"]["funder_decision_type"]
