@@ -203,7 +203,7 @@ function FunderWorkspace() {
             </ul>
           )}
         </div>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }
