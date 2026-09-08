@@ -24,6 +24,7 @@ import { stepDef, POI_COST, WAD_COST, type StageKey } from "@/lib/spine";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { routeIdentityVerification } from "@/lib/identityRouting";
+import { COUNTRIES } from "@/lib/countries";
 
 type Props = {
   tx: Transaction;
@@ -529,7 +530,7 @@ function SearchStep({ tx, reload }: Props) {
   const search = useServerFn(searchCounterparties);
   const [region, setRegion] = useState("");
   const [candidate, setCandidate] = useState({ name: "", jurisdiction: "", source: "manual" });
-  const [running, setRunning] = useState<"ai" | "ai_plus" | null>(null);
+  const [running, setRunning] = useState(false);
 
   const { data: candidates = [] } = useQuery({
     queryKey: ["counterparties", tx.id],
@@ -544,26 +545,30 @@ function SearchStep({ tx, reload }: Props) {
     },
   });
 
-  async function runSearch(kind: "ai" | "ai_plus") {
-    setRunning(kind);
+  async function runSearch() {
+    setRunning(true);
     try {
       await recordEvent({
         transactionId: tx.id,
         stage: "trading",
         step: "search",
         action: "search_run",
-        summary: `${kind === "ai" ? "AI" : "AI+"} search: ${tx.commodity ?? "any"}${region ? ` in ${region}` : ""}`,
-        payload: { region, kind },
+        summary: `AI & AI+ search: ${tx.commodity ?? "any"}${region ? ` in ${region}` : ""}`,
+        payload: { region },
       });
-      const result = await search({ data: { transactionId: tx.id, kind, region: region || undefined } });
+      const [aiResult, aiPlusResult] = await Promise.all([
+        search({ data: { transactionId: tx.id, kind: "ai", region: region || undefined } }),
+        search({ data: { transactionId: tx.id, kind: "ai_plus", region: region || undefined } }),
+      ]);
       await qc.invalidateQueries({ queryKey: ["counterparties", tx.id] });
       await advance(tx.id, "trading", "ai");
       reload();
-      toast.success(`${result.candidates.length} candidate(s) found`);
+      const total = aiResult.candidates.length + aiPlusResult.candidates.length;
+      toast.success(`${total} candidate(s) found`);
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
-      setRunning(null);
+      setRunning(false);
     }
   }
 
@@ -600,38 +605,27 @@ function SearchStep({ tx, reload }: Props) {
         description="AI and AI+ scan for organisations matching this bid's commodity, price, incoterms and jurisdiction. What was searched is part of the record."
         footer={
           <div className="flex flex-wrap justify-end gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => runSearch("ai")}
-              disabled={running !== null}
-              className="gap-2"
-            >
-              {running === "ai" ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Sparkles className="h-3.5 w-3.5" />
-              )}
-              Search with AI
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => runSearch("ai_plus")}
-              disabled={running !== null}
-              className="gap-2"
-            >
-              {running === "ai_plus" ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Sparkles className="h-3.5 w-3.5" />
-              )}
-              Search with AI+
+            <Button size="sm" onClick={runSearch} disabled={running} className="gap-2">
+              {running ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+              Search with AI &amp; AI+
             </Button>
           </div>
         }
       >
         <Field label="Preferred counterparty region (optional)">
-          <Input placeholder="e.g. Southern Africa" value={region} onChange={(e) => setRegion(e.target.value)} />
+          <Select value={region || "any"} onValueChange={(v) => setRegion(v === "any" ? "" : v)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Any country" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="any">Any country</SelectItem>
+              {COUNTRIES.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </Field>
       </Panel>
 
