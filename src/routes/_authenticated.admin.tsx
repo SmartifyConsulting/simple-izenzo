@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
+import { Lock } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
@@ -125,6 +126,8 @@ function AdminPage() {
   );
 }
 
+const SUPERUSER_EMAIL = "georgia.adams@smartify.co.za";
+
 function UsersTab() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
@@ -150,7 +153,11 @@ function UsersTab() {
     },
   });
 
-  async function toggleAdmin(userId: string, isCurrentlyAdmin: boolean) {
+  async function toggleAdmin(userId: string, isCurrentlyAdmin: boolean, email: string | null) {
+    if (isCurrentlyAdmin && email === SUPERUSER_EMAIL) {
+      toast.error("This account is locked as a permanent administrator.");
+      return;
+    }
     try {
       if (isCurrentlyAdmin) {
         const { error } = await supabase
@@ -192,6 +199,7 @@ function UsersTab() {
         <ul className="divide-y divide-border">
           {filteredUsers.map((u) => {
             const isUserAdmin = adminIds.has(u.id);
+            const isSuperuser = u.email === SUPERUSER_EMAIL;
             return (
               <li key={u.id} className="flex items-center justify-between gap-3 p-4 text-sm">
                 <div className="min-w-0">
@@ -204,9 +212,19 @@ function UsersTab() {
                       admin
                     </Badge>
                   )}
-                  <Button size="sm" variant="outline" onClick={() => toggleAdmin(u.id, isUserAdmin)}>
-                    {isUserAdmin ? "Revoke admin" : "Make admin"}
-                  </Button>
+                  {isSuperuser ? (
+                    <Badge
+                      variant="outline"
+                      className="gap-1 border-warning/40 bg-warning/10 font-normal text-warning-foreground"
+                      title="This account is locked as a permanent administrator"
+                    >
+                      <Lock className="h-3 w-3" /> Locked admin
+                    </Badge>
+                  ) : (
+                    <Button size="sm" variant="outline" onClick={() => toggleAdmin(u.id, isUserAdmin, u.email)}>
+                      {isUserAdmin ? "Revoke admin" : "Make admin"}
+                    </Button>
+                  )}
                 </div>
               </li>
             );
