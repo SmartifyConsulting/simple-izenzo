@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import type { Transaction } from "@/lib/tx";
 
-export const Route = createFileRoute("/_authenticated/tx/$id")({
+export const Route = createFileRoute("/_authenticated/deal/$id")({
   head: () => ({
     meta: [
       { title: "Deal canvas — Izenzo" },
