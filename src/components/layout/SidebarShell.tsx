@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
 import { setLayoutPreference } from "@/lib/layoutPreference";
 import { NAV_DESTINATIONS } from "@/lib/navDestinations";
+import { WorkspaceSwitcher } from "@/components/layout/WorkspaceSwitcher";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -48,9 +49,8 @@ export function SidebarShell({
           <LayoutSwitch />
         </div>
 
-        <div className="border-b border-border px-4 py-3">
-          <p className="truncate text-sm font-semibold">{org?.name ?? "Trade Desk"}</p>
-          <p className="text-xs text-muted-foreground">Governance live desk</p>
+        <div className="border-b border-border p-2">
+          <WorkspaceSwitcher current={org?.name ?? "Trade Desk"} />
         </div>
 
         <nav className="flex-1 space-y-0.5 px-2 py-3">

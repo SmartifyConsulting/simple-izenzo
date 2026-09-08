@@ -45,6 +45,13 @@ import { Route as SolutionsTradersRouteImport } from './routes/solutions.traders
 import { Route as AuthenticatedAccountBillingRouteImport } from './routes/_authenticated.account.billing'
 import { Route as AuthenticatedAccountSettingsRouteImport } from './routes/_authenticated.account.settings'
 import { Route as AuthenticatedDealIdRouteImport } from './routes/_authenticated.deal.$id'
+import { Route as AuthenticatedDeveloperDocsRouteImport } from './routes/_authenticated.developer.docs'
+import { Route as AuthenticatedDeveloperKeysRouteImport } from './routes/_authenticated.developer.keys'
+import { Route as AuthenticatedDeveloperNotificationsRouteImport } from './routes/_authenticated.developer.notifications'
+import { Route as AuthenticatedDeveloperSchemaRouteImport } from './routes/_authenticated.developer.schema'
+import { Route as AuthenticatedDeveloperSupportRouteImport } from './routes/_authenticated.developer.support'
+import { Route as AuthenticatedDeveloperUsageRouteImport } from './routes/_authenticated.developer.usage'
+import { Route as AuthenticatedDeveloperWebhooksRouteImport } from './routes/_authenticated.developer.webhooks'
 import { Route as AuthenticatedTransactionsNewRouteImport } from './routes/_authenticated.transactions.new'
 import { Route as AuthenticatedTxIdStageStepRouteImport } from './routes/_authenticated.tx.$id.$stage.$step'
 
@@ -231,6 +238,48 @@ const AuthenticatedDealIdRoute = AuthenticatedDealIdRouteImport.update({
   path: '/deal/$id',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedDeveloperDocsRoute =
+  AuthenticatedDeveloperDocsRouteImport.update({
+    id: '/developer/docs',
+    path: '/developer/docs',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedDeveloperKeysRoute =
+  AuthenticatedDeveloperKeysRouteImport.update({
+    id: '/developer/keys',
+    path: '/developer/keys',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedDeveloperNotificationsRoute =
+  AuthenticatedDeveloperNotificationsRouteImport.update({
+    id: '/developer/notifications',
+    path: '/developer/notifications',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedDeveloperSchemaRoute =
+  AuthenticatedDeveloperSchemaRouteImport.update({
+    id: '/developer/schema',
+    path: '/developer/schema',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedDeveloperSupportRoute =
+  AuthenticatedDeveloperSupportRouteImport.update({
+    id: '/developer/support',
+    path: '/developer/support',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedDeveloperUsageRoute =
+  AuthenticatedDeveloperUsageRouteImport.update({
+    id: '/developer/usage',
+    path: '/developer/usage',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedDeveloperWebhooksRoute =
+  AuthenticatedDeveloperWebhooksRouteImport.update({
+    id: '/developer/webhooks',
+    path: '/developer/webhooks',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedTransactionsNewRoute =
   AuthenticatedTransactionsNewRouteImport.update({
     id: '/transactions/new',
@@ -280,6 +329,13 @@ export interface FileRoutesByFullPath {
   '/account/billing': typeof AuthenticatedAccountBillingRoute
   '/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/deal/$id': typeof AuthenticatedDealIdRoute
+  '/developer/docs': typeof AuthenticatedDeveloperDocsRoute
+  '/developer/keys': typeof AuthenticatedDeveloperKeysRoute
+  '/developer/notifications': typeof AuthenticatedDeveloperNotificationsRoute
+  '/developer/schema': typeof AuthenticatedDeveloperSchemaRoute
+  '/developer/support': typeof AuthenticatedDeveloperSupportRoute
+  '/developer/usage': typeof AuthenticatedDeveloperUsageRoute
+  '/developer/webhooks': typeof AuthenticatedDeveloperWebhooksRoute
   '/transactions/new': typeof AuthenticatedTransactionsNewRoute
   '/tx/$id/$stage/$step': typeof AuthenticatedTxIdStageStepRoute
 }
@@ -319,6 +375,13 @@ export interface FileRoutesByTo {
   '/account/billing': typeof AuthenticatedAccountBillingRoute
   '/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/deal/$id': typeof AuthenticatedDealIdRoute
+  '/developer/docs': typeof AuthenticatedDeveloperDocsRoute
+  '/developer/keys': typeof AuthenticatedDeveloperKeysRoute
+  '/developer/notifications': typeof AuthenticatedDeveloperNotificationsRoute
+  '/developer/schema': typeof AuthenticatedDeveloperSchemaRoute
+  '/developer/support': typeof AuthenticatedDeveloperSupportRoute
+  '/developer/usage': typeof AuthenticatedDeveloperUsageRoute
+  '/developer/webhooks': typeof AuthenticatedDeveloperWebhooksRoute
   '/transactions/new': typeof AuthenticatedTransactionsNewRoute
   '/tx/$id/$stage/$step': typeof AuthenticatedTxIdStageStepRoute
 }
@@ -360,6 +423,13 @@ export interface FileRoutesById {
   '/_authenticated/account/billing': typeof AuthenticatedAccountBillingRoute
   '/_authenticated/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/_authenticated/deal/$id': typeof AuthenticatedDealIdRoute
+  '/_authenticated/developer/docs': typeof AuthenticatedDeveloperDocsRoute
+  '/_authenticated/developer/keys': typeof AuthenticatedDeveloperKeysRoute
+  '/_authenticated/developer/notifications': typeof AuthenticatedDeveloperNotificationsRoute
+  '/_authenticated/developer/schema': typeof AuthenticatedDeveloperSchemaRoute
+  '/_authenticated/developer/support': typeof AuthenticatedDeveloperSupportRoute
+  '/_authenticated/developer/usage': typeof AuthenticatedDeveloperUsageRoute
+  '/_authenticated/developer/webhooks': typeof AuthenticatedDeveloperWebhooksRoute
   '/_authenticated/transactions/new': typeof AuthenticatedTransactionsNewRoute
   '/_authenticated/tx/$id/$stage/$step': typeof AuthenticatedTxIdStageStepRoute
 }
@@ -401,6 +471,13 @@ export interface FileRouteTypes {
     | '/account/billing'
     | '/account/settings'
     | '/deal/$id'
+    | '/developer/docs'
+    | '/developer/keys'
+    | '/developer/notifications'
+    | '/developer/schema'
+    | '/developer/support'
+    | '/developer/usage'
+    | '/developer/webhooks'
     | '/transactions/new'
     | '/tx/$id/$stage/$step'
   fileRoutesByTo: FileRoutesByTo
@@ -440,6 +517,13 @@ export interface FileRouteTypes {
     | '/account/billing'
     | '/account/settings'
     | '/deal/$id'
+    | '/developer/docs'
+    | '/developer/keys'
+    | '/developer/notifications'
+    | '/developer/schema'
+    | '/developer/support'
+    | '/developer/usage'
+    | '/developer/webhooks'
     | '/transactions/new'
     | '/tx/$id/$stage/$step'
   id:
@@ -480,6 +564,13 @@ export interface FileRouteTypes {
     | '/_authenticated/account/billing'
     | '/_authenticated/account/settings'
     | '/_authenticated/deal/$id'
+    | '/_authenticated/developer/docs'
+    | '/_authenticated/developer/keys'
+    | '/_authenticated/developer/notifications'
+    | '/_authenticated/developer/schema'
+    | '/_authenticated/developer/support'
+    | '/_authenticated/developer/usage'
+    | '/_authenticated/developer/webhooks'
     | '/_authenticated/transactions/new'
     | '/_authenticated/tx/$id/$stage/$step'
   fileRoutesById: FileRoutesById
@@ -759,6 +850,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDealIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/developer/docs': {
+      id: '/_authenticated/developer/docs'
+      path: '/developer/docs'
+      fullPath: '/developer/docs'
+      preLoaderRoute: typeof AuthenticatedDeveloperDocsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/developer/keys': {
+      id: '/_authenticated/developer/keys'
+      path: '/developer/keys'
+      fullPath: '/developer/keys'
+      preLoaderRoute: typeof AuthenticatedDeveloperKeysRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/developer/notifications': {
+      id: '/_authenticated/developer/notifications'
+      path: '/developer/notifications'
+      fullPath: '/developer/notifications'
+      preLoaderRoute: typeof AuthenticatedDeveloperNotificationsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/developer/schema': {
+      id: '/_authenticated/developer/schema'
+      path: '/developer/schema'
+      fullPath: '/developer/schema'
+      preLoaderRoute: typeof AuthenticatedDeveloperSchemaRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/developer/support': {
+      id: '/_authenticated/developer/support'
+      path: '/developer/support'
+      fullPath: '/developer/support'
+      preLoaderRoute: typeof AuthenticatedDeveloperSupportRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/developer/usage': {
+      id: '/_authenticated/developer/usage'
+      path: '/developer/usage'
+      fullPath: '/developer/usage'
+      preLoaderRoute: typeof AuthenticatedDeveloperUsageRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/developer/webhooks': {
+      id: '/_authenticated/developer/webhooks'
+      path: '/developer/webhooks'
+      fullPath: '/developer/webhooks'
+      preLoaderRoute: typeof AuthenticatedDeveloperWebhooksRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/transactions/new': {
       id: '/_authenticated/transactions/new'
       path: '/transactions/new'
@@ -793,6 +933,13 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAccountBillingRoute: typeof AuthenticatedAccountBillingRoute
   AuthenticatedAccountSettingsRoute: typeof AuthenticatedAccountSettingsRoute
   AuthenticatedDealIdRoute: typeof AuthenticatedDealIdRoute
+  AuthenticatedDeveloperDocsRoute: typeof AuthenticatedDeveloperDocsRoute
+  AuthenticatedDeveloperKeysRoute: typeof AuthenticatedDeveloperKeysRoute
+  AuthenticatedDeveloperNotificationsRoute: typeof AuthenticatedDeveloperNotificationsRoute
+  AuthenticatedDeveloperSchemaRoute: typeof AuthenticatedDeveloperSchemaRoute
+  AuthenticatedDeveloperSupportRoute: typeof AuthenticatedDeveloperSupportRoute
+  AuthenticatedDeveloperUsageRoute: typeof AuthenticatedDeveloperUsageRoute
+  AuthenticatedDeveloperWebhooksRoute: typeof AuthenticatedDeveloperWebhooksRoute
   AuthenticatedTransactionsNewRoute: typeof AuthenticatedTransactionsNewRoute
   AuthenticatedTxIdStageStepRoute: typeof AuthenticatedTxIdStageStepRoute
 }
@@ -814,6 +961,14 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAccountBillingRoute: AuthenticatedAccountBillingRoute,
   AuthenticatedAccountSettingsRoute: AuthenticatedAccountSettingsRoute,
   AuthenticatedDealIdRoute: AuthenticatedDealIdRoute,
+  AuthenticatedDeveloperDocsRoute: AuthenticatedDeveloperDocsRoute,
+  AuthenticatedDeveloperKeysRoute: AuthenticatedDeveloperKeysRoute,
+  AuthenticatedDeveloperNotificationsRoute:
+    AuthenticatedDeveloperNotificationsRoute,
+  AuthenticatedDeveloperSchemaRoute: AuthenticatedDeveloperSchemaRoute,
+  AuthenticatedDeveloperSupportRoute: AuthenticatedDeveloperSupportRoute,
+  AuthenticatedDeveloperUsageRoute: AuthenticatedDeveloperUsageRoute,
+  AuthenticatedDeveloperWebhooksRoute: AuthenticatedDeveloperWebhooksRoute,
   AuthenticatedTransactionsNewRoute: AuthenticatedTransactionsNewRoute,
   AuthenticatedTxIdStageStepRoute: AuthenticatedTxIdStageStepRoute,
 }
