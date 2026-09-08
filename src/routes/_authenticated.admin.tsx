@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { History } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/AppShell";
@@ -99,9 +99,9 @@ function AdminPage() {
   const isSuperuser = (user?.email ?? "").toLowerCase() === SUPERUSER_EMAIL;
   const search = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
-  const [rechecking, setRechecking] = React.useState(false);
+  const [rechecking, setRechecking] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
