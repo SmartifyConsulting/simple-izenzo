@@ -142,13 +142,14 @@ const SUPERUSER_EMAIL = "georgia.adams@smartify.co.za";
 function UsersTab() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"created" | "accessed">("created");
 
   const { data: users = [] } = useQuery({
     queryKey: ["admin-users"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, email, full_name, org_id, created_at")
+        .select("id, email, full_name, org_id, created_at, last_accessed_at")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as ProfileRow[];
