@@ -48,6 +48,7 @@ function DealCanvasPage() {
 
   return (
     <AppShell
+      wide
       title="Deal canvas"
       actions={
         <Link to="/dashboard">
