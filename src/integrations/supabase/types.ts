@@ -762,6 +762,239 @@ export type Database = {
           },
         ]
       }
+      api_keys: {
+        Row: {
+          commercial_owner: string | null
+          compliance_owner: string | null
+          created_at: string
+          created_by: string
+          environment: string
+          expires_at: string
+          id: string
+          ip_allowlist: string[]
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          monthly_allowance: number
+          name: string
+          org_id: string
+          revoke_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          scopes: string[]
+          status: string
+        }
+        Insert: {
+          commercial_owner?: string | null
+          compliance_owner?: string | null
+          created_at?: string
+          created_by?: string
+          environment: string
+          expires_at: string
+          id?: string
+          ip_allowlist?: string[]
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          monthly_allowance?: number
+          name: string
+          org_id: string
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          scopes?: string[]
+          status?: string
+        }
+        Update: {
+          commercial_owner?: string | null
+          compliance_owner?: string | null
+          created_at?: string
+          created_by?: string
+          environment?: string
+          expires_at?: string
+          id?: string
+          ip_allowlist?: string[]
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          monthly_allowance?: number
+          name?: string
+          org_id?: string
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          scopes?: string[]
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_keys_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_request_logs: {
+        Row: {
+          api_key_id: string | null
+          billable: boolean
+          correlation_id: string | null
+          created_at: string
+          endpoint: string
+          environment: string
+          error_code: string | null
+          id: string
+          latency_ms: number
+          log_hash: string
+          method: string
+          org_id: string | null
+          previous_log_hash: string | null
+          rate_limit_decision: string
+          request_id: string
+          request_payload_hash: string | null
+          response_status: number
+          scopes_evaluated: string[]
+          source_ip: string | null
+          token_cost: number
+          user_agent: string | null
+        }
+        Insert: {
+          api_key_id?: string | null
+          billable?: boolean
+          correlation_id?: string | null
+          created_at?: string
+          endpoint: string
+          environment: string
+          error_code?: string | null
+          id?: string
+          latency_ms: number
+          log_hash: string
+          method: string
+          org_id?: string | null
+          previous_log_hash?: string | null
+          rate_limit_decision?: string
+          request_id: string
+          request_payload_hash?: string | null
+          response_status: number
+          scopes_evaluated?: string[]
+          source_ip?: string | null
+          token_cost?: number
+          user_agent?: string | null
+        }
+        Update: {
+          api_key_id?: string | null
+          billable?: boolean
+          correlation_id?: string | null
+          created_at?: string
+          endpoint?: string
+          environment?: string
+          error_code?: string | null
+          id?: string
+          latency_ms?: number
+          log_hash?: string
+          method?: string
+          org_id?: string | null
+          previous_log_hash?: string | null
+          rate_limit_decision?: string
+          request_id?: string
+          request_payload_hash?: string | null
+          response_status?: number
+          scopes_evaluated?: string[]
+          source_ip?: string | null
+          token_cost?: number
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_request_logs_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_webhook_endpoints: {
+        Row: {
+          active: boolean
+          api_key_id: string
+          created_at: string
+          id: string
+          secret: string
+          url: string
+        }
+        Insert: {
+          active?: boolean
+          api_key_id: string
+          created_at?: string
+          id?: string
+          secret: string
+          url: string
+        }
+        Update: {
+          active?: boolean
+          api_key_id?: string
+          created_at?: string
+          id?: string
+          secret?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_webhook_endpoints_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_webhook_deliveries: {
+        Row: {
+          attempt: number
+          created_at: string
+          endpoint_id: string
+          event_type: string
+          id: string
+          payload: Json
+          response_status: number | null
+          signature: string
+          status: string
+        }
+        Insert: {
+          attempt?: number
+          created_at?: string
+          endpoint_id: string
+          event_type: string
+          id?: string
+          payload: Json
+          response_status?: number | null
+          signature: string
+          status?: string
+        }
+        Update: {
+          attempt?: number
+          created_at?: string
+          endpoint_id?: string
+          event_type?: string
+          id?: string
+          payload?: Json
+          response_status?: number | null
+          signature?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_webhook_deliveries_endpoint_id_fkey"
+            columns: ["endpoint_id"]
+            isOneToOne: false
+            referencedRelation: "api_webhook_endpoints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       funder_decisions: {
         Row: {
           decided_by: string
@@ -1609,6 +1842,33 @@ export type Database = {
       funder_record_decision: {
         Args: { p_decision: string; p_note?: string | null; p_release_id: string }
         Returns: undefined
+      }
+      admin_api_create_key: {
+        Args: {
+          p_commercial_owner?: string | null
+          p_compliance_owner?: string | null
+          p_environment: string
+          p_name: string
+          p_org_id: string
+          p_scopes?: string[]
+        }
+        Returns: { id: string; raw_key: string }[]
+      }
+      admin_api_suspend_key: {
+        Args: { p_id: string }
+        Returns: undefined
+      }
+      admin_api_reactivate_key: {
+        Args: { p_id: string }
+        Returns: undefined
+      }
+      admin_api_revoke_key: {
+        Args: { p_id: string; p_reason: string }
+        Returns: undefined
+      }
+      admin_api_rotate_key: {
+        Args: { p_id: string }
+        Returns: { id: string; raw_key: string }[]
       }
       admin_override_counterparty_rating: {
         Args: {
