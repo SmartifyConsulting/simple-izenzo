@@ -234,7 +234,7 @@ function AvatarMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button className="flex shrink-0 items-center gap-2 rounded-full hover:opacity-80">
-          <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-sidebar text-[11px] font-semibold text-sidebar-foreground">
+          <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-sidebar text-[13px] font-semibold text-sidebar-foreground">
             {profile?.avatar_url ? (
               <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
             ) : (
