@@ -202,11 +202,8 @@
 }
 
 @utility node-active {
-  border-color: color-mix(in oklab, var(--signal) 70%, transparent);
-  box-shadow:
-    0 0 0 1px color-mix(in oklab, var(--signal) 45%, transparent),
-    0 18px 50px -22px color-mix(in oklab, var(--signal) 70%, transparent),
-    inset 0 1px 0 oklch(1 0 0 / 14%);
+  border-color: color-mix(in oklab, var(--signal) 55%, transparent);
+  box-shadow: var(--glass-shadow);
   transform: translateZ(0) scale(1.015);
 }
 
@@ -217,11 +214,10 @@
 
 @utility ink-grid {
   background-image:
-    radial-gradient(900px 520px at 18% 0%, color-mix(in oklab, var(--signal) 12%, transparent), transparent 70%),
-    radial-gradient(760px 480px at 88% 12%, oklch(0.68 0.11 220 / 12%), transparent 72%),
-    linear-gradient(oklch(1 0 0 / 3.5%) 1px, transparent 1px),
-    linear-gradient(90deg, oklch(1 0 0 / 3.5%) 1px, transparent 1px);
-  background-size: auto, auto, 44px 44px, 44px 44px;
+    linear-gradient(var(--color-border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-border) 1px, transparent 1px);
+  background-size: 44px 44px, 44px 44px;
+  background-position: -1px -1px;
 }
 
 @keyframes node-rise {
