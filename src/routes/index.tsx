@@ -49,7 +49,7 @@ function Landing() {
     <div className="min-h-screen bg-background">
       <SiteHeader
         logoClassName="h-12"
-        containerClassName="max-w-none h-auto py-8 px-6 sm:px-10 lg:px-16"
+        containerClassName="max-w-6xl h-auto py-8 px-5"
         logoVariant="white"
         logoOnDark
       />

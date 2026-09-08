@@ -27,9 +27,13 @@ export function SignUpForm({
   hideFooterLink?: boolean;
 }) {
   const navigate = useNavigate();
+  const [step, setStep] = useState<1 | 2>(1);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [orgName, setOrgName] = useState("");
+  const [registrationNo, setRegistrationNo] = useState("");
+  const [country, setCountry] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -42,16 +46,26 @@ export function SignUpForm({
     },
   ];
 
-  async function onSubmit(e: React.FormEvent) {
+  function onContinue(e: React.FormEvent) {
     e.preventDefault();
     setMessage("");
     if (rules.some((r) => !r.ok)) {
       setMessage("Please meet all the password requirements.");
       return;
     }
+    setStep(2);
+  }
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setMessage("");
+    if (!orgName.trim()) {
+      setMessage("Organisation name is required.");
+      return;
+    }
     setBusy(true);
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data: signUpData, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -60,6 +74,28 @@ export function SignUpForm({
         },
       });
       if (error) throw error;
+
+      const userId = signUpData.user?.id;
+      if (userId) {
+        const { data: org, error: orgErr } = await supabase
+          .from("organisations")
+          .insert({ name: orgName, registration_no: registrationNo, country })
+          .select()
+          .single();
+        if (orgErr) throw orgErr;
+
+        const { error: mErr } = await supabase
+          .from("org_members")
+          .insert({ org_id: org.id, user_id: userId, role: "owner" });
+        if (mErr) throw mErr;
+
+        const { error: pErr } = await supabase
+          .from("profiles")
+          .update({ org_id: org.id })
+          .eq("id", userId);
+        if (pErr) throw pErr;
+      }
+
       toast.success("Account created");
       navigate({ to: safeNext(next), replace: true });
     } catch (err) {
@@ -94,66 +130,138 @@ export function SignUpForm({
         </>
       )}
 
-      <form onSubmit={onSubmit} className={hideHeader ? "space-y-4" : "mt-7 space-y-4"}>
-        <div className="space-y-1.5">
-          <Label htmlFor="hero-name">Full name</Label>
-          <Input
-            id="hero-name"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            autoComplete="name"
-            required
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="hero-email">Email</Label>
-          <Input
-            id="hero-email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-            required
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="hero-password">Password</Label>
-          <PasswordInput
-            id="hero-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="new-password"
-            required
-          />
-          <ul className="mt-2 space-y-1">
-            {rules.map((r) => (
-              <li key={r.label} className={"text-xs " + (r.ok ? "text-success" : "text-muted-foreground")}>
-                {r.ok ? "✓" : "•"} {r.label}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {message && (
-          <p aria-live="polite" className="text-sm text-destructive">
-            {message}
-          </p>
-        )}
-
-        <Button type="submit" className="w-full" disabled={busy}>
-          Create account
-        </Button>
-      </form>
-
-      <div className="my-5 flex items-center gap-3">
-        <span className="h-px flex-1 bg-border" />
-        <span className="text-xs text-muted-foreground">or</span>
-        <span className="h-px flex-1 bg-border" />
+      <div className={hideHeader ? "mb-4 flex items-center gap-2" : "mb-4 mt-7 flex items-center gap-2"}>
+        <span
+          className={
+            "flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold " +
+            (step === 1 ? "bg-foreground text-background" : "bg-muted text-muted-foreground")
+          }
+        >
+          1
+        </span>
+        <span className="h-px w-6 bg-border" />
+        <span
+          className={
+            "flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold " +
+            (step === 2 ? "bg-foreground text-background" : "bg-muted text-muted-foreground")
+          }
+        >
+          2
+        </span>
+        <p className="ml-2 text-xs text-muted-foreground">
+          {step === 1 ? "Your details" : "Organisation details"}
+        </p>
       </div>
 
-      <Button variant="outline" className="w-full" onClick={google} disabled={busy}>
-        Continue with Google
-      </Button>
+      {step === 1 ? (
+        <form onSubmit={onContinue} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="hero-name">Full name</Label>
+            <Input
+              id="hero-name"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              autoComplete="name"
+              required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="hero-email">Email</Label>
+            <Input
+              id="hero-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="hero-password">Password</Label>
+            <PasswordInput
+              id="hero-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+              required
+            />
+            <ul className="mt-2 space-y-1">
+              {rules.map((r) => (
+                <li key={r.label} className={"text-xs " + (r.ok ? "text-success" : "text-muted-foreground")}>
+                  {r.ok ? "✓" : "•"} {r.label}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {message && (
+            <p aria-live="polite" className="text-sm text-destructive">
+              {message}
+            </p>
+          )}
+
+          <Button type="submit" className="w-full">
+            Continue
+          </Button>
+        </form>
+      ) : (
+        <form onSubmit={onSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="org-name">Registered name</Label>
+            <Input
+              id="org-name"
+              value={orgName}
+              onChange={(e) => setOrgName(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="org-reg">Registration number</Label>
+            <Input
+              id="org-reg"
+              value={registrationNo}
+              onChange={(e) => setRegistrationNo(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="org-country">Country of domicile</Label>
+            <Input
+              id="org-country"
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+            />
+          </div>
+
+          {message && (
+            <p aria-live="polite" className="text-sm text-destructive">
+              {message}
+            </p>
+          )}
+
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" className="flex-1" onClick={() => setStep(1)} disabled={busy}>
+              Back
+            </Button>
+            <Button type="submit" className="flex-1" disabled={busy}>
+              Create account
+            </Button>
+          </div>
+        </form>
+      )}
+
+      {step === 1 && (
+        <>
+          <div className="my-5 flex items-center gap-3">
+            <span className="h-px flex-1 bg-border" />
+            <span className="text-xs text-muted-foreground">or</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+
+          <Button variant="outline" className="w-full" onClick={google} disabled={busy}>
+            Continue with Google
+          </Button>
+        </>
+      )}
 
       {!hideFooterLink && (
         <p className="mt-6 text-center text-sm text-muted-foreground">
