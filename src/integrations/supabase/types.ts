@@ -1847,6 +1847,47 @@ export type Database = {
         }
         Relationships: []
       }
+      pending_user_links: {
+        Row: {
+          applied_at: string | null
+          created_at: string
+          email: string
+          full_name: string | null
+          memberships: Json
+          org_id: string | null
+          roles: string[]
+          seat: string
+        }
+        Insert: {
+          applied_at?: string | null
+          created_at?: string
+          email: string
+          full_name?: string | null
+          memberships?: Json
+          org_id?: string | null
+          roles?: string[]
+          seat?: string
+        }
+        Update: {
+          applied_at?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string | null
+          memberships?: Json
+          org_id?: string | null
+          roles?: string[]
+          seat?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_user_links_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
