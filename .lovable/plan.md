@@ -10,6 +10,8 @@ Goal: Jane Doe (admin) and Georgia (system admin) get an identical experience, e
 
 2. **Activity Log and Integrations stay system-admin only.** No change to the current rule; both remain hidden and unreachable for ordinary admins, and the server keeps refusing integration reads/saves/tests for anyone else.
 
+   **Bigger profile picture.** Make the profile picture on Account settings 40% larger (from 64px to about 90px), keeping the camera/upload overlay proportionate.
+
 3. **Per-user activity shortcut.** The small history icon next to each user in Users stays system-admin only, since it opens the Activity Log.
 
 4. **System admin stays hidden** from the Users list and cannot have their admin right revoked. Unchanged.
