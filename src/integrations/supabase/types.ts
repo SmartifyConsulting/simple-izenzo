@@ -58,6 +58,134 @@ export type Database = {
           },
         ]
       }
+      facilitation_cases: {
+        Row: {
+          authority_confirmed: boolean
+          closed_at: string | null
+          closure_reason: string | null
+          compliance_hold: boolean
+          compliance_hold_reason: string | null
+          contact_identifier: string
+          counterparty_name: string
+          counterparty_role: string | null
+          country: string | null
+          created_at: string
+          final_outcome: string | null
+          id: string
+          org_id: string | null
+          owner_assigned_at: string | null
+          owner_id: string | null
+          product_service: string | null
+          purpose: string | null
+          requester_id: string
+          sector: string | null
+          source_evidence: string
+          status: string
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          authority_confirmed?: boolean
+          closed_at?: string | null
+          closure_reason?: string | null
+          compliance_hold?: boolean
+          compliance_hold_reason?: string | null
+          contact_identifier: string
+          counterparty_name: string
+          counterparty_role?: string | null
+          country?: string | null
+          created_at?: string
+          final_outcome?: string | null
+          id?: string
+          org_id?: string | null
+          owner_assigned_at?: string | null
+          owner_id?: string | null
+          product_service?: string | null
+          purpose?: string | null
+          requester_id?: string
+          sector?: string | null
+          source_evidence: string
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          authority_confirmed?: boolean
+          closed_at?: string | null
+          closure_reason?: string | null
+          compliance_hold?: boolean
+          compliance_hold_reason?: string | null
+          contact_identifier?: string
+          counterparty_name?: string
+          counterparty_role?: string | null
+          country?: string | null
+          created_at?: string
+          final_outcome?: string | null
+          id?: string
+          org_id?: string | null
+          owner_assigned_at?: string | null
+          owner_id?: string | null
+          product_service?: string | null
+          purpose?: string | null
+          requester_id?: string
+          sector?: string | null
+          source_evidence?: string
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facilitation_cases_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facilitation_cases_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      facilitation_case_events: {
+        Row: {
+          actor_id: string
+          case_id: string
+          created_at: string
+          event_type: string
+          id: string
+          note: string | null
+        }
+        Insert: {
+          actor_id?: string
+          case_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          note?: string | null
+        }
+        Update: {
+          actor_id?: string
+          case_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facilitation_case_events_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "facilitation_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       registry_companies: {
         Row: {
           claimed_org_id: string | null
@@ -919,6 +1047,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_facilitation_assign: {
+        Args: { p_case_id: string; p_owner_id: string }
+        Returns: undefined
+      }
+      admin_facilitation_close: {
+        Args: { p_case_id: string; p_outcome: string; p_reason: string }
+        Returns: undefined
+      }
+      admin_facilitation_set_compliance_hold: {
+        Args: { p_case_id: string; p_hold: boolean; p_reason?: string | null }
+        Returns: undefined
+      }
+      admin_facilitation_set_status: {
+        Args: { p_case_id: string; p_note?: string | null; p_status: string }
+        Returns: undefined
+      }
       admin_decide_registry_claim: {
         Args: {
           p_claim_id: string

@@ -20,6 +20,7 @@ import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
 import { Route as AuthenticatedCreditsRouteImport } from './routes/_authenticated.credits'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
+import { Route as AuthenticatedFacilitationRouteImport } from './routes/_authenticated.facilitation'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated.inbox'
 import { Route as AuthenticatedRegistryRouteImport } from './routes/_authenticated.registry'
 import { Route as AuthenticatedAccountBillingRouteImport } from './routes/_authenticated.account.billing'
@@ -81,6 +82,12 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedFacilitationRoute =
+  AuthenticatedFacilitationRouteImport.update({
+    id: '/facilitation',
+    path: '/facilitation',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedInboxRoute = AuthenticatedInboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
@@ -127,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRoute
   '/credits': typeof AuthenticatedCreditsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/facilitation': typeof AuthenticatedFacilitationRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/registry': typeof AuthenticatedRegistryRoute
   '/account/billing': typeof AuthenticatedAccountBillingRoute
@@ -145,6 +153,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminRoute
   '/credits': typeof AuthenticatedCreditsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/facilitation': typeof AuthenticatedFacilitationRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/registry': typeof AuthenticatedRegistryRoute
   '/account/billing': typeof AuthenticatedAccountBillingRoute
@@ -165,6 +174,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/credits': typeof AuthenticatedCreditsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/facilitation': typeof AuthenticatedFacilitationRoute
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
   '/_authenticated/registry': typeof AuthenticatedRegistryRoute
   '/_authenticated/account/billing': typeof AuthenticatedAccountBillingRoute
@@ -185,6 +195,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/credits'
     | '/dashboard'
+    | '/facilitation'
     | '/inbox'
     | '/registry'
     | '/account/billing'
@@ -203,6 +214,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/credits'
     | '/dashboard'
+    | '/facilitation'
     | '/inbox'
     | '/registry'
     | '/account/billing'
@@ -222,6 +234,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/credits'
     | '/_authenticated/dashboard'
+    | '/_authenticated/facilitation'
     | '/_authenticated/inbox'
     | '/_authenticated/registry'
     | '/_authenticated/account/billing'
@@ -320,6 +333,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/facilitation': {
+      id: '/_authenticated/facilitation'
+      path: '/facilitation'
+      fullPath: '/facilitation'
+      preLoaderRoute: typeof AuthenticatedFacilitationRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/inbox': {
       id: '/_authenticated/inbox'
       path: '/inbox'
@@ -369,6 +389,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedCreditsRoute: typeof AuthenticatedCreditsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedFacilitationRoute: typeof AuthenticatedFacilitationRoute
   AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
   AuthenticatedRegistryRoute: typeof AuthenticatedRegistryRoute
   AuthenticatedAccountBillingRoute: typeof AuthenticatedAccountBillingRoute
@@ -381,6 +402,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedCreditsRoute: AuthenticatedCreditsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedFacilitationRoute: AuthenticatedFacilitationRoute,
   AuthenticatedInboxRoute: AuthenticatedInboxRoute,
   AuthenticatedRegistryRoute: AuthenticatedRegistryRoute,
   AuthenticatedAccountBillingRoute: AuthenticatedAccountBillingRoute,

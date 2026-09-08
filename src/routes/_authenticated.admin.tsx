@@ -53,6 +53,7 @@ function AdminPage() {
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="tokens">Tokens</TabsTrigger>
           <TabsTrigger value="registry">Registry</TabsTrigger>
+          <TabsTrigger value="facilitation">Facilitation</TabsTrigger>
           <TabsTrigger value="reporting">Reporting</TabsTrigger>
         </TabsList>
         <TabsContent value="users" className="mt-6">
@@ -63,6 +64,9 @@ function AdminPage() {
         </TabsContent>
         <TabsContent value="registry" className="mt-6">
           <RegistryTab />
+        </TabsContent>
+        <TabsContent value="facilitation" className="mt-6">
+          <FacilitationTab />
         </TabsContent>
         <TabsContent value="reporting" className="mt-6">
           <ReportingTab />
@@ -469,6 +473,191 @@ function RegistryTab() {
           ))}
         </ul>
       </div>
+    </div>
+  );
+}
+
+const FACILITATION_STATUSES = [
+  "new_unassigned",
+  "triage_in_progress",
+  "more_information_needed",
+  "compliance_review_required",
+  "outreach_approved",
+  "contact_attempted",
+  "counterparty_responded",
+  "profile_verification_in_progress",
+  "ready_for_poi",
+] as const;
+
+const FACILITATION_OUTCOMES = [
+  "converted_to_known_counterparty",
+  "ready_for_next_step",
+  "ready_for_poi_review",
+  "counterparty_declined",
+  "no_response",
+  "invalid_details",
+  "duplicate_merged",
+  "blocked_by_compliance",
+  "cancelled_by_requester",
+  "closed_by_admin",
+  "unable_to_contact",
+] as const;
+
+function FacilitationTab() {
+  const qc = useQueryClient();
+  const { profile } = useAuth();
+
+  const { data: cases = [], isLoading } = useQuery({
+    queryKey: ["admin-facilitation-cases"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("facilitation_cases")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  async function refresh() {
+    await qc.invalidateQueries({ queryKey: ["admin-facilitation-cases"] });
+  }
+
+  async function assign(caseId: string) {
+    if (!profile) return;
+    const { error } = await supabase.rpc("admin_facilitation_assign", {
+      p_case_id: caseId,
+      p_owner_id: profile.id,
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Case assigned to you");
+    await refresh();
+  }
+
+  async function setStatus(caseId: string, status: string) {
+    let note: string | null = null;
+    if (status === "more_information_needed") {
+      note = window.prompt("What information is needed?");
+      if (!note) return;
+    }
+    const { error } = await supabase.rpc("admin_facilitation_set_status", {
+      p_case_id: caseId,
+      p_status: status,
+      p_note: note,
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Status updated");
+    await refresh();
+  }
+
+  async function toggleHold(caseId: string, hold: boolean) {
+    const reason = hold ? window.prompt("Compliance hold reason (required):") : null;
+    if (hold && !reason) return;
+    const { error } = await supabase.rpc("admin_facilitation_set_compliance_hold", {
+      p_case_id: caseId,
+      p_hold: hold,
+      p_reason: reason,
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(hold ? "Compliance hold set" : "Compliance hold cleared");
+    await refresh();
+  }
+
+  async function close(caseId: string) {
+    const outcome = window.prompt(
+      `Final outcome (${FACILITATION_OUTCOMES.join(" / ")}):`,
+    );
+    if (!outcome || !(FACILITATION_OUTCOMES as readonly string[]).includes(outcome)) {
+      if (outcome) toast.error("Not a valid outcome");
+      return;
+    }
+    const reason = window.prompt("Closure reason (required):");
+    if (!reason) return;
+    const { error } = await supabase.rpc("admin_facilitation_close", {
+      p_case_id: caseId,
+      p_outcome: outcome,
+      p_reason: reason,
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Case closed");
+    await refresh();
+  }
+
+  return (
+    <div>
+      <h2 className="text-sm font-semibold">Unknown-counterparty facilitation queue</h2>
+      {isLoading ? (
+        <p className="mt-3 text-sm text-muted-foreground">Loading…</p>
+      ) : cases.length === 0 ? (
+        <p className="mt-3 text-sm text-muted-foreground">No facilitation cases yet.</p>
+      ) : (
+        <ul className="mt-3 space-y-3">
+          {cases.map((c) => (
+            <li key={c.id} className="rounded-md border border-border p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold">{c.counterparty_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {c.country ?? "—"} · {c.sector ?? "—"} · contact: {c.contact_identifier}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">{c.source_evidence}</p>
+                  {c.compliance_hold && (
+                    <Badge variant="secondary" className="mt-1 font-normal text-destructive">
+                      Compliance hold: {c.compliance_hold_reason}
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1.5">
+                  <select
+                    className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                    value={c.status}
+                    onChange={(e) => setStatus(c.id, e.target.value)}
+                    disabled={c.status === "closed"}
+                  >
+                    {FACILITATION_STATUSES.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                    {c.status === "closed" && <option value="closed">closed</option>}
+                  </select>
+                  <div className="flex gap-1.5">
+                    {!c.owner_id && (
+                      <Button size="sm" variant="outline" onClick={() => assign(c.id)}>
+                        Assign to me
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => toggleHold(c.id, !c.compliance_hold)}
+                    >
+                      {c.compliance_hold ? "Clear hold" : "Compliance hold"}
+                    </Button>
+                    {c.status !== "closed" && (
+                      <Button size="sm" onClick={() => close(c.id)}>
+                        Close
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
