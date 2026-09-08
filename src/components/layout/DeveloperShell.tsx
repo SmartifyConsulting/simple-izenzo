@@ -44,7 +44,7 @@ export function DeveloperShell({
 
   return (
     <div className="flex min-h-screen bg-slate-950 font-mono text-slate-200">
-      <aside className="flex w-64 shrink-0 flex-col border-r border-slate-800 bg-slate-900">
+      <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col border-r border-slate-800 bg-slate-900">
         <div className="border-b border-slate-800 px-4 py-4">
           <p className="text-[10px] uppercase tracking-[0.15em] text-emerald-400">Izenzo / Dev</p>
           <p className="mt-0.5 text-sm font-semibold text-slate-100">Command Centre</p>
@@ -56,7 +56,7 @@ export function DeveloperShell({
           <p className="truncate text-[11px] text-slate-500">{org?.name ?? "—"}</p>
         </div>
 
-        <nav className="flex-1 space-y-0.5 px-2 py-3">
+        <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-3">
           {NAV.map((item) => {
             const active = pathname === item.to || pathname.startsWith(item.to + "/");
             return (

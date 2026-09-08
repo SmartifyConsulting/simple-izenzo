@@ -33,7 +33,7 @@ export function GovernanceShell({
 
   return (
     <div className="flex min-h-screen bg-background">
-      <aside className="flex w-60 shrink-0 flex-col border-r border-border bg-sidebar">
+      <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r border-border bg-sidebar">
         <div className="border-b border-border px-4 py-4">
           <Logo className="h-6" />
         </div>
@@ -44,7 +44,7 @@ export function GovernanceShell({
           <p className="text-xs text-muted-foreground">Triage &amp; adjudicate</p>
         </div>
 
-        <nav className="flex-1 space-y-0.5 px-2 py-3">
+        <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-3">
           {NAV.map((item) => {
             const active = pathname === item.to || pathname.startsWith(item.to + "/");
             return (

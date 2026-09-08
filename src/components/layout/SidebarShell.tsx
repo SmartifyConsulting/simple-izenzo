@@ -33,7 +33,7 @@ export function SidebarShell({
 
   return (
     <div className="flex min-h-screen bg-background">
-      <aside className="flex w-60 shrink-0 flex-col border-r border-border bg-sidebar">
+      <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r border-border bg-sidebar">
         <div className="flex items-center justify-between border-b border-border px-4 py-4">
           <Logo className="h-6" />
           <LayoutSwitch />
@@ -43,7 +43,7 @@ export function SidebarShell({
           <WorkspaceSwitcher current={org?.name ?? "Trade Desk"} />
         </div>
 
-        <nav className="flex-1 space-y-0.5 px-2 py-3">
+        <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-3">
           {isSimpleMode ? (
             <>
               <Link
