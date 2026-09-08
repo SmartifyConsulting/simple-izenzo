@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { discoverCounterpartiesByQuery } from "@/lib/izenzo.functions";
 
 export const Route = createFileRoute("/_authenticated/discover")({
   head: () => ({
@@ -24,7 +25,7 @@ type Result = {
   id: string;
   name: string;
   detail: string;
-  source: "registry" | "web";
+  source: "registry" | "ai" | "ai_plus" | "web";
   matchPct?: number;
 };
 
@@ -32,8 +33,9 @@ function Discover() {
   const [role, setRole] = useState<Party>("buyer");
   const [query, setQuery] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
-  const [webResults, setWebResults] = useState<Result[] | null>(null);
-  const [webLoading, setWebLoading] = useState(false);
+  const [aiResults, setAiResults] = useState<Result[] | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   const { data: dbResults = [], isFetching } = useQuery({
     queryKey: ["discover-db", submittedQuery],
@@ -69,23 +71,54 @@ function Discover() {
     const trimmed = q.trim();
     if (!trimmed) return;
     setSubmittedQuery(trimmed);
-    setWebLoading(true);
-    setWebResults(null);
+    setAiLoading(true);
+    setAiResults(null);
+    setAiError(null);
     try {
-      const { data, error } = await supabase.functions.invoke("counterparty-discovery", {
-        body: { query: trimmed, role },
-      });
-      if (error) throw error;
-      setWebResults((data?.results ?? []) as Result[]);
-    } catch {
-      // Live web discovery isn't configured yet — registry results still show below.
-      setWebResults([]);
+      const [ai, aiPlus, web] = await Promise.allSettled([
+        discoverCounterpartiesByQuery({ data: { query: trimmed, role, kind: "ai" } }),
+        discoverCounterpartiesByQuery({ data: { query: trimmed, role, kind: "ai_plus" } }),
+        supabase.functions.invoke("counterparty-discovery", { body: { query: trimmed, role } }),
+      ]);
+
+      const collected: Result[] = [];
+      if (ai.status === "fulfilled") {
+        collected.push(
+          ...ai.value.candidates.map((c, i) => ({
+            id: `ai-${i}-${c.name}`,
+            name: c.name,
+            detail: [c.jurisdiction, c.sector].filter(Boolean).join(" · "),
+            source: "ai" as const,
+            matchPct: c.score,
+          })),
+        );
+      }
+      if (aiPlus.status === "fulfilled") {
+        collected.push(
+          ...aiPlus.value.candidates.map((c, i) => ({
+            id: `ai-plus-${i}-${c.name}`,
+            name: c.name,
+            detail: [c.jurisdiction, c.sector].filter(Boolean).join(" · "),
+            source: "ai_plus" as const,
+            matchPct: c.score,
+          })),
+        );
+      }
+      if (web.status === "fulfilled" && !web.value.error) {
+        collected.push(...((web.value.data?.results ?? []) as Result[]));
+      }
+
+      if (ai.status === "rejected" && aiPlus.status === "rejected") {
+        setAiError((ai.reason as Error)?.message ?? "AI discovery is unavailable right now.");
+      }
+
+      setAiResults(collected);
     } finally {
-      setWebLoading(false);
+      setAiLoading(false);
     }
   }
 
-  const results = [...dbResults, ...(webResults ?? [])];
+  const results = [...dbResults, ...(aiResults ?? [])];
 
   return (
     <AppShell
@@ -97,7 +130,8 @@ function Discover() {
           <Search className="h-4 w-4 text-primary" /> Find Counterparties + Company Register
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
-          One search checks counterparties and the company register together.
+          One search checks counterparties and the company register together, then asks AI and AI+ to
+          propose further candidates.
         </p>
 
         <div className="mt-4 grid grid-cols-2 overflow-hidden rounded-lg border border-border text-sm">
@@ -122,7 +156,7 @@ function Discover() {
             onKeyDown={(e) => e.key === "Enter" && runSearch(query)}
             placeholder="Search counterparties and registered companies"
           />
-          <Button onClick={() => runSearch(query)} disabled={isFetching || webLoading} className="gap-2">
+          <Button onClick={() => runSearch(query)} disabled={isFetching || aiLoading} className="gap-2">
             <Search className="h-4 w-4" /> Search
           </Button>
         </div>
@@ -151,15 +185,19 @@ function Discover() {
 
           <div className="mt-4 flex items-center gap-6 text-sm">
             <Stat label="Registry" value={dbResults.length} />
-            <Stat label="Web" value={webResults?.length ?? 0} icon={<Sparkles className="h-3.5 w-3.5" />} />
+            <Stat
+              label="AI Discovery"
+              value={aiResults?.length ?? 0}
+              icon={<Sparkles className="h-3.5 w-3.5 text-primary" />}
+            />
             <Stat label="Total" value={results.length} />
           </div>
 
           <div className="mt-4 divide-y divide-border overflow-hidden rounded-xl border border-border">
-            {(isFetching || webLoading) && (
-              <p className="p-6 text-sm text-muted-foreground">Searching…</p>
+            {(isFetching || aiLoading) && (
+              <p className="p-6 text-sm text-muted-foreground">Searching — asking AI and AI+…</p>
             )}
-            {!isFetching && !webLoading && results.length === 0 && (
+            {!isFetching && !aiLoading && results.length === 0 && (
               <p className="p-6 text-sm text-muted-foreground">No matches yet — try a different search.</p>
             )}
             {results.map((r) => (
@@ -167,9 +205,19 @@ function Discover() {
                 <div className="min-w-0">
                   <p className="flex items-center gap-2 text-sm font-semibold">
                     {r.name}
-                    {r.source === "web" && (
+                    {r.source === "ai" && (
                       <span className="flex items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
-                        <Sparkles className="h-2.5 w-2.5" /> Web discovered
+                        <Sparkles className="h-2.5 w-2.5" /> AI
+                      </span>
+                    )}
+                    {r.source === "ai_plus" && (
+                      <span className="flex items-center gap-1 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                        <Sparkles className="h-2.5 w-2.5" /> AI+
+                      </span>
+                    )}
+                    {r.source === "web" && (
+                      <span className="flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        Web discovered
                       </span>
                     )}
                   </p>
@@ -190,10 +238,9 @@ function Discover() {
             ))}
           </div>
 
-          {webResults !== null && webResults.length === 0 && (
+          {aiError && (
             <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-              <ExternalLink className="h-3 w-3" /> Live web discovery isn't connected yet — showing registry
-              results only.
+              <ExternalLink className="h-3 w-3" /> {aiError} Registry results still show above.
             </p>
           )}
         </div>

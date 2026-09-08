@@ -288,6 +288,54 @@ export const searchCounterparties = createServerFn({ method: "POST" })
     return { candidates: inserted ?? [], model };
   });
 
+/** Free-text AI/AI+ counterparty discovery for the Discover Counterparties screen — not tied to
+ * a transaction, so results are returned to the caller rather than written to `counterparties`
+ * (that table requires a transaction_id). A person adds a result to a real case from there. */
+export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) =>
+    z
+      .object({
+        query: z.string().min(2).max(300),
+        role: z.enum(["buyer", "seller"]),
+        kind: z.enum(["ai", "ai_plus"]),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const apiKey = process.env["LOVABLE_API_KEY"];
+    if (!apiKey) throw new Error("AI is not configured");
+
+    const counterpart = data.role === "buyer" ? "suppliers/sellers" : "buyers";
+    const system =
+      data.kind === "ai"
+        ? `You are the Izenzo counterparty search assistant. The user is a ${data.role} searching for ${counterpart}. Propose plausible counterparty organisations matching their search. You never decide and never contact anyone — you only propose candidates for a person to review. Respond with ONLY a JSON array, each item: {"name":string,"jurisdiction":string,"sector":string,"score":number 0-100,"rationale":string under 40 words}. No prose outside the array.`
+        : `You are Izenzo AI+, a deeper counterparty search. The user is a ${data.role} searching for ${counterpart}. Propose well-matched counterparty organisations, weighing jurisdiction fit, sector fit and plausibility. You never decide and never contact anyone. Respond with ONLY a JSON array, each item: {"name":string,"jurisdiction":string,"sector":string,"score":number 0-100,"rationale":string under 40 words covering fit and any risk notes}. No prose outside the array.`;
+
+    const prompt = `Search: "${data.query}"\nRole: ${data.role}\nPropose 4-6 candidates.`;
+
+    const model = data.kind === "ai" ? "google/gemini-3.7-flash" : "openai/gpt-5.4";
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: prompt },
+        ],
+      }),
+    });
+    if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
+    if (res.status === 402) throw new Error("AI credits are exhausted for this workspace.");
+    if (!res.ok) throw new Error("AI request failed");
+    const json = (await res.json()) as { choices: { message: { content: string } }[] };
+    const output = json.choices?.[0]?.message?.content ?? "";
+    const candidates = parseCandidates(output);
+
+    return { candidates, model, kind: data.kind };
+  });
+
 /** AI and AI+ proposals. AI proposes; a person always confirms. */
 export const runAiProposal = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
