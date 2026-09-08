@@ -127,6 +127,7 @@ function AdminPage() {
 
 function UsersTab() {
   const qc = useQueryClient();
+  const [search, setSearch] = useState("");
 
   const { data: users = [] } = useQuery({
     queryKey: ["admin-users"],
@@ -169,13 +170,27 @@ function UsersTab() {
     }
   }
 
+  const q = search.trim().toLowerCase();
+  const filteredUsers = q
+    ? users.filter((u) => (u.full_name ?? "").toLowerCase().includes(q) || (u.email ?? "").toLowerCase().includes(q))
+    : users;
+
   return (
-    <div className="overflow-hidden rounded-md border border-border">
-      {users.length === 0 ? (
-        <p className="p-6 text-sm text-muted-foreground">No users yet.</p>
+    <div>
+      <div className="mb-3">
+        <Input
+          placeholder="Search by name or email…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-sm"
+        />
+      </div>
+      <div className="overflow-hidden rounded-md border border-border">
+      {filteredUsers.length === 0 ? (
+        <p className="p-6 text-sm text-muted-foreground">{users.length === 0 ? "No users yet." : "No users match your search."}</p>
       ) : (
         <ul className="divide-y divide-border">
-          {users.map((u) => {
+          {filteredUsers.map((u) => {
             const isUserAdmin = adminIds.has(u.id);
             return (
               <li key={u.id} className="flex items-center justify-between gap-3 p-4 text-sm">
@@ -198,6 +213,7 @@ function UsersTab() {
           })}
         </ul>
       )}
+      </div>
     </div>
   );
 }
@@ -207,6 +223,7 @@ function TokensTab() {
   const [issue, setIssue] = useState({ orgId: "", amount: "1" });
   const [nudge, setNudge] = useState({ orgId: "", title: "", body: "" });
   const [countryFilter, setCountryFilter] = useState("");
+  const [orgSearch, setOrgSearch] = useState("");
 
   const { data: orgs = [] } = useQuery({
     queryKey: ["admin-orgs"],
@@ -218,7 +235,10 @@ function TokensTab() {
   });
 
   const countries = Array.from(new Set(orgs.map((o) => o.country).filter(Boolean))) as string[];
-  const filteredOrgs = countryFilter ? orgs.filter((o) => o.country === countryFilter) : orgs;
+  const orgQ = orgSearch.trim().toLowerCase();
+  const filteredOrgs = orgs
+    .filter((o) => !countryFilter || o.country === countryFilter)
+    .filter((o) => !orgQ || o.name.toLowerCase().includes(orgQ));
 
   function nudgeRow(orgId: string) {
     setNudge((n) => ({ ...n, orgId }));
@@ -338,20 +358,31 @@ function TokensTab() {
             <h2 className="text-sm font-semibold">Organisations</h2>
             <p className="text-xs text-muted-foreground">{filteredOrgs.length} of {orgs.length}</p>
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Filter by country</Label>
-            <select
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-              value={countryFilter}
-              onChange={(e) => setCountryFilter(e.target.value)}
-            >
-              <option value="">All countries</option>
-              {countries.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Search</Label>
+              <Input
+                placeholder="Search organisations…"
+                value={orgSearch}
+                onChange={(e) => setOrgSearch(e.target.value)}
+                className="h-9 w-56"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Filter by country</Label>
+              <select
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                value={countryFilter}
+                onChange={(e) => setCountryFilter(e.target.value)}
+              >
+                <option value="">All countries</option>
+                {countries.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
         {filteredOrgs.length === 0 ? (
@@ -2240,6 +2271,7 @@ function SupportTab() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reply, setReply] = useState("");
   const [replyVisibility, setReplyVisibility] = useState<"customer" | "internal">("customer");
+  const [ticketSearch, setTicketSearch] = useState("");
 
   const { data: tickets = [], isLoading } = useQuery({
     queryKey: ["admin-support-tickets"],
@@ -2360,6 +2392,12 @@ function SupportTab() {
   }
 
   const selected = tickets.find((t) => t.id === selectedId);
+  const ticketQ = ticketSearch.trim().toLowerCase();
+  const filteredTickets = tickets.filter((t) => {
+    if (!ticketQ) return true;
+    const orgName = (t as { organisations?: { name?: string } | null }).organisations?.name ?? "";
+    return t.subject.toLowerCase().includes(ticketQ) || orgName.toLowerCase().includes(ticketQ);
+  });
 
   return (
     <div className="space-y-6">
@@ -2378,11 +2416,19 @@ function SupportTab() {
         </p>
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-sm font-semibold">Support Tickets</h2>
-        <Button size="sm" variant="outline" onClick={exportCsv}>
-          Export CSV
-        </Button>
+        <div className="flex items-center gap-2">
+          <Input
+            placeholder="Search by subject or org…"
+            value={ticketSearch}
+            onChange={(e) => setTicketSearch(e.target.value)}
+            className="h-8 w-56"
+          />
+          <Button size="sm" variant="outline" onClick={exportCsv}>
+            Export CSV
+          </Button>
+        </div>
       </div>
 
       {selected ? (
@@ -2479,11 +2525,13 @@ function SupportTab() {
         </div>
       ) : isLoading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : tickets.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No tickets yet.</p>
+      ) : filteredTickets.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          {tickets.length === 0 ? "No tickets yet." : "No tickets match your search."}
+        </p>
       ) : (
         <ul className="space-y-2">
-          {tickets.map((t) => {
+          {filteredTickets.map((t) => {
             const orgName = (t as { organisations?: { name?: string } | null }).organisations?.name;
             const breached = new Date(t.sla_due_at) < new Date() && !["resolved", "closed"].includes(t.status);
             return (
