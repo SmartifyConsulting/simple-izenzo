@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { when, type Transaction } from "@/lib/tx";
 import { issueEvidencePack, downloadEvidencePack } from "@/lib/evidencePack.functions";
+import { IntegrationsTab } from "@/components/admin/IntegrationsTab";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
@@ -43,6 +44,7 @@ const ADMIN_GROUPS: { id: string; label: string; tabs: { value: string; label: s
     tabs: [
       { value: "users", label: "Users", Component: UsersTab },
       { value: "api-keys", label: "API Keys", Component: ApiKeysTab },
+      { value: "integrations", label: "Integrations", Component: IntegrationsTab },
     ],
   },
   {
