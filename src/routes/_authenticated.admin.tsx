@@ -55,7 +55,7 @@ const ADMIN_GROUPS: { id: string; label: string; tabs: AdminTab[] }[] = [
     tabs: [
       { value: "users", label: "Users", Component: UsersTab },
       { value: "api-keys", label: "API Keys", Component: ApiKeysTab },
-      { value: "integrations", label: "Integrations", Component: IntegrationsTab, superuserOnly: true },
+      { value: "integrations", label: "Integrations", Component: IntegrationsTab },
       { value: "activity-log", label: "Activity Log", Component: AuditLogTab, superuserOnly: true },
     ],
   },
