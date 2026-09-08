@@ -1,5 +1,5 @@
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { LayoutGrid, Waypoints, GitBranch, Check, ChevronsUpDown } from "lucide-react";
+import { LayoutGrid, Waypoints, GitBranch, Grid3x3, Check, ChevronsUpDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,18 +14,22 @@ const VIEWS = [
   { key: "classic", label: "Classic", blurb: "Full nav, step by step", icon: LayoutGrid, to: "/dashboard" as const },
   { key: "guided", label: "Simple Mode", blurb: "Flight-search style, one form", icon: Waypoints, to: "/guided" as const },
   { key: "workflow", label: "Workflow View", blurb: "The gate flowchart, your step highlighted", icon: GitBranch, to: "/workflow" as const },
+  { key: "workflow-grid", label: "Workflow Grid", blurb: "The same flowchart, on its grid backdrop", icon: Grid3x3, to: "/workflow-grid" as const },
 ];
 
-/** Lets the user jump between the three Trade Desk views — Classic, Simple Mode, Workflow View —
- * from any of them, not just the two the pre-existing "Switch to Version 1" button covered. */
+/** Lets the user jump between the four Trade Desk views — Classic, Simple Mode, Workflow View,
+ * Workflow Grid — from any of them, not just the two the pre-existing "Switch to Version 1"
+ * button covered. */
 export function ViewSwitcher({ variant = "compact" }: { variant?: "block" | "compact" }) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const activeKey = pathname.startsWith("/guided")
     ? "guided"
-    : pathname.startsWith("/workflow")
-      ? "workflow"
-      : "classic";
+    : pathname.startsWith("/workflow-grid")
+      ? "workflow-grid"
+      : pathname.startsWith("/workflow")
+        ? "workflow"
+        : "classic";
   const activeView = VIEWS.find((v) => v.key === activeKey)!;
 
   return (

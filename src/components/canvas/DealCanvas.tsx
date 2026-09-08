@@ -40,11 +40,15 @@ export function DealCanvas({
   reload,
   deals,
   onSelectDeal,
+  gridBackground = true,
 }: {
   tx: Transaction;
   reload: () => void;
   deals?: Transaction[];
   onSelectDeal?: (id: string) => void;
+  /** Set false for a clean flowchart with no grid backdrop (Workflow View); the grid stays on
+   * everywhere else, including Workflow Grid, by default. */
+  gridBackground?: boolean;
 }) {
   const [panel, setPanel] = useState<{ stage: StageKey; step: string } | null>(null);
   const stateOf = useNodeState(tx);
@@ -77,7 +81,7 @@ export function DealCanvas({
     tx.stage === "trading" && ["search", "ai", "ai-plus", "counterparties"].includes(tx.step);
 
   return (
-    <div className="ink-grid relative rounded-3xl border border-border p-4 sm:p-7">
+    <div className={cn("relative rounded-3xl border border-border p-4 sm:p-7", gridBackground && "ink-grid")}>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
           <p className="label-caps">Live deal canvas</p>
