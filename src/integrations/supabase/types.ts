@@ -658,6 +658,176 @@ export type Database = {
           },
         ]
       }
+      support_tickets: {
+        Row: {
+          assigned_agent_id: string | null
+          closed_at: string | null
+          created_at: string
+          id: string
+          org_id: string
+          priority: string
+          related_release: string | null
+          requester_id: string
+          resolved_at: string | null
+          sla_due_at: string
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_agent_id?: string | null
+          closed_at?: string | null
+          created_at?: string
+          id?: string
+          org_id: string
+          priority?: string
+          related_release?: string | null
+          requester_id?: string
+          resolved_at?: string | null
+          sla_due_at: string
+          status?: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_agent_id?: string | null
+          closed_at?: string | null
+          created_at?: string
+          id?: string
+          org_id?: string
+          priority?: string
+          related_release?: string | null
+          requester_id?: string
+          resolved_at?: string | null
+          sla_due_at?: string
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_ticket_messages: {
+        Row: {
+          author_id: string
+          body: string
+          created_at: string
+          id: string
+          ticket_id: string
+          visibility: string
+        }
+        Insert: {
+          author_id?: string
+          body: string
+          created_at?: string
+          id?: string
+          ticket_id: string
+          visibility?: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          ticket_id?: string
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_ticket_events: {
+        Row: {
+          actor_id: string
+          created_at: string
+          event_type: string
+          id: string
+          new_status: string | null
+          note: string | null
+          previous_status: string | null
+          ticket_id: string
+        }
+        Insert: {
+          actor_id?: string
+          created_at?: string
+          event_type: string
+          id?: string
+          new_status?: string | null
+          note?: string | null
+          previous_status?: string | null
+          ticket_id: string
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          new_status?: string | null
+          note?: string | null
+          previous_status?: string | null
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_events_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_skip_events: {
+        Row: {
+          channel: string
+          created_at: string
+          event_type: string
+          fallback_channel: string
+          id: string
+          reason: string
+          related_ticket_id: string | null
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          event_type: string
+          fallback_channel?: string
+          id?: string
+          reason?: string
+          related_ticket_id?: string | null
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          event_type?: string
+          fallback_channel?: string
+          id?: string
+          reason?: string
+          related_ticket_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_skip_events_related_ticket_id_fkey"
+            columns: ["related_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       counterparties: {
         Row: {
           chosen_at: string | null
@@ -1863,6 +2033,30 @@ export type Database = {
           id: string
           raw_key: string
         }[]
+      }
+      support_create_ticket: {
+        Args: { p_description: string; p_priority?: string; p_subject: string }
+        Returns: string
+      }
+      support_customer_reply: {
+        Args: { p_body: string; p_ticket_id: string }
+        Returns: undefined
+      }
+      support_agent_reply: {
+        Args: { p_body: string; p_ticket_id: string; p_visibility: string }
+        Returns: undefined
+      }
+      support_assign: {
+        Args: { p_agent_id: string; p_ticket_id: string }
+        Returns: undefined
+      }
+      support_escalate: {
+        Args: { p_reason: string; p_related_release?: string; p_ticket_id: string }
+        Returns: undefined
+      }
+      support_set_status: {
+        Args: { p_status: string; p_ticket_id: string }
+        Returns: undefined
       }
       admin_api_suspend_key: { Args: { p_id: string }; Returns: undefined }
       admin_case_approve_decision: {

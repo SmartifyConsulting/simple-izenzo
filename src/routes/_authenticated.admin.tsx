@@ -59,6 +59,7 @@ function AdminPage() {
           <TabsTrigger value="compliance-cases">Compliance Cases</TabsTrigger>
           <TabsTrigger value="funders">Funders</TabsTrigger>
           <TabsTrigger value="api-keys">API Keys</TabsTrigger>
+          <TabsTrigger value="support">Support</TabsTrigger>
           <TabsTrigger value="reporting">Reporting</TabsTrigger>
         </TabsList>
         <TabsContent value="users" className="mt-6">
@@ -84,6 +85,9 @@ function AdminPage() {
         </TabsContent>
         <TabsContent value="api-keys" className="mt-6">
           <ApiKeysTab />
+        </TabsContent>
+        <TabsContent value="support" className="mt-6">
+          <SupportTab />
         </TabsContent>
         <TabsContent value="reporting" className="mt-6">
           <ReportingTab />
@@ -2078,6 +2082,295 @@ function ApiKeysTab() {
           </ul>
         )}
       </div>
+    </div>
+  );
+}
+
+const TICKET_STATUS_LABEL: Record<string, string> = {
+  open: "Open",
+  in_progress: "In progress",
+  waiting_on_customer: "Waiting on customer",
+  escalated: "Escalated",
+  resolved: "Resolved",
+  closed: "Closed",
+};
+
+function SupportTab() {
+  const qc = useQueryClient();
+  const { profile } = useAuth();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [reply, setReply] = useState("");
+  const [replyVisibility, setReplyVisibility] = useState<"customer" | "internal">("customer");
+
+  const { data: tickets = [], isLoading } = useQuery({
+    queryKey: ["admin-support-tickets"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("support_tickets")
+        .select("*, organisations(name)")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: messages = [] } = useQuery({
+    queryKey: ["admin-support-ticket-messages", selectedId],
+    enabled: Boolean(selectedId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("support_ticket_messages")
+        .select("*")
+        .eq("ticket_id", selectedId!)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: channelSettings } = useQuery({
+    queryKey: ["admin-notification-channels"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("admin_settings")
+        .select("*")
+        .in("key", ["sms_channel", "whatsapp_channel"]);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  async function refresh() {
+    await qc.invalidateQueries({ queryKey: ["admin-support-tickets"] });
+    if (selectedId) await qc.invalidateQueries({ queryKey: ["admin-support-ticket-messages", selectedId] });
+  }
+
+  async function sendReply() {
+    if (!selectedId || !reply.trim()) return;
+    const { error } = await supabase.rpc("support_agent_reply", {
+      p_ticket_id: selectedId,
+      p_body: reply,
+      p_visibility: replyVisibility,
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setReply("");
+    toast.success(replyVisibility === "internal" ? "Internal note added" : "Reply sent to customer");
+    await refresh();
+  }
+
+  async function assignToMe(id: string) {
+    if (!profile) return;
+    const { error } = await supabase.rpc("support_assign", { p_ticket_id: id, p_agent_id: profile.id });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Assigned to you");
+    await refresh();
+  }
+
+  async function escalate(id: string) {
+    const reason = window.prompt("Escalation reason (required):");
+    if (!reason) return;
+    const { error } = await supabase.rpc("support_escalate", { p_ticket_id: id, p_reason: reason });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Escalated to engineer on call");
+    await refresh();
+  }
+
+  async function setStatus(id: string, status: string) {
+    const { error } = await supabase.rpc("support_set_status", {
+      p_ticket_id: id,
+      p_status: status as "open" | "in_progress" | "waiting_on_customer" | "escalated" | "resolved" | "closed",
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Status updated");
+    await refresh();
+  }
+
+  function exportCsv() {
+    const rows = [
+      ["id", "org", "subject", "priority", "status", "sla_due_at", "created_at"],
+      ...tickets.map((t) => [
+        t.id,
+        (t as { organisations?: { name?: string } | null }).organisations?.name ?? "",
+        t.subject,
+        t.priority,
+        t.status,
+        t.sla_due_at,
+        t.created_at,
+      ]),
+    ];
+    const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "support_tickets.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  const selected = tickets.find((t) => t.id === selectedId);
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-md border border-border p-3 text-sm">
+        <p className="font-medium">Notification channels</p>
+        <div className="mt-1.5 flex flex-wrap gap-2">
+          {(channelSettings ?? []).map((s) => (
+            <Badge key={s.key} variant="secondary" className="font-normal">
+              {s.key === "sms_channel" ? "SMS" : "WhatsApp"}: Not Configured
+            </Badge>
+          ))}
+        </div>
+        <p className="mt-1.5 text-xs text-muted-foreground">
+          All notifications fall back to in-app/email. Skipped sends are audited in
+          notification_skip_events. Nothing blocks or unlocks based on notification status.
+        </p>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold">Support Tickets</h2>
+        <Button size="sm" variant="outline" onClick={exportCsv}>
+          Export CSV
+        </Button>
+      </div>
+
+      {selected ? (
+        <div className="space-y-4">
+          <Button size="sm" variant="ghost" onClick={() => setSelectedId(null)}>
+            ← Back to tickets
+          </Button>
+          <div className="rounded-md border border-border p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold">{selected.subject}</p>
+                <p className="text-xs text-muted-foreground">
+                  SLA due {new Date(selected.sla_due_at).toLocaleString()}
+                  {new Date(selected.sla_due_at) < new Date() && !["resolved", "closed"].includes(selected.status) && (
+                    <span className="ml-1 text-destructive">— breached</span>
+                  )}
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Badge variant="outline" className="font-normal">
+                  {TICKET_STATUS_LABEL[selected.status] ?? selected.status}
+                </Badge>
+                {!selected.assigned_agent_id && (
+                  <Button size="sm" variant="outline" onClick={() => assignToMe(selected.id)}>
+                    Assign to me
+                  </Button>
+                )}
+                {selected.status !== "escalated" && (
+                  <Button size="sm" variant="outline" onClick={() => escalate(selected.id)}>
+                    Escalate
+                  </Button>
+                )}
+                <select
+                  className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                  value={selected.status}
+                  onChange={(e) => setStatus(selected.id, e.target.value)}
+                >
+                  {Object.keys(TICKET_STATUS_LABEL).map((s) => (
+                    <option key={s} value={s}>
+                      {TICKET_STATUS_LABEL[s]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <ul className="mt-4 space-y-3">
+              {messages.map((m) => (
+                <li
+                  key={m.id}
+                  className={
+                    m.visibility === "internal"
+                      ? "rounded-md border border-warning/40 bg-warning/10 p-3 text-sm"
+                      : "rounded-md bg-muted/40 p-3 text-sm"
+                  }
+                >
+                  {m.visibility === "internal" && (
+                    <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-warning">
+                      Internal note — never visible to the customer
+                    </p>
+                  )}
+                  <p>{m.body}</p>
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center gap-3 text-xs">
+                <label className="flex items-center gap-1.5">
+                  <input
+                    type="radio"
+                    checked={replyVisibility === "customer"}
+                    onChange={() => setReplyVisibility("customer")}
+                  />
+                  Reply to customer
+                </label>
+                <label className="flex items-center gap-1.5">
+                  <input
+                    type="radio"
+                    checked={replyVisibility === "internal"}
+                    onChange={() => setReplyVisibility("internal")}
+                  />
+                  Internal note
+                </label>
+              </div>
+              <Textarea rows={2} value={reply} onChange={(e) => setReply(e.target.value)} />
+              <div className="text-right">
+                <Button size="sm" onClick={sendReply}>
+                  Send
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      ) : tickets.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No tickets yet.</p>
+      ) : (
+        <ul className="space-y-2">
+          {tickets.map((t) => {
+            const orgName = (t as { organisations?: { name?: string } | null }).organisations?.name;
+            const breached = new Date(t.sla_due_at) < new Date() && !["resolved", "closed"].includes(t.status);
+            return (
+              <li
+                key={t.id}
+                className="flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-md border border-border p-3 text-sm hover:bg-muted/40"
+                onClick={() => setSelectedId(t.id)}
+              >
+                <span>
+                  <span className="font-medium">{t.subject}</span> ({orgName}) · {t.priority}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  {breached && (
+                    <Badge variant="destructive" className="font-normal">
+                      SLA breached
+                    </Badge>
+                  )}
+                  <Badge variant="outline" className="font-normal">
+                    {TICKET_STATUS_LABEL[t.status] ?? t.status}
+                  </Badge>
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }

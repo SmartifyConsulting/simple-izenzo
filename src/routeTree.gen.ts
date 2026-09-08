@@ -24,6 +24,7 @@ import { Route as AuthenticatedFacilitationRouteImport } from './routes/_authent
 import { Route as AuthenticatedFunderRouteImport } from './routes/_authenticated.funder'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated.inbox'
 import { Route as AuthenticatedRegistryRouteImport } from './routes/_authenticated.registry'
+import { Route as AuthenticatedSupportRouteImport } from './routes/_authenticated.support'
 import { Route as AuthenticatedAccountBillingRouteImport } from './routes/_authenticated.account.billing'
 import { Route as AuthenticatedAccountSettingsRouteImport } from './routes/_authenticated.account.settings'
 import { Route as AuthenticatedTransactionsNewRouteImport } from './routes/_authenticated.transactions.new'
@@ -104,6 +105,11 @@ const AuthenticatedRegistryRoute = AuthenticatedRegistryRouteImport.update({
   path: '/registry',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedSupportRoute = AuthenticatedSupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedAccountBillingRoute =
   AuthenticatedAccountBillingRouteImport.update({
     id: '/account/billing',
@@ -144,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/funder': typeof AuthenticatedFunderRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/registry': typeof AuthenticatedRegistryRoute
+  '/support': typeof AuthenticatedSupportRoute
   '/account/billing': typeof AuthenticatedAccountBillingRoute
   '/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/transactions/new': typeof AuthenticatedTransactionsNewRoute
@@ -164,6 +171,7 @@ export interface FileRoutesByTo {
   '/funder': typeof AuthenticatedFunderRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/registry': typeof AuthenticatedRegistryRoute
+  '/support': typeof AuthenticatedSupportRoute
   '/account/billing': typeof AuthenticatedAccountBillingRoute
   '/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/transactions/new': typeof AuthenticatedTransactionsNewRoute
@@ -186,6 +194,7 @@ export interface FileRoutesById {
   '/_authenticated/funder': typeof AuthenticatedFunderRoute
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
   '/_authenticated/registry': typeof AuthenticatedRegistryRoute
+  '/_authenticated/support': typeof AuthenticatedSupportRoute
   '/_authenticated/account/billing': typeof AuthenticatedAccountBillingRoute
   '/_authenticated/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/_authenticated/transactions/new': typeof AuthenticatedTransactionsNewRoute
@@ -208,6 +217,7 @@ export interface FileRouteTypes {
     | '/funder'
     | '/inbox'
     | '/registry'
+    | '/support'
     | '/account/billing'
     | '/account/settings'
     | '/transactions/new'
@@ -228,6 +238,7 @@ export interface FileRouteTypes {
     | '/funder'
     | '/inbox'
     | '/registry'
+    | '/support'
     | '/account/billing'
     | '/account/settings'
     | '/transactions/new'
@@ -249,6 +260,7 @@ export interface FileRouteTypes {
     | '/_authenticated/funder'
     | '/_authenticated/inbox'
     | '/_authenticated/registry'
+    | '/_authenticated/support'
     | '/_authenticated/account/billing'
     | '/_authenticated/account/settings'
     | '/_authenticated/transactions/new'
@@ -373,6 +385,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRegistryRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/support': {
+      id: '/_authenticated/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof AuthenticatedSupportRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/account/billing': {
       id: '/_authenticated/account/billing'
       path: '/account/billing'
@@ -412,6 +431,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedFunderRoute: typeof AuthenticatedFunderRoute
   AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
   AuthenticatedRegistryRoute: typeof AuthenticatedRegistryRoute
+  AuthenticatedSupportRoute: typeof AuthenticatedSupportRoute
   AuthenticatedAccountBillingRoute: typeof AuthenticatedAccountBillingRoute
   AuthenticatedAccountSettingsRoute: typeof AuthenticatedAccountSettingsRoute
   AuthenticatedTransactionsNewRoute: typeof AuthenticatedTransactionsNewRoute
@@ -426,6 +446,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedFunderRoute: AuthenticatedFunderRoute,
   AuthenticatedInboxRoute: AuthenticatedInboxRoute,
   AuthenticatedRegistryRoute: AuthenticatedRegistryRoute,
+  AuthenticatedSupportRoute: AuthenticatedSupportRoute,
   AuthenticatedAccountBillingRoute: AuthenticatedAccountBillingRoute,
   AuthenticatedAccountSettingsRoute: AuthenticatedAccountSettingsRoute,
   AuthenticatedTransactionsNewRoute: AuthenticatedTransactionsNewRoute,

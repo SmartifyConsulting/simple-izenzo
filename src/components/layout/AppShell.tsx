@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Building2,
   Search,
+  LifeBuoy,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,7 +45,7 @@ function NavLink({
   active,
   onClick,
 }: {
-  to: "/dashboard" | "/inbox" | "/credits" | "/registry" | "/facilitation";
+  to: "/dashboard" | "/inbox" | "/credits" | "/registry" | "/facilitation" | "/support";
   icon: typeof LayoutDashboard;
   label: string;
   active: boolean;
@@ -166,6 +167,13 @@ function SidebarBody({ onNavigate }: { onNavigate?: (() => void) | undefined }) 
           icon={Search}
           label="Unknown Counterparty"
           active={pathname.startsWith("/facilitation")}
+          onClick={onNavigate}
+        />
+        <NavLink
+          to="/support"
+          icon={LifeBuoy}
+          label="Support"
+          active={pathname.startsWith("/support")}
           onClick={onNavigate}
         />
       </nav>
