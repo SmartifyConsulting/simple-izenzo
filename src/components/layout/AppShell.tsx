@@ -210,12 +210,22 @@ export function AppShell({
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 pb-14 pt-6 sm:px-6">
-        <div className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4">
+      <main className={cn("mx-auto px-4 pb-14 sm:px-6", width, wide ? "pt-4" : "pt-6")}>
+        <div
+          className={cn(
+            "grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4",
+            wide ? "mb-3" : "mb-6",
+          )}
+        >
           <div className="min-w-0">
             {firstName && (
               <p
-                className="truncate text-[1.75rem] leading-[1.15] tracking-tight sm:text-[2rem]"
+                className={cn(
+                  "truncate leading-[1.15] tracking-tight",
+                  wide
+                    ? "text-[1.15rem] sm:text-[1.3rem]"
+                    : "text-[1.75rem] sm:text-[2rem]",
+                )}
                 style={{ fontFamily: "var(--font-greeting)", fontWeight: 700 }}
               >
                 {greeting()}, {firstName}
