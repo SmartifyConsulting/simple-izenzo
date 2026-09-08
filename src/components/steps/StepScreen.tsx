@@ -23,6 +23,7 @@ import { advance, fingerprintOf, money, recordEvent, shortHash, when, type Trans
 import { stepDef, POI_COST, WAD_COST, type StageKey } from "@/lib/spine";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
+import { routeIdentityVerification } from "@/lib/identityRouting";
 
 type Props = {
   tx: Transaction;
@@ -1230,15 +1231,27 @@ function WadStep({ tx, reload }: Props) {
       }
     >
       <ul className="space-y-2.5">
-        {WAD_CHECKS.map((c) => (
-          <li key={c.key} className="flex items-center gap-2.5 text-sm">
-            <Checkbox
-              checked={Boolean(checks[c.key])}
-              onCheckedChange={(v) => setChecks({ ...checks, [c.key]: Boolean(v) })}
-            />
-            {c.label}
-          </li>
-        ))}
+        {WAD_CHECKS.map((c) => {
+          const route = c.key === "kyc" ? routeIdentityVerification(tx.jurisdiction) : null;
+          return (
+            <li key={c.key} className="text-sm">
+              <div className="flex items-center gap-2.5">
+                <Checkbox
+                  checked={Boolean(checks[c.key])}
+                  onCheckedChange={(v) => setChecks({ ...checks, [c.key]: Boolean(v) })}
+                />
+                {c.label}
+              </div>
+              {route && (
+                <p className="ml-6 mt-1 text-xs text-muted-foreground">
+                  Identity verification route: <span className="font-medium">{route.provider}</span>
+                  {" — "}
+                  {route.note}
+                </p>
+              )}
+            </li>
+          );
+        })}
       </ul>
       <div className="mt-5">
         <Field label="Case notes">
