@@ -40,7 +40,7 @@ export function useModules(): ModuleDef[] {
     { to: "/registry", label: "Registry", icon: Building2, blurb: "Known businesses" },
     {
       to: "/facilitation",
-      label: "Unknown counterparty",
+      label: "Search Party",
       icon: Search,
       blurb: "Find and surface a party",
     },

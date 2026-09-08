@@ -19,22 +19,37 @@ const WORKSPACES = [
 /** Mirrors compliance-matching.lovable.app's "Switch Workspace" menu — Trade Desk, Governance
  * Console, Developer Centre — each its own shell (SidebarShell, GovernanceShell,
  * DeveloperShell) reading real data scoped by the signed-in account's own RLS access. */
-export function WorkspaceSwitcher({ current }: { current: string }) {
+export function WorkspaceSwitcher({
+  current,
+  variant = "block",
+}: {
+  current: string;
+  variant?: "block" | "compact";
+}) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const activeKey = pathname.startsWith("/developer") ? "developer" : pathname.startsWith("/governance") ? "governance" : "trade-desk";
+  const activeWorkspace = WORKSPACES.find((w) => w.key === activeKey);
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex w-full items-center justify-between gap-2 rounded-md border border-border px-2.5 py-2 text-left outline-none hover:bg-accent">
-        <span className="min-w-0">
-          <span className="block truncate text-sm font-semibold">{current}</span>
-          <span className="block truncate text-[11px] text-muted-foreground">
-            {WORKSPACES.find((w) => w.key === activeKey)?.blurb}
+      {variant === "compact" ? (
+        <DropdownMenuTrigger className="flex shrink-0 items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground outline-none hover:text-foreground">
+          {activeWorkspace && <activeWorkspace.icon className="h-3.5 w-3.5" />}
+          {activeWorkspace?.label ?? current}
+          <ChevronsUpDown className="h-3 w-3" />
+        </DropdownMenuTrigger>
+      ) : (
+        <DropdownMenuTrigger className="flex w-full items-center justify-between gap-2 rounded-md border border-border px-2.5 py-2 text-left outline-none hover:bg-accent">
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-semibold">{current}</span>
+            <span className="block truncate text-[11px] text-muted-foreground">
+              {activeWorkspace?.blurb}
+            </span>
           </span>
-        </span>
-        <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-      </DropdownMenuTrigger>
+          <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+        </DropdownMenuTrigger>
+      )}
       <DropdownMenuContent align="start" className="w-64">
         <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
           Switch workspace

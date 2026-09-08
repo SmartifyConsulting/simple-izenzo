@@ -13,22 +13,18 @@ export function ModulesShowcase() {
 
   return (
     <section className="mt-8">
-      <p className="label-caps">All modules</p>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Everything available in the classic layout, laid out here to plan how each folds into
-        Simple Mode.
-      </p>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="flex gap-2">
         {modules.map((m, i) => (
-          <CanvasNode
-            key={m.to}
-            label={m.label}
-            blurb={m.blurb}
-            icon={m.icon}
-            state={pathname.startsWith(m.to) ? "active" : "open"}
-            delay={i * 60}
-            onClick={() => navigate({ to: m.to })}
-          />
+          <div key={m.to} className="min-w-0 flex-1">
+            <CanvasNode
+              label={m.label}
+              icon={m.icon}
+              state={pathname.startsWith(m.to) ? "active" : "open"}
+              delay={i * 60}
+              compact
+              onClick={() => navigate({ to: m.to })}
+            />
+          </div>
         ))}
       </div>
     </section>

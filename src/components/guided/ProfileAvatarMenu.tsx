@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Building2, Bell, LayoutDashboard, Coins, LifeBuoy, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { useModules } from "@/lib/useModules";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,19 +11,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const ITEMS = [
-  { to: "/registry", label: "Business Registry", icon: Building2 },
-  { to: "/inbox", label: "Notifications", icon: Bell },
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/credits", label: "Tokens", icon: Coins },
-  { to: "/support", label: "Support", icon: LifeBuoy },
-] as const;
-
-/** Simple Mode's own compact profile menu — a single avatar trigger bundling the destinations
- * a Simple Mode user needs most, so the page stays usable without the detailed sidebar. */
+/** Simple Mode's own compact profile menu — same names and order as the Modules row below the
+ * board, so the two stay consistent rather than presenting two different destination lists. */
 export function ProfileAvatarMenu() {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
+  const modules = useModules();
 
   return (
     <DropdownMenu>
@@ -42,7 +36,7 @@ export function ProfileAvatarMenu() {
           {profile?.email}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {ITEMS.map((item) => (
+        {modules.map((item) => (
           <DropdownMenuItem key={item.to} asChild>
             <Link to={item.to} className="flex items-center">
               <item.icon className="mr-2 h-3.5 w-3.5" /> {item.label}

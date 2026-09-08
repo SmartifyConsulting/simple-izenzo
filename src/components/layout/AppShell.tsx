@@ -17,6 +17,7 @@ import { Logo } from "@/components/Logo";
 import { useLayoutPreference, setLayoutPreference } from "@/lib/layoutPreference";
 import { SidebarShell } from "@/components/layout/SidebarShell";
 import { useModules } from "@/lib/useModules";
+import { WorkspaceSwitcher } from "@/components/layout/WorkspaceSwitcher";
 
 function greeting() {
   const hour = new Date().getHours();
@@ -153,6 +154,7 @@ function ClassicShell({
             <Logo onDark className="h-7 w-auto" />
           </Link>
           <ModuleLauncher />
+          <WorkspaceSwitcher current={org?.name ?? "Trade Desk"} variant="compact" />
           <div className="min-w-0 flex-1" />
           {org && (
             <Link
