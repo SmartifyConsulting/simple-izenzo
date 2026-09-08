@@ -180,7 +180,12 @@ function GuidedSetup({
         )}
       </div>
 
-      <ProviderCard provider={provider} row={byProvider[provider.id]} onChanged={onChanged} />
+      <ProviderCard
+        key={provider.id}
+        provider={provider}
+        row={byProvider[provider.id]}
+        onChanged={onChanged}
+      />
 
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="outline" disabled={index === 0} onClick={() => setIndex((i) => i - 1)}>
