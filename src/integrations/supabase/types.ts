@@ -58,6 +58,121 @@ export type Database = {
           },
         ]
       }
+      registry_companies: {
+        Row: {
+          claimed_org_id: string | null
+          country: string
+          created_at: string
+          created_by: string | null
+          id: string
+          import_batch_id: string | null
+          legal_name: string
+          licence_ref: string | null
+          observed_date: string | null
+          readiness_state: string
+          registration_no: string | null
+          sector: string | null
+          source_name: string | null
+          source_type: string
+          trading_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          claimed_org_id?: string | null
+          country: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          import_batch_id?: string | null
+          legal_name: string
+          licence_ref?: string | null
+          observed_date?: string | null
+          readiness_state?: string
+          registration_no?: string | null
+          sector?: string | null
+          source_name?: string | null
+          source_type?: string
+          trading_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          claimed_org_id?: string | null
+          country?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          import_batch_id?: string | null
+          legal_name?: string
+          licence_ref?: string | null
+          observed_date?: string | null
+          readiness_state?: string
+          registration_no?: string | null
+          sector?: string | null
+          source_name?: string | null
+          source_type?: string
+          trading_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "registry_companies_claimed_org_id_fkey"
+            columns: ["claimed_org_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      registry_claims: {
+        Row: {
+          claimant_id: string
+          claimant_role: string
+          company_id: string
+          created_at: string
+          decision_reason: string | null
+          evidence_note: string | null
+          evidence_url: string | null
+          id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          claimant_id?: string
+          claimant_role: string
+          company_id: string
+          created_at?: string
+          decision_reason?: string | null
+          evidence_note?: string | null
+          evidence_url?: string | null
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          claimant_id?: string
+          claimant_role?: string
+          company_id?: string
+          created_at?: string
+          decision_reason?: string | null
+          evidence_note?: string | null
+          evidence_url?: string | null
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "registry_claims_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "registry_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bid_offers: {
         Row: {
           created_at: string
@@ -804,6 +919,29 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_decide_registry_claim: {
+        Args: {
+          p_claim_id: string
+          p_decision: string
+          p_reason?: string | null
+        }
+        Returns: undefined
+      }
+      admin_registry_create_company: {
+        Args: {
+          p_country: string
+          p_legal_name: string
+          p_readiness_state?: string
+          p_registration_no?: string | null
+          p_sector?: string | null
+          p_source_name?: string | null
+        }
+        Returns: string
+      }
+      admin_registry_set_readiness: {
+        Args: { p_company_id: string; p_state: string }
+        Returns: undefined
+      }
       atomic_token_adjust: {
         Args: {
           p_delta: number

@@ -52,6 +52,7 @@ function AdminPage() {
         <TabsList>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="tokens">Tokens</TabsTrigger>
+          <TabsTrigger value="registry">Registry</TabsTrigger>
           <TabsTrigger value="reporting">Reporting</TabsTrigger>
         </TabsList>
         <TabsContent value="users" className="mt-6">
@@ -59,6 +60,9 @@ function AdminPage() {
         </TabsContent>
         <TabsContent value="tokens" className="mt-6">
           <TokensTab />
+        </TabsContent>
+        <TabsContent value="registry" className="mt-6">
+          <RegistryTab />
         </TabsContent>
         <TabsContent value="reporting" className="mt-6">
           <ReportingTab />
@@ -321,6 +325,149 @@ function TokensTab() {
             ))}
           </ul>
         )}
+      </div>
+    </div>
+  );
+}
+
+function RegistryTab() {
+  const qc = useQueryClient();
+
+  const { data: claims = [], isLoading } = useQuery({
+    queryKey: ["admin-registry-claims"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("registry_claims")
+        .select("*, registry_companies(legal_name, country, readiness_state)")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: companies = [] } = useQuery({
+    queryKey: ["admin-registry-companies"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("registry_companies")
+        .select("*")
+        .order("legal_name");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  async function decide(claimId: string, decision: "approved" | "rejected" | "more_information_required") {
+    const reason =
+      decision === "rejected" ? window.prompt("Rejection reason (required):") : null;
+    if (decision === "rejected" && !reason) return;
+    const { error } = await supabase.rpc("admin_decide_registry_claim", {
+      p_claim_id: claimId,
+      p_decision: decision,
+      p_reason: reason,
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Claim updated");
+    await qc.invalidateQueries({ queryKey: ["admin-registry-claims"] });
+    await qc.invalidateQueries({ queryKey: ["admin-registry-companies"] });
+  }
+
+  async function setReadiness(companyId: string, state: string) {
+    const { error } = await supabase.rpc("admin_registry_set_readiness", {
+      p_company_id: companyId,
+      p_state: state,
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Readiness updated");
+    await qc.invalidateQueries({ queryKey: ["admin-registry-companies"] });
+  }
+
+  const pending = claims.filter((c) => c.status === "submitted" || c.status === "more_information_required");
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-sm font-semibold">Claims awaiting review</h2>
+        {isLoading ? (
+          <p className="mt-3 text-sm text-muted-foreground">Loading…</p>
+        ) : pending.length === 0 ? (
+          <p className="mt-3 text-sm text-muted-foreground">No claims waiting for review.</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-border rounded-md border border-border">
+            {pending.map((c) => (
+              <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+                <div>
+                  <p className="text-sm font-medium">
+                    {(c as { registry_companies?: { legal_name: string } }).registry_companies?.legal_name ??
+                      "Unknown company"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Claimant role: {c.claimant_role} · {when(c.created_at)}
+                  </p>
+                  {c.evidence_note && (
+                    <p className="mt-1 text-xs text-muted-foreground">{c.evidence_note}</p>
+                  )}
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <Button size="sm" variant="outline" onClick={() => decide(c.id, "more_information_required")}>
+                    Request info
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => decide(c.id, "rejected")}>
+                    Reject
+                  </Button>
+                  <Button size="sm" onClick={() => decide(c.id, "approved")}>
+                    Approve
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div>
+        <h2 className="text-sm font-semibold">Company readiness</h2>
+        <ul className="mt-3 divide-y divide-border rounded-md border border-border">
+          {companies.map((co) => (
+            <li key={co.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+              <div>
+                <p className="text-sm font-medium">{co.legal_name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {co.country} · {co.sector ?? "—"} · {co.source_type}
+                </p>
+              </div>
+              <select
+                className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                value={co.readiness_state}
+                onChange={(e) => setReadiness(co.id, e.target.value)}
+              >
+                {[
+                  "seed_only",
+                  "sample_only",
+                  "demo_only",
+                  "licence_pending",
+                  "provider_pending",
+                  "quarantined",
+                  "duplicate_unresolved",
+                  "disputed",
+                  "privacy_hold",
+                  "public_search_ready",
+                  "demo_ready",
+                ].map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );

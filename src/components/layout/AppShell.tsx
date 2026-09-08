@@ -10,6 +10,7 @@ import {
   Receipt,
   LayoutDashboard,
   ChevronRight,
+  Building2,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,7 +43,7 @@ function NavLink({
   active,
   onClick,
 }: {
-  to: "/dashboard" | "/inbox" | "/credits";
+  to: "/dashboard" | "/inbox" | "/credits" | "/registry";
   icon: typeof LayoutDashboard;
   label: string;
   active: boolean;
@@ -150,6 +151,13 @@ function SidebarBody({ onNavigate }: { onNavigate?: (() => void) | undefined }) 
           icon={Coins}
           label="Token Management"
           active={pathname.startsWith("/credits")}
+          onClick={onNavigate}
+        />
+        <NavLink
+          to="/registry"
+          icon={Building2}
+          label="Business Registry"
+          active={pathname.startsWith("/registry")}
           onClick={onNavigate}
         />
       </nav>
