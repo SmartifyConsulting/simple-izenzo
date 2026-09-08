@@ -1,12 +1,12 @@
 /** AES-GCM encryption for stored third-party credentials.
  * The key never leaves the server; it lives in the INTEGRATION_ENCRYPTION_KEY secret. */
 
-function keyMaterial(): Uint8Array {
+function keyMaterial(): Uint8Array<ArrayBuffer> {
   const raw = process.env["INTEGRATION_ENCRYPTION_KEY"];
   if (!raw) throw new Error("Credential encryption key is not configured.");
   const bytes = new TextEncoder().encode(raw);
   // Fold to exactly 32 bytes so any secret length works.
-  const out = new Uint8Array(32);
+  const out = new Uint8Array(new ArrayBuffer(32));
   for (let i = 0; i < bytes.length; i++) out[i % 32] = (out[i % 32]! ^ bytes[i]!) & 0xff;
   return out;
 }
@@ -24,15 +24,15 @@ function toBase64(bytes: Uint8Array) {
   return btoa(s);
 }
 
-function fromBase64(value: string) {
+function fromBase64(value: string): Uint8Array<ArrayBuffer> {
   const bin = atob(value);
-  const out = new Uint8Array(bin.length);
+  const out = new Uint8Array(new ArrayBuffer(bin.length));
   for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
   return out;
 }
 
 export async function encryptSecrets(secrets: Record<string, string>): Promise<string> {
-  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const iv = crypto.getRandomValues(new Uint8Array(new ArrayBuffer(12)));
   const data = new TextEncoder().encode(JSON.stringify(secrets));
   const cipher = new Uint8Array(
     await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await aesKey(), data),
