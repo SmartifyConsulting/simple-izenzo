@@ -815,6 +815,91 @@ function useCounterparties(txId: string) {
   });
 }
 
+const RATING_BADGE_CLASS: Record<string, string> = {
+  trusted: "bg-success text-white",
+  neutral: "bg-muted-foreground text-white",
+  flagged: "bg-destructive text-white",
+};
+
+const RATING_DISCLAIMER =
+  "This rating is informational only. It does not replace KYC, KYB, sanctions/PEP screening or any WaD gate.";
+
+function RatingBadge({ c }: { c: { rating_band: string | null; rating_override: string | null } }) {
+  const effective = c.rating_override ?? c.rating_band;
+  if (!effective) return null;
+  return (
+    <Badge variant="outline" className={cn("font-normal border-transparent capitalize", RATING_BADGE_CLASS[effective])}>
+      {effective}
+      {c.rating_override && " (overridden)"}
+    </Badge>
+  );
+}
+
+function RatingDrawer({
+  c,
+}: {
+  c: {
+    id: string;
+    score: number | null;
+    rationale: string | null;
+    source: string | null;
+    rating_band: string | null;
+    rating_version: string;
+    rating_override: string | null;
+    rating_override_reason: string | null;
+  };
+}) {
+  const { roles } = useAuth();
+  const qc = useQueryClient();
+  const isAdmin = roles.includes("admin");
+
+  async function override() {
+    const value = window.prompt("Override rating (trusted / neutral / flagged):");
+    if (!value || !["trusted", "neutral", "flagged"].includes(value)) {
+      if (value) toast.error("Must be trusted, neutral or flagged");
+      return;
+    }
+    const reason = window.prompt("Override reason (required):");
+    if (!reason) return;
+    const { error } = await supabase.rpc("admin_override_counterparty_rating", {
+      p_counterparty_id: c.id,
+      p_override: value,
+      p_reason: reason,
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Rating overridden");
+    await qc.invalidateQueries({ queryKey: ["counterparties"] });
+  }
+
+  return (
+    <details className="mt-1.5">
+      <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+        Why this rating?
+      </summary>
+      <div className="mt-1.5 space-y-1 rounded-md bg-muted/40 p-2.5 text-xs text-muted-foreground">
+        <p>Score: {c.score ?? "—"}</p>
+        <p>Source: {c.source ?? "—"}</p>
+        {c.rationale && <p>Rationale: {c.rationale}</p>}
+        <p>Methodology: {c.rating_version}</p>
+        {c.rating_override && (
+          <p className="text-warning">
+            Overridden to {c.rating_override}: {c.rating_override_reason}
+          </p>
+        )}
+        <p className="pt-1 italic">{RATING_DISCLAIMER}</p>
+        {isAdmin && (
+          <Button size="sm" variant="outline" className="mt-1" onClick={override}>
+            Override rating
+          </Button>
+        )}
+      </div>
+    </details>
+  );
+}
+
 function CounterpartyList({ tx, reload }: Props) {
   const { data: cps = [] } = useCounterparties(tx.id);
   const qc = useQueryClient();
@@ -841,14 +926,16 @@ function CounterpartyList({ tx, reload }: Props) {
       ) : (
         <ul className="divide-y divide-border">
           {cps.map((c) => (
-            <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-              <div>
+            <li key={c.id} className="flex flex-wrap items-start justify-between gap-3 py-3">
+              <div className="min-w-0">
                 <p className="text-sm font-medium">{c.name}</p>
                 <p className="text-xs text-muted-foreground">
                   {c.jurisdiction ?? "—"} · surfaced by {c.source ?? "search"}
                 </p>
+                <RatingDrawer c={c} />
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center gap-2">
+                <RatingBadge c={c} />
                 <Badge variant="secondary" className="font-normal capitalize">
                   {c.status}
                 </Badge>
@@ -1178,6 +1265,19 @@ function WadStep({ tx, reload }: Props) {
   const [checks, setChecks] = useState<Record<string, boolean>>({});
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
+  const { data: chosenCp } = useQuery({
+    queryKey: ["chosen-counterparty-rating", tx.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("counterparties")
+        .select("name, rating_band, rating_override")
+        .eq("transaction_id", tx.id)
+        .eq("status", "chosen")
+        .maybeSingle();
+      return data;
+    },
+  });
+  const flagged = chosenCp && (chosenCp.rating_override ?? chosenCp.rating_band) === "flagged";
 
   const allChecked = WAD_CHECKS.every((c) => checks[c.key]);
 
@@ -1230,6 +1330,13 @@ function WadStep({ tx, reload }: Props) {
         </div>
       }
     >
+      {flagged && (
+        <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+          <strong>{chosenCp?.name}</strong> carries a Flagged counterparty rating. This requires
+          admin review before WaD proceeds — the rating itself does not clear or block any
+          compliance gate on its own.
+        </div>
+      )}
       <ul className="space-y-2.5">
         {WAD_CHECKS.map((c) => {
           const route = c.key === "kyc" ? routeIdentityVerification(tx.jurisdiction) : null;

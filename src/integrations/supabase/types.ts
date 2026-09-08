@@ -359,6 +359,14 @@ export type Database = {
           jurisdiction: string | null
           media_flags: Json
           name: string
+          rating_band: string | null
+          rating_computed_at: string | null
+          rating_override: string | null
+          rating_override_at: string | null
+          rating_override_by: string | null
+          rating_override_expiry: string | null
+          rating_override_reason: string | null
+          rating_version: string
           rationale: string | null
           score: number | null
           sector: string | null
@@ -373,6 +381,14 @@ export type Database = {
           jurisdiction?: string | null
           media_flags?: Json
           name: string
+          rating_band?: string | null
+          rating_computed_at?: string | null
+          rating_override?: string | null
+          rating_override_at?: string | null
+          rating_override_by?: string | null
+          rating_override_expiry?: string | null
+          rating_override_reason?: string | null
+          rating_version?: string
           rationale?: string | null
           score?: number | null
           sector?: string | null
@@ -387,6 +403,14 @@ export type Database = {
           jurisdiction?: string | null
           media_flags?: Json
           name?: string
+          rating_band?: string | null
+          rating_computed_at?: string | null
+          rating_override?: string | null
+          rating_override_at?: string | null
+          rating_override_by?: string | null
+          rating_override_expiry?: string | null
+          rating_override_reason?: string | null
+          rating_version?: string
           rationale?: string | null
           score?: number | null
           sector?: string | null
@@ -1047,6 +1071,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_override_counterparty_rating: {
+        Args: {
+          p_counterparty_id: string
+          p_expiry?: string | null
+          p_override: string
+          p_reason: string
+        }
+        Returns: undefined
+      }
       admin_facilitation_assign: {
         Args: { p_case_id: string; p_owner_id: string }
         Returns: undefined
