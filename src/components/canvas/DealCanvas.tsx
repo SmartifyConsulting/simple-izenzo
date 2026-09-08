@@ -34,7 +34,17 @@ function useNodeState(tx: Transaction) {
   };
 }
 
-export function DealCanvas({ tx, reload }: { tx: Transaction; reload: () => void }) {
+export function DealCanvas({
+  tx,
+  reload,
+  deals,
+  onSelectDeal,
+}: {
+  tx: Transaction;
+  reload: () => void;
+  deals?: Transaction[];
+  onSelectDeal?: (id: string) => void;
+}) {
   const [panel, setPanel] = useState<{ stage: StageKey; step: string } | null>(null);
   const stateOf = useNodeState(tx);
 
