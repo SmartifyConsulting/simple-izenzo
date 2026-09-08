@@ -23,18 +23,49 @@ import {
   type IntegrationRow,
 } from "@/lib/integrations.functions";
 
+/** Most useful first — the order the guided setup walks through. */
+const GUIDED_ORDER = [
+  "resend",
+  "payfast",
+  "smile_identity",
+  "cipc",
+  "complyadvantage",
+  "exchangerate_host",
+];
+
+function guidedProviders(): IntegrationProvider[] {
+  const ranked = GUIDED_ORDER.map((id) => INTEGRATION_PROVIDERS.find((p) => p.id === id)).filter(
+    Boolean,
+  ) as IntegrationProvider[];
+  const rest = INTEGRATION_PROVIDERS.filter((p) => !GUIDED_ORDER.includes(p.id));
+  return [...ranked, ...rest];
+}
+
 export function IntegrationsTab() {
   const qc = useQueryClient();
   const load = useServerFn(listIntegrations);
-  const { data: rows = [], isLoading } = useQuery({
+  const { data: rows = [], isLoading, error } = useQuery({
     queryKey: ["integrations"],
     queryFn: () => load({ data: undefined as never }),
+    retry: false,
   });
+
+  const [guided, setGuided] = useState(false);
 
   const byProvider = useMemo(
     () => Object.fromEntries(rows.map((r) => [r.provider, r])) as Record<string, IntegrationRow>,
     [rows],
   );
+
+  const refresh = () => qc.invalidateQueries({ queryKey: ["integrations"] });
+
+  if (error) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        This area is restricted to the system administrator.
+      </p>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -42,32 +73,142 @@ export function IntegrationsTab() {
         <Lock className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
         <p className="text-xs text-muted-foreground">
           Every password, key and token on this page is encrypted before it is stored and is never
-          sent back to the browser unless you press <strong>Reveal</strong>. Only administrators can
-          open this page. Leave a secret field blank to keep the value already saved.
+          sent back to the browser unless you press <strong>Reveal</strong>. Only the system
+          administrator can open this page. Leave a secret field blank to keep the value already saved.
         </p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button size="sm" variant={guided ? "outline" : "default"} onClick={() => setGuided(false)}>
+          All services
+        </Button>
+        <Button size="sm" variant={guided ? "default" : "outline"} onClick={() => setGuided(true)}>
+          Guided setup
+        </Button>
+        <span className="text-xs text-muted-foreground">
+          Guided setup takes you through the services one at a time, in the order that matters most.
+        </span>
       </div>
 
       {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
 
-      {INTEGRATION_GROUPS.map((group) => {
-        const providers = INTEGRATION_PROVIDERS.filter((p) => p.group === group);
-        if (providers.length === 0) return null;
-        return (
-          <section key={group} className="space-y-3">
-            <h3 className="text-sm font-semibold">{group}</h3>
-            <div className="grid gap-4 xl:grid-cols-2">
-              {providers.map((p) => (
-                <ProviderCard
-                  key={p.id}
-                  provider={p}
-                  row={byProvider[p.id]}
-                  onChanged={() => qc.invalidateQueries({ queryKey: ["integrations"] })}
-                />
-              ))}
-            </div>
-          </section>
-        );
-      })}
+      {guided ? (
+        <GuidedSetup byProvider={byProvider} onChanged={refresh} />
+      ) : (
+        INTEGRATION_GROUPS.map((group) => {
+          const providers = INTEGRATION_PROVIDERS.filter((p) => p.group === group);
+          if (providers.length === 0) return null;
+          return (
+            <section key={group} className="space-y-3">
+              <h3 className="text-sm font-semibold">{group}</h3>
+              <div className="grid gap-4 xl:grid-cols-2">
+                {providers.map((p) => (
+                  <ProviderCard key={p.id} provider={p} row={byProvider[p.id]} onChanged={refresh} />
+                ))}
+              </div>
+            </section>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+function GuidedSetup({
+  byProvider,
+  onChanged,
+}: {
+  byProvider: Record<string, IntegrationRow>;
+  onChanged: () => void;
+}) {
+  const steps = useMemo(guidedProviders, []);
+  const [index, setIndex] = useState(0);
+  const [skipped, setSkipped] = useState<Record<string, boolean>>({});
+
+  const provider = steps[index]!;
+  const done = (id: string) => Boolean(byProvider[id]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-1.5">
+        {steps.map((p, i) => {
+          const state = done(p.id) ? "done" : skipped[p.id] ? "skipped" : "todo";
+          return (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => setIndex(i)}
+              className={`rounded-full border px-3 py-1 text-xs ${
+                i === index
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : state === "done"
+                    ? "border-emerald-600/40 bg-emerald-600/10 text-foreground"
+                    : state === "skipped"
+                      ? "border-border text-muted-foreground line-through"
+                      : "border-border text-muted-foreground"
+              }`}
+            >
+              {p.name}
+            </button>
+          );
+        })}
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        Step {index + 1} of {steps.length} · {steps.filter((p) => done(p.id)).length} set up
+      </p>
+
+      <div className="rounded-md border border-border bg-muted/30 p-4 text-xs text-muted-foreground">
+        <p className="font-medium text-foreground">What you need for {provider.name}</p>
+        <ul className="mt-2 list-disc space-y-1 pl-4">
+          {provider.fields.map((f) => (
+            <li key={f.key}>
+              <span className="text-foreground">{f.label}</span>
+              {f.help ? ` — ${f.help}` : ""}
+            </li>
+          ))}
+        </ul>
+        {provider.docsUrl && (
+          <a
+            href={provider.docsUrl}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="mt-2 inline-block underline"
+          >
+            Where to find these in the {provider.name} portal
+          </a>
+        )}
+      </div>
+
+      <ProviderCard
+        key={provider.id}
+        provider={provider}
+        row={byProvider[provider.id]}
+        onChanged={onChanged}
+      />
+
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" variant="outline" disabled={index === 0} onClick={() => setIndex((i) => i - 1)}>
+          Back
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => {
+            setSkipped((s) => ({ ...s, [provider.id]: true }));
+            setIndex((i) => Math.min(i + 1, steps.length - 1));
+          }}
+        >
+          Skip for now
+        </Button>
+        <Button
+          size="sm"
+          disabled={index === steps.length - 1}
+          onClick={() => setIndex((i) => Math.min(i + 1, steps.length - 1))}
+        >
+          Next
+        </Button>
+      </div>
     </div>
   );
 }

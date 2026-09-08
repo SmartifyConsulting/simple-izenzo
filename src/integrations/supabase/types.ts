@@ -1855,6 +1855,7 @@ export type Database = {
           email_verified_at: string | null
           full_name: string | null
           id: string
+          last_accessed_at: string | null
           login_count: number
           org_id: string | null
           seat: string
@@ -1867,6 +1868,7 @@ export type Database = {
           email_verified_at?: string | null
           full_name?: string | null
           id: string
+          last_accessed_at?: string | null
           login_count?: number
           org_id?: string | null
           seat?: string
@@ -1879,6 +1881,7 @@ export type Database = {
           email_verified_at?: string | null
           full_name?: string | null
           id?: string
+          last_accessed_at?: string | null
           login_count?: number
           org_id?: string | null
           seat?: string
