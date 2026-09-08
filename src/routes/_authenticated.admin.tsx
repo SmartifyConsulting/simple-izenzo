@@ -141,6 +141,8 @@ const SUPERUSER_EMAIL = "georgia.adams@smartify.co.za";
 
 function UsersTab() {
   const qc = useQueryClient();
+  const { profile } = useAuth();
+  const isSystemAdmin = profile?.email === SUPERUSER_EMAIL;
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"created" | "accessed">("created");
 
@@ -265,8 +267,17 @@ function UsersTab() {
                     >
                       <Lock className="h-3 w-3" /> Locked admin
                     </Badge>
-                  ) : (
+                  ) : isSystemAdmin ? (
                     <Button size="sm" variant="outline" onClick={() => toggleAdmin(u.id, isUserAdmin, u.email)}>
+                      {isUserAdmin ? "Revoke admin" : "Make admin"}
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled
+                      title="Only the system administrator can grant or revoke admin access"
+                    >
                       {isUserAdmin ? "Revoke admin" : "Make admin"}
                     </Button>
                   )}
