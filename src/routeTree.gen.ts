@@ -23,14 +23,17 @@ import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as WalkthroughRouteImport } from './routes/walkthrough'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
 import { Route as AuthenticatedAuditorRouteImport } from './routes/_authenticated.auditor'
+import { Route as AuthenticatedComplianceRouteImport } from './routes/_authenticated.compliance'
 import { Route as AuthenticatedCreditsRouteImport } from './routes/_authenticated.credits'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
 import { Route as AuthenticatedDiscoverRouteImport } from './routes/_authenticated.discover'
 import { Route as AuthenticatedFacilitationRouteImport } from './routes/_authenticated.facilitation'
 import { Route as AuthenticatedFunderRouteImport } from './routes/_authenticated.funder'
+import { Route as AuthenticatedGuidedRouteImport } from './routes/_authenticated.guided'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated.inbox'
 import { Route as AuthenticatedRegistryRouteImport } from './routes/_authenticated.registry'
 import { Route as AuthenticatedSupportRouteImport } from './routes/_authenticated.support'
+import { Route as AuthenticatedTradesRouteImport } from './routes/_authenticated.trades'
 import { Route as DocsApiRouteImport } from './routes/docs.api'
 import { Route as DocsWebhooksRouteImport } from './routes/docs.webhooks'
 import { Route as ProductsAuditLedgerRouteImport } from './routes/products.audit-ledger'
@@ -114,6 +117,11 @@ const AuthenticatedAuditorRoute = AuthenticatedAuditorRouteImport.update({
   path: '/auditor',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedComplianceRoute = AuthenticatedComplianceRouteImport.update({
+  id: '/compliance',
+  path: '/compliance',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedCreditsRoute = AuthenticatedCreditsRouteImport.update({
   id: '/credits',
   path: '/credits',
@@ -140,6 +148,11 @@ const AuthenticatedFunderRoute = AuthenticatedFunderRouteImport.update({
   path: '/funder',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedGuidedRoute = AuthenticatedGuidedRouteImport.update({
+  id: '/guided',
+  path: '/guided',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedInboxRoute = AuthenticatedInboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
@@ -153,6 +166,11 @@ const AuthenticatedRegistryRoute = AuthenticatedRegistryRouteImport.update({
 const AuthenticatedSupportRoute = AuthenticatedSupportRouteImport.update({
   id: '/support',
   path: '/support',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedTradesRoute = AuthenticatedTradesRouteImport.update({
+  id: '/trades',
+  path: '/trades',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const DocsApiRoute = DocsApiRouteImport.update({
@@ -240,14 +258,17 @@ export interface FileRoutesByFullPath {
   '/walkthrough': typeof WalkthroughRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/auditor': typeof AuthenticatedAuditorRoute
+  '/compliance': typeof AuthenticatedComplianceRoute
   '/credits': typeof AuthenticatedCreditsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/discover': typeof AuthenticatedDiscoverRoute
   '/facilitation': typeof AuthenticatedFacilitationRoute
   '/funder': typeof AuthenticatedFunderRoute
+  '/guided': typeof AuthenticatedGuidedRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/registry': typeof AuthenticatedRegistryRoute
   '/support': typeof AuthenticatedSupportRoute
+  '/trades': typeof AuthenticatedTradesRoute
   '/docs/api': typeof DocsApiRoute
   '/docs/webhooks': typeof DocsWebhooksRoute
   '/products/audit-ledger': typeof ProductsAuditLedgerRoute
@@ -276,14 +297,17 @@ export interface FileRoutesByTo {
   '/walkthrough': typeof WalkthroughRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/auditor': typeof AuthenticatedAuditorRoute
+  '/compliance': typeof AuthenticatedComplianceRoute
   '/credits': typeof AuthenticatedCreditsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/discover': typeof AuthenticatedDiscoverRoute
   '/facilitation': typeof AuthenticatedFacilitationRoute
   '/funder': typeof AuthenticatedFunderRoute
+  '/guided': typeof AuthenticatedGuidedRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/registry': typeof AuthenticatedRegistryRoute
   '/support': typeof AuthenticatedSupportRoute
+  '/trades': typeof AuthenticatedTradesRoute
   '/docs/api': typeof DocsApiRoute
   '/docs/webhooks': typeof DocsWebhooksRoute
   '/products/audit-ledger': typeof ProductsAuditLedgerRoute
@@ -314,14 +338,17 @@ export interface FileRoutesById {
   '/walkthrough': typeof WalkthroughRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/auditor': typeof AuthenticatedAuditorRoute
+  '/_authenticated/compliance': typeof AuthenticatedComplianceRoute
   '/_authenticated/credits': typeof AuthenticatedCreditsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/discover': typeof AuthenticatedDiscoverRoute
   '/_authenticated/facilitation': typeof AuthenticatedFacilitationRoute
   '/_authenticated/funder': typeof AuthenticatedFunderRoute
+  '/_authenticated/guided': typeof AuthenticatedGuidedRoute
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
   '/_authenticated/registry': typeof AuthenticatedRegistryRoute
   '/_authenticated/support': typeof AuthenticatedSupportRoute
+  '/_authenticated/trades': typeof AuthenticatedTradesRoute
   '/docs/api': typeof DocsApiRoute
   '/docs/webhooks': typeof DocsWebhooksRoute
   '/products/audit-ledger': typeof ProductsAuditLedgerRoute
@@ -352,14 +379,17 @@ export interface FileRouteTypes {
     | '/walkthrough'
     | '/admin'
     | '/auditor'
+    | '/compliance'
     | '/credits'
     | '/dashboard'
     | '/discover'
     | '/facilitation'
     | '/funder'
+    | '/guided'
     | '/inbox'
     | '/registry'
     | '/support'
+    | '/trades'
     | '/docs/api'
     | '/docs/webhooks'
     | '/products/audit-ledger'
@@ -388,14 +418,17 @@ export interface FileRouteTypes {
     | '/walkthrough'
     | '/admin'
     | '/auditor'
+    | '/compliance'
     | '/credits'
     | '/dashboard'
     | '/discover'
     | '/facilitation'
     | '/funder'
+    | '/guided'
     | '/inbox'
     | '/registry'
     | '/support'
+    | '/trades'
     | '/docs/api'
     | '/docs/webhooks'
     | '/products/audit-ledger'
@@ -425,14 +458,17 @@ export interface FileRouteTypes {
     | '/walkthrough'
     | '/_authenticated/admin'
     | '/_authenticated/auditor'
+    | '/_authenticated/compliance'
     | '/_authenticated/credits'
     | '/_authenticated/dashboard'
     | '/_authenticated/discover'
     | '/_authenticated/facilitation'
     | '/_authenticated/funder'
+    | '/_authenticated/guided'
     | '/_authenticated/inbox'
     | '/_authenticated/registry'
     | '/_authenticated/support'
+    | '/_authenticated/trades'
     | '/docs/api'
     | '/docs/webhooks'
     | '/products/audit-ledger'
@@ -569,6 +605,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAuditorRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/compliance': {
+      id: '/_authenticated/compliance'
+      path: '/compliance'
+      fullPath: '/compliance'
+      preLoaderRoute: typeof AuthenticatedComplianceRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/credits': {
       id: '/_authenticated/credits'
       path: '/credits'
@@ -604,6 +647,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFunderRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/guided': {
+      id: '/_authenticated/guided'
+      path: '/guided'
+      fullPath: '/guided'
+      preLoaderRoute: typeof AuthenticatedGuidedRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/inbox': {
       id: '/_authenticated/inbox'
       path: '/inbox'
@@ -623,6 +673,13 @@ declare module '@tanstack/react-router' {
       path: '/support'
       fullPath: '/support'
       preLoaderRoute: typeof AuthenticatedSupportRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/trades': {
+      id: '/_authenticated/trades'
+      path: '/trades'
+      fullPath: '/trades'
+      preLoaderRoute: typeof AuthenticatedTradesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/docs/api': {
@@ -722,14 +779,17 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedAuditorRoute: typeof AuthenticatedAuditorRoute
+  AuthenticatedComplianceRoute: typeof AuthenticatedComplianceRoute
   AuthenticatedCreditsRoute: typeof AuthenticatedCreditsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDiscoverRoute: typeof AuthenticatedDiscoverRoute
   AuthenticatedFacilitationRoute: typeof AuthenticatedFacilitationRoute
   AuthenticatedFunderRoute: typeof AuthenticatedFunderRoute
+  AuthenticatedGuidedRoute: typeof AuthenticatedGuidedRoute
   AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
   AuthenticatedRegistryRoute: typeof AuthenticatedRegistryRoute
   AuthenticatedSupportRoute: typeof AuthenticatedSupportRoute
+  AuthenticatedTradesRoute: typeof AuthenticatedTradesRoute
   AuthenticatedAccountBillingRoute: typeof AuthenticatedAccountBillingRoute
   AuthenticatedAccountSettingsRoute: typeof AuthenticatedAccountSettingsRoute
   AuthenticatedDealIdRoute: typeof AuthenticatedDealIdRoute
@@ -740,14 +800,17 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedAuditorRoute: AuthenticatedAuditorRoute,
+  AuthenticatedComplianceRoute: AuthenticatedComplianceRoute,
   AuthenticatedCreditsRoute: AuthenticatedCreditsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDiscoverRoute: AuthenticatedDiscoverRoute,
   AuthenticatedFacilitationRoute: AuthenticatedFacilitationRoute,
   AuthenticatedFunderRoute: AuthenticatedFunderRoute,
+  AuthenticatedGuidedRoute: AuthenticatedGuidedRoute,
   AuthenticatedInboxRoute: AuthenticatedInboxRoute,
   AuthenticatedRegistryRoute: AuthenticatedRegistryRoute,
   AuthenticatedSupportRoute: AuthenticatedSupportRoute,
+  AuthenticatedTradesRoute: AuthenticatedTradesRoute,
   AuthenticatedAccountBillingRoute: AuthenticatedAccountBillingRoute,
   AuthenticatedAccountSettingsRoute: AuthenticatedAccountSettingsRoute,
   AuthenticatedDealIdRoute: AuthenticatedDealIdRoute,
