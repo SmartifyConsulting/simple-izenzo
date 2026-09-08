@@ -72,6 +72,7 @@ function SettingsPage() {
                   fallback={(profile.full_name ?? profile.email ?? "?").slice(0, 2).toUpperCase()}
                   folder="users"
                   ownerId={profile.id}
+                  size="h-[5.6rem] w-[5.6rem]"
                   onUploaded={onAvatarUploaded}
                 />
               )}

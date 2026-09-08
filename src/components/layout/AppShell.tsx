@@ -13,6 +13,7 @@ import {
   Search,
   LifeBuoy,
   ShieldAlert,
+  Banknote,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -85,6 +86,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: (() => void) | undefined }) 
   const { roles } = useAuth();
   const isAuditor = roles.includes("auditor") || roles.includes("admin");
   const isAdmin = roles.includes("admin");
+  const isFunder = roles.includes("funder") || roles.includes("admin");
 
   const onGateway = pathname === "/dashboard" && Boolean(search.stage);
 
@@ -189,6 +191,16 @@ function SidebarBody({ onNavigate }: { onNavigate?: (() => void) | undefined }) 
           active={pathname.startsWith("/support")}
           onClick={onNavigate}
         />
+        {isFunder && (
+          <NavLink
+            to="/funder"
+            icon={Banknote}
+            label="Funder"
+            active={pathname.startsWith("/funder")}
+            onClick={onNavigate}
+            adminAccess={isAdmin}
+          />
+        )}
         {isAuditor && (
           <NavLink
             to="/auditor"
