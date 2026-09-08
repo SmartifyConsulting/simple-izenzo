@@ -1608,6 +1608,54 @@ export type Database = {
           },
         ]
       }
+      integration_credentials: {
+        Row: {
+          config: Json
+          created_at: string
+          enabled: boolean
+          environment: string
+          id: string
+          last_test_message: string | null
+          last_test_ok: boolean | null
+          last_tested_at: string | null
+          provider: string
+          secret_field_names: string[]
+          secrets_encrypted: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          enabled?: boolean
+          environment?: string
+          id?: string
+          last_test_message?: string | null
+          last_test_ok?: boolean | null
+          last_tested_at?: string | null
+          provider: string
+          secret_field_names?: string[]
+          secrets_encrypted?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          enabled?: boolean
+          environment?: string
+          id?: string
+          last_test_message?: string | null
+          last_test_ok?: boolean | null
+          last_tested_at?: string | null
+          provider?: string
+          secret_field_names?: string[]
+          secrets_encrypted?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       notification_skip_events: {
         Row: {
           channel: string
