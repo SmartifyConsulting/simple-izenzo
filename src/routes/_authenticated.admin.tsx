@@ -1,7 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
+import { History } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,9 @@ import { useAuth } from "@/lib/auth";
 import { when, type Transaction } from "@/lib/tx";
 import { issueEvidencePack, downloadEvidencePack } from "@/lib/evidencePack.functions";
 import { IntegrationsTab } from "@/components/admin/IntegrationsTab";
+import { AuditLogTab } from "@/components/admin/AuditLogTab";
+
+type AdminSearch = { group?: string; tab?: string; activityUser?: string };
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
@@ -24,6 +28,11 @@ export const Route = createFileRoute("/_authenticated/admin")({
       { property: "og:title", content: "System Admin — Izenzo" },
       { property: "og:description", content: "Administer users, tokens and reporting." },
     ],
+  }),
+  validateSearch: (search: Record<string, unknown>): AdminSearch => ({
+    ...(typeof search["group"] === "string" ? { group: search["group"] } : {}),
+    ...(typeof search["tab"] === "string" ? { tab: search["tab"] } : {}),
+    ...(typeof search["activityUser"] === "string" ? { activityUser: search["activityUser"] } : {}),
   }),
   component: AdminPage,
 });
@@ -47,6 +56,7 @@ const ADMIN_GROUPS: { id: string; label: string; tabs: AdminTab[] }[] = [
       { value: "users", label: "Users", Component: UsersTab },
       { value: "api-keys", label: "API Keys", Component: ApiKeysTab },
       { value: "integrations", label: "Integrations", Component: IntegrationsTab, superuserOnly: true },
+      { value: "activity-log", label: "Activity Log", Component: AuditLogTab, superuserOnly: true },
     ],
   },
   {
@@ -87,6 +97,8 @@ function AdminPage() {
   const { roles, user } = useAuth();
   const isAdmin = roles.includes("admin");
   const isSuperuser = (user?.email ?? "").toLowerCase() === SUPERUSER_EMAIL;
+  const search = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
 
   if (!isAdmin) {
     return (
@@ -103,9 +115,18 @@ function AdminPage() {
     tabs: g.tabs.filter((t) => !t.superuserOnly || isSuperuser),
   })).filter((g) => g.tabs.length > 0);
 
+  const activeGroup = groups.find((g) => g.id === search.group) ?? groups[0]!;
+  const activeTab = activeGroup.tabs.find((t) => t.value === search.tab) ?? activeGroup.tabs[0]!;
+
   return (
     <AppShell title="System Admin" description="Users, tokens and reporting for the whole book">
-      <Tabs defaultValue="platform">
+      <Tabs
+        value={activeGroup.id}
+        onValueChange={(v) => {
+          const g = groups.find((x) => x.id === v)!;
+          navigate({ search: { group: v, tab: g.tabs[0]!.value } });
+        }}
+      >
         <TabsList>
           {groups.map((g) => (
             <TabsTrigger key={g.id} value={g.id}>
@@ -115,7 +136,10 @@ function AdminPage() {
         </TabsList>
         {groups.map((g) => (
           <TabsContent key={g.id} value={g.id} className="mt-6">
-            <Tabs defaultValue={g.tabs[0]!.value}>
+            <Tabs
+              value={g.id === activeGroup.id ? activeTab.value : g.tabs[0]!.value}
+              onValueChange={(v) => navigate({ search: { group: g.id, tab: v } })}
+            >
               <TabsList>
                 {g.tabs.map((t) => (
                   <TabsTrigger key={t.value} value={t.value}>
@@ -125,7 +149,11 @@ function AdminPage() {
               </TabsList>
               {g.tabs.map((t) => (
                 <TabsContent key={t.value} value={t.value} className="mt-6">
-                  <t.Component />
+                  {t.value === "activity-log" ? (
+                    <AuditLogTab initialUserId={g.id === activeGroup.id ? search.activityUser : undefined} />
+                  ) : (
+                    <t.Component />
+                  )}
                 </TabsContent>
               ))}
             </Tabs>
@@ -140,6 +168,9 @@ const SUPERUSER_EMAIL = "georgia.adams@smartify.co.za";
 
 function UsersTab() {
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const isSuperuser = (user?.email ?? "").toLowerCase() === SUPERUSER_EMAIL;
+  const navigate = useNavigate({ from: "/admin" });
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"created" | "accessed">("created");
 
@@ -255,6 +286,19 @@ function UsersTab() {
                     <Badge variant="secondary" className="font-normal">
                       admin
                     </Badge>
+                  )}
+                  {isSuperuser && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8"
+                      title="View activity log"
+                      onClick={() =>
+                        navigate({ search: { group: "platform", tab: "activity-log", activityUser: u.id } })
+                      }
+                    >
+                      <History className="h-4 w-4" />
+                    </Button>
                   )}
                   <Button size="sm" variant="outline" onClick={() => toggleAdmin(u.id, isUserAdmin, u.email)}>
                     {isUserAdmin ? "Revoke admin" : "Make admin"}

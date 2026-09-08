@@ -9,6 +9,7 @@ import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { VerifyEmailDialog } from "@/components/auth/VerifyEmailDialog";
+import { ActivityTracker } from "@/components/ActivityTracker";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -62,6 +63,7 @@ function RequireEmailVerified() {
   if (needsOrg && !onOrgSetup && !mustVerify) return null;
   return (
     <>
+      <ActivityTracker />
       <Outlet />
       <VerifyEmailDialog open={mustVerify} />
     </>

@@ -359,12 +359,17 @@ function Dashboard() {
                               {money(t.price, t.currency)}
                             </td>
                             <td className="px-4 py-3">
-                              <Badge
-                                variant="outline"
-                                className={cn("font-normal border-transparent", STAGE_BADGE_CLASS[t.stage])}
-                              >
-                                {STAGE_ABBR[t.stage]} · {stepDef(t.stage, t.step)?.label ?? t.step}
-                              </Badge>
+                              <Link to="/tx/$id/$stage/$step" params={{ id: t.id, stage: t.stage, step: t.step }}>
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    "font-normal border-transparent transition-opacity hover:opacity-80",
+                                    STAGE_BADGE_CLASS[t.stage],
+                                  )}
+                                >
+                                  {STAGE_ABBR[t.stage]} · {stepDef(t.stage, t.step)?.label ?? t.step}
+                                </Badge>
+                              </Link>
                             </td>
                             {orgFilter === "all" && orgs.length > 1 && (
                               <td className="hidden px-4 py-3 lg:table-cell">
