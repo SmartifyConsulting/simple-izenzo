@@ -47,7 +47,7 @@ function NavLink({
   onClick,
   adminAccess,
 }: {
-  to: "/dashboard" | "/inbox" | "/credits" | "/registry" | "/facilitation" | "/support" | "/auditor" | "/admin";
+  to: "/dashboard" | "/inbox" | "/credits" | "/registry" | "/facilitation" | "/support" | "/auditor" | "/funder" | "/admin";
   icon: typeof LayoutDashboard;
   label: string;
   active: boolean;
