@@ -52,6 +52,11 @@ import { Route as AuthenticatedDeveloperSchemaRouteImport } from './routes/_auth
 import { Route as AuthenticatedDeveloperSupportRouteImport } from './routes/_authenticated.developer.support'
 import { Route as AuthenticatedDeveloperUsageRouteImport } from './routes/_authenticated.developer.usage'
 import { Route as AuthenticatedDeveloperWebhooksRouteImport } from './routes/_authenticated.developer.webhooks'
+import { Route as AuthenticatedGovernanceAuditsRouteImport } from './routes/_authenticated.governance.audits'
+import { Route as AuthenticatedGovernanceEntitiesRouteImport } from './routes/_authenticated.governance.entities'
+import { Route as AuthenticatedGovernanceHealthRouteImport } from './routes/_authenticated.governance.health'
+import { Route as AuthenticatedGovernanceNotificationsRouteImport } from './routes/_authenticated.governance.notifications'
+import { Route as AuthenticatedGovernanceTriageRouteImport } from './routes/_authenticated.governance.triage'
 import { Route as AuthenticatedTransactionsNewRouteImport } from './routes/_authenticated.transactions.new'
 import { Route as AuthenticatedTxIdStageStepRouteImport } from './routes/_authenticated.tx.$id.$stage.$step'
 
@@ -280,6 +285,36 @@ const AuthenticatedDeveloperWebhooksRoute =
     path: '/developer/webhooks',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedGovernanceAuditsRoute =
+  AuthenticatedGovernanceAuditsRouteImport.update({
+    id: '/governance/audits',
+    path: '/governance/audits',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedGovernanceEntitiesRoute =
+  AuthenticatedGovernanceEntitiesRouteImport.update({
+    id: '/governance/entities',
+    path: '/governance/entities',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedGovernanceHealthRoute =
+  AuthenticatedGovernanceHealthRouteImport.update({
+    id: '/governance/health',
+    path: '/governance/health',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedGovernanceNotificationsRoute =
+  AuthenticatedGovernanceNotificationsRouteImport.update({
+    id: '/governance/notifications',
+    path: '/governance/notifications',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedGovernanceTriageRoute =
+  AuthenticatedGovernanceTriageRouteImport.update({
+    id: '/governance/triage',
+    path: '/governance/triage',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedTransactionsNewRoute =
   AuthenticatedTransactionsNewRouteImport.update({
     id: '/transactions/new',
@@ -336,6 +371,11 @@ export interface FileRoutesByFullPath {
   '/developer/support': typeof AuthenticatedDeveloperSupportRoute
   '/developer/usage': typeof AuthenticatedDeveloperUsageRoute
   '/developer/webhooks': typeof AuthenticatedDeveloperWebhooksRoute
+  '/governance/audits': typeof AuthenticatedGovernanceAuditsRoute
+  '/governance/entities': typeof AuthenticatedGovernanceEntitiesRoute
+  '/governance/health': typeof AuthenticatedGovernanceHealthRoute
+  '/governance/notifications': typeof AuthenticatedGovernanceNotificationsRoute
+  '/governance/triage': typeof AuthenticatedGovernanceTriageRoute
   '/transactions/new': typeof AuthenticatedTransactionsNewRoute
   '/tx/$id/$stage/$step': typeof AuthenticatedTxIdStageStepRoute
 }
@@ -382,6 +422,11 @@ export interface FileRoutesByTo {
   '/developer/support': typeof AuthenticatedDeveloperSupportRoute
   '/developer/usage': typeof AuthenticatedDeveloperUsageRoute
   '/developer/webhooks': typeof AuthenticatedDeveloperWebhooksRoute
+  '/governance/audits': typeof AuthenticatedGovernanceAuditsRoute
+  '/governance/entities': typeof AuthenticatedGovernanceEntitiesRoute
+  '/governance/health': typeof AuthenticatedGovernanceHealthRoute
+  '/governance/notifications': typeof AuthenticatedGovernanceNotificationsRoute
+  '/governance/triage': typeof AuthenticatedGovernanceTriageRoute
   '/transactions/new': typeof AuthenticatedTransactionsNewRoute
   '/tx/$id/$stage/$step': typeof AuthenticatedTxIdStageStepRoute
 }
@@ -430,6 +475,11 @@ export interface FileRoutesById {
   '/_authenticated/developer/support': typeof AuthenticatedDeveloperSupportRoute
   '/_authenticated/developer/usage': typeof AuthenticatedDeveloperUsageRoute
   '/_authenticated/developer/webhooks': typeof AuthenticatedDeveloperWebhooksRoute
+  '/_authenticated/governance/audits': typeof AuthenticatedGovernanceAuditsRoute
+  '/_authenticated/governance/entities': typeof AuthenticatedGovernanceEntitiesRoute
+  '/_authenticated/governance/health': typeof AuthenticatedGovernanceHealthRoute
+  '/_authenticated/governance/notifications': typeof AuthenticatedGovernanceNotificationsRoute
+  '/_authenticated/governance/triage': typeof AuthenticatedGovernanceTriageRoute
   '/_authenticated/transactions/new': typeof AuthenticatedTransactionsNewRoute
   '/_authenticated/tx/$id/$stage/$step': typeof AuthenticatedTxIdStageStepRoute
 }
@@ -478,6 +528,11 @@ export interface FileRouteTypes {
     | '/developer/support'
     | '/developer/usage'
     | '/developer/webhooks'
+    | '/governance/audits'
+    | '/governance/entities'
+    | '/governance/health'
+    | '/governance/notifications'
+    | '/governance/triage'
     | '/transactions/new'
     | '/tx/$id/$stage/$step'
   fileRoutesByTo: FileRoutesByTo
@@ -524,6 +579,11 @@ export interface FileRouteTypes {
     | '/developer/support'
     | '/developer/usage'
     | '/developer/webhooks'
+    | '/governance/audits'
+    | '/governance/entities'
+    | '/governance/health'
+    | '/governance/notifications'
+    | '/governance/triage'
     | '/transactions/new'
     | '/tx/$id/$stage/$step'
   id:
@@ -571,6 +631,11 @@ export interface FileRouteTypes {
     | '/_authenticated/developer/support'
     | '/_authenticated/developer/usage'
     | '/_authenticated/developer/webhooks'
+    | '/_authenticated/governance/audits'
+    | '/_authenticated/governance/entities'
+    | '/_authenticated/governance/health'
+    | '/_authenticated/governance/notifications'
+    | '/_authenticated/governance/triage'
     | '/_authenticated/transactions/new'
     | '/_authenticated/tx/$id/$stage/$step'
   fileRoutesById: FileRoutesById
@@ -899,6 +964,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDeveloperWebhooksRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/governance/audits': {
+      id: '/_authenticated/governance/audits'
+      path: '/governance/audits'
+      fullPath: '/governance/audits'
+      preLoaderRoute: typeof AuthenticatedGovernanceAuditsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/governance/entities': {
+      id: '/_authenticated/governance/entities'
+      path: '/governance/entities'
+      fullPath: '/governance/entities'
+      preLoaderRoute: typeof AuthenticatedGovernanceEntitiesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/governance/health': {
+      id: '/_authenticated/governance/health'
+      path: '/governance/health'
+      fullPath: '/governance/health'
+      preLoaderRoute: typeof AuthenticatedGovernanceHealthRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/governance/notifications': {
+      id: '/_authenticated/governance/notifications'
+      path: '/governance/notifications'
+      fullPath: '/governance/notifications'
+      preLoaderRoute: typeof AuthenticatedGovernanceNotificationsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/governance/triage': {
+      id: '/_authenticated/governance/triage'
+      path: '/governance/triage'
+      fullPath: '/governance/triage'
+      preLoaderRoute: typeof AuthenticatedGovernanceTriageRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/transactions/new': {
       id: '/_authenticated/transactions/new'
       path: '/transactions/new'
@@ -940,6 +1040,11 @@ interface AuthenticatedRouteChildren {
   AuthenticatedDeveloperSupportRoute: typeof AuthenticatedDeveloperSupportRoute
   AuthenticatedDeveloperUsageRoute: typeof AuthenticatedDeveloperUsageRoute
   AuthenticatedDeveloperWebhooksRoute: typeof AuthenticatedDeveloperWebhooksRoute
+  AuthenticatedGovernanceAuditsRoute: typeof AuthenticatedGovernanceAuditsRoute
+  AuthenticatedGovernanceEntitiesRoute: typeof AuthenticatedGovernanceEntitiesRoute
+  AuthenticatedGovernanceHealthRoute: typeof AuthenticatedGovernanceHealthRoute
+  AuthenticatedGovernanceNotificationsRoute: typeof AuthenticatedGovernanceNotificationsRoute
+  AuthenticatedGovernanceTriageRoute: typeof AuthenticatedGovernanceTriageRoute
   AuthenticatedTransactionsNewRoute: typeof AuthenticatedTransactionsNewRoute
   AuthenticatedTxIdStageStepRoute: typeof AuthenticatedTxIdStageStepRoute
 }
@@ -969,6 +1074,12 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDeveloperSupportRoute: AuthenticatedDeveloperSupportRoute,
   AuthenticatedDeveloperUsageRoute: AuthenticatedDeveloperUsageRoute,
   AuthenticatedDeveloperWebhooksRoute: AuthenticatedDeveloperWebhooksRoute,
+  AuthenticatedGovernanceAuditsRoute: AuthenticatedGovernanceAuditsRoute,
+  AuthenticatedGovernanceEntitiesRoute: AuthenticatedGovernanceEntitiesRoute,
+  AuthenticatedGovernanceHealthRoute: AuthenticatedGovernanceHealthRoute,
+  AuthenticatedGovernanceNotificationsRoute:
+    AuthenticatedGovernanceNotificationsRoute,
+  AuthenticatedGovernanceTriageRoute: AuthenticatedGovernanceTriageRoute,
   AuthenticatedTransactionsNewRoute: AuthenticatedTransactionsNewRoute,
   AuthenticatedTxIdStageStepRoute: AuthenticatedTxIdStageStepRoute,
 }

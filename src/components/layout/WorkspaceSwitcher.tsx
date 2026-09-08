@@ -12,17 +12,17 @@ import { cn } from "@/lib/utils";
 
 const WORKSPACES = [
   { key: "trade-desk", label: "Trade Desk", blurb: "Operate live desk", icon: LayoutGrid, to: "/dashboard" as const, enabled: true },
-  { key: "governance", label: "Governance Console", blurb: "Triage & adjudicate", icon: ShieldAlert, to: "/auditor" as const, enabled: false },
+  { key: "governance", label: "Governance Console", blurb: "Triage & adjudicate", icon: ShieldAlert, to: "/governance/triage" as const, enabled: true },
   { key: "developer", label: "Developer Centre", blurb: "Keys, webhooks, schema", icon: TerminalSquare, to: "/developer/keys" as const, enabled: true },
 ];
 
 /** Mirrors compliance-matching.lovable.app's "Switch Workspace" menu — Trade Desk, Governance
- * Console, Developer Centre. Governance Console isn't built yet (needs its own data model for
- * Active Audits / Entity Verification) so it's shown but disabled, matching what exists today. */
+ * Console, Developer Centre — each its own shell (SidebarShell, GovernanceShell,
+ * DeveloperShell) reading real data scoped by the signed-in account's own RLS access. */
 export function WorkspaceSwitcher({ current }: { current: string }) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const activeKey = pathname.startsWith("/developer") ? "developer" : pathname.startsWith("/auditor") ? "governance" : "trade-desk";
+  const activeKey = pathname.startsWith("/developer") ? "developer" : pathname.startsWith("/governance") ? "governance" : "trade-desk";
 
   return (
     <DropdownMenu>

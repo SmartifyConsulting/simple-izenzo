@@ -38,7 +38,7 @@ function ApiKeysPage() {
   return (
     <DeveloperShell
       title="API Keys"
-      description="Engineers and integration owners issuing credentials and wiring back-office systems to Izenzo."
+      description="Credentials your systems use to call the Izenzo API — scoped, expiring, and revocable."
     >
       <div className="flex items-center justify-between rounded-md border border-slate-800 bg-slate-900 p-3">
         <div className="flex items-center gap-1 rounded-md border border-slate-800 bg-slate-950 p-1 text-xs">
@@ -57,8 +57,8 @@ function ApiKeysPage() {
         </div>
         <p className="text-[11px] text-slate-500">
           {env === "sandbox"
-            ? "Synthetic data. No real counterparties contacted, no credits burned."
-            : "Live effects real trades, real counterparties, real credit balances."}
+            ? "Sandbox keys only talk to test fixtures — nothing here touches real trades or balances."
+            : "Live keys act on real trades, real counterparties and real token balances."}
         </p>
       </div>
 
