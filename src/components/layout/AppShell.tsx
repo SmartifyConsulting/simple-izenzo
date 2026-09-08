@@ -45,12 +45,14 @@ function NavLink({
   label,
   active,
   onClick,
+  adminAccess,
 }: {
   to: "/dashboard" | "/inbox" | "/credits" | "/registry" | "/facilitation" | "/support" | "/auditor" | "/admin";
   icon: typeof LayoutDashboard;
   label: string;
   active: boolean;
   onClick?: (() => void) | undefined;
+  adminAccess?: boolean | undefined;
 }) {
   return (
     <Link
@@ -64,7 +66,15 @@ function NavLink({
       )}
     >
       <Icon className="h-4 w-4 shrink-0" />
-      {label}
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      {adminAccess && (
+        <span
+          title="Admins have access to this"
+          className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-warning text-[10px] font-bold leading-none text-warning-foreground"
+        >
+          A
+        </span>
+      )}
     </Link>
   );
 }
@@ -113,7 +123,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: (() => void) | undefined }) 
           onClick={() => setGatewayOpen((v) => !v)}
           className={cn(
             "flex w-full items-center gap-2.5 rounded px-2.5 py-2 text-sm transition-colors",
-            onGateway ? "text-white" : "text-white/90 hover:text-white",
+            onGateway ? "text-white" : "text-white/90 hover:bg-white/25 hover:text-white",
           )}
         >
           <ChevronRight className={cn("h-4 w-4 shrink-0 transition-transform", gatewayOpen && "rotate-90")} />
@@ -131,7 +141,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: (() => void) | undefined }) 
                   "flex items-center justify-between gap-2 truncate rounded px-2.5 py-1.5 text-sm transition-colors",
                   search.stage === s.key
                     ? "bg-sidebar-accent text-white"
-                    : "text-white/80 hover:bg-sidebar-accent/60 hover:text-white",
+                    : "text-white/80 hover:bg-white/25 hover:text-white",
                 )}
               >
                 <span className="truncate">{s.label}</span>
@@ -187,6 +197,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: (() => void) | undefined }) 
             label="Auditor Access"
             active={pathname.startsWith("/auditor")}
             onClick={onNavigate}
+            adminAccess={isAdmin}
           />
         )}
       </nav>
@@ -199,6 +210,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: (() => void) | undefined }) 
             label="Admin"
             active={pathname.startsWith("/admin")}
             onClick={onNavigate}
+            adminAccess
           />
         </div>
       )}
@@ -300,7 +312,7 @@ export function AppShell({
                 <div className="min-w-0 flex-1">
                   {firstName && (
                     <p
-                      className="truncate text-[2.025rem] leading-none tracking-tight sm:text-[2.25rem]"
+                      className="truncate text-[2.025rem] leading-[1.2] tracking-tight sm:text-[2.25rem]"
                       style={{ fontFamily: "var(--font-greeting)", fontWeight: 700 }}
                     >
                       {greeting()}, {firstName}
