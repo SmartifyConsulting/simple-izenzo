@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/layout/AppShell";
 import { TradingBoard } from "@/components/guided/TradingBoard";
+import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
 
 export const Route = createFileRoute("/_authenticated/guided")({
   head: () => ({
@@ -17,6 +18,7 @@ function Guided() {
     <AppShell
       title="Simple Mode"
       description="Buy on the left, sell on the right — matches aggregate in the middle as they happen."
+      actions={<ProfileAvatarMenu />}
     >
       <TradingBoard />
     </AppShell>
