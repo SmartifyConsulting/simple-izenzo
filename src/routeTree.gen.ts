@@ -28,8 +28,8 @@ import { Route as AuthenticatedRegistryRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedSupportRouteImport } from './routes/_authenticated.support'
 import { Route as AuthenticatedAccountBillingRouteImport } from './routes/_authenticated.account.billing'
 import { Route as AuthenticatedAccountSettingsRouteImport } from './routes/_authenticated.account.settings'
+import { Route as AuthenticatedDealIdRouteImport } from './routes/_authenticated.deal.$id'
 import { Route as AuthenticatedTransactionsNewRouteImport } from './routes/_authenticated.transactions.new'
-import { Route as AuthenticatedTxIdRouteImport } from './routes/_authenticated.tx.$id'
 import { Route as AuthenticatedTxIdStageStepRouteImport } from './routes/_authenticated.tx.$id.$stage.$step'
 
 const IndexRoute = IndexRouteImport.update({
@@ -129,22 +129,22 @@ const AuthenticatedAccountSettingsRoute =
     path: '/account/settings',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedDealIdRoute = AuthenticatedDealIdRouteImport.update({
+  id: '/deal/$id',
+  path: '/deal/$id',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedTransactionsNewRoute =
   AuthenticatedTransactionsNewRouteImport.update({
     id: '/transactions/new',
     path: '/transactions/new',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedTxIdRoute = AuthenticatedTxIdRouteImport.update({
-  id: '/tx/$id',
-  path: '/tx/$id',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
 const AuthenticatedTxIdStageStepRoute =
   AuthenticatedTxIdStageStepRouteImport.update({
-    id: '/$stage/$step',
-    path: '/$stage/$step',
-    getParentRoute: () => AuthenticatedTxIdRoute,
+    id: '/tx/$id/$stage/$step',
+    path: '/tx/$id/$stage/$step',
+    getParentRoute: () => AuthenticatedRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -166,8 +166,8 @@ export interface FileRoutesByFullPath {
   '/support': typeof AuthenticatedSupportRoute
   '/account/billing': typeof AuthenticatedAccountBillingRoute
   '/account/settings': typeof AuthenticatedAccountSettingsRoute
+  '/deal/$id': typeof AuthenticatedDealIdRoute
   '/transactions/new': typeof AuthenticatedTransactionsNewRoute
-  '/tx/$id': typeof AuthenticatedTxIdRouteWithChildren
   '/tx/$id/$stage/$step': typeof AuthenticatedTxIdStageStepRoute
 }
 export interface FileRoutesByTo {
@@ -189,8 +189,8 @@ export interface FileRoutesByTo {
   '/support': typeof AuthenticatedSupportRoute
   '/account/billing': typeof AuthenticatedAccountBillingRoute
   '/account/settings': typeof AuthenticatedAccountSettingsRoute
+  '/deal/$id': typeof AuthenticatedDealIdRoute
   '/transactions/new': typeof AuthenticatedTransactionsNewRoute
-  '/tx/$id': typeof AuthenticatedTxIdRouteWithChildren
   '/tx/$id/$stage/$step': typeof AuthenticatedTxIdStageStepRoute
 }
 export interface FileRoutesById {
@@ -214,8 +214,8 @@ export interface FileRoutesById {
   '/_authenticated/support': typeof AuthenticatedSupportRoute
   '/_authenticated/account/billing': typeof AuthenticatedAccountBillingRoute
   '/_authenticated/account/settings': typeof AuthenticatedAccountSettingsRoute
+  '/_authenticated/deal/$id': typeof AuthenticatedDealIdRoute
   '/_authenticated/transactions/new': typeof AuthenticatedTransactionsNewRoute
-  '/_authenticated/tx/$id': typeof AuthenticatedTxIdRouteWithChildren
   '/_authenticated/tx/$id/$stage/$step': typeof AuthenticatedTxIdStageStepRoute
 }
 export interface FileRouteTypes {
@@ -239,8 +239,8 @@ export interface FileRouteTypes {
     | '/support'
     | '/account/billing'
     | '/account/settings'
+    | '/deal/$id'
     | '/transactions/new'
-    | '/tx/$id'
     | '/tx/$id/$stage/$step'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -262,8 +262,8 @@ export interface FileRouteTypes {
     | '/support'
     | '/account/billing'
     | '/account/settings'
+    | '/deal/$id'
     | '/transactions/new'
-    | '/tx/$id'
     | '/tx/$id/$stage/$step'
   id:
     | '__root__'
@@ -286,8 +286,8 @@ export interface FileRouteTypes {
     | '/_authenticated/support'
     | '/_authenticated/account/billing'
     | '/_authenticated/account/settings'
+    | '/_authenticated/deal/$id'
     | '/_authenticated/transactions/new'
-    | '/_authenticated/tx/$id'
     | '/_authenticated/tx/$id/$stage/$step'
   fileRoutesById: FileRoutesById
 }
@@ -437,6 +437,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAccountSettingsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/deal/$id': {
+      id: '/_authenticated/deal/$id'
+      path: '/deal/$id'
+      fullPath: '/deal/$id'
+      preLoaderRoute: typeof AuthenticatedDealIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/transactions/new': {
       id: '/_authenticated/transactions/new'
       path: '/transactions/new'
@@ -444,33 +451,15 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTransactionsNewRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/tx/$id': {
-      id: '/_authenticated/tx/$id'
-      path: '/tx/$id'
-      fullPath: '/tx/$id'
-      preLoaderRoute: typeof AuthenticatedTxIdRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/tx/$id/$stage/$step': {
       id: '/_authenticated/tx/$id/$stage/$step'
-      path: '/$stage/$step'
+      path: '/tx/$id/$stage/$step'
       fullPath: '/tx/$id/$stage/$step'
       preLoaderRoute: typeof AuthenticatedTxIdStageStepRouteImport
-      parentRoute: typeof AuthenticatedTxIdRoute
+      parentRoute: typeof AuthenticatedRoute
     }
   }
 }
-
-interface AuthenticatedTxIdRouteChildren {
-  AuthenticatedTxIdStageStepRoute: typeof AuthenticatedTxIdStageStepRoute
-}
-
-const AuthenticatedTxIdRouteChildren: AuthenticatedTxIdRouteChildren = {
-  AuthenticatedTxIdStageStepRoute: AuthenticatedTxIdStageStepRoute,
-}
-
-const AuthenticatedTxIdRouteWithChildren =
-  AuthenticatedTxIdRoute._addFileChildren(AuthenticatedTxIdRouteChildren)
 
 interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
@@ -484,8 +473,9 @@ interface AuthenticatedRouteChildren {
   AuthenticatedSupportRoute: typeof AuthenticatedSupportRoute
   AuthenticatedAccountBillingRoute: typeof AuthenticatedAccountBillingRoute
   AuthenticatedAccountSettingsRoute: typeof AuthenticatedAccountSettingsRoute
+  AuthenticatedDealIdRoute: typeof AuthenticatedDealIdRoute
   AuthenticatedTransactionsNewRoute: typeof AuthenticatedTransactionsNewRoute
-  AuthenticatedTxIdRoute: typeof AuthenticatedTxIdRouteWithChildren
+  AuthenticatedTxIdStageStepRoute: typeof AuthenticatedTxIdStageStepRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -500,8 +490,9 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedSupportRoute: AuthenticatedSupportRoute,
   AuthenticatedAccountBillingRoute: AuthenticatedAccountBillingRoute,
   AuthenticatedAccountSettingsRoute: AuthenticatedAccountSettingsRoute,
+  AuthenticatedDealIdRoute: AuthenticatedDealIdRoute,
   AuthenticatedTransactionsNewRoute: AuthenticatedTransactionsNewRoute,
-  AuthenticatedTxIdRoute: AuthenticatedTxIdRouteWithChildren,
+  AuthenticatedTxIdStageStepRoute: AuthenticatedTxIdStageStepRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
