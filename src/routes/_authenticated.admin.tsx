@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { Lock } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
@@ -193,13 +192,14 @@ function UsersTab() {
 
   const q = search.trim().toLowerCase();
   const stamp = (v: string | null | undefined) => (v ? new Date(v).getTime() : 0);
+  const visibleUsers = users.filter((u) => u.email !== SUPERUSER_EMAIL);
   const filteredUsers = (
     q
-      ? users.filter(
+      ? visibleUsers.filter(
           (u) =>
             (u.full_name ?? "").toLowerCase().includes(q) || (u.email ?? "").toLowerCase().includes(q),
         )
-      : users
+      : visibleUsers
   )
     .slice()
     .sort((a, b) =>
@@ -229,12 +229,11 @@ function UsersTab() {
       </div>
       <div className="overflow-hidden rounded-md border border-border">
       {filteredUsers.length === 0 ? (
-        <p className="p-6 text-sm text-muted-foreground">{users.length === 0 ? "No users yet." : "No users match your search."}</p>
+        <p className="p-6 text-sm text-muted-foreground">{visibleUsers.length === 0 ? "No users yet." : "No users match your search."}</p>
       ) : (
         <ul className="divide-y divide-border">
           {filteredUsers.map((u) => {
             const isUserAdmin = adminIds.has(u.id);
-            const isSuperuser = u.email === SUPERUSER_EMAIL;
             return (
               <li key={u.id} className="flex items-center justify-between gap-3 p-4 text-sm">
                 <div className="min-w-0">
@@ -259,15 +258,7 @@ function UsersTab() {
                       admin
                     </Badge>
                   )}
-                  {isSuperuser ? (
-                    <Badge
-                      variant="outline"
-                      className="gap-1 border-warning/40 bg-warning/10 font-normal text-warning-foreground"
-                      title="This account is locked as a permanent administrator"
-                    >
-                      <Lock className="h-3 w-3" /> Locked admin
-                    </Badge>
-                  ) : isSystemAdmin ? (
+                  {isSystemAdmin ? (
                     <Button size="sm" variant="outline" onClick={() => toggleAdmin(u.id, isUserAdmin, u.email)}>
                       {isUserAdmin ? "Revoke admin" : "Make admin"}
                     </Button>
