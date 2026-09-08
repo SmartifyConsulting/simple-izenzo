@@ -78,8 +78,8 @@ function NewTransaction() {
         payload: { ...form },
       });
       navigate({
-        to: "/tx/$id/$stage/$step",
-        params: { id: data.id, stage: "trading", step: "bid-offer" },
+        to: "/deal/$id",
+        params: { id: data.id },
       });
     } catch (err) {
       toast.error((err as Error).message);

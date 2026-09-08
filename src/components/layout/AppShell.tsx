@@ -4,20 +4,16 @@ import {
   Coins,
   Inbox,
   ShieldCheck,
-  Menu,
   LogOut,
   Settings,
   LayoutDashboard,
-  ChevronRight,
   Building2,
   Search,
   LifeBuoy,
   ShieldAlert,
   Banknote,
+  LayoutGrid,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { SPINE, type StageKey } from "@/lib/spine";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,9 +24,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
+
+type NavTo =
+  | "/dashboard"
+  | "/inbox"
+  | "/credits"
+  | "/registry"
+  | "/facilitation"
+  | "/support"
+  | "/auditor"
+  | "/funder"
+  | "/admin";
 
 function greeting() {
   const hour = new Date().getHours();
@@ -39,190 +46,85 @@ function greeting() {
   return "Good evening";
 }
 
-function NavLink({
-  to,
-  icon: Icon,
-  label,
-  active,
-  onClick,
-  adminAccess,
-}: {
-  to: "/dashboard" | "/inbox" | "/credits" | "/registry" | "/facilitation" | "/support" | "/auditor" | "/funder" | "/admin";
-  icon: typeof LayoutDashboard;
-  label: string;
-  active: boolean;
-  onClick?: (() => void) | undefined;
-  adminAccess?: boolean | undefined;
-}) {
-  return (
-    <Link
-      to={to}
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-2.5 rounded px-2.5 py-2 text-sm transition-colors",
-        active
-          ? "bg-sidebar-accent text-white"
-          : "text-white/90 hover:bg-white/25 hover:text-white",
-      )}
-    >
-      <Icon className="h-4 w-4 shrink-0" />
-      <span className="min-w-0 flex-1 truncate">{label}</span>
-      {adminAccess && (
-        <span
-          title="Admins have access to this"
-          className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-warning text-[10px] font-bold leading-none text-warning-foreground"
-        >
-          A
-        </span>
-      )}
-    </Link>
-  );
+/** Modules reachable from the command bar. The sidebar is gone: everything opens from here. */
+function useModules() {
+  const { roles } = useAuth();
+  const isAdmin = roles.includes("admin");
+  const isAuditor = roles.includes("auditor") || isAdmin;
+  const isFunder = roles.includes("funder") || isAdmin;
+
+  const modules: { to: NavTo; label: string; icon: typeof Inbox; blurb: string }[] = [
+    { to: "/dashboard", label: "Deals", icon: LayoutDashboard, blurb: "Every live deal canvas" },
+    { to: "/inbox", label: "Inbox", icon: Inbox, blurb: "Requests waiting on you" },
+    { to: "/credits", label: "Tokens", icon: Coins, blurb: "Balance and top-ups" },
+    { to: "/registry", label: "Registry", icon: Building2, blurb: "Known businesses" },
+    {
+      to: "/facilitation",
+      label: "Unknown counterparty",
+      icon: Search,
+      blurb: "Find and surface a party",
+    },
+    { to: "/support", label: "Support", icon: LifeBuoy, blurb: "Talk to us" },
+  ];
+  if (isFunder)
+    modules.push({ to: "/funder", label: "Funder", icon: Banknote, blurb: "Funding positions" });
+  if (isAuditor)
+    modules.push({
+      to: "/auditor",
+      label: "Auditor",
+      icon: ShieldAlert,
+      blurb: "Read-only assurance",
+    });
+  if (isAdmin)
+    modules.push({ to: "/admin", label: "Admin", icon: ShieldCheck, blurb: "People and platform" });
+  return modules;
 }
 
-function SidebarBody({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
+function ModuleLauncher() {
+  const [open, setOpen] = useState(false);
+  const modules = useModules();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const search = useRouterState({ select: (s) => s.location.search as { stage?: string } });
-  const [gatewayOpen, setGatewayOpen] = useState(true);
-  const { roles } = useAuth();
-  const isAuditor = roles.includes("auditor") || roles.includes("admin");
-  const isAdmin = roles.includes("admin");
-  const isFunder = roles.includes("funder") || roles.includes("admin");
-
-  const onGateway = pathname === "/dashboard" && Boolean(search.stage);
-
-  const { data: gateCounts = {} } = useQuery({
-    queryKey: ["sidebar-gate-counts"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("transactions").select("stage");
-      if (error) throw error;
-      const counts: Partial<Record<StageKey, number>> = {};
-      for (const row of data ?? []) {
-        const stage = row.stage as StageKey;
-        counts[stage] = (counts[stage] ?? 0) + 1;
-      }
-      return counts;
-    },
-  });
 
   return (
-    <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
-      <Link to="/dashboard" className="flex h-42 items-center justify-center px-3">
-        <Logo onDark className="h-[1.96875rem] w-auto" />
-      </Link>
+    <>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setOpen(true)}
+        className="gap-2 rounded-full border border-border bg-white/5 px-3"
+      >
+        <LayoutGrid className="h-4 w-4" />
+        <span className="hidden sm:inline">Modules</span>
+      </Button>
 
-      <nav className="flex-1 space-y-0.5 px-2 py-3">
-        <NavLink
-          to="/dashboard"
-          icon={LayoutDashboard}
-          label="Trades"
-          active={pathname === "/dashboard" && !search.stage}
-          onClick={onNavigate}
-        />
-
-        <button
-          type="button"
-          onClick={() => setGatewayOpen((v) => !v)}
-          className={cn(
-            "flex w-full items-center gap-2.5 rounded px-2.5 py-2 text-sm transition-colors",
-            onGateway ? "text-white" : "text-white/90 hover:bg-white/25 hover:text-white",
-          )}
-        >
-          <ChevronRight className={cn("h-4 w-4 shrink-0 transition-transform", gatewayOpen && "rotate-90")} />
-          Gateway
-        </button>
-        {gatewayOpen && (
-          <div className="ml-3 space-y-0.5 border-l border-sidebar-border pl-3">
-            {SPINE.map((s) => (
-              <Link
-                key={s.key}
-                to="/dashboard"
-                search={{ stage: s.key }}
-                onClick={onNavigate}
-                className={cn(
-                  "flex items-center justify-between gap-2 truncate rounded px-2.5 py-1.5 text-sm transition-colors",
-                  search.stage === s.key
-                    ? "bg-sidebar-accent text-white"
-                    : "text-white/80 hover:bg-white/25 hover:text-white",
-                )}
-              >
-                <span className="truncate">{s.label}</span>
-                {Boolean(gateCounts[s.key]) && (
-                  <span className="shrink-0 rounded-full bg-white px-1.5 py-0.5 text-[11px] font-semibold leading-none text-info">
-                    {gateCounts[s.key]}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="glass w-[min(760px,94vw)] p-6 sm:max-w-[min(760px,94vw)]">
+          <DialogTitle className="text-base tracking-tight">Open a module</DialogTitle>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            {modules.map((m) => {
+              const active = pathname.startsWith(m.to);
+              return (
+                <Link
+                  key={m.to}
+                  to={m.to}
+                  onClick={() => setOpen(false)}
+                  className={cn(
+                    "glass-node block px-4 py-3.5 transition-transform hover:-translate-y-0.5",
+                    active && "node-active",
+                  )}
+                >
+                  <span className="flex items-center gap-2 text-[13.5px] font-semibold tracking-tight">
+                    <m.icon className="h-4 w-4 text-primary" />
+                    {m.label}
                   </span>
-                )}
-              </Link>
-            ))}
+                  <span className="mt-1 block text-[12px] text-muted-foreground">{m.blurb}</span>
+                </Link>
+              );
+            })}
           </div>
-        )}
-
-        <NavLink
-          to="/inbox"
-          icon={Inbox}
-          label="Inbox"
-          active={pathname.startsWith("/inbox")}
-          onClick={onNavigate}
-        />
-        <NavLink
-          to="/credits"
-          icon={Coins}
-          label="Token Management"
-          active={pathname.startsWith("/credits")}
-          onClick={onNavigate}
-        />
-        <NavLink
-          to="/registry"
-          icon={Building2}
-          label="Business Registry"
-          active={pathname.startsWith("/registry")}
-          onClick={onNavigate}
-        />
-        <NavLink
-          to="/facilitation"
-          icon={Search}
-          label="Unknown Counterparty"
-          active={pathname.startsWith("/facilitation")}
-          onClick={onNavigate}
-        />
-        <NavLink
-          to="/support"
-          icon={LifeBuoy}
-          label="Support"
-          active={pathname.startsWith("/support")}
-          onClick={onNavigate}
-        />
-        {isFunder && (
-          <NavLink
-            to="/funder"
-            icon={Banknote}
-            label="Funder"
-            active={pathname.startsWith("/funder")}
-            onClick={onNavigate}
-            adminAccess={isAdmin}
-          />
-        )}
-        {isAuditor && (
-          <NavLink
-            to="/auditor"
-            icon={ShieldAlert}
-            label="Auditor Access"
-            active={pathname.startsWith("/auditor")}
-            onClick={onNavigate}
-            adminAccess={isAdmin}
-          />
-        )}
-        {isAdmin && (
-          <NavLink
-            to="/admin"
-            icon={ShieldCheck}
-            label="Admin"
-            active={pathname.startsWith("/admin")}
-            onClick={onNavigate}
-            adminAccess
-          />
-        )}
-      </nav>
-    </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -234,7 +136,7 @@ function AvatarMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button className="flex shrink-0 items-center gap-2 rounded-full hover:opacity-80">
-          <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-sidebar text-[13px] font-semibold text-sidebar-foreground">
+          <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-border bg-white/5 text-[13px] font-semibold text-foreground">
             {profile?.avatar_url ? (
               <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
             ) : (
@@ -248,9 +150,6 @@ function AvatarMenu() {
           {profile?.email}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuLabel className="text-[11px] font-semibold uppercase tracking-[0.09em] text-muted-foreground">
-          Account
-        </DropdownMenuLabel>
         <DropdownMenuItem onClick={() => navigate({ to: "/account/settings" })}>
           <Settings className="mr-2 h-3.5 w-3.5" /> Settings
         </DropdownMenuItem>
@@ -264,7 +163,9 @@ function AvatarMenu() {
           <LogOut className="mr-2 h-3.5 w-3.5" /> Sign out
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <p className="px-2 py-1.5 text-[11px] text-muted-foreground">{roles.join(" · ") || "party"} seat</p>
+        <p className="px-2 py-1.5 text-[11px] text-muted-foreground">
+          {roles.join(" · ") || "party"} seat
+        </p>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -281,75 +182,55 @@ export function AppShell({
   actions?: ReactNode;
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
   const { profile, org } = useAuth();
   const firstName = (profile?.full_name ?? profile?.email ?? "").split(/[\s@]/)[0];
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <aside className="hidden w-72 shrink-0 border-r border-sidebar-border lg:block">
-        <div className="sticky top-0 h-screen">
-          <SidebarBody />
+    <div className="ink-grid min-h-screen bg-background">
+      <header className="sticky top-0 z-30 border-b border-border bg-background/70 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6">
+          <Link to="/dashboard" className="shrink-0">
+            <Logo onDark className="h-7 w-auto" />
+          </Link>
+          <ModuleLauncher />
+          <div className="min-w-0 flex-1" />
+          {org && (
+            <Link
+              to="/credits"
+              className="hidden shrink-0 items-center gap-1.5 rounded-full border border-primary/40 bg-primary/12 px-2.5 py-1 text-xs font-medium text-primary transition-opacity hover:opacity-90 sm:flex"
+            >
+              <Coins className="h-3.5 w-3.5" />
+              {org.credits} token{org.credits === 1 ? "" : "s"}
+            </Link>
+          )}
+          <AvatarMenu />
         </div>
-      </aside>
+      </header>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 h-42 bg-background/95 backdrop-blur">
-          <div className="flex h-full items-center gap-3 px-4 sm:px-6">
-            <Sheet open={open} onOpenChange={setOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="lg:hidden">
-                  <Menu className="h-4 w-4" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-72 p-0">
-                <SheetTitle className="sr-only">Menu</SheetTitle>
-                <SidebarBody onNavigate={() => setOpen(false)} />
-              </SheetContent>
-            </Sheet>
-            <div className="grid h-full w-full grid-cols-1 lg:grid-cols-[1fr_5fr_5fr_1fr]">
-              <div className="flex min-w-0 items-start gap-3 pt-7 lg:col-start-2 lg:col-span-2">
-                <div className="min-w-0 flex-1">
-                  {firstName && (
-                    <p
-                      className="truncate text-[2.025rem] leading-[1.2] tracking-tight sm:text-[2.25rem]"
-                      style={{ fontFamily: "var(--font-greeting)", fontWeight: 700 }}
-                    >
-                      {greeting()}, {firstName}
-                    </p>
-                  )}
-                  {title && (
-                    <h1 className="mt-4 truncate text-sm font-semibold tracking-tight text-muted-foreground">
-                      {title}
-                    </h1>
-                  )}
-                  {description && (
-                    <p className="mt-1 truncate text-xs text-muted-foreground">{description}</p>
-                  )}
-                </div>
-                {actions && <div className="self-center">{actions}</div>}
-                {org && (
-                  <Link
-                    to="/credits"
-                    className="flex shrink-0 items-center gap-1.5 self-center rounded-full bg-success px-2.5 py-1 text-xs font-medium text-white transition-opacity hover:opacity-90"
-                  >
-                    <Coins className="h-3.5 w-3.5" />
-                    {org.credits} token{org.credits === 1 ? "" : "s"}
-                  </Link>
-                )}
-                <div className="self-center">
-                  <AvatarMenu />
-                </div>
-              </div>
-            </div>
+      <main className="mx-auto max-w-7xl px-4 pb-14 pt-6 sm:px-6">
+        <div className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4">
+          <div className="min-w-0">
+            {firstName && (
+              <p
+                className="truncate text-[1.75rem] leading-[1.15] tracking-tight sm:text-[2rem]"
+                style={{ fontFamily: "var(--font-greeting)", fontWeight: 700 }}
+              >
+                {greeting()}, {firstName}
+              </p>
+            )}
+            {title && (
+              <h1 className="mt-2 truncate text-sm font-semibold tracking-tight text-muted-foreground">
+                {title}
+              </h1>
+            )}
+            {description && (
+              <p className="mt-1 truncate text-xs text-muted-foreground">{description}</p>
+            )}
           </div>
-        </header>
-        <main className="flex-1 px-4 pb-6 pt-2 sm:px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_5fr_5fr_1fr]">
-            <div className="lg:col-start-2 lg:col-span-2">{children}</div>
-          </div>
-        </main>
-      </div>
+          {actions && <div>{actions}</div>}
+        </div>
+        {children}
+      </main>
     </div>
   );
 }

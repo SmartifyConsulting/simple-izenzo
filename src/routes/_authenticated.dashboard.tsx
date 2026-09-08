@@ -344,8 +344,8 @@ function Dashboard() {
                           <tr key={t.id} className="hover:bg-muted/40">
                             <td className="px-4 py-3">
                               <Link
-                                to="/tx/$id/$stage/$step"
-                                params={{ id: t.id, stage: t.stage, step: t.step }}
+                                to="/deal/$id"
+                                params={{ id: t.id }}
                                 className="font-medium hover:underline"
                               >
                                 {t.title}
@@ -359,7 +359,7 @@ function Dashboard() {
                               {money(t.price, t.currency)}
                             </td>
                             <td className="px-4 py-3">
-                              <Link to="/tx/$id/$stage/$step" params={{ id: t.id, stage: t.stage, step: t.step }}>
+                              <Link to="/deal/$id" params={{ id: t.id }}>
                                 <Badge
                                   variant="outline"
                                   className={cn(
@@ -389,8 +389,8 @@ function Dashboard() {
                             </td>
                             <td className="px-2 py-3">
                               <Link
-                                to="/tx/$id/$stage/$step"
-                                params={{ id: t.id, stage: t.stage, step: t.step }}
+                                to="/deal/$id"
+                                params={{ id: t.id }}
                                 className="text-muted-foreground hover:text-foreground"
                               >
                                 <ArrowUpRight className="h-4 w-4" />

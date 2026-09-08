@@ -11,43 +11,44 @@ import { useAuth } from "@/lib/auth";
 
 type GateStatus = "IN PROGRESS" | "LOCKED" | "EMPTY";
 
-const GATES: { n: string; name: string; status: GateStatus; blurb: string; stageKey: StageKey }[] = [
-  {
-    n: "01",
-    name: "Trading Gate",
-    status: "IN PROGRESS",
-    blurb: "Bid and offer, deal documents, counterparties, counter, confirm intent, POI.",
-    stageKey: "trading",
-  },
-  {
-    n: "02",
-    name: "Compliance Gate",
-    status: "LOCKED",
-    blurb: "WaD — Without a Doubt. KYC, KYB, UBO, PEP, AML/sanctions before Execution.",
-    stageKey: "compliance",
-  },
-  {
-    n: "03",
-    name: "Execution Gate",
-    status: "LOCKED",
-    blurb: "Project preparation, bankability, implementation, stakeholder entry/exit.",
-    stageKey: "execution",
-  },
-  {
-    n: "04",
-    name: "Finality Gate",
-    status: "LOCKED",
-    blurb: "Type, change/value event, evidence, validation and the finality record.",
-    stageKey: "finality",
-  },
-  {
-    n: "05",
-    name: "Memory Gate",
-    status: "EMPTY",
-    blurb: "Attributable record and Capital Deployment Assessment — hash-chained.",
-    stageKey: "memory",
-  },
-];
+const GATES: { n: string; name: string; status: GateStatus; blurb: string; stageKey: StageKey }[] =
+  [
+    {
+      n: "01",
+      name: "Trading Gate",
+      status: "IN PROGRESS",
+      blurb: "Bid and offer, deal documents, counterparties, counter, confirm intent, POI.",
+      stageKey: "trading",
+    },
+    {
+      n: "02",
+      name: "Compliance Gate",
+      status: "LOCKED",
+      blurb: "WaD — Without a Doubt. KYC, KYB, UBO, PEP, AML/sanctions before Execution.",
+      stageKey: "compliance",
+    },
+    {
+      n: "03",
+      name: "Execution Gate",
+      status: "LOCKED",
+      blurb: "Project preparation, bankability, implementation, stakeholder entry/exit.",
+      stageKey: "execution",
+    },
+    {
+      n: "04",
+      name: "Finality Gate",
+      status: "LOCKED",
+      blurb: "Type, change/value event, evidence, validation and the finality record.",
+      stageKey: "finality",
+    },
+    {
+      n: "05",
+      name: "Memory Gate",
+      status: "EMPTY",
+      blurb: "Attributable record and Capital Deployment Assessment — hash-chained.",
+      stageKey: "memory",
+    },
+  ];
 
 const STATUS_BADGE_CLASS: Record<GateStatus, string> = {
   "IN PROGRESS": "bg-warning text-white",
@@ -107,7 +108,9 @@ function GateCardInner({ gate, selected }: { gate: (typeof GATES)[number]; selec
         </span>
       </div>
       <h3 className="mt-4 text-lg font-semibold tracking-tight">{gate.name}</h3>
-      <p className="mt-1.5 flex-1 text-[13.5px] leading-relaxed text-muted-foreground">{gate.blurb}</p>
+      <p className="mt-1.5 flex-1 text-[13.5px] leading-relaxed text-muted-foreground">
+        {gate.blurb}
+      </p>
     </>
   );
 }
@@ -183,23 +186,19 @@ function Landing() {
       <SiteHeader
         logoClassName="h-[3.75rem]"
         containerClassName="max-w-none h-[4.55rem] px-6 sm:px-10 lg:px-16"
-        logoVariant="blue"
+        logoVariant="white"
       />
 
       <main>
         <section className="flex flex-col lg:flex-row">
           <div className="flex flex-1 flex-col justify-center bg-sidebar px-6 py-16 text-sidebar-foreground sm:px-10 sm:py-20 lg:px-16">
             <div className="max-w-xl">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-sidebar-foreground/55">
-                Trading · Compliance · Execution · Finality · Memory
-              </p>
-              <h1 className="mt-4 text-4xl font-semibold leading-[1.1] tracking-tight text-white sm:text-5xl">
-                A transaction is not a conversation. It is a record.
+              <h1 className="text-4xl font-semibold leading-[1.1] tracking-tight text-white sm:text-5xl">
+                Match a bid to the right counterparty, with proof at every gate.
               </h1>
               <p className="mt-5 max-w-lg text-base leading-relaxed text-sidebar-foreground/75">
-                Izenzo carries a trade through the Izenzo Trading Gateway. Every step is written once,
-                attributed to a person, timestamped and fingerprinted. Intent is sealed before anything
-                moves, and the record can be read forward and backward for as long as it matters.
+                Bidders on the left, responders on the right. Each module opens as the deal moves,
+                and every choice is recorded as it happens.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <a href="mailto:support@izenzo.co.za?subject=Demo%20request&body=I%20would%20like%20to%20request%20a%20demo%20of%20the%20Izenzo%20Trading%20Gateway.">
@@ -216,7 +215,10 @@ function Landing() {
           </div>
 
           <div className="flex flex-1 items-center justify-center bg-sidebar px-5 py-16 sm:py-20">
-            <AuthTabs next={next} className="w-full max-w-sm rounded-2xl bg-background p-8 shadow-xl" />
+            <AuthTabs
+              next={next}
+              className="w-full max-w-sm rounded-2xl bg-background p-8 shadow-xl"
+            />
           </div>
         </section>
 
@@ -224,12 +226,12 @@ function Landing() {
           <div className="mx-auto max-w-6xl px-5 py-14">
             <h2 className="text-lg font-semibold tracking-tight">The Izenzo Trading Gateway</h2>
             <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-              The Izenzo Trading Gateway is modular. Each gate can operate as a distinct module, while
-              transaction data, approvals and evidence flow forwards and backwards through Trading,
-              Compliance, Execution, Finality and Memory.
+              The Izenzo Trading Gateway is modular. Each gate can operate as a distinct module,
+              while transaction data, approvals and evidence flow forwards and backwards through
+              Trading, Compliance, Execution, Finality and Memory.
               <br />
-              This is enabled by AI, agentic AI and AI+, which facilitate a connective network across
-              the Gates.
+              This is enabled by AI, agentic AI and AI+, which facilitate a connective network
+              across the Gates.
             </p>
             <p className="mt-8 flex items-center gap-1.5 whitespace-nowrap text-xs font-medium text-muted-foreground">
               <Gauge className="h-3.5 w-3.5 shrink-0" />
@@ -242,7 +244,13 @@ function Landing() {
                   gate={gate}
                   selected={i === selectedGate}
                   onSelect={() => setSelectedGate((cur) => (cur === i ? null : i))}
-                  href={user ? (gate.stageKey === "trading" ? "/transactions/new" : "/dashboard") : undefined}
+                  href={
+                    user
+                      ? gate.stageKey === "trading"
+                        ? "/transactions/new"
+                        : "/dashboard"
+                      : undefined
+                  }
                 />
               ))}
             </div>
@@ -257,22 +265,22 @@ function Landing() {
               <div>
                 <h3 className="text-sm font-semibold text-white">Proof of Intent is a gate</h3>
                 <p className="mt-2 text-sm leading-relaxed text-white/70">
-                  Nothing past Trading opens until a person confirms intent and the Proof of Intent is
-                  sealed. One token, USD 10, charged on the server, not hidden in the interface.
+                  Nothing past Trading opens until a person confirms intent and the Proof of Intent
+                  is sealed. One token, USD 10, charged on the server, not hidden in the interface.
                 </p>
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-white">WaD before execution</h3>
                 <p className="mt-2 text-sm leading-relaxed text-white/70">
-                  Without a Doubt — KYC, KYB, UBO, sanctions and PEP — must clear before execution can
-                  begin. Three further tokens, USD 30.
+                  Without a Doubt — KYC, KYB, UBO, sanctions and PEP — must clear before execution
+                  can begin. Three further tokens, USD 30.
                 </p>
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-white">AI proposes, people decide</h3>
                 <p className="mt-2 text-sm leading-relaxed text-white/70">
-                  AI and AI+ read the record and put forward proposals. They are stored as proposals.
-                  A person adopts them, and that adoption is itself an event.
+                  AI and AI+ read the record and put forward proposals. They are stored as
+                  proposals. A person adopts them, and that adoption is itself an event.
                 </p>
               </div>
             </div>
