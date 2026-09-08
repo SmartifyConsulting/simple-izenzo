@@ -185,7 +185,7 @@ function Landing() {
     <div className="min-h-screen bg-background">
       <SiteHeader
         logoClassName="h-[3.75rem]"
-        containerClassName="max-w-none h-[4.55rem] px-6 sm:px-10 lg:px-16"
+        containerClassName="max-w-none h-auto py-8 px-6 sm:px-10 lg:px-16"
         logoVariant="white"
       />
 
@@ -222,42 +222,8 @@ function Landing() {
           </div>
         </section>
 
-        <section className="border-y border-border bg-muted/40">
-          <div className="mx-auto max-w-6xl px-5 py-14">
-            <h2 className="text-lg font-semibold tracking-tight">The Izenzo Trading Gateway</h2>
-            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-              The Izenzo Trading Gateway is modular. Each gate can operate as a distinct module,
-              while transaction data, approvals and evidence flow forwards and backwards through
-              Trading, Compliance, Execution, Finality and Memory.
-              <br />
-              This is enabled by AI, agentic AI and AI+, which facilitate a connective network
-              across the Gates.
-            </p>
-            <p className="mt-8 flex items-center gap-1.5 whitespace-nowrap text-xs font-medium text-muted-foreground">
-              <Gauge className="h-3.5 w-3.5 shrink-0" />
-              Pay only for what you use. Zero subscriptions. Zero lock-ins.
-            </p>
-            <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-              {GATES.map((gate, i) => (
-                <GateCard
-                  key={gate.n}
-                  gate={gate}
-                  selected={i === selectedGate}
-                  onSelect={() => setSelectedGate((cur) => (cur === i ? null : i))}
-                  href={
-                    user
-                      ? gate.stageKey === "trading"
-                        ? "/transactions/new"
-                        : "/dashboard"
-                      : undefined
-                  }
-                />
-              ))}
-            </div>
 
-            {!user && selectedGate !== null && <GateStepStrip gate={GATES[selectedGate]!} />}
-          </div>
-        </section>
+
 
         <section className="bg-sidebar text-white">
           <div className="mx-auto max-w-6xl px-5 py-16">
