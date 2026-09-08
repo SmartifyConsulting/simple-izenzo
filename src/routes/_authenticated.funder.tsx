@@ -99,40 +99,25 @@ function FunderWorkspace() {
 
   if (!isFunder) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-6">
+      <AppShell title="Funder Workspace">
         <p className="text-sm text-muted-foreground">This area is for funder seats only.</p>
-      </div>
+      </AppShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="flex items-center justify-between border-b border-border px-6 py-4">
-        <Logo className="h-6 w-auto" />
-        <div className="flex items-center gap-3">
-          <Badge variant="outline" className="font-normal">
-            Funder Workspace
-          </Badge>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={async () => {
-              await signOut();
-              navigate({ to: "/" });
-            }}
-          >
-            Sign out
-          </Button>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-3xl px-6 py-8">
+    <AppShell
+      title="Funder Workspace"
+      description="Released counterparty information and funding decisions"
+    >
+      <div className="max-w-3xl">
         <h1 className="text-lg font-semibold">Released counterparty information</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Only the fields, summary and documents an Izenzo admin has explicitly released to your
           organisation appear here. Nothing else about a counterparty, another funder's deals, or
           the wider platform is visible from this workspace.
         </p>
+
 
         <div className="mt-6">
           {isLoading ? (
