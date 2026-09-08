@@ -35,16 +35,19 @@ type ProfileRow = {
   full_name: string | null;
   org_id: string | null;
   created_at: string;
+  last_accessed_at?: string | null;
 };
 
-const ADMIN_GROUPS: { id: string; label: string; tabs: { value: string; label: string; Component: () => React.JSX.Element }[] }[] = [
+type AdminTab = { value: string; label: string; Component: () => React.JSX.Element; superuserOnly?: boolean };
+
+const ADMIN_GROUPS: { id: string; label: string; tabs: AdminTab[] }[] = [
   {
     id: "platform",
     label: "Platform",
     tabs: [
       { value: "users", label: "Users", Component: UsersTab },
       { value: "api-keys", label: "API Keys", Component: ApiKeysTab },
-      { value: "integrations", label: "Integrations", Component: IntegrationsTab },
+      { value: "integrations", label: "Integrations", Component: IntegrationsTab, superuserOnly: true },
     ],
   },
   {
