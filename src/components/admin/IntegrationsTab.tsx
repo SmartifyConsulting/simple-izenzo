@@ -60,10 +60,9 @@ export function IntegrationsTab() {
   const refresh = () => qc.invalidateQueries({ queryKey: ["integrations"] });
 
   if (error) {
-    const forbidden = error.message.includes("restricted to the system administrator");
     return (
       <p className="text-sm text-muted-foreground">
-        {forbidden ? "This area is restricted to the system administrator." : error.message}
+        This area is restricted to the system administrator.
       </p>
     );
   }
