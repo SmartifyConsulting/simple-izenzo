@@ -1,170 +1,11 @@
-import { useEffect, useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Gauge } from "lucide-react";
+import { useEffect } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { AuthTabs } from "@/components/auth/AuthTabs";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SiteFooter } from "@/components/layout/SiteFooter";
-import { SPINE, type StageKey } from "@/lib/spine";
-import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 
-type GateStatus = "IN PROGRESS" | "LOCKED" | "EMPTY";
-
-const GATES: { n: string; name: string; status: GateStatus; blurb: string; stageKey: StageKey }[] =
-  [
-    {
-      n: "01",
-      name: "Trading Gate",
-      status: "IN PROGRESS",
-      blurb: "Bid and offer, deal documents, counterparties, counter, confirm intent, POI.",
-      stageKey: "trading",
-    },
-    {
-      n: "02",
-      name: "Compliance Gate",
-      status: "LOCKED",
-      blurb: "WaD — Without a Doubt. KYC, KYB, UBO, PEP, AML/sanctions before Execution.",
-      stageKey: "compliance",
-    },
-    {
-      n: "03",
-      name: "Execution Gate",
-      status: "LOCKED",
-      blurb: "Project preparation, bankability, implementation, stakeholder entry/exit.",
-      stageKey: "execution",
-    },
-    {
-      n: "04",
-      name: "Finality Gate",
-      status: "LOCKED",
-      blurb: "Type, change/value event, evidence, validation and the finality record.",
-      stageKey: "finality",
-    },
-    {
-      n: "05",
-      name: "Memory Gate",
-      status: "EMPTY",
-      blurb: "Attributable record and Capital Deployment Assessment — hash-chained.",
-      stageKey: "memory",
-    },
-  ];
-
-const STATUS_BADGE_CLASS: Record<GateStatus, string> = {
-  "IN PROGRESS": "bg-warning text-white",
-  LOCKED: "bg-muted-foreground text-white",
-  EMPTY: "bg-muted-foreground text-white",
-};
-
-type Search = { next?: string | undefined };
-
-export const Route = createFileRoute("/")({
-  validateSearch: (search: Record<string, unknown>): Search => ({
-    next: typeof search["next"] === "string" ? (search["next"] as string) : undefined,
-  }),
-  head: () => ({
-    meta: [
-      { title: "Izenzo — Proof-backed trading, from intent to memory" },
-      {
-        name: "description",
-        content:
-          "Izenzo is a trading platform where every step is recorded: trading, compliance, execution, finality and memory. Intent is sealed, not assumed.",
-      },
-      { property: "og:title", content: "Izenzo — Proof-backed trading" },
-      {
-        property: "og:description",
-        content:
-          "The Izenzo Trading Gateway records every step: trading, compliance and governance, execution, finality and memory.",
-      },
-    ],
-  }),
-  component: Landing,
-});
-
-const GATE_CARD_CLASS =
-  "flex min-h-[190px] flex-col rounded-2xl border-2 bg-background p-5 text-left shadow-sm transition-all";
-const GATE_CARD_SELECTED = "border-primary bg-primary/[0.06] shadow-lg ring-4 ring-primary/15";
-const GATE_CARD_IDLE = "border-border hover:border-foreground/30";
-
-function GateCardInner({ gate, selected }: { gate: (typeof GATES)[number]; selected: boolean }) {
-  return (
-    <>
-      <div className="flex items-center justify-between">
-        <span
-          className={cn(
-            "font-mono text-[11px]",
-            selected ? "text-primary" : "text-muted-foreground",
-          )}
-        >
-          {gate.n}
-        </span>
-        <span
-          className={cn(
-            "rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide",
-            STATUS_BADGE_CLASS[gate.status],
-          )}
-        >
-          {gate.status}
-        </span>
-      </div>
-      <h3 className="mt-4 text-lg font-semibold tracking-tight">{gate.name}</h3>
-      <p className="mt-1.5 flex-1 text-[13.5px] leading-relaxed text-muted-foreground">
-        {gate.blurb}
-      </p>
-    </>
-  );
-}
-
-/** Signed out: click toggles the step preview below. Signed in: click opens the gate for real. */
-function GateCard({
-  gate,
-  selected,
-  onSelect,
-  href,
-}: {
-  gate: (typeof GATES)[number];
-  selected: boolean;
-  onSelect: () => void;
-  href?: "/transactions/new" | "/dashboard" | undefined;
-}) {
-  const className = cn(GATE_CARD_CLASS, selected ? GATE_CARD_SELECTED : GATE_CARD_IDLE);
-
-  if (href) {
-    return (
-      <Link to={href} className={className}>
-        <GateCardInner gate={gate} selected={selected} />
-      </Link>
-    );
-  }
-
-  return (
-    <button type="button" onClick={onSelect} aria-pressed={selected} className={className}>
-      <GateCardInner gate={gate} selected={selected} />
-    </button>
-  );
-}
-
-function GateStepStrip({ gate }: { gate: (typeof GATES)[number] }) {
-  const steps = SPINE.find((s) => s.key === gate.stageKey)?.steps ?? [];
-  return (
-    <div className="mt-4 animate-in fade-in slide-in-from-top-1 rounded-xl border border-border bg-background p-4 duration-300">
-      <p className="label-caps">
-        {gate.n} · {gate.name.toUpperCase()}
-      </p>
-      <div className="mt-3 flex flex-wrap items-center gap-1.5">
-        {steps.map((s) => (
-          <span
-            key={s.key}
-            className="flex items-center gap-2 whitespace-nowrap rounded-lg bg-muted px-3 py-1.5 text-[13px] font-medium text-foreground"
-          >
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground" />
-            {s.label}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function safeNext(next: string | undefined) {
   if (next && next.startsWith("/") && !next.startsWith("//")) return next;
@@ -172,7 +13,6 @@ function safeNext(next: string | undefined) {
 }
 
 function Landing() {
-  const [selectedGate, setSelectedGate] = useState<number | null>(null);
   const { user } = useAuth();
   const { next } = Route.useSearch();
   const navigate = useNavigate();
