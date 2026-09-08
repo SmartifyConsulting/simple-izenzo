@@ -238,7 +238,7 @@ function UsersTab() {
                   <p className="truncate font-medium">{u.full_name ?? u.email}</p>
                   <p className="truncate text-xs text-muted-foreground">{u.email}</p>
                 </div>
-                <div className="hidden shrink-0 text-xs text-muted-foreground sm:grid sm:grid-cols-[7rem_7rem]">
+                <div className="hidden shrink-0 text-xs text-muted-foreground sm:grid sm:grid-cols-[7rem_7rem] sm:gap-x-[2cm]">
                   <span title={new Date(u.created_at).toLocaleString()}>
                     <span className="block text-[10px] uppercase tracking-wide">Created</span>
                     {when(u.created_at)}
