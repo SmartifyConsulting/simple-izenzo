@@ -7,7 +7,6 @@ import {
   Menu,
   LogOut,
   Settings,
-  Receipt,
   LayoutDashboard,
   ChevronRight,
   Building2,
@@ -242,9 +241,6 @@ function AvatarMenu() {
         </DropdownMenuLabel>
         <DropdownMenuItem onClick={() => navigate({ to: "/account/settings" })}>
           <Settings className="mr-2 h-3.5 w-3.5" /> Settings
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigate({ to: "/account/billing" })}>
-          <Receipt className="mr-2 h-3.5 w-3.5" /> Billing History
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
