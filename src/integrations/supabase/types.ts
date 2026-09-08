@@ -888,6 +888,163 @@ export type Database = {
           },
         ]
       }
+      deletion_forensic_records: {
+        Row: {
+          completed_correctly: boolean
+          created_at: string
+          deleted_by: string | null
+          deletion_method: string
+          entity_id: string
+          entity_type: string
+          failure_detail: string | null
+          id: string
+          legal_hold_applied: boolean
+          legal_hold_reference: string | null
+          reason: string
+          recorded_by: string
+          redacted_fields: string[]
+          redaction_justification: string | null
+        }
+        Insert: {
+          completed_correctly?: boolean
+          created_at?: string
+          deleted_by?: string | null
+          deletion_method?: string
+          entity_id: string
+          entity_type: string
+          failure_detail?: string | null
+          id?: string
+          legal_hold_applied?: boolean
+          legal_hold_reference?: string | null
+          reason: string
+          recorded_by?: string
+          redacted_fields?: string[]
+          redaction_justification?: string | null
+        }
+        Update: {
+          completed_correctly?: boolean
+          created_at?: string
+          deleted_by?: string | null
+          deletion_method?: string
+          entity_id?: string
+          entity_type?: string
+          failure_detail?: string | null
+          id?: string
+          legal_hold_applied?: boolean
+          legal_hold_reference?: string | null
+          reason?: string
+          recorded_by?: string
+          redacted_fields?: string[]
+          redaction_justification?: string | null
+        }
+        Relationships: []
+      }
+      deletion_forensic_findings: {
+        Row: {
+          created_at: string
+          finding: string
+          id: string
+          raised_by: string
+          record_id: string
+        }
+        Insert: {
+          created_at?: string
+          finding: string
+          id?: string
+          raised_by?: string
+          record_id: string
+        }
+        Update: {
+          created_at?: string
+          finding?: string
+          id?: string
+          raised_by?: string
+          record_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deletion_forensic_findings_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "deletion_forensic_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auditor_access_grants: {
+        Row: {
+          auditor_id: string
+          created_at: string
+          expires_at: string | null
+          granted_by: string
+          id: string
+          is_standing: boolean
+          purpose: string
+          revoke_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+        }
+        Insert: {
+          auditor_id: string
+          created_at?: string
+          expires_at?: string | null
+          granted_by?: string
+          id?: string
+          is_standing?: boolean
+          purpose: string
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+        }
+        Update: {
+          auditor_id?: string
+          created_at?: string
+          expires_at?: string | null
+          granted_by?: string
+          id?: string
+          is_standing?: boolean
+          purpose?: string
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+        }
+        Relationships: []
+      }
+      auditor_access_events: {
+        Row: {
+          actor_id: string
+          created_at: string
+          event_type: string
+          grant_id: string
+          id: string
+          note: string | null
+        }
+        Insert: {
+          actor_id?: string
+          created_at?: string
+          event_type: string
+          grant_id: string
+          id?: string
+          note?: string | null
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          event_type?: string
+          grant_id?: string
+          id?: string
+          note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auditor_access_events_grant_id_fkey"
+            columns: ["grant_id"]
+            isOneToOne: false
+            referencedRelation: "auditor_access_grants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_skip_events: {
         Row: {
           channel: string
@@ -2213,6 +2370,42 @@ export type Database = {
       log_evidence_pack_download: {
         Args: { p_id: string }
         Returns: undefined
+      }
+      admin_grant_auditor_access: {
+        Args: {
+          p_auditor_id: string
+          p_expires_at?: string
+          p_is_standing?: boolean
+          p_purpose: string
+        }
+        Returns: string
+      }
+      admin_revoke_auditor_access: {
+        Args: { p_grant_id: string; p_reason: string }
+        Returns: undefined
+      }
+      log_auditor_access_use: {
+        Args: { p_event_type: string; p_grant_id: string }
+        Returns: undefined
+      }
+      admin_log_deletion_forensic_event: {
+        Args: {
+          p_completed_correctly?: boolean
+          p_deletion_method?: string
+          p_entity_id: string
+          p_entity_type: string
+          p_failure_detail?: string
+          p_legal_hold_applied?: boolean
+          p_legal_hold_reference?: string
+          p_reason: string
+          p_redacted_fields?: string[]
+          p_redaction_justification?: string
+        }
+        Returns: string
+      }
+      admin_add_forensic_finding: {
+        Args: { p_finding: string; p_record_id: string }
+        Returns: string
       }
       admin_api_suspend_key: { Args: { p_id: string }; Returns: undefined }
       admin_case_approve_decision: {

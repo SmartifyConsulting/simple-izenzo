@@ -62,6 +62,7 @@ function AdminPage() {
           <TabsTrigger value="funders">Funders</TabsTrigger>
           <TabsTrigger value="api-keys">API Keys</TabsTrigger>
           <TabsTrigger value="support">Support</TabsTrigger>
+          <TabsTrigger value="auditors">Auditors</TabsTrigger>
           <TabsTrigger value="reporting">Reporting</TabsTrigger>
         </TabsList>
         <TabsContent value="users" className="mt-6">
@@ -90,6 +91,9 @@ function AdminPage() {
         </TabsContent>
         <TabsContent value="support" className="mt-6">
           <SupportTab />
+        </TabsContent>
+        <TabsContent value="auditors" className="mt-6">
+          <AuditorsTab />
         </TabsContent>
         <TabsContent value="reporting" className="mt-6">
           <ReportingTab />
@@ -2484,6 +2488,298 @@ function SupportTab() {
           })}
         </ul>
       )}
+    </div>
+  );
+}
+
+function AuditorsTab() {
+  const qc = useQueryClient();
+  const [grantForm, setGrantForm] = useState({ email: "", purpose: "", isStanding: false, expiryDays: "30" });
+  const [recordForm, setRecordForm] = useState({
+    entityType: "",
+    entityId: "",
+    reason: "",
+    legalHoldApplied: false,
+    legalHoldReference: "",
+    completedCorrectly: true,
+    failureDetail: "",
+  });
+  const [findingDrafts, setFindingDrafts] = useState<Record<string, string>>({});
+
+  const { data: grants = [] } = useQuery({
+    queryKey: ["admin-auditor-grants"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("auditor_access_grants").select("*").order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: records = [] } = useQuery({
+    queryKey: ["admin-forensic-records"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("deletion_forensic_records")
+        .select("*, deletion_forensic_findings(*)")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  async function grantAccess(e: React.FormEvent) {
+    e.preventDefault();
+    if (!grantForm.email.trim() || !grantForm.purpose.trim()) {
+      toast.error("Email and purpose are required.");
+      return;
+    }
+    const { data: profileRow, error: lookupError } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("email", grantForm.email.trim())
+      .maybeSingle();
+    if (lookupError) {
+      toast.error(lookupError.message);
+      return;
+    }
+    if (!profileRow) {
+      toast.error("No user found with that email — they must sign up first.");
+      return;
+    }
+    const expiresAt = grantForm.isStanding
+      ? null
+      : new Date(Date.now() + Number(grantForm.expiryDays) * 24 * 60 * 60 * 1000).toISOString();
+    const { error } = await supabase.rpc("admin_grant_auditor_access", {
+      p_auditor_id: profileRow.id,
+      p_purpose: grantForm.purpose,
+      p_is_standing: grantForm.isStanding,
+      ...(expiresAt ? { p_expires_at: expiresAt } : {}),
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Auditor access granted");
+    setGrantForm({ email: "", purpose: "", isStanding: false, expiryDays: "30" });
+    await qc.invalidateQueries({ queryKey: ["admin-auditor-grants"] });
+  }
+
+  async function revokeGrant(id: string) {
+    const reason = window.prompt("Revocation reason (required):");
+    if (!reason) return;
+    const { error } = await supabase.rpc("admin_revoke_auditor_access", { p_grant_id: id, p_reason: reason });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Access revoked");
+    await qc.invalidateQueries({ queryKey: ["admin-auditor-grants"] });
+  }
+
+  async function recordDeletion(e: React.FormEvent) {
+    e.preventDefault();
+    if (!recordForm.entityType.trim() || !recordForm.entityId.trim() || !recordForm.reason.trim()) {
+      toast.error("Entity type, entity ID and reason are required.");
+      return;
+    }
+    const { error } = await supabase.rpc("admin_log_deletion_forensic_event", {
+      p_entity_type: recordForm.entityType,
+      p_entity_id: recordForm.entityId,
+      p_reason: recordForm.reason,
+      p_legal_hold_applied: recordForm.legalHoldApplied,
+      p_completed_correctly: recordForm.completedCorrectly,
+      ...(recordForm.legalHoldReference ? { p_legal_hold_reference: recordForm.legalHoldReference } : {}),
+      ...(recordForm.failureDetail ? { p_failure_detail: recordForm.failureDetail } : {}),
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Deletion forensic record created");
+    setRecordForm({
+      entityType: "",
+      entityId: "",
+      reason: "",
+      legalHoldApplied: false,
+      legalHoldReference: "",
+      completedCorrectly: true,
+      failureDetail: "",
+    });
+    await qc.invalidateQueries({ queryKey: ["admin-forensic-records"] });
+  }
+
+  async function addFinding(recordId: string) {
+    const finding = findingDrafts[recordId];
+    if (!finding?.trim()) return;
+    const { error } = await supabase.rpc("admin_add_forensic_finding", { p_record_id: recordId, p_finding: finding });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Finding added — original record left unedited");
+    setFindingDrafts({ ...findingDrafts, [recordId]: "" });
+    await qc.invalidateQueries({ queryKey: ["admin-forensic-records"] });
+  }
+
+  return (
+    <div className="space-y-8">
+      <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm text-warning">
+        Deletion forensic records are immutable — nothing here can ever be edited or deleted, only
+        added to via a linked finding. Auditor access is either standing (designated platform
+        auditors) or purpose-bound with a mandatory expiry.
+      </div>
+
+      <div>
+        <h2 className="text-sm font-semibold">Grant auditor access</h2>
+        <form onSubmit={grantAccess} className="mt-2 grid gap-3 rounded-md border border-border p-4 sm:grid-cols-2">
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label>User email (must already have an Izenzo account)</Label>
+            <Input value={grantForm.email} onChange={(e) => setGrantForm({ ...grantForm, email: e.target.value })} />
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label>Purpose (required)</Label>
+            <Input value={grantForm.purpose} onChange={(e) => setGrantForm({ ...grantForm, purpose: e.target.value })} />
+          </div>
+          <label className="flex items-center gap-1.5 text-xs sm:col-span-2">
+            <input
+              type="checkbox"
+              checked={grantForm.isStanding}
+              onChange={(e) => setGrantForm({ ...grantForm, isStanding: e.target.checked })}
+            />
+            Standing access (designated platform auditor — no expiry)
+          </label>
+          {!grantForm.isStanding && (
+            <div className="space-y-1.5">
+              <Label>Expiry (days from now)</Label>
+              <Input
+                type="number"
+                min={1}
+                value={grantForm.expiryDays}
+                onChange={(e) => setGrantForm({ ...grantForm, expiryDays: e.target.value })}
+              />
+            </div>
+          )}
+          <div className="sm:col-span-2 text-right">
+            <Button type="submit" size="sm">
+              Grant access
+            </Button>
+          </div>
+        </form>
+
+        <ul className="mt-3 space-y-1.5">
+          {grants.map((g) => (
+            <li key={g.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border p-2.5 text-xs">
+              <span>
+                {g.auditor_id} · {g.is_standing ? "standing" : `expires ${g.expires_at ? new Date(g.expires_at).toLocaleDateString() : "n/a"}`} · {g.purpose}
+              </span>
+              {g.revoked_at ? (
+                <Badge variant="secondary" className="font-normal">
+                  revoked
+                </Badge>
+              ) : (
+                <Button size="sm" variant="ghost" onClick={() => revokeGrant(g.id)}>
+                  Revoke
+                </Button>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div>
+        <h2 className="text-sm font-semibold">Record a deletion forensic event</h2>
+        <form onSubmit={recordDeletion} className="mt-2 grid gap-3 rounded-md border border-border p-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label>Entity type</Label>
+            <Input value={recordForm.entityType} onChange={(e) => setRecordForm({ ...recordForm, entityType: e.target.value })} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Entity ID</Label>
+            <Input value={recordForm.entityId} onChange={(e) => setRecordForm({ ...recordForm, entityId: e.target.value })} />
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label>Reason</Label>
+            <Textarea rows={2} value={recordForm.reason} onChange={(e) => setRecordForm({ ...recordForm, reason: e.target.value })} />
+          </div>
+          <label className="flex items-center gap-1.5 text-xs">
+            <input
+              type="checkbox"
+              checked={recordForm.legalHoldApplied}
+              onChange={(e) => setRecordForm({ ...recordForm, legalHoldApplied: e.target.checked })}
+            />
+            Legal hold applied
+          </label>
+          <label className="flex items-center gap-1.5 text-xs">
+            <input
+              type="checkbox"
+              checked={recordForm.completedCorrectly}
+              onChange={(e) => setRecordForm({ ...recordForm, completedCorrectly: e.target.checked })}
+            />
+            Completed correctly
+          </label>
+          {recordForm.legalHoldApplied && (
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Legal hold reference</Label>
+              <Input
+                value={recordForm.legalHoldReference}
+                onChange={(e) => setRecordForm({ ...recordForm, legalHoldReference: e.target.value })}
+              />
+            </div>
+          )}
+          {!recordForm.completedCorrectly && (
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Failure detail</Label>
+              <Textarea
+                rows={2}
+                value={recordForm.failureDetail}
+                onChange={(e) => setRecordForm({ ...recordForm, failureDetail: e.target.value })}
+              />
+            </div>
+          )}
+          <div className="sm:col-span-2 text-right">
+            <Button type="submit" size="sm">
+              Record event
+            </Button>
+          </div>
+        </form>
+      </div>
+
+      <div>
+        <h2 className="text-sm font-semibold">Deletion forensic records</h2>
+        {records.length === 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground">No records yet.</p>
+        ) : (
+          <ul className="mt-2 space-y-2">
+            {records.map((r) => {
+              const findings = (r as { deletion_forensic_findings?: { id: string; finding: string }[] }).deletion_forensic_findings ?? [];
+              return (
+                <li key={r.id} className="rounded-md border border-border p-3 text-xs">
+                  <p className="font-medium">
+                    {r.entity_type} · {r.entity_id}
+                  </p>
+                  <p className="mt-1 text-muted-foreground">{r.reason}</p>
+                  {findings.map((f) => (
+                    <p key={f.id} className="mt-1 rounded bg-muted/40 p-1.5">
+                      {f.finding}
+                    </p>
+                  ))}
+                  <div className="mt-1.5 flex gap-1.5">
+                    <Input
+                      className="h-7 text-xs"
+                      placeholder="Add a finding (never edits the original)…"
+                      value={findingDrafts[r.id] ?? ""}
+                      onChange={(e) => setFindingDrafts({ ...findingDrafts, [r.id]: e.target.value })}
+                    />
+                    <Button size="sm" variant="outline" onClick={() => addFinding(r.id)}>
+                      Add
+                    </Button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

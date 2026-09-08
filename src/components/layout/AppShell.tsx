@@ -13,6 +13,7 @@ import {
   Building2,
   Search,
   LifeBuoy,
+  ShieldAlert,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,7 +46,7 @@ function NavLink({
   active,
   onClick,
 }: {
-  to: "/dashboard" | "/inbox" | "/credits" | "/registry" | "/facilitation" | "/support";
+  to: "/dashboard" | "/inbox" | "/credits" | "/registry" | "/facilitation" | "/support" | "/auditor";
   icon: typeof LayoutDashboard;
   label: string;
   active: boolean;
@@ -72,6 +73,8 @@ function SidebarBody({ onNavigate }: { onNavigate?: (() => void) | undefined }) 
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const search = useRouterState({ select: (s) => s.location.search as { stage?: string } });
   const [gatewayOpen, setGatewayOpen] = useState(true);
+  const { roles } = useAuth();
+  const isAuditor = roles.includes("auditor") || roles.includes("admin");
 
   const onGateway = pathname === "/dashboard" && Boolean(search.stage);
 
@@ -176,6 +179,15 @@ function SidebarBody({ onNavigate }: { onNavigate?: (() => void) | undefined }) 
           active={pathname.startsWith("/support")}
           onClick={onNavigate}
         />
+        {isAuditor && (
+          <NavLink
+            to="/auditor"
+            icon={ShieldAlert}
+            label="Auditor Access"
+            active={pathname.startsWith("/auditor")}
+            onClick={onNavigate}
+          />
+        )}
       </nav>
     </div>
   );
