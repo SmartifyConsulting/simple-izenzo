@@ -48,14 +48,15 @@ function Landing() {
   return (
     <div className="min-h-screen bg-background">
       <SiteHeader
-        logoClassName="h-[3.75rem]"
+        logoClassName="h-12"
         containerClassName="max-w-none h-auto py-8 px-6 sm:px-10 lg:px-16"
         logoVariant="white"
+        logoOnDark
       />
 
       <main>
-        <section className="flex flex-col lg:flex-row">
-          <div className="flex flex-1 flex-col justify-center bg-sidebar px-6 py-16 text-sidebar-foreground sm:px-10 sm:py-20 lg:px-16">
+        <section className="bg-sidebar">
+          <div className="mx-auto grid max-w-6xl gap-10 px-5 py-16 text-sidebar-foreground sm:py-20 lg:grid-cols-2 lg:items-center lg:gap-16">
             <div className="max-w-xl">
               <h1 className="text-4xl font-semibold leading-[1.1] tracking-tight text-white sm:text-5xl">
                 Match a bid to the right counterparty, with proof at every gate.
@@ -76,13 +77,13 @@ function Landing() {
                 </a>
               </div>
             </div>
-          </div>
 
-          <div className="flex flex-1 items-center justify-center bg-sidebar px-5 py-16 sm:py-20">
-            <AuthTabs
-              next={next}
-              className="w-full max-w-sm rounded-2xl bg-background p-8 shadow-xl"
-            />
+            <div className="flex justify-center lg:justify-end">
+              <AuthTabs
+                next={next}
+                className="w-full max-w-sm rounded-2xl bg-background p-8 shadow-xl"
+              />
+            </div>
           </div>
         </section>
 

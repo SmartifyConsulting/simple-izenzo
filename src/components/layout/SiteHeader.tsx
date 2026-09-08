@@ -8,16 +8,18 @@ export function SiteHeader({
   logoClassName,
   containerClassName,
   logoVariant,
+  logoOnDark,
 }: {
   logoClassName?: string | undefined;
   containerClassName?: string | undefined;
   logoVariant?: "white" | "blue" | undefined;
+  logoOnDark?: boolean | undefined;
 }) {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur">
       <div className={cn("mx-auto flex h-14 max-w-6xl items-center px-5", containerClassName)}>
         <Link to="/">
-          <Logo className={logoClassName} variant={logoVariant} />
+          <Logo className={logoClassName} variant={logoVariant} onDark={logoOnDark} />
         </Link>
       </div>
     </header>
