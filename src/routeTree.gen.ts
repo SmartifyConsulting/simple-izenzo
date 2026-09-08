@@ -29,6 +29,7 @@ import { Route as AuthenticatedSupportRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedAccountBillingRouteImport } from './routes/_authenticated.account.billing'
 import { Route as AuthenticatedAccountSettingsRouteImport } from './routes/_authenticated.account.settings'
 import { Route as AuthenticatedTransactionsNewRouteImport } from './routes/_authenticated.transactions.new'
+import { Route as AuthenticatedTxIdRouteImport } from './routes/_authenticated.tx.$id'
 import { Route as AuthenticatedTxIdStageStepRouteImport } from './routes/_authenticated.tx.$id.$stage.$step'
 
 const IndexRoute = IndexRouteImport.update({
@@ -134,11 +135,16 @@ const AuthenticatedTransactionsNewRoute =
     path: '/transactions/new',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedTxIdRoute = AuthenticatedTxIdRouteImport.update({
+  id: '/tx/$id',
+  path: '/tx/$id',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedTxIdStageStepRoute =
   AuthenticatedTxIdStageStepRouteImport.update({
-    id: '/tx/$id/$stage/$step',
-    path: '/tx/$id/$stage/$step',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/$stage/$step',
+    path: '/$stage/$step',
+    getParentRoute: () => AuthenticatedTxIdRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -161,6 +167,7 @@ export interface FileRoutesByFullPath {
   '/account/billing': typeof AuthenticatedAccountBillingRoute
   '/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/transactions/new': typeof AuthenticatedTransactionsNewRoute
+  '/tx/$id': typeof AuthenticatedTxIdRouteWithChildren
   '/tx/$id/$stage/$step': typeof AuthenticatedTxIdStageStepRoute
 }
 export interface FileRoutesByTo {
@@ -183,6 +190,7 @@ export interface FileRoutesByTo {
   '/account/billing': typeof AuthenticatedAccountBillingRoute
   '/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/transactions/new': typeof AuthenticatedTransactionsNewRoute
+  '/tx/$id': typeof AuthenticatedTxIdRouteWithChildren
   '/tx/$id/$stage/$step': typeof AuthenticatedTxIdStageStepRoute
 }
 export interface FileRoutesById {
@@ -207,6 +215,7 @@ export interface FileRoutesById {
   '/_authenticated/account/billing': typeof AuthenticatedAccountBillingRoute
   '/_authenticated/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/_authenticated/transactions/new': typeof AuthenticatedTransactionsNewRoute
+  '/_authenticated/tx/$id': typeof AuthenticatedTxIdRouteWithChildren
   '/_authenticated/tx/$id/$stage/$step': typeof AuthenticatedTxIdStageStepRoute
 }
 export interface FileRouteTypes {
@@ -231,6 +240,7 @@ export interface FileRouteTypes {
     | '/account/billing'
     | '/account/settings'
     | '/transactions/new'
+    | '/tx/$id'
     | '/tx/$id/$stage/$step'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -253,6 +263,7 @@ export interface FileRouteTypes {
     | '/account/billing'
     | '/account/settings'
     | '/transactions/new'
+    | '/tx/$id'
     | '/tx/$id/$stage/$step'
   id:
     | '__root__'
@@ -276,6 +287,7 @@ export interface FileRouteTypes {
     | '/_authenticated/account/billing'
     | '/_authenticated/account/settings'
     | '/_authenticated/transactions/new'
+    | '/_authenticated/tx/$id'
     | '/_authenticated/tx/$id/$stage/$step'
   fileRoutesById: FileRoutesById
 }
@@ -432,15 +444,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTransactionsNewRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/tx/$id': {
+      id: '/_authenticated/tx/$id'
+      path: '/tx/$id'
+      fullPath: '/tx/$id'
+      preLoaderRoute: typeof AuthenticatedTxIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/tx/$id/$stage/$step': {
       id: '/_authenticated/tx/$id/$stage/$step'
-      path: '/tx/$id/$stage/$step'
+      path: '/$stage/$step'
       fullPath: '/tx/$id/$stage/$step'
       preLoaderRoute: typeof AuthenticatedTxIdStageStepRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedTxIdRoute
     }
   }
 }
+
+interface AuthenticatedTxIdRouteChildren {
+  AuthenticatedTxIdStageStepRoute: typeof AuthenticatedTxIdStageStepRoute
+}
+
+const AuthenticatedTxIdRouteChildren: AuthenticatedTxIdRouteChildren = {
+  AuthenticatedTxIdStageStepRoute: AuthenticatedTxIdStageStepRoute,
+}
+
+const AuthenticatedTxIdRouteWithChildren =
+  AuthenticatedTxIdRoute._addFileChildren(AuthenticatedTxIdRouteChildren)
 
 interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
@@ -455,7 +485,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAccountBillingRoute: typeof AuthenticatedAccountBillingRoute
   AuthenticatedAccountSettingsRoute: typeof AuthenticatedAccountSettingsRoute
   AuthenticatedTransactionsNewRoute: typeof AuthenticatedTransactionsNewRoute
-  AuthenticatedTxIdStageStepRoute: typeof AuthenticatedTxIdStageStepRoute
+  AuthenticatedTxIdRoute: typeof AuthenticatedTxIdRouteWithChildren
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -471,7 +501,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAccountBillingRoute: AuthenticatedAccountBillingRoute,
   AuthenticatedAccountSettingsRoute: AuthenticatedAccountSettingsRoute,
   AuthenticatedTransactionsNewRoute: AuthenticatedTransactionsNewRoute,
-  AuthenticatedTxIdStageStepRoute: AuthenticatedTxIdStageStepRoute,
+  AuthenticatedTxIdRoute: AuthenticatedTxIdRouteWithChildren,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
