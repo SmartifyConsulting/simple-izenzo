@@ -16,6 +16,7 @@ import { useLayoutPreference, setLayoutPreference } from "@/lib/layoutPreference
 import { SidebarShell } from "@/components/layout/SidebarShell";
 import { useModules } from "@/lib/useModules";
 import { WorkspaceSwitcher } from "@/components/layout/WorkspaceSwitcher";
+import { ViewSwitcher } from "@/components/layout/ViewSwitcher";
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
 
 function greeting() {
@@ -111,6 +112,7 @@ function ClassicShell({
           </Link>
           <ModuleLauncher />
           <WorkspaceSwitcher current={org?.name ?? "Trade Desk"} variant="compact" />
+          <ViewSwitcher variant="compact" />
           <div className="min-w-0 flex-1" />
           {org && (
             <Link

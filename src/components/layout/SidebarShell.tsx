@@ -1,12 +1,13 @@
 import { type ReactNode } from "react";
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { ChevronDown, Waypoints, ArrowLeftRight } from "lucide-react";
+import { Link, useRouterState } from "@tanstack/react-router";
+import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
 import { setLayoutPreference } from "@/lib/layoutPreference";
 import { NAV_DESTINATIONS } from "@/lib/navDestinations";
 import { WorkspaceSwitcher } from "@/components/layout/WorkspaceSwitcher";
+import { ViewSwitcher } from "@/components/layout/ViewSwitcher";
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
 import {
   DropdownMenu,
@@ -27,9 +28,8 @@ export function SidebarShell({
   children: ReactNode;
 }) {
   const { profile, org } = useAuth();
-  const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const isSimpleMode = pathname === "/guided" || pathname.startsWith("/guided/");
+  const isFocusedView = pathname.startsWith("/guided") || pathname.startsWith("/workflow");
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -44,23 +44,8 @@ export function SidebarShell({
         </div>
 
         <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-3">
-          {isSimpleMode ? (
-            <>
-              <Link
-                to="/guided"
-                className="flex items-center gap-2.5 rounded-md bg-primary/10 px-2.5 py-2 text-sm font-semibold text-primary"
-              >
-                <Waypoints className="h-4 w-4" />
-                Simple Mode
-              </Link>
-              <button
-                onClick={() => navigate({ to: "/dashboard" })}
-                className="mt-3 flex w-full items-center gap-2.5 rounded-md border border-border px-2.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              >
-                <ArrowLeftRight className="h-4 w-4" />
-                Switch to Version 1
-              </button>
-            </>
+          {isFocusedView ? (
+            <ViewSwitcher variant="block" />
           ) : (
             <>
               {NAV_DESTINATIONS.slice(0, 4).map((item) => {
@@ -105,20 +90,10 @@ export function SidebarShell({
 
               <div className="my-3 border-t border-border" />
 
-              <Link
-                to="/guided"
-                className={cn(
-                  "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-semibold transition-colors",
-                  pathname === "/guided"
-                    ? "bg-primary/10 text-primary"
-                    : "text-primary hover:bg-primary/10",
-                )}
-              >
-                <Waypoints className="h-4 w-4" />
-                Simple Mode
-              </Link>
-              <p className="px-2.5 pt-0.5 text-[11px] leading-snug text-muted-foreground">
-                Everything above, as a guided icon flow.
+              <ViewSwitcher variant="block" />
+              <p className="px-2.5 pt-1.5 text-[11px] leading-snug text-muted-foreground">
+                Simple Mode and Workflow View walk the same gates as a guided flow or a live
+                flowchart.
               </p>
             </>
           )}
