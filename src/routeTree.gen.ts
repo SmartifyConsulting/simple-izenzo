@@ -13,10 +13,14 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ContactRouteImport } from './routes/contact'
+import { Route as DocsRouteImport } from './routes/docs'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as GlossaryRouteImport } from './routes/glossary'
+import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as StatusRouteImport } from './routes/status'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
+import { Route as WalkthroughRouteImport } from './routes/walkthrough'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
 import { Route as AuthenticatedAuditorRouteImport } from './routes/_authenticated.auditor'
 import { Route as AuthenticatedCreditsRouteImport } from './routes/_authenticated.credits'
@@ -26,6 +30,14 @@ import { Route as AuthenticatedFunderRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated.inbox'
 import { Route as AuthenticatedRegistryRouteImport } from './routes/_authenticated.registry'
 import { Route as AuthenticatedSupportRouteImport } from './routes/_authenticated.support'
+import { Route as DocsApiRouteImport } from './routes/docs.api'
+import { Route as DocsWebhooksRouteImport } from './routes/docs.webhooks'
+import { Route as ProductsAuditLedgerRouteImport } from './routes/products.audit-ledger'
+import { Route as ProductsComplianceEngineRouteImport } from './routes/products.compliance-engine'
+import { Route as ProductsTradeDeskRouteImport } from './routes/products.trade-desk'
+import { Route as SolutionsFinanceRouteImport } from './routes/solutions.finance'
+import { Route as SolutionsSovereignsRouteImport } from './routes/solutions.sovereigns'
+import { Route as SolutionsTradersRouteImport } from './routes/solutions.traders'
 import { Route as AuthenticatedAccountBillingRouteImport } from './routes/_authenticated.account.billing'
 import { Route as AuthenticatedAccountSettingsRouteImport } from './routes/_authenticated.account.settings'
 import { Route as AuthenticatedDealIdRouteImport } from './routes/_authenticated.deal.$id'
@@ -51,6 +63,11 @@ const ContactRoute = ContactRouteImport.update({
   path: '/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DocsRoute = DocsRouteImport.update({
+  id: '/docs',
+  path: '/docs',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
@@ -61,14 +78,29 @@ const GlossaryRoute = GlossaryRouteImport.update({
   path: '/glossary',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StatusRoute = StatusRouteImport.update({
+  id: '/status',
+  path: '/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
   id: '/verify-email',
   path: '/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WalkthroughRoute = WalkthroughRouteImport.update({
+  id: '/walkthrough',
+  path: '/walkthrough',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
@@ -117,6 +149,47 @@ const AuthenticatedSupportRoute = AuthenticatedSupportRouteImport.update({
   path: '/support',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const DocsApiRoute = DocsApiRouteImport.update({
+  id: '/api',
+  path: '/api',
+  getParentRoute: () => DocsRoute,
+} as any)
+const DocsWebhooksRoute = DocsWebhooksRouteImport.update({
+  id: '/webhooks',
+  path: '/webhooks',
+  getParentRoute: () => DocsRoute,
+} as any)
+const ProductsAuditLedgerRoute = ProductsAuditLedgerRouteImport.update({
+  id: '/products/audit-ledger',
+  path: '/products/audit-ledger',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProductsComplianceEngineRoute =
+  ProductsComplianceEngineRouteImport.update({
+    id: '/products/compliance-engine',
+    path: '/products/compliance-engine',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ProductsTradeDeskRoute = ProductsTradeDeskRouteImport.update({
+  id: '/products/trade-desk',
+  path: '/products/trade-desk',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SolutionsFinanceRoute = SolutionsFinanceRouteImport.update({
+  id: '/solutions/finance',
+  path: '/solutions/finance',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SolutionsSovereignsRoute = SolutionsSovereignsRouteImport.update({
+  id: '/solutions/sovereigns',
+  path: '/solutions/sovereigns',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SolutionsTradersRoute = SolutionsTradersRouteImport.update({
+  id: '/solutions/traders',
+  path: '/solutions/traders',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAccountBillingRoute =
   AuthenticatedAccountBillingRouteImport.update({
     id: '/account/billing',
@@ -151,10 +224,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
+  '/docs': typeof DocsRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/glossary': typeof GlossaryRoute
+  '/pricing': typeof PricingRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/status': typeof StatusRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/walkthrough': typeof WalkthroughRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/auditor': typeof AuthenticatedAuditorRoute
   '/credits': typeof AuthenticatedCreditsRoute
@@ -164,6 +241,14 @@ export interface FileRoutesByFullPath {
   '/inbox': typeof AuthenticatedInboxRoute
   '/registry': typeof AuthenticatedRegistryRoute
   '/support': typeof AuthenticatedSupportRoute
+  '/docs/api': typeof DocsApiRoute
+  '/docs/webhooks': typeof DocsWebhooksRoute
+  '/products/audit-ledger': typeof ProductsAuditLedgerRoute
+  '/products/compliance-engine': typeof ProductsComplianceEngineRoute
+  '/products/trade-desk': typeof ProductsTradeDeskRoute
+  '/solutions/finance': typeof SolutionsFinanceRoute
+  '/solutions/sovereigns': typeof SolutionsSovereignsRoute
+  '/solutions/traders': typeof SolutionsTradersRoute
   '/account/billing': typeof AuthenticatedAccountBillingRoute
   '/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/deal/$id': typeof AuthenticatedDealIdRoute
@@ -174,10 +259,14 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
+  '/docs': typeof DocsRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/glossary': typeof GlossaryRoute
+  '/pricing': typeof PricingRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/status': typeof StatusRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/walkthrough': typeof WalkthroughRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/auditor': typeof AuthenticatedAuditorRoute
   '/credits': typeof AuthenticatedCreditsRoute
@@ -187,6 +276,14 @@ export interface FileRoutesByTo {
   '/inbox': typeof AuthenticatedInboxRoute
   '/registry': typeof AuthenticatedRegistryRoute
   '/support': typeof AuthenticatedSupportRoute
+  '/docs/api': typeof DocsApiRoute
+  '/docs/webhooks': typeof DocsWebhooksRoute
+  '/products/audit-ledger': typeof ProductsAuditLedgerRoute
+  '/products/compliance-engine': typeof ProductsComplianceEngineRoute
+  '/products/trade-desk': typeof ProductsTradeDeskRoute
+  '/solutions/finance': typeof SolutionsFinanceRoute
+  '/solutions/sovereigns': typeof SolutionsSovereignsRoute
+  '/solutions/traders': typeof SolutionsTradersRoute
   '/account/billing': typeof AuthenticatedAccountBillingRoute
   '/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/deal/$id': typeof AuthenticatedDealIdRoute
@@ -199,10 +296,14 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
+  '/docs': typeof DocsRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/glossary': typeof GlossaryRoute
+  '/pricing': typeof PricingRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/status': typeof StatusRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/walkthrough': typeof WalkthroughRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/auditor': typeof AuthenticatedAuditorRoute
   '/_authenticated/credits': typeof AuthenticatedCreditsRoute
@@ -212,6 +313,14 @@ export interface FileRoutesById {
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
   '/_authenticated/registry': typeof AuthenticatedRegistryRoute
   '/_authenticated/support': typeof AuthenticatedSupportRoute
+  '/docs/api': typeof DocsApiRoute
+  '/docs/webhooks': typeof DocsWebhooksRoute
+  '/products/audit-ledger': typeof ProductsAuditLedgerRoute
+  '/products/compliance-engine': typeof ProductsComplianceEngineRoute
+  '/products/trade-desk': typeof ProductsTradeDeskRoute
+  '/solutions/finance': typeof SolutionsFinanceRoute
+  '/solutions/sovereigns': typeof SolutionsSovereignsRoute
+  '/solutions/traders': typeof SolutionsTradersRoute
   '/_authenticated/account/billing': typeof AuthenticatedAccountBillingRoute
   '/_authenticated/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/_authenticated/deal/$id': typeof AuthenticatedDealIdRoute
@@ -224,10 +333,14 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/contact'
+    | '/docs'
     | '/forgot-password'
     | '/glossary'
+    | '/pricing'
     | '/reset-password'
+    | '/status'
     | '/verify-email'
+    | '/walkthrough'
     | '/admin'
     | '/auditor'
     | '/credits'
@@ -237,6 +350,14 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/registry'
     | '/support'
+    | '/docs/api'
+    | '/docs/webhooks'
+    | '/products/audit-ledger'
+    | '/products/compliance-engine'
+    | '/products/trade-desk'
+    | '/solutions/finance'
+    | '/solutions/sovereigns'
+    | '/solutions/traders'
     | '/account/billing'
     | '/account/settings'
     | '/deal/$id'
@@ -247,10 +368,14 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/contact'
+    | '/docs'
     | '/forgot-password'
     | '/glossary'
+    | '/pricing'
     | '/reset-password'
+    | '/status'
     | '/verify-email'
+    | '/walkthrough'
     | '/admin'
     | '/auditor'
     | '/credits'
@@ -260,6 +385,14 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/registry'
     | '/support'
+    | '/docs/api'
+    | '/docs/webhooks'
+    | '/products/audit-ledger'
+    | '/products/compliance-engine'
+    | '/products/trade-desk'
+    | '/solutions/finance'
+    | '/solutions/sovereigns'
+    | '/solutions/traders'
     | '/account/billing'
     | '/account/settings'
     | '/deal/$id'
@@ -271,10 +404,14 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/contact'
+    | '/docs'
     | '/forgot-password'
     | '/glossary'
+    | '/pricing'
     | '/reset-password'
+    | '/status'
     | '/verify-email'
+    | '/walkthrough'
     | '/_authenticated/admin'
     | '/_authenticated/auditor'
     | '/_authenticated/credits'
@@ -284,6 +421,14 @@ export interface FileRouteTypes {
     | '/_authenticated/inbox'
     | '/_authenticated/registry'
     | '/_authenticated/support'
+    | '/docs/api'
+    | '/docs/webhooks'
+    | '/products/audit-ledger'
+    | '/products/compliance-engine'
+    | '/products/trade-desk'
+    | '/solutions/finance'
+    | '/solutions/sovereigns'
+    | '/solutions/traders'
     | '/_authenticated/account/billing'
     | '/_authenticated/account/settings'
     | '/_authenticated/deal/$id'
@@ -296,10 +441,20 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthRoute: typeof AuthRoute
   ContactRoute: typeof ContactRoute
+  DocsRoute: typeof DocsRouteWithChildren
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   GlossaryRoute: typeof GlossaryRoute
+  PricingRoute: typeof PricingRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  StatusRoute: typeof StatusRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
+  WalkthroughRoute: typeof WalkthroughRoute
+  ProductsAuditLedgerRoute: typeof ProductsAuditLedgerRoute
+  ProductsComplianceEngineRoute: typeof ProductsComplianceEngineRoute
+  ProductsTradeDeskRoute: typeof ProductsTradeDeskRoute
+  SolutionsFinanceRoute: typeof SolutionsFinanceRoute
+  SolutionsSovereignsRoute: typeof SolutionsSovereignsRoute
+  SolutionsTradersRoute: typeof SolutionsTradersRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -332,6 +487,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContactRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/docs': {
+      id: '/docs'
+      path: '/docs'
+      fullPath: '/docs'
+      preLoaderRoute: typeof DocsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/forgot-password': {
       id: '/forgot-password'
       path: '/forgot-password'
@@ -346,6 +508,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GlossaryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reset-password': {
       id: '/reset-password'
       path: '/reset-password'
@@ -353,11 +522,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/status': {
+      id: '/status'
+      path: '/status'
+      fullPath: '/status'
+      preLoaderRoute: typeof StatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/verify-email': {
       id: '/verify-email'
       path: '/verify-email'
       fullPath: '/verify-email'
       preLoaderRoute: typeof VerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/walkthrough': {
+      id: '/walkthrough'
+      path: '/walkthrough'
+      fullPath: '/walkthrough'
+      preLoaderRoute: typeof WalkthroughRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/admin': {
@@ -422,6 +605,62 @@ declare module '@tanstack/react-router' {
       fullPath: '/support'
       preLoaderRoute: typeof AuthenticatedSupportRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/docs/api': {
+      id: '/docs/api'
+      path: '/api'
+      fullPath: '/docs/api'
+      preLoaderRoute: typeof DocsApiRouteImport
+      parentRoute: typeof DocsRoute
+    }
+    '/docs/webhooks': {
+      id: '/docs/webhooks'
+      path: '/webhooks'
+      fullPath: '/docs/webhooks'
+      preLoaderRoute: typeof DocsWebhooksRouteImport
+      parentRoute: typeof DocsRoute
+    }
+    '/products/audit-ledger': {
+      id: '/products/audit-ledger'
+      path: '/products/audit-ledger'
+      fullPath: '/products/audit-ledger'
+      preLoaderRoute: typeof ProductsAuditLedgerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/products/compliance-engine': {
+      id: '/products/compliance-engine'
+      path: '/products/compliance-engine'
+      fullPath: '/products/compliance-engine'
+      preLoaderRoute: typeof ProductsComplianceEngineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/products/trade-desk': {
+      id: '/products/trade-desk'
+      path: '/products/trade-desk'
+      fullPath: '/products/trade-desk'
+      preLoaderRoute: typeof ProductsTradeDeskRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/solutions/finance': {
+      id: '/solutions/finance'
+      path: '/solutions/finance'
+      fullPath: '/solutions/finance'
+      preLoaderRoute: typeof SolutionsFinanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/solutions/sovereigns': {
+      id: '/solutions/sovereigns'
+      path: '/solutions/sovereigns'
+      fullPath: '/solutions/sovereigns'
+      preLoaderRoute: typeof SolutionsSovereignsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/solutions/traders': {
+      id: '/solutions/traders'
+      path: '/solutions/traders'
+      fullPath: '/solutions/traders'
+      preLoaderRoute: typeof SolutionsTradersRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/account/billing': {
       id: '/_authenticated/account/billing'
@@ -499,15 +738,37 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
   AuthenticatedRouteChildren,
 )
 
+interface DocsRouteChildren {
+  DocsApiRoute: typeof DocsApiRoute
+  DocsWebhooksRoute: typeof DocsWebhooksRoute
+}
+
+const DocsRouteChildren: DocsRouteChildren = {
+  DocsApiRoute: DocsApiRoute,
+  DocsWebhooksRoute: DocsWebhooksRoute,
+}
+
+const DocsRouteWithChildren = DocsRoute._addFileChildren(DocsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthRoute: AuthRoute,
   ContactRoute: ContactRoute,
+  DocsRoute: DocsRouteWithChildren,
   ForgotPasswordRoute: ForgotPasswordRoute,
   GlossaryRoute: GlossaryRoute,
+  PricingRoute: PricingRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  StatusRoute: StatusRoute,
   VerifyEmailRoute: VerifyEmailRoute,
+  WalkthroughRoute: WalkthroughRoute,
+  ProductsAuditLedgerRoute: ProductsAuditLedgerRoute,
+  ProductsComplianceEngineRoute: ProductsComplianceEngineRoute,
+  ProductsTradeDeskRoute: ProductsTradeDeskRoute,
+  SolutionsFinanceRoute: SolutionsFinanceRoute,
+  SolutionsSovereignsRoute: SolutionsSovereignsRoute,
+  SolutionsTradersRoute: SolutionsTradersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

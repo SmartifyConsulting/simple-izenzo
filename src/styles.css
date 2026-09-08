@@ -1,7 +1,7 @@
 /* Gotham is a paid commercial font with no free CDN distribution — Montserrat Bold is used
  * as the closest freely-licensed substitute for the greeting. Swap this import if a
  * licensed Gotham font file becomes available. */
-@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap");
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
@@ -11,18 +11,17 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Izenzo design system — navy + emerald.
- * Deep navy primary/sidebar, soft indigo page wash, white cards,
- * emerald for completed/sealed states, quiet cool-grey borders.
- * Manrope body, Sora headings, IBM Plex Mono for hashes and seals.
+ * Izenzo design system — mirrors the reference marketing site (compliance-matching.lovable.app):
+ * white surfaces, deep-slate text, emerald-green primary, quiet cool-grey borders.
+ * Inter for body and headings, JetBrains Mono for hashes/seals and stat readouts.
  */
 
 @theme inline {
-  --font-sans: "Manrope Variable", "Manrope", system-ui, -apple-system, sans-serif;
-  --font-heading: "Sora Variable", "Sora", system-ui, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-heading: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   /* Substitute for Gotham Bold — see import note above. */
-  --font-greeting: "Montserrat", "Sora Variable", system-ui, sans-serif;
+  --font-greeting: "Montserrat", "Inter", system-ui, sans-serif;
 
 
   --radius-sm: calc(var(--radius) - 2px);
@@ -74,99 +73,59 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
-/* Ink & Aqua — ink ground #0d0f14, glass panels #1b2430, teal signal #14b8a6, #e8eef6 text. */
+/* Mirrors compliance-matching.lovable.app's palette 1:1 — white surfaces, deep-slate text,
+ * emerald-green primary. See src/routes/index.tsx and layout components for usage. */
 :root {
-  --radius: 0.75rem;
+  --radius: 0.375rem;
 
-  --background: oklch(0.16 0.008 260);
-  --foreground: oklch(0.94 0.012 250);
-  --card: oklch(0.255 0.02 253);
-  --card-foreground: oklch(0.94 0.012 250);
-  --popover: oklch(0.245 0.022 253);
-  --popover-foreground: oklch(0.94 0.012 250);
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(222 47% 11%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(222 47% 11%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(222 47% 11%);
 
-  --primary: oklch(0.71 0.13 178);
-  --primary-foreground: oklch(0.16 0.02 200);
-  --secondary: oklch(0.29 0.02 253);
-  --secondary-foreground: oklch(0.94 0.012 250);
-  --muted: oklch(0.27 0.018 253);
-  --muted-foreground: oklch(0.72 0.018 250);
-  --accent: oklch(0.33 0.03 200);
-  --accent-foreground: oklch(0.94 0.012 250);
+  --primary: hsl(155 35% 28%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(210 40% 98%);
+  --secondary-foreground: hsl(222 47% 11%);
+  --muted: hsl(210 40% 98%);
+  --muted-foreground: hsl(215 16% 47%);
+  --accent: hsl(210 40% 96%);
+  --accent-foreground: hsl(222 47% 11%);
 
-  --destructive: oklch(0.62 0.2 26.5);
-  --destructive-foreground: oklch(0.98 0 0);
-  --success: oklch(0.71 0.13 172);
-  --success-foreground: oklch(0.16 0.02 200);
-  --warning: oklch(0.78 0.14 78);
-  --warning-foreground: oklch(0.18 0.02 250);
-  --info: oklch(0.68 0.11 220);
-  --info-foreground: oklch(0.16 0.02 250);
+  --destructive: hsl(0 72% 51%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --success: hsl(160 84% 39%);
+  --success-foreground: hsl(0 0% 100%);
+  --warning: hsl(43 96% 56%);
+  --warning-foreground: hsl(0 0% 0%);
+  --info: hsl(210 90% 45%);
+  --info-foreground: hsl(0 0% 100%);
 
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.71 0.13 178);
+  --border: hsl(214 32% 91%);
+  --input: hsl(214 32% 91%);
+  --ring: hsl(155 35% 28%);
 
-  --chart-1: oklch(0.71 0.13 178);
-  --chart-2: oklch(0.68 0.11 220);
-  --chart-3: oklch(0.78 0.14 78);
-  --chart-4: oklch(0.55 0.09 200);
-  --chart-5: oklch(0.4 0.04 250);
+  --chart-1: hsl(155 35% 28%);
+  --chart-2: hsl(210 90% 45%);
+  --chart-3: hsl(43 96% 56%);
+  --chart-4: hsl(29 57% 46%);
+  --chart-5: hsl(220 12% 45%);
 
-  --sidebar: oklch(0.205 0.015 253);
-  --sidebar-foreground: oklch(0.9 0.015 250);
-  --sidebar-primary: oklch(0.71 0.13 178);
-  --sidebar-primary-foreground: oklch(0.16 0.02 200);
-  --sidebar-accent: oklch(0.33 0.04 195);
-  --sidebar-accent-foreground: oklch(0.97 0.01 250);
-  --sidebar-border: oklch(1 0 0 / 12%);
-  --sidebar-ring: oklch(0.71 0.13 178);
+  --sidebar: hsl(210 20% 98%);
+  --sidebar-foreground: hsl(220 26% 11%);
+  --sidebar-primary: hsl(155 44% 19%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(220 13% 93%);
+  --sidebar-accent-foreground: hsl(220 26% 11%);
+  --sidebar-border: hsl(220 13% 83%);
+  --sidebar-ring: hsl(155 44% 19%);
 
-  --glass-surface: oklch(0.255 0.02 253 / 62%);
-  --glass-border: oklch(1 0 0 / 14%);
-  --glass-shadow: 0 24px 60px -28px oklch(0 0 0 / 85%), inset 0 1px 0 oklch(1 0 0 / 10%);
-  --signal: oklch(0.71 0.13 178);
-}
-
-.dark {
-  --background: oklch(0.17 0.045 276);
-  --foreground: oklch(0.95 0.012 285);
-  --card: oklch(0.22 0.06 276);
-  --card-foreground: oklch(0.95 0.012 285);
-  --popover: oklch(0.22 0.06 276);
-  --popover-foreground: oklch(0.95 0.012 285);
-  --primary: oklch(0.72 0.14 276);
-  --primary-foreground: oklch(0.15 0.05 276);
-  --secondary: oklch(0.28 0.07 276);
-  --secondary-foreground: oklch(0.95 0.012 285);
-  --muted: oklch(0.28 0.06 276);
-  --muted-foreground: oklch(0.72 0.03 285);
-  --accent: oklch(0.31 0.08 276);
-  --accent-foreground: oklch(0.95 0.012 285);
-  --destructive: oklch(0.65 0.18 26);
-  --destructive-foreground: oklch(0.98 0 0);
-  --success: oklch(0.7 0.15 155);
-  --success-foreground: oklch(0.16 0.04 276);
-  --warning: oklch(0.79 0.14 78);
-  --warning-foreground: oklch(0.16 0.04 276);
-  --info: oklch(0.7 0.12 265);
-  --info-foreground: oklch(0.16 0.04 276);
-  --border: oklch(1 0 0 / 13%);
-  --input: oklch(1 0 0 / 17%);
-  --ring: oklch(0.66 0.13 276);
-  --chart-1: oklch(0.72 0.14 276);
-  --chart-2: oklch(0.7 0.15 155);
-  --chart-3: oklch(0.6 0.12 270);
-  --chart-4: oklch(0.5 0.1 276);
-  --chart-5: oklch(0.4 0.07 276);
-  --sidebar: oklch(0.19 0.055 276);
-  --sidebar-foreground: oklch(0.86 0.03 285);
-  --sidebar-primary: oklch(0.99 0.005 285);
-  --sidebar-primary-foreground: oklch(0.19 0.055 276);
-  --sidebar-accent: oklch(0.29 0.08 276);
-  --sidebar-accent-foreground: oklch(0.99 0.005 285);
-  --sidebar-border: oklch(0.32 0.09 276);
-  --sidebar-ring: oklch(0.6 0.12 276);
+  --glass-surface: hsl(0 0% 100% / 72%);
+  --glass-border: hsl(220 13% 91%);
+  --glass-shadow: 0 20px 50px -24px hsl(220 30% 20% / 18%), inset 0 1px 0 hsl(0 0% 100% / 60%);
+  --signal: hsl(160 84% 39%);
 }
 
 

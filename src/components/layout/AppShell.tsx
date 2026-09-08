@@ -91,7 +91,7 @@ function ModuleLauncher() {
         variant="ghost"
         size="sm"
         onClick={() => setOpen(true)}
-        className="gap-2 rounded-full border border-border bg-white/5 px-3"
+        className="gap-2 rounded-full border border-border bg-muted px-3"
       >
         <LayoutGrid className="h-4 w-4" />
         <span className="hidden sm:inline">Modules</span>
@@ -136,7 +136,7 @@ function AvatarMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button className="flex shrink-0 items-center gap-2 rounded-full hover:opacity-80">
-          <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-border bg-white/5 text-[13px] font-semibold text-foreground">
+          <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-border bg-muted text-[13px] font-semibold text-foreground">
             {profile?.avatar_url ? (
               <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
             ) : (
