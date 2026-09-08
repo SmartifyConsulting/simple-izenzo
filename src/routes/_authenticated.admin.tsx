@@ -385,7 +385,7 @@ function RegistryTab() {
     const { error } = await supabase.rpc("admin_decide_registry_claim", {
       p_claim_id: claimId,
       p_decision: decision,
-      p_reason: reason,
+      ...(reason ? { p_reason: reason } : {}),
     });
     if (error) {
       toast.error(error.message);
@@ -399,7 +399,18 @@ function RegistryTab() {
   async function setReadiness(companyId: string, state: string) {
     const { error } = await supabase.rpc("admin_registry_set_readiness", {
       p_company_id: companyId,
-      p_state: state,
+      p_state: state as
+        | "seed_only"
+        | "sample_only"
+        | "demo_only"
+        | "licence_pending"
+        | "provider_pending"
+        | "quarantined"
+        | "duplicate_unresolved"
+        | "disputed"
+        | "privacy_hold"
+        | "public_search_ready"
+        | "demo_ready",
     });
     if (error) {
       toast.error(error.message);
@@ -562,8 +573,18 @@ function FacilitationTab() {
     }
     const { error } = await supabase.rpc("admin_facilitation_set_status", {
       p_case_id: caseId,
-      p_status: status,
-      p_note: note,
+      p_status: status as
+        | "new_unassigned"
+        | "triage_in_progress"
+        | "more_information_needed"
+        | "compliance_review_required"
+        | "outreach_approved"
+        | "contact_attempted"
+        | "counterparty_responded"
+        | "profile_verification_in_progress"
+        | "ready_for_poi"
+        | "closed",
+      ...(note ? { p_note: note } : {}),
     });
     if (error) {
       toast.error(error.message);
@@ -579,7 +600,7 @@ function FacilitationTab() {
     const { error } = await supabase.rpc("admin_facilitation_set_compliance_hold", {
       p_case_id: caseId,
       p_hold: hold,
-      p_reason: reason,
+      ...(reason ? { p_reason: reason } : {}),
     });
     if (error) {
       toast.error(error.message);
@@ -601,7 +622,18 @@ function FacilitationTab() {
     if (!reason) return;
     const { error } = await supabase.rpc("admin_facilitation_close", {
       p_case_id: caseId,
-      p_outcome: outcome,
+      p_outcome: outcome as
+        | "converted_to_known_counterparty"
+        | "ready_for_next_step"
+        | "ready_for_poi_review"
+        | "counterparty_declined"
+        | "no_response"
+        | "invalid_details"
+        | "duplicate_merged"
+        | "blocked_by_compliance"
+        | "cancelled_by_requester"
+        | "closed_by_admin"
+        | "unable_to_contact",
       p_reason: reason,
     });
     if (error) {
@@ -746,14 +778,16 @@ function AiSuggestionsTab() {
       return;
     }
     const { error } = await supabase.rpc("admin_ai_suggestion_create", {
-      p_suggestion_type: form.type,
-      p_related_transaction_id: form.transactionId || null,
+      p_suggestion_type: form.type as "suggested_buyer" | "suggested_supplier" | "public_source_research_note",
+      // The RPC's transaction id param is nullable in SQL but the generated type omits `| null` —
+      // a known Supabase type-gen gap for nullable params without a default.
+      p_related_transaction_id: (form.transactionId || null) as unknown as string,
       p_suggested_name: form.name,
       p_summary: form.summary,
-      p_confidence: form.confidence,
+      p_confidence: form.confidence as "low" | "medium" | "high",
       p_source_summary: form.sourceSummary,
       p_reason: form.reason,
-      p_source_references: form.sourceReferences || null,
+      ...(form.sourceReferences ? { p_source_references: form.sourceReferences } : {}),
     });
     if (error) {
       toast.error(error.message);
@@ -794,8 +828,17 @@ function AiSuggestionsTab() {
     if (reason === "other" && !note) return;
     const { error } = await supabase.rpc("admin_ai_suggestion_reject", {
       p_id: id,
-      p_reason: reason,
-      p_note: note,
+      p_reason: reason as
+        | "duplicate"
+        | "weak_source"
+        | "wrong_jurisdiction"
+        | "poor_counterparty_fit"
+        | "compliance_concern"
+        | "insufficient_evidence"
+        | "already_known"
+        | "not_commercially_useful"
+        | "other",
+      ...(note ? { p_note: note } : {}),
     });
     if (error) {
       toast.error(error.message);
@@ -1110,10 +1153,10 @@ function ComplianceCasesTab() {
       return;
     }
     const { error } = await supabase.rpc("admin_case_create", {
-      p_case_type: form.caseType,
+      p_case_type: form.caseType as "kyc_review" | "aml_alert" | "counterparty_dispute" | "transaction_review" | "other",
       p_title: form.title,
       p_summary: form.summary,
-      p_priority: form.priority,
+      p_priority: form.priority as "low" | "medium" | "high" | "urgent",
       p_subject_counterparty_id: form.counterpartyId,
     });
     if (error) {
@@ -1147,7 +1190,7 @@ function ComplianceCasesTab() {
     if (!note) return;
     const { error } = await supabase.rpc("admin_case_propose_decision", {
       p_id: id,
-      p_decision: decision,
+      p_decision: decision as "approve" | "reject" | "no_action",
       p_note: note,
     });
     if (error) {
@@ -1159,8 +1202,11 @@ function ComplianceCasesTab() {
   }
 
   async function approveDecision(id: string) {
-    const note = window.prompt("Note (optional):") ?? undefined;
-    const { error } = await supabase.rpc("admin_case_approve_decision", { p_id: id, p_note: note || null });
+    const note = window.prompt("Note (optional):");
+    const { error } = await supabase.rpc("admin_case_approve_decision", {
+      p_id: id,
+      ...(note ? { p_note: note } : {}),
+    });
     if (error) {
       toast.error(error.message);
       return;
@@ -1500,7 +1546,7 @@ function FundersTab() {
       p_reason: releaseForm.reason,
       p_expiry: expiry,
       p_compliance_summary: summary,
-      p_permissions: releaseForm.permissions,
+      p_permissions: releaseForm.permissions as "view" | "view_and_download",
     });
     if (error) {
       toast.error(error.message);
@@ -1819,11 +1865,11 @@ function ApiKeysTab() {
     }
     const { data, error } = await supabase.rpc("admin_api_create_key", {
       p_org_id: form.orgId,
-      p_environment: form.environment,
+      p_environment: form.environment as "sandbox" | "production",
       p_name: form.name,
       p_scopes: form.scopes,
-      p_commercial_owner: form.commercialOwner || null,
-      p_compliance_owner: form.complianceOwner || null,
+      ...(form.commercialOwner ? { p_commercial_owner: form.commercialOwner } : {}),
+      ...(form.complianceOwner ? { p_compliance_owner: form.complianceOwner } : {}),
     });
     if (error) {
       toast.error(error.message);

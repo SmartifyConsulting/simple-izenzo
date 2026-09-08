@@ -863,7 +863,7 @@ function RatingDrawer({
     if (!reason) return;
     const { error } = await supabase.rpc("admin_override_counterparty_rating", {
       p_counterparty_id: c.id,
-      p_override: value,
+      p_override: value as "trusted" | "neutral" | "flagged",
       p_reason: reason,
     });
     if (error) {

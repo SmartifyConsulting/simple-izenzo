@@ -61,11 +61,11 @@ function FunderWorkspace() {
   }
 
   async function recordDecision(id: string, decision: string) {
-    const note = window.prompt("Note (optional):") ?? undefined;
+    const note = window.prompt("Note (optional):");
     const { error } = await supabase.rpc("funder_record_decision", {
       p_release_id: id,
-      p_decision: decision,
-      p_note: note || null,
+      p_decision: decision as "recommend_fund" | "decline" | "request_more_info",
+      ...(note ? { p_note: note } : {}),
     });
     if (error) {
       toast.error(error.message);
