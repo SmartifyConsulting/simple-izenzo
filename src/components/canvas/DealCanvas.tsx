@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import {
   FileUp,
@@ -268,6 +269,35 @@ function SectionRow({ title, items }: { title: string; items: React.ReactNode[] 
     <div className="mt-5">
       <p className="label-caps mb-2">{title}</p>
       <div className="grid gap-3 sm:grid-cols-3">{items}</div>
+    </div>
+  );
+}
+
+/** Shown on the canvas when there is nothing to work on yet. */
+export function CanvasStart() {
+  return (
+    <div className="ink-grid relative rounded-3xl border border-border p-8 sm:p-14">
+      <p className="label-caps text-center">Live deal canvas</p>
+      <div className="mx-auto mt-6 max-w-md">
+        <Link to="/transactions/new" className="block">
+          <span className="glass-node node-active animate-node-rise block px-6 py-7 text-center">
+            <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full border border-primary bg-primary/20 text-primary">
+              <ArrowLeftRight className="h-4.5 w-4.5" />
+            </span>
+            <span className="mt-3 block text-[15px] font-semibold tracking-tight">
+              Open a bid or an offer
+            </span>
+            <span className="mt-1.5 block text-[12.5px] text-muted-foreground">
+              The canvas draws itself from here: your lane on the left, the counterparty on the
+              right.
+            </span>
+          </span>
+        </Link>
+      </div>
+      <Connector />
+      <p className="text-center text-[11.5px] text-muted-foreground">
+        Matching · Proof of Intent · Without a Doubt · Execution · Finality
+      </p>
     </div>
   );
 }
