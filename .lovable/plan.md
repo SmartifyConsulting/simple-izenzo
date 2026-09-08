@@ -9,6 +9,8 @@
 
 ## 2. Setting up the API connections one at a time
 
+Access: the Integrations view is visible only to georgia.adams@smartify.co.za (system admin). The tab is hidden for everyone else, the page refuses to open if reached directly, and the server checks the same thing before reading, saving, revealing or testing any credential — so no other administrator can reach the store.
+
 Admin → Platform → Integrations keeps all provider cards, and gains a **Guided setup** mode that walks through providers one by one:
 
 - A single-provider view showing: what the provider is for, exactly which values to fetch and where to find them in that provider's own portal, the sandbox/production switch, and the credential fields (each password field keeps the eye toggle).
