@@ -8,16 +8,16 @@ import type { Transaction } from "@/lib/tx";
 
 /** Shared behaviour behind both Workflow View and Workflow Grid: same deal-fetching, same
  * ticker, same Live Deal Canvas. The two routes only differ in presentation (title/description
- * and whether the canvas shows its grid background) — every other change belongs here so both
- * views stay in lockstep. */
+ * and the canvas's grid theme) — every other change belongs here so both views stay in
+ * lockstep. */
 export function WorkflowPage({
   title,
   description,
-  gridBackground,
+  gridTheme,
 }: {
   title: string;
   description: string;
-  gridBackground: boolean;
+  gridTheme: "none" | "light" | "dark";
 }) {
   const { org } = useAuth();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -45,13 +45,20 @@ export function WorkflowPage({
   return (
     <AppShell wide title={title} description={description}>
       {isLoading && <p className="text-sm text-muted-foreground">Opening the canvas…</p>}
-      {!isLoading && !activeTx && <CanvasStart />}
+      {!isLoading && !activeTx && (
+        <CanvasStart
+          onCreated={(id) => {
+            setSelectedId(id);
+            void refetch();
+          }}
+        />
+      )}
       {activeTx && (
         <DealCanvas
           tx={activeTx}
           deals={txs}
           onSelectDeal={setSelectedId}
-          gridBackground={gridBackground}
+          gridTheme={gridTheme}
           reload={() => {
             void refetch();
           }}

@@ -253,6 +253,17 @@
   background-position: -1px -1px;
 }
 
+/* Experimental dark treatment for Workflow Grid — black backdrop, green grid lines, so it can be
+ * compared side by side with the light grid. */
+@utility ink-grid-dark {
+  background-color: hsl(150 30% 6%);
+  background-image:
+    linear-gradient(hsl(155 60% 45% / 35%) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(155 60% 45% / 35%) 1px, transparent 1px);
+  background-size: 44px 44px, 44px 44px;
+  background-position: -1px -1px;
+}
+
 @keyframes node-rise {
   from {
     opacity: 0;

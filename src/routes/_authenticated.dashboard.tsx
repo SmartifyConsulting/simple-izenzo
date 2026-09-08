@@ -87,7 +87,14 @@ function Dashboard() {
         <>
           {isLoading && <p className="text-sm text-muted-foreground">Opening the canvas…</p>}
 
-          {!isLoading && !activeTx && <CanvasStart />}
+          {!isLoading && !activeTx && (
+            <CanvasStart
+              onCreated={(id) => {
+                setSelectedId(id);
+                void refetch();
+              }}
+            />
+          )}
 
           {activeTx && (
             <DealCanvas

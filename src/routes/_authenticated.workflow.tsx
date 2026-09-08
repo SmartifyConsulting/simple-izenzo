@@ -23,7 +23,7 @@ function WorkflowView() {
     <WorkflowPage
       title="Workflow View"
       description="The Trading Gateway flowchart — your current step is highlighted."
-      gridBackground={false}
+      gridTheme="none"
     />
   );
 }
