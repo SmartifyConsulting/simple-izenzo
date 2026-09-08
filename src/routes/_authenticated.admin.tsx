@@ -35,6 +35,49 @@ type ProfileRow = {
   created_at: string;
 };
 
+const ADMIN_GROUPS: { id: string; label: string; tabs: { value: string; label: string; Component: () => React.JSX.Element }[] }[] = [
+  {
+    id: "platform",
+    label: "Platform",
+    tabs: [
+      { value: "users", label: "Users", Component: UsersTab },
+      { value: "api-keys", label: "API Keys", Component: ApiKeysTab },
+    ],
+  },
+  {
+    id: "trust-compliance",
+    label: "Trust & Compliance",
+    tabs: [
+      { value: "registry", label: "Registry", Component: RegistryTab },
+      { value: "facilitation", label: "Facilitation", Component: FacilitationTab },
+      { value: "compliance-cases", label: "Compliance Cases", Component: ComplianceCasesTab },
+      { value: "ai-suggestions", label: "AI Suggestions", Component: AiSuggestionsTab },
+      { value: "auditors", label: "Auditors", Component: AuditorsTab },
+    ],
+  },
+  {
+    id: "money",
+    label: "Money",
+    tabs: [
+      { value: "tokens", label: "Tokens", Component: TokensTab },
+      { value: "payments", label: "Payments", Component: PaymentsTab },
+    ],
+  },
+  {
+    id: "partners",
+    label: "Partners",
+    tabs: [{ value: "funders", label: "Funders", Component: FundersTab }],
+  },
+  {
+    id: "operations",
+    label: "Operations",
+    tabs: [
+      { value: "support", label: "Support", Component: SupportTab },
+      { value: "reporting", label: "Reporting", Component: ReportingTab },
+    ],
+  },
+];
+
 function AdminPage() {
   const { roles } = useAuth();
   const isAdmin = roles.includes("admin");
@@ -51,57 +94,32 @@ function AdminPage() {
 
   return (
     <AppShell title="System Admin" description="Users, tokens and reporting for the whole book">
-      <Tabs defaultValue="users">
+      <Tabs defaultValue="platform">
         <TabsList>
-          <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="tokens">Tokens</TabsTrigger>
-          <TabsTrigger value="registry">Registry</TabsTrigger>
-          <TabsTrigger value="facilitation">Facilitation</TabsTrigger>
-          <TabsTrigger value="ai-suggestions">AI Suggestions</TabsTrigger>
-          <TabsTrigger value="compliance-cases">Compliance Cases</TabsTrigger>
-          <TabsTrigger value="funders">Funders</TabsTrigger>
-          <TabsTrigger value="api-keys">API Keys</TabsTrigger>
-          <TabsTrigger value="support">Support</TabsTrigger>
-          <TabsTrigger value="auditors">Auditors</TabsTrigger>
-          <TabsTrigger value="payments">Payments</TabsTrigger>
-          <TabsTrigger value="reporting">Reporting</TabsTrigger>
+          {ADMIN_GROUPS.map((g) => (
+            <TabsTrigger key={g.id} value={g.id}>
+              {g.label}
+            </TabsTrigger>
+          ))}
         </TabsList>
-        <TabsContent value="users" className="mt-6">
-          <UsersTab />
-        </TabsContent>
-        <TabsContent value="tokens" className="mt-6">
-          <TokensTab />
-        </TabsContent>
-        <TabsContent value="registry" className="mt-6">
-          <RegistryTab />
-        </TabsContent>
-        <TabsContent value="facilitation" className="mt-6">
-          <FacilitationTab />
-        </TabsContent>
-        <TabsContent value="ai-suggestions" className="mt-6">
-          <AiSuggestionsTab />
-        </TabsContent>
-        <TabsContent value="compliance-cases" className="mt-6">
-          <ComplianceCasesTab />
-        </TabsContent>
-        <TabsContent value="funders" className="mt-6">
-          <FundersTab />
-        </TabsContent>
-        <TabsContent value="api-keys" className="mt-6">
-          <ApiKeysTab />
-        </TabsContent>
-        <TabsContent value="support" className="mt-6">
-          <SupportTab />
-        </TabsContent>
-        <TabsContent value="auditors" className="mt-6">
-          <AuditorsTab />
-        </TabsContent>
-        <TabsContent value="payments" className="mt-6">
-          <PaymentsTab />
-        </TabsContent>
-        <TabsContent value="reporting" className="mt-6">
-          <ReportingTab />
-        </TabsContent>
+        {ADMIN_GROUPS.map((g) => (
+          <TabsContent key={g.id} value={g.id} className="mt-6">
+            <Tabs defaultValue={g.tabs[0]!.value}>
+              <TabsList>
+                {g.tabs.map((t) => (
+                  <TabsTrigger key={t.value} value={t.value}>
+                    {t.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {g.tabs.map((t) => (
+                <TabsContent key={t.value} value={t.value} className="mt-6">
+                  <t.Component />
+                </TabsContent>
+              ))}
+            </Tabs>
+          </TabsContent>
+        ))}
       </Tabs>
     </AppShell>
   );

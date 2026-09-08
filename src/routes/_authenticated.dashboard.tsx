@@ -197,24 +197,30 @@ function Dashboard() {
         </div>
         <div className="grid gap-5 bg-background p-5 sm:grid-cols-3">
           <div>
-            <p className="label-caps">What's changed</p>
-            <ul className="mt-1.5 space-y-1 text-sm text-muted-foreground">
+            <span className="inline-block rounded-full bg-sidebar px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.09em] text-white">
+              What's changed
+            </span>
+            <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
               {overview.changes.map((c) => (
                 <li key={c}>{c}</li>
               ))}
             </ul>
           </div>
           <div>
-            <p className="label-caps">Needs your attention</p>
-            <ul className="mt-1.5 space-y-1 text-sm text-muted-foreground">
+            <span className="inline-block rounded-full bg-sidebar px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.09em] text-white">
+              Needs your attention
+            </span>
+            <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
               {overview.attention.map((a) => (
                 <li key={a}>{a}</li>
               ))}
             </ul>
           </div>
           <div>
-            <p className="label-caps">Recommendation</p>
-            <p className="mt-1.5 text-sm text-muted-foreground">{overview.recommendation}</p>
+            <span className="inline-block rounded-full bg-sidebar px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.09em] text-white">
+              Recommendation
+            </span>
+            <p className="mt-2 text-sm text-muted-foreground">{overview.recommendation}</p>
           </div>
         </div>
       </div>

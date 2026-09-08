@@ -46,7 +46,7 @@ function NavLink({
   active,
   onClick,
 }: {
-  to: "/dashboard" | "/inbox" | "/credits" | "/registry" | "/facilitation" | "/support" | "/auditor";
+  to: "/dashboard" | "/inbox" | "/credits" | "/registry" | "/facilitation" | "/support" | "/auditor" | "/admin";
   icon: typeof LayoutDashboard;
   label: string;
   active: boolean;
@@ -60,7 +60,7 @@ function NavLink({
         "flex items-center gap-2.5 rounded px-2.5 py-2 text-sm transition-colors",
         active
           ? "bg-sidebar-accent text-white"
-          : "text-white/90 hover:bg-sidebar-accent/60 hover:text-white",
+          : "text-white/90 hover:bg-white/10 hover:text-white",
       )}
     >
       <Icon className="h-4 w-4 shrink-0" />
@@ -75,6 +75,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: (() => void) | undefined }) 
   const [gatewayOpen, setGatewayOpen] = useState(true);
   const { roles } = useAuth();
   const isAuditor = roles.includes("auditor") || roles.includes("admin");
+  const isAdmin = roles.includes("admin");
 
   const onGateway = pathname === "/dashboard" && Boolean(search.stage);
 
@@ -94,7 +95,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: (() => void) | undefined }) 
 
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
-      <Link to="/dashboard" className="flex h-42 items-center px-3">
+      <Link to="/dashboard" className="flex h-42 items-center justify-center px-3">
         <Logo onDark className="h-[1.96875rem] w-auto" />
       </Link>
 
@@ -189,6 +190,18 @@ function SidebarBody({ onNavigate }: { onNavigate?: (() => void) | undefined }) 
           />
         )}
       </nav>
+
+      {isAdmin && (
+        <div className="border-t border-sidebar-border px-2 py-3">
+          <NavLink
+            to="/admin"
+            icon={ShieldCheck}
+            label="Admin"
+            active={pathname.startsWith("/admin")}
+            onClick={onNavigate}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -294,12 +307,12 @@ export function AppShell({
                     </p>
                   )}
                   {title && (
-                    <h1 className="mt-2 truncate text-sm font-semibold tracking-tight text-muted-foreground">
+                    <h1 className="mt-4 truncate text-sm font-semibold tracking-tight text-muted-foreground">
                       {title}
                     </h1>
                   )}
                   {description && (
-                    <p className="mt-0.5 truncate text-xs text-muted-foreground">{description}</p>
+                    <p className="mt-1 truncate text-xs text-muted-foreground">{description}</p>
                   )}
                 </div>
                 {actions && <div className="self-center">{actions}</div>}

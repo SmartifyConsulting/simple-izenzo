@@ -80,12 +80,12 @@ function SettingsPage() {
 
           <form onSubmit={save} className="space-y-4 rounded-md border border-border p-5">
             <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" value={profile?.email ?? ""} disabled />
-            </div>
-            <div className="space-y-1.5">
               <Label htmlFor="full_name">Full name</Label>
               <Input id="full_name" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" value={profile?.email ?? ""} disabled />
             </div>
             <Button type="submit" size="sm" disabled={busy}>
               Save
