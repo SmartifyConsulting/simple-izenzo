@@ -3,21 +3,15 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { providerById } from "@/lib/integrations.catalog";
 
-/** Only the named system administrator may touch integration credentials. */
-export const INTEGRATIONS_SUPERUSER_EMAIL = "georgia.adams@smartify.co.za";
-
+/** Only accounts holding the admin role may touch integration credentials. */
 async function assertAdmin(context: { supabase: any; userId: string; claims?: any }) {
-  const claimEmail = (context.claims?.email as string | undefined)?.toLowerCase();
-  let email = claimEmail;
-  if (!email) {
-    const { data } = await context.supabase
-      .from("profiles")
-      .select("email")
-      .eq("id", context.userId)
-      .maybeSingle();
-    email = (data?.email as string | undefined)?.toLowerCase();
-  }
-  if (email !== INTEGRATIONS_SUPERUSER_EMAIL) {
+  const { data, error } = await context.supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", context.userId)
+    .eq("role", "admin")
+    .maybeSingle();
+  if (error || !data) {
     throw new Error("Forbidden — this area is restricted to the system administrator.");
   }
 }
