@@ -270,6 +270,29 @@
   animation: beam-sweep 2.6s ease-in-out infinite;
 }
 
+@keyframes ribbon-sweep {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+@utility animate-ribbon-sweep {
+  background-image: linear-gradient(
+    90deg,
+    hsl(160 84% 39%) 0%,
+    hsl(155 35% 28%) 20%,
+    hsl(150 45% 14%) 40%,
+    hsl(155 35% 28%) 60%,
+    hsl(160 84% 39%) 80%,
+    hsl(155 35% 28%) 100%
+  );
+  background-size: 200% 100%;
+  animation: ribbon-sweep 2.2s linear infinite;
+}
+
 @keyframes marquee-up {
   from {
     transform: translateY(0);

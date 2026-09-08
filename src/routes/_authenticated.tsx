@@ -10,7 +10,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { VerifyEmailDialog } from "@/components/auth/VerifyEmailDialog";
 import { ActivityTracker } from "@/components/ActivityTracker";
-import { useGoToShortcuts } from "@/lib/useGoToShortcuts";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -28,7 +27,6 @@ function RequireEmailVerified() {
   const { user, profile, loading, roles } = useAuth();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  useGoToShortcuts();
 
   // Funder Workspace confinement (rebuild requirements section 9): a funder-only seat must never
   // reach Trade Desk, Governance, Developer Centre, Marketplace, Billing, or HQ/Admin, even by

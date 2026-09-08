@@ -1,29 +1,18 @@
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { LogOut, ChevronDown, ExternalLink, Waypoints, Keyboard, ArrowLeftRight } from "lucide-react";
+import { LogOut, ChevronDown, Waypoints, ArrowLeftRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
 import { setLayoutPreference } from "@/lib/layoutPreference";
 import { NAV_DESTINATIONS } from "@/lib/navDestinations";
 import { WorkspaceSwitcher } from "@/components/layout/WorkspaceSwitcher";
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-const SHORTCUT_KEYS: Record<string, string> = {
-  Overview: "o",
-  Counterparties: "c",
-  "Company Register": "r",
-  "My Trades": "t",
-  Compliance: "k",
-  Billing: "b",
-  Settings: "s",
-};
 
 export function SidebarShell({
   title,
@@ -137,9 +126,6 @@ export function SidebarShell({
         <div className="border-t border-border px-4 py-3">
           <p className="truncate text-xs text-muted-foreground">{profile?.email}</p>
           <div className="mt-2 flex items-center gap-3">
-            <Link to="/" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-              <ExternalLink className="h-3 w-3" /> View public site
-            </Link>
             <button
               className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
               onClick={async () => {
@@ -150,7 +136,6 @@ export function SidebarShell({
               <LogOut className="h-3 w-3" /> Sign out
             </button>
           </div>
-          <ShortcutsHelp />
         </div>
       </aside>
 
@@ -167,44 +152,6 @@ export function SidebarShell({
         {children}
       </main>
     </div>
-  );
-}
-
-function ShortcutsHelp() {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <button
-        className="mt-2 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-        onClick={() => setOpen(true)}
-      >
-        <Keyboard className="h-3 w-3" /> Keyboard shortcuts
-      </button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="w-[min(360px,92vw)]">
-          <DialogTitle className="text-sm">Keyboard shortcuts</DialogTitle>
-          <DialogDescription className="text-xs">
-            Press "g" then a letter to jump anywhere, from any page.
-          </DialogDescription>
-          <div className="mt-2 space-y-1.5">
-            {NAV_DESTINATIONS.filter((d) => SHORTCUT_KEYS[d.label]).map((d) => (
-              <div key={d.label} className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2 text-muted-foreground">
-                  <d.icon className="h-3.5 w-3.5" /> {d.label}
-                </span>
-                <span className="flex items-center gap-1 font-mono text-xs">
-                  <kbd className="rounded border border-border bg-muted px-1.5 py-0.5">g</kbd>
-                  <span className="text-muted-foreground">then</span>
-                  <kbd className="rounded border border-border bg-muted px-1.5 py-0.5">
-                    {SHORTCUT_KEYS[d.label]}
-                  </kbd>
-                </span>
-              </div>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
   );
 }
 
