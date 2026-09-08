@@ -145,7 +145,7 @@ export function DealCanvas({
 
       <SearchBeam active={matching} />
 
-      <div className="mx-auto grid max-w-2xl gap-3 sm:grid-cols-3">
+      <div className="mx-auto grid max-w-3xl gap-3 sm:grid-cols-3">
         {node({ stage: "trading", step: "search", icon: Radar }, { compact: true, delay: 60 })}
         {node({ stage: "trading", step: "ai", icon: Sparkles }, { compact: true, delay: 120 })}
         {node({ stage: "trading", step: "ai-plus", icon: Sparkles }, { compact: true, delay: 180 })}
@@ -153,7 +153,7 @@ export function DealCanvas({
 
       <Connector pulse={matching} />
 
-      <div className="mx-auto max-w-2xl space-y-3">
+      <div className="mx-auto max-w-3xl space-y-3">
         {node({ stage: "trading", step: "counterparties", icon: Users }, { side: "center" })}
         {node(
           { stage: "trading", step: "media", label: "Background screening", icon: Newspaper },
@@ -169,7 +169,7 @@ export function DealCanvas({
 
       <GateBar label="Proof of Intent" cleared={poi} />
 
-      <div className="mx-auto max-w-2xl">
+      <div className="mx-auto max-w-3xl">
         {node(
           { stage: "compliance", step: "wad", icon: ShieldCheck },
           { side: "center", note: "3 tokens · USD 30" },
@@ -192,7 +192,7 @@ export function DealCanvas({
         )}
       />
 
-      <div className="mx-auto mt-5 max-w-2xl">
+      <div className="mx-auto mt-5 max-w-3xl">
         {node({ stage: "memory", step: "ledger", icon: BookLock }, { side: "center" })}
       </div>
 
