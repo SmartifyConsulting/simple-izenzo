@@ -77,13 +77,41 @@ export function DealCanvas({
 
   return (
     <div className="ink-grid relative rounded-3xl border border-border p-4 sm:p-7">
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
           <p className="label-caps">Live deal canvas</p>
           <h2 className="mt-1 truncate text-xl font-semibold tracking-tight">{tx.title}</h2>
         </div>
         <p className="text-sm text-muted-foreground">{money(tx.price, tx.currency)}</p>
       </div>
+
+      {deals && deals.length > 1 && onSelectDeal && (
+        <div className="mb-6 flex gap-2 overflow-x-auto pb-1">
+          {deals.map((d) => {
+            const def = stepDef(d.stage, d.step);
+            const current = d.id === tx.id;
+            return (
+              <button
+                key={d.id}
+                type="button"
+                onClick={() => onSelectDeal(d.id)}
+                className={cn(
+                  "glass-node w-[220px] shrink-0 px-3.5 py-2.5 text-left transition-transform hover:-translate-y-0.5",
+                  current && "node-active",
+                )}
+              >
+                <span className="block truncate text-[13px] font-semibold tracking-tight">
+                  {d.title}
+                </span>
+                <span className="mt-0.5 block truncate text-[11.5px] text-muted-foreground">
+                  {money(d.price, d.currency)} · {def?.label ?? d.step}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
 
       {/* Lane headers */}
       <div className="grid grid-cols-2 gap-4 sm:gap-8">
