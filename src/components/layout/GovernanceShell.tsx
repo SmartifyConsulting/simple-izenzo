@@ -91,6 +91,8 @@ export function GovernanceShell({
           </div>
         )}
         {children}
+        <SiteFooter />
+
       </main>
     </div>
   );
