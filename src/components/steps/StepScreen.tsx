@@ -1045,6 +1045,24 @@ function ChoiceStep({ tx, reload }: Props) {
 function IntentStep({ tx, reload }: Props) {
   const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
+  const { profile } = useAuth();
+  const signer = profile?.full_name ?? profile?.email ?? "—";
+
+  // The party chosen after background screening — the intent is signed against them.
+  const { data: chosen } = useQuery({
+    queryKey: ["chosen-counterparty", tx.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("counterparties")
+        .select("name")
+        .eq("transaction_id", tx.id)
+        .eq("status", "chosen")
+        .order("chosen_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data?.name ?? null;
+    },
+  });
 
   async function confirm() {
     setBusy(true);
@@ -1056,8 +1074,16 @@ function IntentStep({ tx, reload }: Props) {
         stage: "trading",
         step: "intent",
         action: "intent_confirmed",
-        summary: "Intent to transact confirmed",
-        payload: { price: tx.price, quantity: tx.quantity, currency: tx.currency },
+        summary: `Intent to transact confirmed by ${signer}`,
+        payload: {
+          price: tx.price,
+          quantity: tx.quantity,
+          currency: tx.currency,
+          counterparty: chosen,
+          signed_by: signer,
+          signed_at: now,
+        },
+
       });
       await advance(tx.id, "trading", "poi");
       reload();
