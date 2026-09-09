@@ -878,6 +878,8 @@ function LiveDealEngine() {
                     step={stagePanel}
                     reload={() => void reloadDeal()}
                     onClose={() => setStagePanel(null)}
+                    onChangeParty={() => void reopenChoice()}
+
                   />
                 )}
 
