@@ -136,9 +136,12 @@ const ARROWS: { d: string; arrow?: boolean }[] = [
   { d: elbow(bottom(BOXES.finality), top(BOXES.payment), "x") },
   { d: elbow(bottom(BOXES.payment), top(BOXES.completion), "x") },
   { d: elbow(right(BOXES.completion), left(BOXES.memory), "y") },
-  ...branchDown(bottom(BOXES.projectPrep), [top(BOXES.concept), top(BOXES.prefeasibility)]).map(
-    (d) => ({ d }),
-  ),
+  ...branchDown(
+    bottom(BOXES.projectPrep),
+    [top(BOXES.concept), top(BOXES.prefeasibility)],
+    14,
+  ).map((d) => ({ d })),
+
   { d: elbow(bottom(BOXES.concept), top(BOXES.feasibility), "x") },
   { d: elbow(bottom(BOXES.prefeasibility), top(BOXES.bankability), "x") },
 ];
