@@ -87,18 +87,20 @@ export function AppShell({
     >
       <header className="sticky top-0 z-30 border-b border-border bg-background/70 backdrop-blur-xl">
         <div className={cn("mx-auto flex h-16 items-center gap-3 px-4 sm:px-6", width)}>
-          <Link to="/live-deal-engine" className="shrink-0">
+          <Link to="/live-deal-engine" className="shrink-0" aria-label="Izenzo — workflow">
             <Logo onDark className="h-7 w-auto" />
           </Link>
           <SearchButton />
           <button
             type="button"
             onClick={() => setViewMode(viewMode === "mahjong" ? "classic" : "mahjong")}
-            className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+            title={viewMode === "mahjong" ? "Classic View" : "Mahjong View"}
+            aria-label={viewMode === "mahjong" ? "Classic View" : "Mahjong View"}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:text-foreground"
           >
-            <LayoutGrid className="h-4 w-4" strokeWidth={2.25} />
-            {viewMode === "mahjong" ? "Classic View" : "Mahjong View"}
+            <LayoutGrid className="h-5 w-5" strokeWidth={2.25} />
           </button>
+
           <div className="min-w-0 flex-1" />
           {org && (
             <Link

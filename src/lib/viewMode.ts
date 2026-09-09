@@ -9,14 +9,13 @@ const KEY = "izenzo:view-mode";
 const listeners = new Set<() => void>();
 
 function readStored(): ViewMode {
-  if (typeof window === "undefined") return "mahjong";
+  if (typeof window === "undefined") return "classic";
   try {
-    // Session-scoped on purpose: every sign-in starts on the Mahjong workflow map, and a toggle
-    // (or the automatic switch to Classic when registering a bid/offer) only sticks for that
-    // browsing session.
-    return sessionStorage.getItem(KEY) === "classic" ? "classic" : "mahjong";
+    // Session-scoped on purpose: every sign-in starts on the Classic workflow (start node plus
+    // the full pipeline), and a toggle to the Mahjong map only sticks for that browsing session.
+    return sessionStorage.getItem(KEY) === "mahjong" ? "mahjong" : "classic";
   } catch {
-    return "mahjong";
+    return "classic";
   }
 }
 
@@ -42,5 +41,5 @@ function subscribe(cb: () => void) {
 }
 
 export function useViewMode(): ViewMode {
-  return useSyncExternalStore(subscribe, getViewMode, () => "mahjong");
+  return useSyncExternalStore(subscribe, getViewMode, () => "classic");
 }

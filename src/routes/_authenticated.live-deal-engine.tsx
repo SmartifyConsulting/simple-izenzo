@@ -162,17 +162,41 @@ function LiveDealEngine() {
   const [finalizing, setFinalizing] = useState(false);
   /** Which gate step the right-hand panel is currently asking the user to complete. */
   const [stagePanel, setStagePanel] = useState<"intent" | "poi" | "wad" | null>(null);
-  // Coming back to a deal that is already mid-gate reopens the step it stopped on.
+  // Coming back to a deal that is already mid-gate reopens the step it stopped on. A deal that
+  // already has a chosen counterparty but no signed intent always reopens Intent, whatever step
+  // happens to be stored on the row — that is what left users stranded on "Choice recorded".
+  const [hasChosen, setHasChosen] = useState(false);
+  useEffect(() => {
+    if (!dealTx?.id) return;
+    let live = true;
+    (async () => {
+      const { count } = await supabase
+        .from("counterparties")
+        .select("id", { count: "exact", head: true })
+        .eq("transaction_id", dealTx.id)
+        .eq("status", "chosen");
+      if (live) setHasChosen((count ?? 0) > 0);
+    })();
+    return () => {
+      live = false;
+    };
+  }, [dealTx?.id, dealTx?.step]);
+
   const resumedStep: "intent" | "poi" | "wad" | null = dealTx?.wad_completed_at
     ? null
     : dealTx?.poi_sealed_at
       ? "wad"
-      : dealTx?.step === "intent" || dealTx?.step === "poi"
-        ? dealTx.step
-        : null;
+      : dealTx?.intent_confirmed_at
+        ? "poi"
+        : dealTx?.step === "intent" || dealTx?.step === "poi"
+          ? dealTx.step
+          : hasChosen
+            ? "intent"
+            : null;
   useEffect(() => {
     if (resumedStep) setStagePanel(resumedStep);
   }, [resumedStep]);
+
 
 
   const [screeningProgress, setScreeningProgress] = useState<
@@ -698,7 +722,15 @@ function LiveDealEngine() {
               side === "offer" && "sm:order-1",
             )}
           >
-            <p className="label-caps">Live workspace</p>
+            <div className="flex items-start justify-between gap-3">
+              <p className="label-caps">Live workspace</p>
+              {(dealTx?.reference ?? activity?.reference) && (
+                <span className="shrink-0 rounded-full border border-primary/40 bg-primary/12 px-2.5 py-1 text-[11px] font-bold tracking-wide text-primary">
+                  {dealTx?.reference ?? activity?.reference}
+                </span>
+              )}
+            </div>
+
 
             {activity ? (
               <div className="mt-4 space-y-3">
@@ -776,7 +808,9 @@ function LiveDealEngine() {
                   </div>
                 )}
 
-                {(flowStep === "searching" || flowStep === "results") && dealTx && (
+                {/* Once a party is chosen the gate panel takes over the workspace — leaving the
+                    match list open below it is what made the screen look stuck. */}
+                {(flowStep === "searching" || flowStep === "results") && dealTx && !stagePanel && (
                   <div className="space-y-2">
                     {searchError && (
                       <p className="text-xs text-[#F97316]">Search failed: {searchError}</p>
