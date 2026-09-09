@@ -174,11 +174,12 @@ export const refreshVerification = createServerFn({ method: "POST" })
 
     const { data: row } = await supabaseAdmin
       .from("identity_verifications")
-      .select("provider_session_id")
+      .select("provider_session_id, subject_counterparty_id")
       .eq("id", data.id)
       .maybeSingle();
     const sessionId = row?.provider_session_id as string | null;
     if (!sessionId) throw new Error("This verification has no Didit session yet.");
+
 
     const creds = await loadDiditCreds();
     const decision = await fetchDiditDecision(creds, sessionId);
@@ -197,5 +198,14 @@ export const refreshVerification = createServerFn({ method: "POST" })
       .select(SELECT)
       .single();
     if (upErr) throw new Error(upErr.message);
+
+    // A late-arriving pass can be the one that completes the set — raise the Inbox alert here too.
+    const counterpartyId = row?.subject_counterparty_id as string | null;
+    if (status === "passed" && counterpartyId) {
+      const { notifyIfFullyMatched } = await import("@/lib/matchNotify.server");
+      await notifyIfFullyMatched(counterpartyId);
+    }
+
     return updated as VerificationRow;
   });
+

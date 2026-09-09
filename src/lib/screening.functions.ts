@@ -231,8 +231,13 @@ export const runBackgroundScreening = createServerFn({ method: "POST" })
         payload: { counterparty_id: cp.id, checks },
       });
 
+      // If every check is already clear for this counterparty, tell the org in their Inbox.
+      const { notifyIfFullyMatched } = await import("@/lib/matchNotify.server");
+      await notifyIfFullyMatched(cp.id);
+
       results.push({ counterpartyId: cp.id, name: cp.name, checks });
     }
+
 
     return results;
   });

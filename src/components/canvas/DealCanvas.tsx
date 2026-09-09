@@ -3,7 +3,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
+  CheckCircle2,
   Download,
+
   FileUp,
   Radar,
   Users,
@@ -262,7 +264,9 @@ export function DealCanvas({
   };
 
   const poi = Boolean(tx.poi_sealed_at);
+  const poiSealed = poi;
   const wad = Boolean(tx.wad_completed_at);
+
   const matchingPhase =
     tx.stage === "trading" && ["search", "ai", "ai-plus"].includes(tx.step);
   const pickingDirection = tx.stage === "trading" && tx.step === "bid-offer";
@@ -324,7 +328,7 @@ export function DealCanvas({
           <LaneHeader label="Responder" side="right" />
         </div>
       )}
-      {hideBidOfferGroups && (
+      {hideBidOfferGroups && !poiSealed && (
         <div className={cn("mt-1", !focusSide && "grid grid-cols-2 gap-4 sm:gap-8")}>
           {focusSide !== "offer" && (
             <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-white">Next steps</p>
@@ -447,8 +451,31 @@ export function DealCanvas({
         </div>
       )}
 
-      {visible("trading", "counterparties") && (
+      {/* Once the Proof of Intent is sealed the whole gate is history: it folds down into a green
+          ticked list, the way Deal Creation does, and attention moves on to Without a Doubt. */}
+      {poiSealed && (
+        <div className={cn("mt-3", stepsBoxClass)}>
+          <p className="label-caps mb-2 text-muted-foreground">Proof of Intent</p>
+          <div className="space-y-1.5">
+            {[
+              "Counterparties surfaced",
+              "Counterparty chosen",
+              "Background screening complete",
+              "Intent confirmed",
+              "Proof of Intent sealed",
+            ].map((label) => (
+              <div key={label} className="flex items-center gap-2 text-xs text-emerald-500">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                {label}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!poiSealed && visible("trading", "counterparties") && (
         <>
+
           <Connector />
           <GateGroup
             title="Proof of Intent"
@@ -535,19 +562,36 @@ export function DealCanvas({
       )}
 
       {visible("compliance", "wad") && (
-        <GateGroup title="Without a Doubt" align={focusSide === "offer" ? "right" : "left"}>
-          <div className={stepsBoxClass}>
-            {node(
-              { stage: "compliance", step: "wad", icon: ShieldCheck },
-              { side: "center", note: "3 tokens · USD 30" },
-            )}
-          </div>
-          <div className={stepsBoxClass}>
-            <GateBar label="Without a Doubt" cleared={wad} />
-          </div>
-
-        </GateGroup>
+        <>
+          {poiSealed && (
+            <p
+              className={cn(
+                "mt-4 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-white",
+                focusSide === "offer" && "text-right",
+              )}
+            >
+              Next steps
+            </p>
+          )}
+          <GateGroup
+            title="Without a Doubt"
+            align={focusSide === "offer" ? "right" : "left"}
+            forceOpen={poiSealed}
+            pulse={poiSealed && !wad}
+          >
+            <div className={stepsBoxClass}>
+              {node(
+                { stage: "compliance", step: "wad", icon: ShieldCheck },
+                { side: "center", note: "3 tokens · USD 30" },
+              )}
+            </div>
+            <div className={stepsBoxClass}>
+              <GateBar label="Without a Doubt" cleared={wad} />
+            </div>
+          </GateGroup>
+        </>
       )}
+
 
       {executionItems.length > 0 && (
         <GateGroup title="Execution" align={focusSide === "offer" ? "right" : "left"}>
@@ -1072,6 +1116,7 @@ function GateGroup({
   defaultOpen = false,
   align = "left",
   forceOpen = false,
+  pulse = false,
 }: {
   title: string;
   children: React.ReactNode;
@@ -1081,6 +1126,8 @@ function GateGroup({
   align?: "left" | "right";
   /** Opens the group from outside, e.g. while the match search is running. */
   forceOpen?: boolean;
+  /** Draws attention to the group as the one thing left to do. */
+  pulse?: boolean;
 }) {
 
   const [open, setOpen] = useState(defaultOpen);
@@ -1096,7 +1143,13 @@ function GateGroup({
   }, [forceOpen, forcedFor]);
 
   return (
-    <div className={cn("mt-3 flex items-start gap-3", align === "right" && "flex-row-reverse")}>
+    <div
+      className={cn(
+        "mt-3 flex items-start gap-3",
+        align === "right" && "flex-row-reverse",
+        pulse && "animate-throb rounded-md border border-primary/60 p-2",
+      )}
+    >
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -1118,6 +1171,7 @@ function GateGroup({
     </div>
   );
 }
+
 
 /** Shown on the canvas when there is nothing to work on yet. Clicking the card reveals the Bid
  * and Offer frames inline — nothing else on the flowchart shows until one of them is opened and

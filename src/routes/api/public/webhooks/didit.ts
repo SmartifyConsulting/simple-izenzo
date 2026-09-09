@@ -59,10 +59,12 @@ export const Route = createFileRoute("/api/public/webhooks/didit")({
 
         const query = supabaseAdmin.from("identity_verifications").update(patch);
         const { data: rows, error } = verificationId
-          ? await query.eq("id", verificationId).select("id, transaction_id, check_type, subject_label")
+          ? await query
+              .eq("id", verificationId)
+              .select("id, transaction_id, check_type, subject_label, subject_counterparty_id")
           : await query
               .eq("provider_session_id", sessionId!)
-              .select("id, transaction_id, check_type, subject_label");
+              .select("id, transaction_id, check_type, subject_label, subject_counterparty_id");
         if (error) return new Response("Write failed", { status: 500 });
 
         const row = rows?.[0];
@@ -78,6 +80,11 @@ export const Route = createFileRoute("/api/public/webhooks/didit")({
             payload: { verification_id: row.id, status, provider_status: payload?.status ?? null },
           });
         }
+        if (status === "passed" && row?.subject_counterparty_id) {
+          const { notifyIfFullyMatched } = await import("@/lib/matchNotify.server");
+          await notifyIfFullyMatched(row.subject_counterparty_id as string);
+        }
+
 
         return new Response("ok");
       },

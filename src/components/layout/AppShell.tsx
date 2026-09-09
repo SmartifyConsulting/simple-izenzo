@@ -1,9 +1,12 @@
 import { useEffect, type ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, BarChart3, ChevronDown, Coins, DollarSign, LayoutGrid, Mail, Plug } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useViewMode, setViewMode } from "@/lib/viewMode";
+
 import { Logo } from "@/components/Logo";
 import { SearchButton } from "@/components/layout/SearchButton";
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
@@ -48,6 +51,21 @@ export function AppShell({
   const viewMode = useViewMode();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const onEngine = pathname === "/live-deal-engine";
+
+  // Unread Inbox notifications — e.g. "this counterparty matched on all checks".
+  const { data: unread = 0 } = useQuery({
+    queryKey: ["notifications-unread", org?.id],
+    enabled: Boolean(org?.id),
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("read", false);
+      return count ?? 0;
+    },
+  });
+
   // Document-style screens (settings, admin, reporting, API docs) drop the canvas grid and give
   // every frame the same green edge — the grid belongs to the deal canvas, not to tables and forms.
   const flat = ["/account", "/admin", "/credits", "/trades", "/activity", "/developer", "/docs"].some(
@@ -135,10 +153,16 @@ export function AppShell({
           <Link
             to="/inbox"
             title="Inbox"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-foreground/80 transition-colors hover:text-primary"
+            className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-foreground/80 transition-colors hover:text-primary"
           >
             <Mail className="h-5 w-5" strokeWidth={2.25} />
+            {unread > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                {unread}
+              </span>
+            )}
           </Link>
+
           <ProfileAvatarMenu />
         </div>
       </header>

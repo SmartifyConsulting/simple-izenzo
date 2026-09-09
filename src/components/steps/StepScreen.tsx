@@ -1045,6 +1045,24 @@ function ChoiceStep({ tx, reload }: Props) {
 function IntentStep({ tx, reload }: Props) {
   const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
+  const { profile } = useAuth();
+  const signer = profile?.full_name ?? profile?.email ?? "—";
+
+  // The party chosen after background screening — the intent is signed against them.
+  const { data: chosen } = useQuery({
+    queryKey: ["chosen-counterparty", tx.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("counterparties")
+        .select("name")
+        .eq("transaction_id", tx.id)
+        .eq("status", "chosen")
+        .order("chosen_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data?.name ?? null;
+    },
+  });
 
   async function confirm() {
     setBusy(true);
@@ -1056,8 +1074,16 @@ function IntentStep({ tx, reload }: Props) {
         stage: "trading",
         step: "intent",
         action: "intent_confirmed",
-        summary: "Intent to transact confirmed",
-        payload: { price: tx.price, quantity: tx.quantity, currency: tx.currency },
+        summary: `Intent to transact confirmed by ${signer}`,
+        payload: {
+          price: tx.price,
+          quantity: tx.quantity,
+          currency: tx.currency,
+          counterparty: chosen,
+          signed_by: signer,
+          signed_at: now,
+        },
+
       });
       await advance(tx.id, "trading", "poi");
       reload();
@@ -1112,12 +1138,21 @@ function IntentStep({ tx, reload }: Props) {
           <dt className="label-caps">Jurisdiction</dt>
           <dd>{tx.jurisdiction ?? "—"}</dd>
         </div>
+        <div>
+          <dt className="label-caps">Counterparty</dt>
+          <dd>{chosen ?? "—"}</dd>
+        </div>
+        <div>
+          <dt className="label-caps">Signed by</dt>
+          <dd>{signer}</dd>
+        </div>
       </dl>
       {tx.intent_confirmed_at && (
         <p className="mt-4 text-xs text-muted-foreground">
-          Confirmed {when(tx.intent_confirmed_at)}
+          Signed by {signer} · {when(tx.intent_confirmed_at)}
         </p>
       )}
+
     </Panel>
   );
 }
@@ -1141,10 +1176,54 @@ function PoiStep({ tx, reload }: Props) {
     },
   });
 
+  /** The certificate text — identical whether it is filed against the deal or downloaded. */
+  function certificateBody(sealedAt: string | null, hash: string | null) {
+    return [
+      "IZENZO — PROOF OF INTENT",
+      "",
+      `Transaction: ${tx.title}`,
+      `Commodity:   ${tx.commodity ?? "—"}`,
+      `Quantity:    ${tx.quantity ?? "—"} ${tx.unit ?? ""}`,
+      `Price:       ${tx.price ?? "—"} ${tx.currency}`,
+      `Incoterms:   ${tx.incoterms ?? "—"}`,
+      `Jurisdiction:${tx.jurisdiction ?? "—"}`,
+      `Intent:      ${tx.intent_confirmed_at}`,
+      `Sealed:      ${sealedAt}`,
+      "",
+      `Fingerprint: ${hash}`,
+    ].join("\n");
+  }
+
   async function doSeal() {
     setBusy(true);
     try {
       await seal({ data: { transactionId: tx.id } });
+
+      // File the sealed certificate against the deal so it sits with the other attachments.
+      const { data: sealedTx } = await supabase
+        .from("transactions")
+        .select("poi_sealed_at, poi_hash")
+        .eq("id", tx.id)
+        .maybeSingle();
+      const name = `Proof of Intent — ${tx.title}.txt`;
+      const path = `deals/${tx.id}/${Date.now()}-proof-of-intent.txt`;
+      const body = certificateBody(sealedTx?.poi_sealed_at ?? null, sealedTx?.poi_hash ?? null);
+      const { error: upErr } = await supabase.storage
+        .from("documents")
+        .upload(path, new Blob([body], { type: "text/plain" }));
+      if (!upErr) {
+        await supabase.from("documents").insert({
+          transaction_id: tx.id,
+          name,
+          doc_type: "certificate",
+          notes: "Certificate",
+          sha256: sealedTx?.poi_hash ?? null,
+          storage_path: path,
+        });
+      } else {
+        toast.warning("Sealed, but the certificate could not be filed against the deal.");
+      }
+
       reload();
       toast.success("Proof of Intent sealed");
     } catch (err) {
@@ -1155,20 +1234,7 @@ function PoiStep({ tx, reload }: Props) {
   }
 
   function download() {
-    const body = [
-      "IZENZO — PROOF OF INTENT",
-      "",
-      `Transaction: ${tx.title}`,
-      `Commodity:   ${tx.commodity ?? "—"}`,
-      `Quantity:    ${tx.quantity ?? "—"} ${tx.unit ?? ""}`,
-      `Price:       ${tx.price ?? "—"} ${tx.currency}`,
-      `Incoterms:   ${tx.incoterms ?? "—"}`,
-      `Jurisdiction:${tx.jurisdiction ?? "—"}`,
-      `Intent:      ${tx.intent_confirmed_at}`,
-      `Sealed:      ${tx.poi_sealed_at}`,
-      "",
-      `Fingerprint: ${tx.poi_hash}`,
-    ].join("\n");
+    const body = certificateBody(tx.poi_sealed_at, tx.poi_hash);
     const url = URL.createObjectURL(new Blob([body], { type: "text/plain" }));
     const a = document.createElement("a");
     a.href = url;
@@ -1176,6 +1242,7 @@ function PoiStep({ tx, reload }: Props) {
     a.click();
     URL.revokeObjectURL(url);
   }
+
 
   if (tx.poi_sealed_at) {
     return (
