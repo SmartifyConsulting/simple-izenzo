@@ -176,6 +176,14 @@ export function DealCanvas({
     visible("finality", s),
   );
 
+  // Once the canvas is focused on one side, the remaining pipeline steps sit under that side's
+  // lane at half the usual width instead of spanning the full centered column.
+  const stepsBoxClass = cn(
+    focusSide ? "max-w-[24rem]" : "mx-auto max-w-3xl",
+    focusSide === "bid" && "mr-auto",
+    focusSide === "offer" && "ml-auto",
+  );
+
   return (
     <div className="ink-grid relative rounded-3xl border border-border p-3 sm:p-5">
       {!readOnly && (
@@ -320,7 +328,7 @@ export function DealCanvas({
         <>
           <Connector />
           <GateGroup title="Proof of Intent">
-            <div className="mx-auto max-w-3xl space-y-3">
+            <div className={cn(stepsBoxClass, "space-y-3")}>
               {node({ stage: "trading", step: "counterparties", icon: Users }, { side: "center" })}
               {visible("trading", "choice") &&
                 node({ stage: "trading", step: "choice", icon: MousePointerClick }, { side: "center" })}
@@ -344,7 +352,7 @@ export function DealCanvas({
 
       {visible("compliance", "wad") && (
         <GateGroup title="Without a Doubt">
-          <div className="mx-auto max-w-3xl">
+          <div className={stepsBoxClass}>
             {node(
               { stage: "compliance", step: "wad", icon: ShieldCheck },
               { side: "center", note: "3 tokens · USD 30" },
@@ -356,7 +364,7 @@ export function DealCanvas({
 
       {executionItems.length > 0 && (
         <GateGroup title="Execution">
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className={cn("grid gap-3", focusSide ? cn("grid-cols-1", stepsBoxClass) : "sm:grid-cols-3")}>
             {executionItems.map((s) => node({ stage: "execution", step: s, icon: Hammer }, { compact: true }))}
           </div>
         </GateGroup>
@@ -364,7 +372,7 @@ export function DealCanvas({
 
       {finalityItems.length > 0 && (
         <GateGroup title="Finality">
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className={cn("grid gap-3", focusSide ? cn("grid-cols-1", stepsBoxClass) : "sm:grid-cols-3")}>
             {finalityItems.map((s) => node({ stage: "finality", step: s, icon: Landmark }, { compact: true }))}
           </div>
         </GateGroup>
@@ -372,7 +380,7 @@ export function DealCanvas({
 
       {visible("memory", "ledger") && (
         <GateGroup title="Memory">
-          <div className="mx-auto max-w-3xl">
+          <div className={stepsBoxClass}>
             {node({ stage: "memory", step: "ledger", icon: BookLock }, { side: "center" })}
           </div>
         </GateGroup>
