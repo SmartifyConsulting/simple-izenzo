@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { ArrowLeft, BarChart3, ChevronDown, Coins, LayoutGrid, Mail, Tag, TerminalSquare } from "lucide-react";
+import { ArrowLeft, BarChart3, ChevronDown, Coins, DollarSign, LayoutGrid, Mail, Plug } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { useViewMode, setViewMode } from "@/lib/viewMode";
