@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { History } from "lucide-react";
+import { Coins, CreditCard, History, KeyRound, Plug, Users, type LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
@@ -66,7 +66,7 @@ const ADMIN_TABS: AdminTab[] = [
 ];
 
 function AdminPage() {
-  const { roles, loading, refresh } = useAuth();
+  const { roles, loading, refresh, profile } = useAuth();
   const isAdmin = roles.includes("admin");
   const search = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
