@@ -672,12 +672,23 @@ function GateGroup({
  * and Offer frames inline — nothing else on the flowchart shows until one of them is opened and
  * completed, at which point the parent (given the new transaction id) switches to the real
  * DealCanvas, which then reveals its own next frame the same way. */
+export type RecordedActivity = {
+  direction: "bid" | "offer";
+  title: string;
+  commodity: string | null;
+  quantity: string | null;
+  unit: string | null;
+  price: string | null;
+  currency: string;
+  time: string;
+};
+
 export function CanvasStart({
   onCreated,
   onPickingChange,
   onDirectionChange,
 }: {
-  onCreated: (id: string) => void;
+  onCreated: (id: string, activity: RecordedActivity) => void;
   /** Fires whenever picking starts/stops, so the caller can hide anything that would look like a
    * duplicate of this card (e.g. the read-only flowchart preview) while it's active. */
   onPickingChange?: (picking: boolean) => void;
@@ -747,8 +758,18 @@ export function CanvasStart({
         payload: { ...form },
       });
       await advance(newTx.id, "trading", "documents");
+      const activity: RecordedActivity = {
+        direction,
+        title: form.title || form.commodity || newTx.title,
+        commodity: form.commodity || null,
+        quantity: form.quantity || null,
+        unit: form.unit || null,
+        price: form.price || null,
+        currency: form.currency || "USD",
+        time: new Date().toISOString(),
+      };
       setDirection(null);
-      onCreated(newTx.id);
+      onCreated(newTx.id, activity);
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -905,11 +926,13 @@ export function CanvasStart({
       <p className="label-caps mb-3">
         {direction === "bid" ? "Live deal engine for Bidder" : direction === "offer" ? "Live deal engine for Responder" : "Live deal engine"}
       </p>
-      <div className="grid grid-cols-2 gap-4 sm:gap-8">
-        {direction !== "offer" && <LaneHeader label="Bidder" side="left" />}
-        {direction !== "bid" && <LaneHeader label="Responder" side="right" className="col-start-2" />}
-      </div>
-      <div className="mt-3 grid grid-cols-2 gap-4 sm:gap-8">
+      {!direction && (
+        <div className="grid grid-cols-2 gap-4 sm:gap-8">
+          <LaneHeader label="Bidder" side="left" />
+          <LaneHeader label="Responder" side="right" />
+        </div>
+      )}
+      <div className={cn("mt-3", !direction && "grid grid-cols-2 gap-4 sm:gap-8")}>
         {direction !== "offer" && (
           <div className="space-y-3">
             {direction === "bid" ? (
@@ -940,7 +963,7 @@ export function CanvasStart({
           </div>
         )}
         {direction !== "bid" && (
-          <div className="col-start-2 space-y-3">
+          <div className={cn("space-y-3", !direction && "col-start-2")}>
             {direction === "offer" ? (
               <div className="glass-node animate-node-rise p-5 sm:p-6">
                 <div className="mb-4 flex items-start justify-between gap-4">
