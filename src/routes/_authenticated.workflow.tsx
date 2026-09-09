@@ -17,13 +17,12 @@ export const Route = createFileRoute("/_authenticated/workflow")({
 /** Workflow View: the same Live Deal Canvas the Trade Desk uses, surfaced as its own guided
  * view — pick a deal from the ticker and see the whole gate flowchart with the current step
  * highlighted, without the rest of the classic dashboard chrome around it. Presented as a clean
- * diagram with no grid backdrop; Workflow Grid is the same page with the grid on. */
+ * diagram with no grid backdrop. */
 function WorkflowView() {
   return (
     <WorkflowPage
       title="Workflow View"
       description="The Trading Gateway flowchart — your current step is highlighted."
-      gridTheme="none"
     />
   );
 }

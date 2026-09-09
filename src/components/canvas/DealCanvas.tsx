@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   FileUp,
@@ -13,20 +14,25 @@ import {
   ArrowLeftRight,
   Newspaper,
   Loader2,
+  X,
 } from "lucide-react";
 import { CanvasNode, Connector, GateBar, type NodeState } from "./CanvasNode";
 import { StepScreen } from "@/components/steps/StepScreen";
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { lockReason, stepDef, stepIndex, type StageKey } from "@/lib/spine";
-import { advance, money, recordEvent, type Transaction } from "@/lib/tx";
+import { advance, money, recordEvent, when, type Transaction, type TxEvent } from "@/lib/tx";
 import { cn } from "@/lib/utils";
 
 type NodeRef = { stage: StageKey; step: string; label?: string; icon?: typeof Radar };
+
+// Reduce the Bid/Offer (and Documents) lanes by two grid squares (the ink-grid repeats every
+// 44px) while keeping their outer edges flush with the canvas — the lane shrinks from its inner
+// edge only.
+const LANE_INSET = 88;
 
 function useNodeState(tx: Transaction) {
   const currentIdx = stepIndex(tx.stage, tx.step);
@@ -50,33 +56,37 @@ export function DealCanvas({
   reload: () => void;
   deals?: Transaction[];
   onSelectDeal?: (id: string) => void;
-  /** "none" for a clean flowchart with no grid backdrop (Workflow View); "dark" for the
-   * black/green experimental treatment (Workflow Grid); "light" (default) is the original look,
-   * unchanged everywhere else. */
-  gridTheme?: "none" | "light" | "dark";
+  /** "none" for a clean flowchart with no grid backdrop (Workflow View); "light" (default) is
+   * the original look, unchanged everywhere else. */
+  gridTheme?: "none" | "light";
 }) {
   const [panel, setPanel] = useState<{ stage: StageKey; step: string } | null>(null);
+  const [direction, setDirection] = useState<"bid" | "offer" | null>(null);
   const stateOf = useNodeState(tx);
-
-  const open = (stage: StageKey, step: string) => setPanel({ stage, step });
 
   const node = (
     n: NodeRef,
     opts?: { side?: "left" | "right" | "center"; note?: string; compact?: boolean; delay?: number },
   ) => {
     const def = stepDef(n.stage, n.step);
+    const isOpen = panel?.stage === n.stage && panel?.step === n.step;
     return (
-      <CanvasNode
-        label={n.label ?? def?.label ?? n.step}
-        blurb={opts?.compact ? undefined : def?.blurb}
-        state={stateOf(n.stage, n.step)}
-        icon={n.icon}
-        side={opts?.side}
-        note={opts?.note}
-        compact={opts?.compact}
-        delay={opts?.delay}
-        onClick={() => open(n.stage, n.step)}
-      />
+      <div>
+        <CanvasNode
+          label={n.label ?? def?.label ?? n.step}
+          blurb={opts?.compact ? undefined : def?.blurb}
+          state={stateOf(n.stage, n.step)}
+          icon={n.icon}
+          side={opts?.side}
+          note={opts?.note}
+          compact={opts?.compact}
+          delay={opts?.delay}
+          onClick={() => setPanel(isOpen ? null : { stage: n.stage, step: n.step })}
+        />
+        {isOpen && (
+          <InlineFrame tx={tx} stage={n.stage} step={n.step} reload={reload} onClose={() => setPanel(null)} />
+        )}
+      </div>
     );
   };
 
@@ -84,6 +94,7 @@ export function DealCanvas({
   const wad = Boolean(tx.wad_completed_at);
   const matchingPhase =
     tx.stage === "trading" && ["search", "ai", "ai-plus"].includes(tx.step);
+  const pickingDirection = tx.stage === "trading" && tx.step === "bid-offer";
 
   // Progressive reveal: only the current step and everything already completed are shown — the
   // canvas builds itself up one frame at a time instead of exposing the whole flowchart at once.
@@ -105,7 +116,6 @@ export function DealCanvas({
       className={cn(
         "relative rounded-3xl border border-border p-4 sm:p-7",
         gridTheme === "light" && "ink-grid",
-        gridTheme === "dark" && "ink-grid-dark",
       )}
     >
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
@@ -127,31 +137,73 @@ export function DealCanvas({
         <LaneHeader label="Responder" side="right" />
       </div>
 
-      {/* Paired opening lanes */}
-      <div className="mt-3 grid grid-cols-2 gap-4 sm:gap-8">
-        <div className="space-y-3">
-          {node(
-            { stage: "trading", step: "bid-offer", label: "Bid", icon: ArrowLeftRight },
-            { side: "left", delay: 0 },
-          )}
-          {visible("trading", "documents") &&
-            node(
-              { stage: "trading", step: "documents", label: "Deal documents", icon: FileUp },
-              { side: "left", delay: 90 },
+      {pickingDirection ? (
+        // Choosing bid vs offer: clicking one hides the other, opens the recording form inline
+        // in its place, and the opposite lane becomes a static record of what's been recorded.
+        <div className="mt-3 grid grid-cols-2 gap-4 sm:gap-8">
+          <div className="space-y-3">
+            {direction === "offer" ? (
+              <SelectionRecord txId={tx.id} />
+            ) : direction === "bid" ? (
+              <InlineFrame tx={tx} stage="trading" step="bid-offer" reload={reload} onClose={() => setDirection(null)} />
+            ) : (
+              <div style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
+                <CanvasNode
+                  label="Bid"
+                  blurb="Record the opening bid and its terms."
+                  state="active"
+                  icon={ArrowLeftRight}
+                  side="left"
+                  onClick={() => setDirection("bid")}
+                />
+              </div>
             )}
-        </div>
-        <div className="space-y-3">
-          {node(
-            { stage: "trading", step: "bid-offer", label: "Offer", icon: ArrowLeftRight },
-            { side: "right", delay: 45 },
-          )}
-          {visible("trading", "documents") &&
-            node(
-              { stage: "trading", step: "documents", label: "Deal documents", icon: FileUp },
-              { side: "right", delay: 135 },
+          </div>
+          <div className="space-y-3">
+            {direction === "bid" ? (
+              <SelectionRecord txId={tx.id} />
+            ) : direction === "offer" ? (
+              <InlineFrame tx={tx} stage="trading" step="bid-offer" reload={reload} onClose={() => setDirection(null)} />
+            ) : (
+              <div className="ml-auto" style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
+                <CanvasNode
+                  label="Offer"
+                  blurb="Record the opening offer and its terms."
+                  state="active"
+                  icon={ArrowLeftRight}
+                  side="right"
+                  onClick={() => setDirection("offer")}
+                />
+              </div>
             )}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="mt-3 grid grid-cols-2 gap-4 sm:gap-8">
+          <div className="space-y-3" style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
+            {node(
+              { stage: "trading", step: "bid-offer", label: "Bid", icon: ArrowLeftRight },
+              { side: "left", delay: 0 },
+            )}
+            {visible("trading", "documents") &&
+              node(
+                { stage: "trading", step: "documents", label: "Deal documents", icon: FileUp },
+                { side: "left", delay: 90 },
+              )}
+          </div>
+          <div className="ml-auto space-y-3" style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
+            {node(
+              { stage: "trading", step: "bid-offer", label: "Offer", icon: ArrowLeftRight },
+              { side: "right", delay: 45 },
+            )}
+            {visible("trading", "documents") &&
+              node(
+                { stage: "trading", step: "documents", label: "Deal documents", icon: FileUp },
+                { side: "right", delay: 135 },
+              )}
+          </div>
+        </div>
+      )}
 
       {matchingPhase && (
         <div className="mx-auto mt-4 max-w-3xl overflow-hidden rounded-xl border border-primary/20">
@@ -218,20 +270,6 @@ export function DealCanvas({
           {node({ stage: "memory", step: "ledger", icon: BookLock }, { side: "center" })}
         </div>
       )}
-
-      <Dialog open={panel !== null} onOpenChange={(v) => !v && setPanel(null)}>
-        <DialogContent className="glass max-h-[88vh] w-[min(1000px,94vw)] overflow-y-auto p-0 sm:max-w-[min(1000px,94vw)]">
-          {panel && (
-            <PanelBody
-              tx={tx}
-              stage={panel.stage}
-              step={panel.step}
-              onClose={() => setPanel(null)}
-              reload={reload}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
@@ -308,37 +346,78 @@ function DealTicker({
   );
 }
 
-function PanelBody({
+/** A step's completion form, rendered inline right where its node sits — continuing the canvas
+ * as a frame rather than popping up as a modal window. */
+function InlineFrame({
   tx,
   stage,
   step,
-  onClose,
   reload,
+  onClose,
 }: {
   tx: Transaction;
   stage: StageKey;
   step: string;
-  onClose: () => void;
   reload: () => void;
+  onClose: () => void;
 }) {
   const def = stepDef(stage, step);
   const locked = lockReason(stage, step, tx);
   return (
-    <div className="p-5 sm:p-7">
-      <div className="mb-5 flex items-start justify-between gap-4">
+    <div className="glass-node animate-node-rise mt-2 p-5 sm:p-6">
+      <div className="mb-4 flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <DialogTitle className="truncate text-lg tracking-tight">
-            {def?.label ?? step}
-          </DialogTitle>
-          <DialogDescription className="mt-1 text-[13px]">{def?.blurb}</DialogDescription>
+          <p className="truncate text-base font-semibold tracking-tight">{def?.label ?? step}</p>
+          {def?.blurb && <p className="mt-1 text-[13px] text-muted-foreground">{def.blurb}</p>}
         </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+        >
+          <X className="h-4 w-4" />
+        </button>
       </div>
       {locked ? (
-        <p className="rounded-xl border border-border bg-white/5 p-4 text-sm text-muted-foreground">
-          {locked}.
-        </p>
+        <p className="rounded-xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">{locked}.</p>
       ) : (
         <StepScreen tx={tx} stage={stage} step={step} reload={reload} />
+      )}
+    </div>
+  );
+}
+
+/** The static record panel that stands in for whichever side (Bid or Offer) wasn't picked —
+ * a running log of everything recorded on the transaction so far. */
+function SelectionRecord({ txId }: { txId?: string | null }) {
+  const { data: events = [] } = useQuery({
+    queryKey: ["canvas-record", txId],
+    enabled: !!txId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("transaction_events")
+        .select("*")
+        .eq("transaction_id", txId as string)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as TxEvent[];
+    },
+  });
+
+  return (
+    <div className="rounded-2xl border-2 border-primary bg-white p-4">
+      <p className="label-caps text-primary">Record</p>
+      {events.length === 0 ? (
+        <p className="mt-2 text-sm text-muted-foreground">Nothing recorded yet.</p>
+      ) : (
+        <ul className="mt-2 space-y-2.5">
+          {events.map((e) => (
+            <li key={e.id}>
+              <p className="text-sm font-medium text-foreground">{e.summary ?? e.action}</p>
+              <p className="text-[11px] text-muted-foreground">{when(e.created_at)}</p>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );
@@ -458,6 +537,68 @@ export function CanvasStart({ onCreated }: { onCreated: (id: string) => void }) 
     );
   }
 
+  const form_ = (
+    <form onSubmit={submit} className="mt-2 space-y-3">
+      <div className="space-y-1.5">
+        <Label htmlFor="cs-title">Transaction title</Label>
+        <Input
+          id="cs-title"
+          autoFocus
+          placeholder="e.g. Copper cathode, Q3 delivery"
+          value={form.title}
+          onChange={(e) => setForm({ ...form, title: e.target.value })}
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="cs-commodity">Commodity or asset</Label>
+        <Input
+          id="cs-commodity"
+          value={form.commodity}
+          onChange={(e) => setForm({ ...form, commodity: e.target.value })}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="cs-qty">Quantity</Label>
+          <Input
+            id="cs-qty"
+            type="number"
+            step="any"
+            value={form.quantity}
+            onChange={(e) => setForm({ ...form, quantity: e.target.value })}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="cs-unit">Unit</Label>
+          <Input id="cs-unit" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="cs-price">Price</Label>
+          <Input
+            id="cs-price"
+            type="number"
+            step="any"
+            value={form.price}
+            onChange={(e) => setForm({ ...form, price: e.target.value })}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="cs-currency">Currency</Label>
+          <Input
+            id="cs-currency"
+            value={form.currency}
+            onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase() })}
+          />
+        </div>
+      </div>
+      <Button type="submit" disabled={busy} className="w-full">
+        {busy ? "Recording…" : "Record and continue"}
+      </Button>
+    </form>
+  );
+
   return (
     <div className="ink-grid relative rounded-3xl border border-border p-4 sm:p-7">
       <p className="label-caps mb-4">Live deal canvas</p>
@@ -466,93 +607,67 @@ export function CanvasStart({ onCreated }: { onCreated: (id: string) => void }) 
         <LaneHeader label="Responder" side="right" />
       </div>
       <div className="mt-3 grid grid-cols-2 gap-4 sm:gap-8">
-        <CanvasNode
-          label="Bid"
-          blurb="Record the opening bid and its terms."
-          state="active"
-          icon={ArrowLeftRight}
-          side="left"
-          onClick={() => setDirection("bid")}
-        />
-        <CanvasNode
-          label="Offer"
-          blurb="Record the opening offer and its terms."
-          state="active"
-          icon={ArrowLeftRight}
-          side="right"
-          onClick={() => setDirection("offer")}
-        />
+        <div className="space-y-3">
+          {direction === "offer" ? (
+            <SelectionRecord />
+          ) : direction === "bid" ? (
+            <div className="glass-node animate-node-rise p-5 sm:p-6">
+              <div className="mb-4 flex items-start justify-between gap-4">
+                <p className="text-base font-semibold tracking-tight">New Bid to Buy</p>
+                <button
+                  type="button"
+                  onClick={() => setDirection(null)}
+                  className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              {form_}
+            </div>
+          ) : (
+            <div style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
+              <CanvasNode
+                label="Bid"
+                blurb="Record the opening bid and its terms."
+                state="active"
+                icon={ArrowLeftRight}
+                side="left"
+                onClick={() => setDirection("bid")}
+              />
+            </div>
+          )}
+        </div>
+        <div className="space-y-3">
+          {direction === "bid" ? (
+            <SelectionRecord />
+          ) : direction === "offer" ? (
+            <div className="glass-node animate-node-rise p-5 sm:p-6">
+              <div className="mb-4 flex items-start justify-between gap-4">
+                <p className="text-base font-semibold tracking-tight">New Bid to Sell</p>
+                <button
+                  type="button"
+                  onClick={() => setDirection(null)}
+                  className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              {form_}
+            </div>
+          ) : (
+            <div className="ml-auto" style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
+              <CanvasNode
+                label="Offer"
+                blurb="Record the opening offer and its terms."
+                state="active"
+                icon={ArrowLeftRight}
+                side="right"
+                onClick={() => setDirection("offer")}
+              />
+            </div>
+          )}
+        </div>
       </div>
-
-      <Dialog open={direction !== null} onOpenChange={(v) => !v && setDirection(null)}>
-        <DialogContent className="glass w-[min(560px,94vw)] sm:max-w-[min(560px,94vw)]">
-          <DialogTitle className="text-lg tracking-tight">
-            {direction === "bid" ? "New Bid to Buy" : "New Bid to Sell"}
-          </DialogTitle>
-          <DialogDescription className="text-[13px]">
-            Every step from here is recorded on the Trading Gateway.
-          </DialogDescription>
-          <form onSubmit={submit} className="mt-2 space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="cs-title">Transaction title</Label>
-              <Input
-                id="cs-title"
-                autoFocus
-                placeholder="e.g. Copper cathode, Q3 delivery"
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="cs-commodity">Commodity or asset</Label>
-              <Input
-                id="cs-commodity"
-                value={form.commodity}
-                onChange={(e) => setForm({ ...form, commodity: e.target.value })}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="cs-qty">Quantity</Label>
-                <Input
-                  id="cs-qty"
-                  type="number"
-                  step="any"
-                  value={form.quantity}
-                  onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="cs-unit">Unit</Label>
-                <Input id="cs-unit" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="cs-price">Price</Label>
-                <Input
-                  id="cs-price"
-                  type="number"
-                  step="any"
-                  value={form.price}
-                  onChange={(e) => setForm({ ...form, price: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="cs-currency">Currency</Label>
-                <Input
-                  id="cs-currency"
-                  value={form.currency}
-                  onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase() })}
-                />
-              </div>
-            </div>
-            <Button type="submit" disabled={busy} className="w-full">
-              {busy ? "Recording…" : "Record and continue"}
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

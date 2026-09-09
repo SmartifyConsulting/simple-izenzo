@@ -6,18 +6,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import type { Transaction } from "@/lib/tx";
 
-/** Shared behaviour behind both Workflow View and Workflow Grid: same deal-fetching, same
- * ticker, same Live Deal Canvas. The two routes only differ in presentation (title/description
- * and the canvas's grid theme) — every other change belongs here so both views stay in
- * lockstep. */
+/** Workflow View's page body: deal-fetching, ticker, and the Live Deal Canvas itself, rendered
+ * as a clean flowchart with no grid backdrop. */
 export function WorkflowPage({
   title,
   description,
-  gridTheme,
 }: {
   title: string;
   description: string;
-  gridTheme: "none" | "light" | "dark";
 }) {
   const { org } = useAuth();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -58,7 +54,7 @@ export function WorkflowPage({
           tx={activeTx}
           deals={txs}
           onSelectDeal={setSelectedId}
-          gridTheme={gridTheme}
+          gridTheme="none"
           reload={() => {
             void refetch();
           }}
