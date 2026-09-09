@@ -617,6 +617,11 @@ function LiveDealEngine() {
               openProofOfIntent={flowStep === "searching" || flowStep === "results"}
               throbStep={throbStep}
               screeningProgress={screeningProgress}
+              matchProgress={
+                flowStep === "searching" || flowStep === "results"
+                  ? { searching: flowStep === "searching", error: searchError }
+                  : null
+              }
             />
           </div>
 

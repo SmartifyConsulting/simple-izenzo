@@ -158,6 +158,7 @@ export function DealCanvas({
   throbStep,
   openProofOfIntent,
   screeningProgress,
+  matchProgress,
 
 }: {
   tx: Transaction;
@@ -193,11 +194,22 @@ export function DealCanvas({
   openProofOfIntent?: boolean;
   /** Live progress of the background screening run, drawn as a bar under that node. */
   screeningProgress?: { done: number; total: number; failed?: boolean } | null;
+  /** Live progress of the counterparty match search, drawn as a bar under the Counterparties
+   * node — the match count is read from the already-cached candidate list. */
+  matchProgress?: { searching: boolean; error?: string | null } | null;
 
 }) {
   const [panel, setPanel] = useState<{ stage: StageKey; step: string } | null>(null);
   const [direction, setDirection] = useState<"bid" | "offer" | null>(null);
   const stateOf = useNodeState(tx);
+
+  // Match count for the bar under Counterparties — read straight from the candidate list the
+  // Record panel already keeps in cache, so this never fires a second request of its own.
+  const { data: cachedCandidates } = useQuery<CounterpartyCandidate[]>({
+    queryKey: ["counterparties", tx.id],
+    enabled: false,
+  });
+  const matchCount = cachedCandidates?.length ?? 0;
 
   // Which side placed the bid vs offer — read from the record itself (not just local `direction`
   // state, which resets on reload) so the results panel mirrors correctly at every step.
@@ -444,7 +456,34 @@ export function DealCanvas({
             forceOpen={Boolean(openProofOfIntent)}
           >
             <div className={cn(stepsBoxClass, "space-y-3")}>
-              {node({ stage: "trading", step: "counterparties", icon: Users }, { side: "center" })}
+              <div>
+                {node({ stage: "trading", step: "counterparties", icon: Users }, { side: "center" })}
+                {matchProgress && (
+                  <div className="mt-1.5 space-y-1">
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all duration-500",
+                          matchProgress.searching
+                            ? "w-1/2 animate-ribbon-sweep bg-primary"
+                            : matchProgress.error
+                              ? "w-full bg-destructive"
+                              : "w-full bg-emerald-500",
+                        )}
+                      />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      {matchProgress.searching
+                        ? "Searching for counterparties…"
+                        : matchProgress.error
+                          ? `Search could not finish: ${matchProgress.error}`
+                          : matchCount > 0
+                            ? `Search complete — ${matchCount} match${matchCount === 1 ? "" : "es"} found`
+                            : "Search complete — no matches found"}
+                    </p>
+                  </div>
+                )}
+              </div>
               {visible("trading", "choice") &&
                 node({ stage: "trading", step: "choice", icon: MousePointerClick }, { side: "center" })}
               {visible("trading", "media") && (
@@ -802,30 +841,8 @@ export function CounterpartyRecord({
         </ul>
       )}
 
-      {/* Where the match search got to: sweeping while it runs, full and green once it's done. */}
-      <div className="mt-3">
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-300">
-          <div
-            className={cn(
-              "h-full rounded-full transition-all duration-500",
-              searching
-                ? "w-1/2 animate-ribbon-sweep bg-primary"
-                : error
-                  ? "w-full bg-red-500"
-                  : "w-full bg-emerald-500",
-            )}
-          />
-        </div>
-        <p className="mt-1 text-[11px] text-slate-600">
-          {searching
-            ? "Searching for counterparties…"
-            : error
-              ? `Search could not finish: ${error}`
-              : candidates.length > 0
-                ? `Search complete — ${candidates.length} match${candidates.length === 1 ? "" : "es"} found`
-                : "Search complete — no matches found"}
-        </p>
-      </div>
+      {/* The match-search progress bar lives under the Counterparties node on the diagram. */}
+
 
 
       {screeningResults && screeningResults.length > 0 && (
