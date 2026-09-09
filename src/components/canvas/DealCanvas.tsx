@@ -411,8 +411,11 @@ export function DealCanvas({
                       <p className="text-[11px] text-muted-foreground">
                         {screeningProgress.failed
                           ? "Screening could not finish"
-                          : `${screeningProgress.done} of ${screeningProgress.total} checks complete`}
+                          : screeningProgress.done < screeningProgress.total
+                            ? `${screeningProgress.done} of ${screeningProgress.total} checks opened`
+                            : `All ${screeningProgress.total} checks opened — waiting on results`}
                       </p>
+
                     </div>
                   )}
                 </div>
