@@ -52,7 +52,7 @@ function TokenDonut({ used, available }: { used: number; available: number }) {
           cy="50"
           r={r}
           fill="none"
-          stroke="var(--color-sidebar)"
+          stroke="var(--color-success)"
           strokeWidth="14"
           strokeLinecap="round"
           strokeDasharray={`${usedLen} ${c - usedLen}`}
@@ -206,7 +206,7 @@ function Credits() {
                 </div>
                 <div className="mt-2 flex items-center justify-center gap-3 text-[11px] text-muted-foreground">
                   <span className="flex items-center gap-1">
-                    <span className="h-2 w-2 rounded-full bg-sidebar" /> Used
+                    <span className="h-2 w-2 rounded-full bg-success" /> Used
                   </span>
                   <span className="flex items-center gap-1">
                     <span className="h-2 w-2 rounded-full bg-muted" /> Available

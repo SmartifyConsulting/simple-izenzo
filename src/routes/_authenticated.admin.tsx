@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { History } from "lucide-react";
+import { Coins, CreditCard, History, KeyRound, Plug, Users, type LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
@@ -45,31 +45,28 @@ type ProfileRow = {
   last_accessed_at?: string | null;
 };
 
-type AdminTab = { value: string; label: string; Component: () => React.JSX.Element; superuserOnly?: boolean };
+type AdminTab = {
+  value: string;
+  label: string;
+  Component: () => React.JSX.Element;
+  Icon: LucideIcon;
+  superuserOnly?: boolean;
+  /** Reachable by link, but not shown as a card (tokens live in Token Management now). */
+  hidden?: boolean;
+};
 
-const ADMIN_GROUPS: { id: string; label: string; tabs: AdminTab[] }[] = [
-  {
-    id: "platform",
-    label: "Platform",
-    tabs: [
-      { value: "users", label: "Users", Component: UsersTab },
-      { value: "api-keys", label: "API Keys", Component: ApiKeysTab },
-      { value: "integrations", label: "Integrations", Component: IntegrationsTab },
-      { value: "activity-log", label: "Activity Log", Component: AuditLogTab },
-    ],
-  },
-  {
-    id: "money",
-    label: "Money",
-    tabs: [
-      { value: "tokens", label: "Tokens", Component: TokensTab },
-      { value: "payments", label: "Payments", Component: PaymentsTab },
-    ],
-  },
+// One flat list — no categories. Cards read as icon + name, green-edged like every other frame.
+const ADMIN_TABS: AdminTab[] = [
+  { value: "users", label: "Users", Component: UsersTab, Icon: Users },
+  { value: "api-keys", label: "API Keys", Component: ApiKeysTab, Icon: KeyRound },
+  { value: "payments", label: "Payments", Component: PaymentsTab, Icon: CreditCard },
+  { value: "integrations", label: "Integrations", Component: IntegrationsTab, Icon: Plug, superuserOnly: true },
+  { value: "activity-log", label: "Activity Log", Component: AuditLogTab, Icon: History, superuserOnly: true },
+  { value: "tokens", label: "Tokens", Component: TokensTab, Icon: Coins, hidden: true },
 ];
 
 function AdminPage() {
-  const { roles, loading, refresh } = useAuth();
+  const { roles, loading, refresh, profile } = useAuth();
   const isAdmin = roles.includes("admin");
   const search = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
@@ -109,34 +106,28 @@ function AdminPage() {
     );
   }
 
-  const groups = ADMIN_GROUPS;
+  const isSuperuser = (profile?.email ?? "").toLowerCase() === SUPERUSER_EMAIL;
+  const tabs = ADMIN_TABS.filter((t) => !t.superuserOnly || isSuperuser);
+  const activeTab = search.tab ? tabs.find((t) => t.value === search.tab) : undefined;
 
-  const activeGroup = search.group ? groups.find((g) => g.id === search.group) : undefined;
-  const activeTab = activeGroup?.tabs.find((t) => t.value === search.tab);
-
-  // No card selected yet — a plain grid of cards grouped under section headings, matching the
-  // Admin tab's card layout in Settings. No tab bar anywhere.
-  if (!activeGroup || !activeTab) {
+  // No card selected yet — one flat grid of green-edged cards, each with its own icon.
+  if (!activeTab) {
     return (
       <AppShell title="Admin" description="Users, tokens and reporting for the whole book">
-        <div className="space-y-8">
-          {groups.map((g) => (
-            <div key={g.id}>
-              <h2 className="text-sm font-semibold">{g.label}</h2>
-              <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {g.tabs.map((t) => (
-                  <button
-                    key={t.value}
-                    type="button"
-                    onClick={() => navigate({ search: { group: g.id, tab: t.value } })}
-                    className="rounded-md border border-border p-5 text-left transition-colors hover:border-primary/40 hover:bg-accent/40"
-                  >
-                    <p className="text-sm font-semibold">{t.label}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {tabs
+            .filter((t) => !t.hidden)
+            .map((t) => (
+              <button
+                key={t.value}
+                type="button"
+                onClick={() => navigate({ search: { tab: t.value } })}
+                className="rounded-md border border-success/55 p-5 text-left transition-colors hover:border-success hover:bg-accent/40"
+              >
+                <t.Icon className="h-6 w-6 text-success" strokeWidth={1.9} />
+                <p className="mt-3 text-sm font-semibold">{t.label}</p>
+              </button>
+            ))}
         </div>
       </AppShell>
     );

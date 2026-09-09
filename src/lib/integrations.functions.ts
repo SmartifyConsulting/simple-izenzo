@@ -191,13 +191,29 @@ async function probe(
   switch (providerId) {
     case "didit": {
       const base = (config["base_url"] || "https://verification.didit.me").replace(/\/+$/, "");
-      const res = await fetch(`${base}/v2/workflows/`, {
-        headers: { "x-api-key": secrets["api_key"] ?? "", Accept: "application/json" },
+      // Creating a session is the only reliable probe: it checks both the key and the workflow ID.
+      const res = await fetch(`${base}/v2/session/`, {
+        method: "POST",
+        headers: { "x-api-key": secrets["api_key"] ?? "", "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workflow_id: config["workflow_id_document"] ?? "",
+          vendor_data: "connection-test",
+        }),
       });
       if (res.status === 401 || res.status === 403)
         return { ok: false, message: `Didit rejected the key [${res.status}].` };
-      return say(res, "Didit accepted the key.");
+      if (res.status === 400) {
+        const body = await res.text();
+        return {
+          ok: false,
+          message: /uuid/i.test(body)
+            ? "The key works, but the ID-document workflow ID is not a valid Didit workflow ID. Copy the workflow ID (a UUID) from your Didit console."
+            : `Didit rejected the request: ${body.slice(0, 200)}`,
+        };
+      }
+      return say(res, "Didit accepted the key and workflow.");
     }
+
     case "onfido": {
       const region = (config["region"] || "eu").toLowerCase();
       const host = region === "us" ? "api.us.onfido.com" : region === "ca" ? "api.ca.onfido.com" : "api.eu.onfido.com";
