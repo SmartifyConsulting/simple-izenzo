@@ -259,6 +259,7 @@ function ProviderCard({
       setSecrets({});
       onChanged();
       toast.success(`${provider.name} credentials saved`);
+      setExpanded(false);
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
