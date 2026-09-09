@@ -7,6 +7,8 @@ import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
 import { SearchButton } from "@/components/layout/SearchButton";
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
+import { SiteFooter } from "@/components/layout/SiteFooter";
+
 import { initTheme } from "@/lib/theme";
 
 function greeting() {
@@ -48,9 +50,10 @@ export function AppShell({
           <Link to="/dashboard">
             <Button variant="ghost" size="sm" className="gap-2 rounded-full border border-border bg-muted px-3">
               <LayoutDashboard className="h-4 w-4" />
-              <span className="hidden sm:inline">Deals</span>
+              <span className="hidden sm:inline">Dashboard</span>
             </Button>
           </Link>
+
           <SearchButton />
           <Link to="/developer/keys">
             <Button variant="ghost" size="sm" className="gap-2 rounded-full border border-border bg-muted px-3">
@@ -116,6 +119,9 @@ export function AppShell({
         </div>
         {children}
       </main>
+
+      <SiteFooter />
     </div>
   );
+
 }

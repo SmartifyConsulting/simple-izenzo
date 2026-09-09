@@ -13,6 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 
 const NAV = [
   { to: "/developer/keys", label: "API Keys", icon: KeyRound },
@@ -103,6 +104,8 @@ export function DeveloperShell({
           </div>
         )}
         {children}
+        <SiteFooter />
+
       </main>
     </div>
   );

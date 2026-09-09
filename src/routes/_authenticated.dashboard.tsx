@@ -5,6 +5,8 @@ import { Plus } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
 import { CanvasStart, DealCanvas } from "@/components/canvas/DealCanvas";
+import { DashboardSummary } from "@/components/canvas/DashboardSummary";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import type { Transaction } from "@/lib/tx";
@@ -57,6 +59,10 @@ function Dashboard() {
       }
     >
       {isLoading && <p className="text-sm text-muted-foreground">Opening the canvas…</p>}
+
+      {!isLoading && <DashboardSummary txs={txs} />}
+
+
 
       {!isLoading && !activeTx && (
         <CanvasStart

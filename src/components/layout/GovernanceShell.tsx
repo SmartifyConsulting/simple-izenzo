@@ -4,6 +4,7 @@ import { Inbox, FileSearch, ShieldCheck, Activity, Bell, ArrowLeftRight } from "
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/Logo";
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 
 const NAV = [
   { to: "/governance/triage", label: "Triage Queue", icon: Inbox },
@@ -91,6 +92,8 @@ export function GovernanceShell({
           </div>
         )}
         {children}
+        <SiteFooter />
+
       </main>
     </div>
   );
