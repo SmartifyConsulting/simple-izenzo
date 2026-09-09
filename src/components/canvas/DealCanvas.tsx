@@ -1072,6 +1072,7 @@ function GateGroup({
   defaultOpen = false,
   align = "left",
   forceOpen = false,
+  pulse = false,
 }: {
   title: string;
   children: React.ReactNode;
@@ -1081,6 +1082,8 @@ function GateGroup({
   align?: "left" | "right";
   /** Opens the group from outside, e.g. while the match search is running. */
   forceOpen?: boolean;
+  /** Draws attention to the group as the one thing left to do. */
+  pulse?: boolean;
 }) {
 
   const [open, setOpen] = useState(defaultOpen);
@@ -1096,7 +1099,13 @@ function GateGroup({
   }, [forceOpen, forcedFor]);
 
   return (
-    <div className={cn("mt-3 flex items-start gap-3", align === "right" && "flex-row-reverse")}>
+    <div
+      className={cn(
+        "mt-3 flex items-start gap-3",
+        align === "right" && "flex-row-reverse",
+        pulse && "animate-throb rounded-md border border-primary/60 p-2",
+      )}
+    >
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -1118,6 +1127,7 @@ function GateGroup({
     </div>
   );
 }
+
 
 /** Shown on the canvas when there is nothing to work on yet. Clicking the card reveals the Bid
  * and Offer frames inline — nothing else on the flowchart shows until one of them is opened and
