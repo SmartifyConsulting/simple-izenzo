@@ -691,7 +691,19 @@ export type RecordedActivity = {
   price: string | null;
   currency: string;
   time: string;
+  /** A unique reference for this bid/offer — BID9088778.../OFF8979667... — generated once when
+   * recorded and shown for the rest of the deal's life on screen. */
+  reference: string;
 };
+
+const BID_REFERENCE_BASE = 9088778;
+const OFFER_REFERENCE_BASE = 8979667;
+
+function nextReference(direction: "bid" | "offer") {
+  const base = direction === "bid" ? BID_REFERENCE_BASE : OFFER_REFERENCE_BASE;
+  const unique = base + Math.floor(Math.random() * 1000);
+  return `${direction === "bid" ? "BID" : "OFF"}${unique}`;
+}
 
 export function CanvasStart({
   onCreated,
@@ -777,6 +789,7 @@ export function CanvasStart({
         price: form.price || null,
         currency: form.currency || "USD",
         time: new Date().toISOString(),
+        reference: nextReference(direction),
       };
       setDirection(null);
       onCreated({ ...newTx, stage: "trading", step: "documents" } as Transaction, activity);

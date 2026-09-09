@@ -142,9 +142,12 @@ function Dashboard() {
           )}
 
           {activity && (
-            <p className="label-caps">
-              Live deal engine for {activity.direction === "bid" ? "The Bid" : "Responder"}
-            </p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="label-caps">
+                Live deal engine for {activity.direction === "bid" ? "The Bid" : "Responder"}
+              </p>
+              <p className="text-sm font-bold text-white">{activity.reference}</p>
+            </div>
           )}
 
           {activity && dealTx && flowStep === "documents" && (
