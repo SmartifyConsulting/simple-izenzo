@@ -106,34 +106,28 @@ function AdminPage() {
     );
   }
 
-  const groups = ADMIN_GROUPS;
+  const isSuperuser = (profile?.email ?? "").toLowerCase() === SUPERUSER_EMAIL;
+  const tabs = ADMIN_TABS.filter((t) => !t.superuserOnly || isSuperuser);
+  const activeTab = search.tab ? tabs.find((t) => t.value === search.tab) : undefined;
 
-  const activeGroup = search.group ? groups.find((g) => g.id === search.group) : undefined;
-  const activeTab = activeGroup?.tabs.find((t) => t.value === search.tab);
-
-  // No card selected yet — a plain grid of cards grouped under section headings, matching the
-  // Admin tab's card layout in Settings. No tab bar anywhere.
-  if (!activeGroup || !activeTab) {
+  // No card selected yet — one flat grid of green-edged cards, each with its own icon.
+  if (!activeTab) {
     return (
       <AppShell title="Admin" description="Users, tokens and reporting for the whole book">
-        <div className="space-y-8">
-          {groups.map((g) => (
-            <div key={g.id}>
-              <h2 className="text-sm font-semibold">{g.label}</h2>
-              <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {g.tabs.map((t) => (
-                  <button
-                    key={t.value}
-                    type="button"
-                    onClick={() => navigate({ search: { group: g.id, tab: t.value } })}
-                    className="rounded-md border border-border p-5 text-left transition-colors hover:border-primary/40 hover:bg-accent/40"
-                  >
-                    <p className="text-sm font-semibold">{t.label}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {tabs
+            .filter((t) => !t.hidden)
+            .map((t) => (
+              <button
+                key={t.value}
+                type="button"
+                onClick={() => navigate({ search: { tab: t.value } })}
+                className="rounded-md border border-success/55 p-5 text-left transition-colors hover:border-success hover:bg-accent/40"
+              >
+                <t.Icon className="h-6 w-6 text-success" strokeWidth={1.9} />
+                <p className="mt-3 text-sm font-semibold">{t.label}</p>
+              </button>
+            ))}
         </div>
       </AppShell>
     );
