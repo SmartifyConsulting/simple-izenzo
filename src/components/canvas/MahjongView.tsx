@@ -102,7 +102,10 @@ const BOXES = {
   bankability: { x: S3_L + PREP_W - SUB_W, y: BRANCH_Y + PITCH * 2, w: SUB_W, h: ROW },
   completion: { x: S4_L, y: BRANCH_Y + PITCH * 2, w: FIN_W, h: ROW },
 
-  memory: { x: S5_L, y: BRANCH_Y + PITCH, w: MEM_W, h: PITCH + ROW },
+  // Memory matches Completion's size and sits on the same line, so the arrow between them is a
+  // straight horizontal run.
+  memory: { x: S5_L, y: BRANCH_Y + PITCH * 2, w: MEM_W, h: ROW },
+
 } as const satisfies Record<string, Box>;
 
 // Connector points sit exactly on each box's border, so a line leaves touching the box it comes
@@ -141,7 +144,7 @@ const ARROWS: { d: string; arrow?: boolean }[] = [
   { d: elbow(bottom(BOXES.offer), top(BOXES.counterparty), "x") },
   { d: elbow(right(BOXES.loadDocs), left(BOXES.search), "y") },
   { d: elbow(left(BOXES.counterparty), right(BOXES.search), "y") },
-  { d: elbow(top(BOXES.surfaceRoutes), bottom(BOXES.counterparty), "x"), arrow: false },
+  { d: elbow(bottom(BOXES.counterparty), top(BOXES.surfaceRoutes), "x") },
   { d: elbow(bottom(BOXES.search), top(BOXES.choice), "x") },
   { d: elbow(bottom(BOXES.loadDocs), left(BOXES.choice), "y") },
   { d: elbow(left(BOXES.surfaceRoutes), right(BOXES.choice), "y") },
