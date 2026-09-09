@@ -41,5 +41,5 @@ function subscribe(cb: () => void) {
 }
 
 export function useViewMode(): ViewMode {
-  return useSyncExternalStore(subscribe, getViewMode, () => "mahjong");
+  return useSyncExternalStore(subscribe, getViewMode, () => "classic");
 }
