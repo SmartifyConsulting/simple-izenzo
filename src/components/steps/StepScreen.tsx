@@ -1138,12 +1138,21 @@ function IntentStep({ tx, reload }: Props) {
           <dt className="label-caps">Jurisdiction</dt>
           <dd>{tx.jurisdiction ?? "—"}</dd>
         </div>
+        <div>
+          <dt className="label-caps">Counterparty</dt>
+          <dd>{chosen ?? "—"}</dd>
+        </div>
+        <div>
+          <dt className="label-caps">Signed by</dt>
+          <dd>{signer}</dd>
+        </div>
       </dl>
       {tx.intent_confirmed_at && (
         <p className="mt-4 text-xs text-muted-foreground">
-          Confirmed {when(tx.intent_confirmed_at)}
+          Signed by {signer} · {when(tx.intent_confirmed_at)}
         </p>
       )}
+
     </Panel>
   );
 }
