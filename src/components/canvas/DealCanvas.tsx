@@ -712,7 +712,7 @@ export function CounterpartyRecord({
       )}
 
       {screeningResults && screeningResults.length > 0 && (
-        <div className="mt-3 space-y-2 border-t border-slate-300 pt-3">
+        <div className="mt-3 space-y-2.5 border-t border-slate-300 pt-3">
           <div className="flex items-center justify-between gap-2">
             <p className="label-caps text-slate-600">Background screening</p>
             <button
@@ -724,30 +724,78 @@ export function CounterpartyRecord({
               Download PDF
             </button>
           </div>
-          {screeningResults.map((r) => (
-            <div key={r.counterpartyId}>
-              <p className="text-sm font-medium text-slate-900">{r.name}</p>
-              <ul className="mt-0.5 space-y-0.5">
-                {r.checks.map((chk) => (
-                  <li key={chk.kind} className="text-[11px] text-slate-600">
-                    <span className="font-medium">{chk.label}:</span>{" "}
-                    {chk.status === "started"
-                      ? "in progress"
-                      : chk.status === "matched"
-                        ? "match found"
-                        : chk.status === "no_match"
-                          ? "no match"
-                          : chk.status === "unavailable"
-                            ? "not connected"
-                            : "could not run"}{" "}
-                    — {chk.detail}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          {screeningResults.map((r) => {
+            const cand = candidates.find((c) => c.id === r.counterpartyId);
+            return (
+              <div key={r.counterpartyId} className="rounded-xl border border-slate-300 bg-white p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-slate-900">{r.name}</p>
+                  {cand?.score != null && (
+                    <Badge variant="secondary" className="font-normal">
+                      {cand.score}/100
+                    </Badge>
+                  )}
+                </div>
+                <ul className="mt-2 divide-y divide-slate-200">
+                  {r.checks.map((chk) => {
+                    const live = chk.verificationId ? verificationById.get(chk.verificationId) : undefined;
+                    const view = describeCheck(chk, live);
+                    return (
+                      <li key={chk.kind} className="py-1.5 first:pt-0 last:pb-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-medium text-slate-800">{chk.label}</span>
+                          <span
+                            className={cn(
+                              "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                              view.tone,
+                            )}
+                          >
+                            {view.label}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 whitespace-pre-line break-words text-[11px] leading-snug text-slate-500">
+                          {view.detail}
+                        </p>
+                        {(chk.url || (chk.verificationId && view.pending)) && (
+                          <div className="mt-1 flex items-center gap-3">
+                            {chk.url && (
+                              <a
+                                href={chk.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+                              >
+                                <ExternalLink className="h-3 w-3" /> Open check
+                              </a>
+                            )}
+                            {chk.verificationId && view.pending && (
+                              <button
+                                type="button"
+                                onClick={() => refreshCheck(chk.verificationId as string)}
+                                disabled={refreshingId === chk.verificationId}
+                                className="flex items-center gap-1 text-[11px] font-medium text-slate-600 hover:underline disabled:opacity-50"
+                              >
+                                <RefreshCw
+                                  className={cn(
+                                    "h-3 w-3",
+                                    refreshingId === chk.verificationId && "animate-spin",
+                                  )}
+                                />
+                                Refresh
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            );
+          })}
         </div>
       )}
+
 
       {screeningDone && onFinalize ? (
         <Button
