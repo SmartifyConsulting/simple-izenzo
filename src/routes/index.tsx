@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { JourneyBanner } from "@/components/JourneyBanner";
+import { AuthTabs } from "@/components/auth/AuthTabs";
+
 import { useAuth } from "@/lib/auth";
 
 type Search = { next?: string | undefined };
