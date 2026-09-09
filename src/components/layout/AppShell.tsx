@@ -59,6 +59,7 @@ export function AppShell({
           <Link to="/dashboard" className="shrink-0">
             <Logo onDark className="h-7 w-auto" />
           </Link>
+          <SearchButton />
           <div className="min-w-0 flex-1" />
           {org && (
             <Link
@@ -110,14 +111,11 @@ export function AppShell({
         </div>
       </header>
 
-      <main className={cn("mx-auto w-full flex-1 px-4 pb-14 sm:px-6", width, wide ? "pt-4" : "pt-6")}>
-        <div className="mb-4">
-          <SearchButton />
-        </div>
+      <main className={cn("mx-auto w-full flex-1 px-4 pb-14 sm:px-6", width, wide ? "pt-3" : "pt-5")}>
         <div
           className={cn(
             "grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4",
-            wide ? "mb-3" : "mb-6",
+            wide ? "mb-2" : "mb-4",
           )}
         >
           <div className="min-w-0">

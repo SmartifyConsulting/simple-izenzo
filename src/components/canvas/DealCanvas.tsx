@@ -28,6 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CommoditySearch } from "@/components/CommoditySearch";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { ensureOrg } from "@/lib/org";
 import { lockReason, stepDef, stepIndex, type StageKey } from "@/lib/spine";
 import { advance, money, recordEvent, when, type Transaction, type TxEvent } from "@/lib/tx";
 import { setCounterpartyShortlist } from "@/lib/izenzo.functions";
@@ -603,7 +604,7 @@ function SectionRow({ title, items }: { title: string; items: React.ReactNode[] 
  * completed, at which point the parent (given the new transaction id) switches to the real
  * DealCanvas, which then reveals its own next frame the same way. */
 export function CanvasStart({ onCreated }: { onCreated: (id: string) => void }) {
-  const { org } = useAuth();
+  const { org, user, profile, refresh } = useAuth();
   const [picking, setPicking] = useState(false);
   const [direction, setDirection] = useState<"bid" | "offer" | null>(null);
   const [form, setForm] = useState({ title: "", commodity: "", quantity: "", unit: "", price: "", currency: "USD" });
@@ -611,16 +612,22 @@ export function CanvasStart({ onCreated }: { onCreated: (id: string) => void }) 
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!org || !direction) {
-      toast.error("Add your organisation details first");
+    if (!direction) return;
+    if (!user) {
+      toast.error("Sign in to record a bid or offer");
       return;
     }
     setBusy(true);
     try {
+      // Some accounts (Google sign-up, or older ones) never got an organisation — provision a
+      // personal one on the fly instead of blocking here, same as new individual sign-ups do.
+      const activeOrg = org ?? (await ensureOrg(user.id, profile?.full_name ?? user.email ?? "My account"));
+      if (!org) void refresh();
+
       const { data: newTx, error } = await supabase
         .from("transactions")
         .insert({
-          org_id: org.id,
+          org_id: activeOrg.id,
           stage: "trading",
           step: "bid-offer",
           title: form.title || form.commodity || (direction === "bid" ? "New buy bid" : "New sell offer"),

@@ -3,12 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import { Plus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { COMMODITIES } from "@/lib/commodities";
 import { cn } from "@/lib/utils";
 
 /** A searchable "Commodity or asset" field: suggests commodities already used elsewhere on the
- * platform (distinct values from `transactions.commodity`), and lets the user add a new one if
- * what they typed isn't in the list — it's still just free text on the `commodity` column, so
- * "adding" simply means using the typed value. */
+ * platform (distinct values from `transactions.commodity`) plus a static starter list (so the
+ * list isn't empty before any real transactions exist), and lets the user add a new one if what
+ * they typed isn't in the list — it's still just free text on the `commodity` column, so "adding"
+ * simply means using the typed value. */
 export function CommoditySearch({
   id,
   value,
@@ -23,7 +25,7 @@ export function CommoditySearch({
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const { data: known = [] } = useQuery({
+  const { data: known = COMMODITIES as unknown as string[] } = useQuery({
     queryKey: ["known-commodities"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -34,6 +36,10 @@ export function CommoditySearch({
       if (error) throw error;
       const seen = new Set<string>();
       const list: string[] = [];
+      for (const c of COMMODITIES) {
+        seen.add(c.toLowerCase());
+        list.push(c);
+      }
       for (const row of data ?? []) {
         const c = (row.commodity ?? "").trim();
         if (!c || seen.has(c.toLowerCase())) continue;

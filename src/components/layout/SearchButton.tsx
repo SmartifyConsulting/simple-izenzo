@@ -64,9 +64,9 @@ export function SearchButton() {
         variant="ghost"
         size="sm"
         onClick={() => setOpen(true)}
-        className="gap-2 rounded-full border border-border bg-muted px-3"
+        className="w-[220px] justify-start gap-2 rounded-full border border-border bg-muted px-3"
       >
-        <Search className="h-4 w-4" />
+        <Search className="h-4 w-4 shrink-0" />
         <span className="hidden sm:inline">Search</span>
       </Button>
 

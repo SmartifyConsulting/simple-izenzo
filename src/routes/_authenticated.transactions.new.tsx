@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CommoditySearch } from "@/components/CommoditySearch";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { ensureOrg } from "@/lib/org";
 import { recordEvent } from "@/lib/tx";
 import { CURRENCIES } from "@/lib/currencies";
 import { UNITS } from "@/lib/units";
@@ -26,7 +27,7 @@ export const Route = createFileRoute("/_authenticated/transactions/new")({
 });
 
 function NewTransaction() {
-  const { org, orgs } = useAuth();
+  const { org, orgs, user, profile, refresh } = useAuth();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [orgId, setOrgId] = useState(org?.id ?? "");
@@ -48,16 +49,26 @@ function NewTransaction() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!orgId) {
-      toast.error("Add your organisation details first");
+    if (!user) {
+      toast.error("Sign in to open a transaction");
       return;
     }
     setBusy(true);
     try {
+      // No organisation yet (Google sign-up, or an older account) — provision a personal one
+      // instead of blocking here, same as new individual sign-ups do.
+      let activeOrgId = orgId;
+      if (!activeOrgId) {
+        const created = await ensureOrg(user.id, profile?.full_name ?? user.email ?? "My account");
+        activeOrgId = created.id;
+        setOrgId(created.id);
+        void refresh();
+      }
+
       const { data, error } = await supabase
         .from("transactions")
         .insert({
-          org_id: orgId,
+          org_id: activeOrgId,
           stage: "trading",
           step: "bid-offer",
           title: form.title,
