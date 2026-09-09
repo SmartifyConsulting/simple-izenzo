@@ -1790,6 +1790,7 @@ export type Database = {
           org_id: string | null
           read: boolean
           title: string
+          transaction_id: string | null
           user_id: string | null
         }
         Insert: {
@@ -1799,6 +1800,7 @@ export type Database = {
           org_id?: string | null
           read?: boolean
           title: string
+          transaction_id?: string | null
           user_id?: string | null
         }
         Update: {
@@ -1808,6 +1810,7 @@ export type Database = {
           org_id?: string | null
           read?: boolean
           title?: string
+          transaction_id?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -1816,6 +1819,13 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
         ]
