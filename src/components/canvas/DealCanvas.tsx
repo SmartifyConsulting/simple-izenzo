@@ -59,14 +59,14 @@ export const FLOWCHART_PREVIEW_TX: Transaction = {
   currency: "USD",
   incoterms: "CIF Rotterdam",
   jurisdiction: "South Africa",
-  stage: "finality",
-  step: "record",
+  stage: "memory",
+  step: "ledger",
   status: "open",
   intent_confirmed_at: new Date(0).toISOString(),
   poi_sealed_at: new Date(0).toISOString(),
   poi_hash: "preview",
   wad_completed_at: new Date(0).toISOString(),
-  finality_sealed_at: null,
+  finality_sealed_at: new Date(0).toISOString(),
   created_at: new Date(0).toISOString(),
 };
 
@@ -169,7 +169,7 @@ export function DealCanvas({
     <div className="ink-grid relative rounded-3xl border border-border p-4 sm:p-7">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
-          <p className="label-caps">Live deal canvas</p>
+          <p className="label-caps">Live deal engine</p>
           <h2 className="mt-1 truncate text-xl font-semibold tracking-tight">{tx.title}</h2>
         </div>
         <p className="text-sm text-muted-foreground">{money(tx.price, tx.currency)}</p>
@@ -284,57 +284,63 @@ export function DealCanvas({
       {visible("trading", "counterparties") && (
         <>
           <Connector />
-          <div className="mx-auto max-w-3xl space-y-3">
-            {node({ stage: "trading", step: "counterparties", icon: Users }, { side: "center" })}
-            {visible("trading", "choice") &&
-              node({ stage: "trading", step: "choice", icon: MousePointerClick }, { side: "center" })}
-            {visible("trading", "media") &&
-              node(
-                { stage: "trading", step: "media", label: "Background screening", icon: Newspaper },
-                { side: "center", compact: true, note: "runs quietly" },
-              )}
-            {visible("trading", "intent") &&
-              node({ stage: "trading", step: "intent", icon: Handshake }, { side: "center" })}
-            {visible("trading", "poi") &&
-              node(
-                { stage: "trading", step: "poi", icon: ShieldCheck },
-                { side: "center", note: "1 token · USD 10" },
-              )}
-          </div>
+          <GateGroup title="Proof of Intent">
+            <div className="mx-auto max-w-3xl space-y-3">
+              {node({ stage: "trading", step: "counterparties", icon: Users }, { side: "center" })}
+              {visible("trading", "choice") &&
+                node({ stage: "trading", step: "choice", icon: MousePointerClick }, { side: "center" })}
+              {visible("trading", "media") &&
+                node(
+                  { stage: "trading", step: "media", label: "Background screening", icon: Newspaper },
+                  { side: "center", compact: true, note: "runs quietly" },
+                )}
+              {visible("trading", "intent") &&
+                node({ stage: "trading", step: "intent", icon: Handshake }, { side: "center" })}
+              {visible("trading", "poi") &&
+                node(
+                  { stage: "trading", step: "poi", icon: ShieldCheck },
+                  { side: "center", note: "1 token · USD 10" },
+                )}
+            </div>
+            {visible("trading", "poi") && <GateBar label="Proof of Intent" cleared={poi} />}
+          </GateGroup>
         </>
       )}
 
-      {visible("trading", "poi") && <GateBar label="Proof of Intent" cleared={poi} />}
-
       {visible("compliance", "wad") && (
-        <div className="mx-auto max-w-3xl">
-          {node(
-            { stage: "compliance", step: "wad", icon: ShieldCheck },
-            { side: "center", note: "3 tokens · USD 30" },
-          )}
-        </div>
+        <GateGroup title="Without a Doubt">
+          <div className="mx-auto max-w-3xl">
+            {node(
+              { stage: "compliance", step: "wad", icon: ShieldCheck },
+              { side: "center", note: "3 tokens · USD 30" },
+            )}
+          </div>
+          <GateBar label="Without a Doubt" cleared={wad} />
+        </GateGroup>
       )}
 
-      {visible("compliance", "wad") && <GateBar label="Without a Doubt" cleared={wad} />}
-
       {executionItems.length > 0 && (
-        <SectionRow
-          title="Execution"
-          items={executionItems.map((s) => node({ stage: "execution", step: s, icon: Hammer }, { compact: true }))}
-        />
+        <GateGroup title="Execution">
+          <div className="grid gap-3 sm:grid-cols-3">
+            {executionItems.map((s) => node({ stage: "execution", step: s, icon: Hammer }, { compact: true }))}
+          </div>
+        </GateGroup>
       )}
 
       {finalityItems.length > 0 && (
-        <SectionRow
-          title="Finality"
-          items={finalityItems.map((s) => node({ stage: "finality", step: s, icon: Landmark }, { compact: true }))}
-        />
+        <GateGroup title="Finality">
+          <div className="grid gap-3 sm:grid-cols-3">
+            {finalityItems.map((s) => node({ stage: "finality", step: s, icon: Landmark }, { compact: true }))}
+          </div>
+        </GateGroup>
       )}
 
       {visible("memory", "ledger") && (
-        <div className="mx-auto mt-5 max-w-3xl">
-          {node({ stage: "memory", step: "ledger", icon: BookLock }, { side: "center" })}
-        </div>
+        <GateGroup title="Memory">
+          <div className="mx-auto max-w-3xl">
+            {node({ stage: "memory", step: "ledger", icon: BookLock }, { side: "center" })}
+          </div>
+        </GateGroup>
       )}
     </div>
   );
@@ -622,11 +628,38 @@ function LaneHeader({ label, side }: { label: string; side: "left" | "right" }) 
   );
 }
 
-function SectionRow({ title, items }: { title: string; items: React.ReactNode[] }) {
+/** A gate's steps, collapsible behind a large brace — click the +/- label to fold the whole
+ * gate down to just its heading, or open it back up to see every step inside. */
+function GateGroup({
+  title,
+  children,
+  defaultOpen = false,
+}: {
+  title: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="mt-5">
-      <p className="label-caps mb-2">{title}</p>
-      <div className="grid gap-3 sm:grid-cols-3">{items}</div>
+    <div className="mt-5 flex items-start gap-3">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex shrink-0 items-start gap-2 text-left"
+      >
+        <span
+          aria-hidden
+          className="select-none font-serif text-4xl leading-[0.6] text-muted-foreground/50"
+        >
+          {"{"}
+        </span>
+        <span className="label-caps mt-1.5 text-muted-foreground transition-colors hover:text-foreground">
+          {open ? "−" : "+"}
+          {title}
+        </span>
+      </button>
+      {open && <div className="min-w-0 flex-1 space-y-3">{children}</div>}
     </div>
   );
 }
@@ -703,7 +736,7 @@ export function CanvasStart({ onCreated }: { onCreated: (id: string) => void }) 
   if (!picking) {
     return (
       <div className="ink-grid relative rounded-3xl border border-border p-8 sm:p-14">
-        <p className="label-caps text-center">Live deal canvas</p>
+        <p className="label-caps text-center">Live deal engine</p>
         <div className="mx-auto mt-6 max-w-md">
           <button
             type="button"
@@ -812,7 +845,7 @@ export function CanvasStart({ onCreated }: { onCreated: (id: string) => void }) 
 
   return (
     <div className="ink-grid relative rounded-3xl border border-border p-4 sm:p-7">
-      <p className="label-caps mb-4">Live deal canvas</p>
+      <p className="label-caps mb-4">Live deal engine</p>
       <div className="grid grid-cols-2 gap-4 sm:gap-8">
         <LaneHeader label="Bidder" side="left" />
         <LaneHeader label="Responder" side="right" />
