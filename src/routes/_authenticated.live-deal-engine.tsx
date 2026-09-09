@@ -796,12 +796,15 @@ function LiveDealEngine() {
                 {dealTx && stagePanel && (
                   <InlineFrame
                     tx={dealTx}
-                    stage="trading"
+                    stage={stagePanel === "wad" ? "compliance" : "trading"}
                     step={stagePanel}
                     reload={() => void reloadDeal()}
                     onClose={() => setStagePanel(null)}
                   />
                 )}
+
+                {dealTx?.wad_completed_at && <TradeSummary tx={dealTx} />}
+
 
 
 
