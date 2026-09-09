@@ -158,6 +158,7 @@ export function DealCanvas({
   throbStep,
   openProofOfIntent,
   screeningProgress,
+  matchProgress,
 
 }: {
   tx: Transaction;
@@ -193,6 +194,9 @@ export function DealCanvas({
   openProofOfIntent?: boolean;
   /** Live progress of the background screening run, drawn as a bar under that node. */
   screeningProgress?: { done: number; total: number; failed?: boolean } | null;
+  /** Live progress of the counterparty match search, drawn as a bar under the Counterparties
+   * node — the match count is read from the already-cached candidate list. */
+  matchProgress?: { searching: boolean; error?: string | null } | null;
 
 }) {
   const [panel, setPanel] = useState<{ stage: StageKey; step: string } | null>(null);
