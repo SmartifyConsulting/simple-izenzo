@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { PasswordInput } from "@/components/PasswordInput";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import {
   INTEGRATION_GROUPS,
   INTEGRATION_PROVIDERS,
@@ -96,20 +97,32 @@ export function IntegrationsTab() {
       {guided ? (
         <GuidedSetup byProvider={byProvider} onChanged={refresh} />
       ) : (
-        INTEGRATION_GROUPS.map((group) => {
-          const providers = INTEGRATION_PROVIDERS.filter((p) => p.group === group);
-          if (providers.length === 0) return null;
-          return (
-            <section key={group} className="space-y-3">
-              <h3 className="text-sm font-semibold">{group}</h3>
-              <div className="grid gap-4 xl:grid-cols-2">
-                {providers.map((p) => (
-                  <ProviderCard key={p.id} provider={p} row={byProvider[p.id]} onChanged={refresh} />
-                ))}
-              </div>
-            </section>
-          );
-        })
+        <Accordion type="multiple">
+          {INTEGRATION_GROUPS.map((group) => {
+            const providers = INTEGRATION_PROVIDERS.filter((p) => p.group === group);
+            if (providers.length === 0) return null;
+            const configuredCount = providers.filter((p) => byProvider[p.id]).length;
+            return (
+              <AccordionItem key={group} value={group}>
+                <AccordionTrigger className="text-sm font-semibold">
+                  <span className="flex items-center gap-2">
+                    {group}
+                    <Badge variant="outline" className="font-normal text-muted-foreground">
+                      {configuredCount}/{providers.length} set up
+                    </Badge>
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="grid gap-2 xl:grid-cols-2">
+                    {providers.map((p) => (
+                      <ProviderCard key={p.id} provider={p} row={byProvider[p.id]} onChanged={refresh} />
+                    ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            );
+          })}
+        </Accordion>
       )}
     </div>
   );
@@ -233,6 +246,9 @@ function ProviderCard({
   const [environment, setEnvironment] = useState(row?.environment ?? provider.environments?.[0] ?? "production");
   const [enabled, setEnabled] = useState(row?.enabled ?? false);
   const [busy, setBusy] = useState<null | "save" | "test" | "reveal">(null);
+  const [expanded, setExpanded] = useState(false);
+  const [vaultPrompt, setVaultPrompt] = useState(false);
+  const [vaultPassword, setVaultPassword] = useState("");
 
   const configured = Boolean(row);
 
@@ -251,10 +267,13 @@ function ProviderCard({
   }
 
   async function onReveal() {
+    if (!vaultPassword) return;
     setBusy("reveal");
     try {
-      const plain = await reveal({ data: { provider: provider.id } });
+      const plain = await reveal({ data: { provider: provider.id, vaultPassword } });
       setSecrets(plain);
+      setVaultPrompt(false);
+      setVaultPassword("");
       toast.success("Stored values loaded — use the eye icon to show them.");
     } catch (err) {
       toast.error((err as Error).message);
@@ -294,29 +313,32 @@ function ProviderCard({
   }
 
   return (
-    <div className="rounded-md border border-border p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <Plug className="h-4 w-4 text-muted-foreground" />
-            <h4 className="text-sm font-semibold">{provider.name}</h4>
+    <div className="rounded-md border border-border p-3">
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="flex w-full items-start justify-between gap-3 text-left"
+      >
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Plug className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <h4 className="text-xs font-semibold">{provider.name}</h4>
             {configured ? (
-              <Badge variant="secondary">Saved</Badge>
+              <Badge variant="secondary" className="text-[10px]">Saved</Badge>
             ) : (
-              <Badge variant="outline">Not set up</Badge>
+              <Badge variant="outline" className="text-[10px]">Not set up</Badge>
             )}
           </div>
-          <p className="mt-1 max-w-prose text-xs text-muted-foreground">{provider.summary}</p>
+          {!expanded && <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{provider.summary}</p>}
         </div>
-        <div className="flex items-center gap-2">
-          <Label htmlFor={`${provider.id}-enabled`} className="text-xs text-muted-foreground">
-            Live
-          </Label>
+        <div className="flex shrink-0 items-center gap-2" onClick={(e) => e.stopPropagation()}>
           <Switch id={`${provider.id}-enabled`} checked={enabled} onCheckedChange={setEnabled} />
         </div>
-      </div>
+      </button>
 
-      <div className="mt-4 space-y-3">
+      {expanded && (
+      <div className="mt-3 space-y-3">
+        <p className="text-xs text-muted-foreground">{provider.summary}</p>
         {provider.environments && provider.environments.length > 1 && (
           <div className="space-y-1.5">
             <Label htmlFor={`${provider.id}-env`}>Environment</Label>
@@ -357,7 +379,6 @@ function ProviderCard({
             {field.help && <p className="text-xs text-muted-foreground">{field.help}</p>}
           </div>
         ))}
-      </div>
 
       {row?.lastTestedAt && (
         <p className="mt-3 flex items-start gap-1.5 text-xs text-muted-foreground">
@@ -375,13 +396,36 @@ function ProviderCard({
         <p className="mt-3 text-xs text-muted-foreground">{provider.testNote}</p>
       )}
 
+      {vaultPrompt && (
+        <div className="flex items-end gap-2 rounded-md border border-primary/30 bg-primary/5 p-2.5">
+          <div className="flex-1 space-y-1">
+            <Label htmlFor={`${provider.id}-vault`} className="text-xs">
+              Vault password
+            </Label>
+            <PasswordInput
+              id={`${provider.id}-vault`}
+              value={vaultPassword}
+              autoComplete="off"
+              onChange={(e) => setVaultPassword(e.target.value)}
+            />
+          </div>
+          <Button size="sm" onClick={onReveal} disabled={busy !== null || !vaultPassword}>
+            {busy === "reveal" && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+            Confirm
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => { setVaultPrompt(false); setVaultPassword(""); }}>
+            Cancel
+          </Button>
+        </div>
+      )}
+
       <div className="mt-4 flex flex-wrap gap-2">
         <Button size="sm" onClick={onSave} disabled={busy !== null}>
           {busy === "save" && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
           Save
         </Button>
-        {configured && (
-          <Button size="sm" variant="outline" onClick={onReveal} disabled={busy !== null}>
+        {configured && !vaultPrompt && (
+          <Button size="sm" variant="outline" onClick={() => setVaultPrompt(true)} disabled={busy !== null}>
             <Eye className="mr-1.5 h-3.5 w-3.5" />
             Reveal
           </Button>
@@ -398,6 +442,8 @@ function ProviderCard({
           </Button>
         )}
       </div>
+      </div>
+      )}
     </div>
   );
 }

@@ -130,12 +130,27 @@ export const saveIntegration = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** Reveal the plaintext for one provider so an administrator can check what is stored. */
+/** Reveal the plaintext for one provider so an administrator can check what is stored. Gated
+ * behind a second, vault-specific password (`INTEGRATIONS_VAULT_PASSWORD`) — separate from the
+ * admin's own account password — so the data stays encrypted to every user, admins included,
+ * until that password is entered. Fails closed: if the vault password isn't configured, nothing
+ * can ever be revealed rather than silently skipping the check. */
 export const revealIntegrationSecrets = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => z.object({ provider: z.string().min(1) }).parse(data))
+  .inputValidator((data: unknown) =>
+    z.object({ provider: z.string().min(1), vaultPassword: z.string().min(1) }).parse(data),
+  )
   .handler(async ({ data, context }): Promise<Record<string, string>> => {
     await assertAdmin(context as any);
+    const expected = process.env["INTEGRATIONS_VAULT_PASSWORD"];
+    if (!expected) {
+      throw new Error(
+        "No vault password is configured (INTEGRATIONS_VAULT_PASSWORD) — nothing can be revealed until an administrator sets one.",
+      );
+    }
+    if (data.vaultPassword !== expected) {
+      throw new Error("Incorrect vault password.");
+    }
     const { decryptSecrets } = await import("@/lib/integrationCrypto.server");
     const { data: row, error } = await (await admin())
       .from("integration_credentials")
