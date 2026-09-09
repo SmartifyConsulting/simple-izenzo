@@ -159,8 +159,10 @@ export function DealCanvas({
   ) => {
     const def = stepDef(n.stage, n.step);
     const isOpen = panel?.stage === n.stage && panel?.step === n.step;
+    const throbbing = Boolean(throbStep) && n.stage === "trading" && n.step === throbStep;
     return (
-      <div>
+      <div className={cn(throbbing && "animate-throb rounded-2xl")} key={`${n.stage}-${n.step}`}>
+
         <CanvasNode
           label={n.label ?? def?.label ?? n.step}
           blurb={opts?.compact ? undefined : def?.blurb}
