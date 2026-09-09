@@ -145,7 +145,37 @@ function LiveDealEngine() {
   const [idBack, setIdBack] = useState<File[]>([]);
   const [docFiles, setDocFiles] = useState<File[]>([]);
   const search = useServerFn(searchCounterparties);
+  const runScreening = useServerFn(runBackgroundScreening);
   const queryClient = useQueryClient();
+
+  // Which canvas step should pulse: the results panel pulses while matching runs, then Choice
+  // takes over, and Background screening pulses while the provider checks are being opened.
+  const throbStep =
+    screening ? "media" : flowStep === "results" ? "choice" : null;
+
+  /** Runs the background screening (registry lookup + Didit ID/KYB/AML) for whichever
+   * counterparties were ticked in the Record panel. */
+  async function startScreening(counterpartyIds: string[]) {
+    if (!dealTx || counterpartyIds.length === 0) return;
+    setScreening(true);
+    setScreeningResults(null);
+    try {
+      const results = await runScreening({
+        data: {
+          transactionId: dealTx.id,
+          counterpartyIds,
+          ...(typeof window !== "undefined" ? { origin: window.location.origin } : {}),
+        },
+      });
+      setScreeningResults(results);
+      toast.success("Background screening started");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setScreening(false);
+    }
+  }
+
 
   // Once something has been recorded, keep the split workspace open (and on the side it was
   // recorded for) even after the form resets — that's what the Live Workspace panel now shows.
