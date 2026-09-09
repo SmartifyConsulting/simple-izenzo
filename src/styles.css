@@ -316,6 +316,22 @@
   background-size: auto, auto, 44px 44px, 44px 44px;
 }
 
+/* Marketing hero keeps the Ink & Aqua dark ground even when the app is in light theme. */
+@utility ink-ground {
+  --background: oklch(0.16 0.008 260);
+  --foreground: oklch(0.94 0.012 250);
+  --card: oklch(0.255 0.02 253);
+  --card-foreground: oklch(0.94 0.012 250);
+  --muted: oklch(0.27 0.018 253);
+  --muted-foreground: oklch(0.72 0.018 250);
+  --border: oklch(1 0 0 / 12%);
+  --primary: oklch(0.71 0.13 178);
+  --primary-foreground: oklch(0.16 0.02 200);
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+
 @keyframes node-rise {
   from {
     opacity: 0;
