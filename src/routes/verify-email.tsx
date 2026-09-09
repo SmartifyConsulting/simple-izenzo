@@ -51,7 +51,7 @@ function VerifyEmailPage() {
       await refresh();
       setDone(true);
       toast.success("Email confirmed");
-      setTimeout(() => navigate({ to: "/dashboard", replace: true }), 900);
+      setTimeout(() => navigate({ to: "/live-deal-engine", replace: true }), 900);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [verified, user?.id]);
@@ -86,7 +86,7 @@ function VerifyEmailPage() {
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
           {done
-            ? "Thanks — taking you to your dashboard."
+            ? "Thanks — taking you to the Live Deal Engine."
             : `We need to confirm ${user?.email ?? "your email address"} once. Send yourself a link and open it on this device.`}
         </p>
 

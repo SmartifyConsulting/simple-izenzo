@@ -62,9 +62,9 @@ function TxStepPage() {
       title={tx.title}
       description={`${stageOf(tx.stage)?.label} · ${money(tx.price, tx.currency)}`}
       actions={
-        <Link to="/dashboard">
+        <Link to="/live-deal-engine">
           <Button size="sm" variant="ghost" className="gap-2">
-            <ArrowLeft className="h-3.5 w-3.5" /> Dashboard
+            <ArrowLeft className="h-3.5 w-3.5" /> Live Deal Engine
           </Button>
         </Link>
       }

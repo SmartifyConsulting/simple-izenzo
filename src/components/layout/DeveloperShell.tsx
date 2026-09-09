@@ -80,7 +80,7 @@ export function DeveloperShell({
           <div className="my-3 border-t border-slate-800" />
 
           <button
-            onClick={() => navigate({ to: "/dashboard" })}
+            onClick={() => navigate({ to: "/live-deal-engine" })}
             className="flex w-full items-center gap-2.5 rounded-md border border-slate-800 px-2.5 py-2 text-sm text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
           >
             <ArrowLeftRight className="h-4 w-4" />

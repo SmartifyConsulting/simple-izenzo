@@ -51,7 +51,7 @@ function DealCanvasPage() {
       wide
       title="Deal canvas"
       actions={
-        <Link to="/dashboard">
+        <Link to="/live-deal-engine">
           <Button size="sm" variant="ghost" className="gap-2">
             <ArrowLeft className="h-3.5 w-3.5" /> All deals
           </Button>

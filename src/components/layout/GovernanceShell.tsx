@@ -68,7 +68,7 @@ export function GovernanceShell({
           <div className="my-3 border-t border-border" />
 
           <button
-            onClick={() => navigate({ to: "/dashboard" })}
+            onClick={() => navigate({ to: "/live-deal-engine" })}
             className="flex w-full items-center gap-2.5 rounded-md border border-border px-2.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
             <ArrowLeftRight className="h-4 w-4" />

@@ -11,7 +11,7 @@ import { mapAuthError } from "@/lib/auth";
 
 function safeNext(next: string | undefined) {
   if (next && next.startsWith("/") && !next.startsWith("//")) return next;
-  return "/dashboard";
+  return "/live-deal-engine";
 }
 
 /** The sign-in form, shared between the standalone /auth page and the home page hero. */

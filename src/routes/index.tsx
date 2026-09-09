@@ -32,7 +32,7 @@ export const Route = createFileRoute("/")({
 
 function safeNext(next: string | undefined) {
   if (next && next.startsWith("/") && !next.startsWith("//")) return next;
-  return "/dashboard";
+  return "/live-deal-engine";
 }
 
 const STATS = [
@@ -99,7 +99,7 @@ function Landing() {
                 title="Respond to a Bid"
                 body="See bids matched to your profile, choose a counterparty, and answer through the same gated record — every choice sealed as it happens."
                 cta="Respond to a Bid"
-                next="/dashboard"
+                next="/live-deal-engine"
               />
             </div>
 

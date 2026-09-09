@@ -28,12 +28,12 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.
 import { Route as AuthenticatedAuditorRouteImport } from './routes/_authenticated.auditor'
 import { Route as AuthenticatedComplianceRouteImport } from './routes/_authenticated.compliance'
 import { Route as AuthenticatedCreditsRouteImport } from './routes/_authenticated.credits'
-import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
 import { Route as AuthenticatedDiscoverRouteImport } from './routes/_authenticated.discover'
 import { Route as AuthenticatedFacilitationRouteImport } from './routes/_authenticated.facilitation'
 import { Route as AuthenticatedFunderRouteImport } from './routes/_authenticated.funder'
 import { Route as AuthenticatedGuidedRouteImport } from './routes/_authenticated.guided'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated.inbox'
+import { Route as AuthenticatedLiveDealEngineRouteImport } from './routes/_authenticated.live-deal-engine'
 import { Route as AuthenticatedRegistryRouteImport } from './routes/_authenticated.registry'
 import { Route as AuthenticatedSupportRouteImport } from './routes/_authenticated.support'
 import { Route as AuthenticatedTradesRouteImport } from './routes/_authenticated.trades'
@@ -158,11 +158,6 @@ const AuthenticatedCreditsRoute = AuthenticatedCreditsRouteImport.update({
   path: '/credits',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
 const AuthenticatedDiscoverRoute = AuthenticatedDiscoverRouteImport.update({
   id: '/discover',
   path: '/discover',
@@ -189,6 +184,12 @@ const AuthenticatedInboxRoute = AuthenticatedInboxRouteImport.update({
   path: '/inbox',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedLiveDealEngineRoute =
+  AuthenticatedLiveDealEngineRouteImport.update({
+    id: '/live-deal-engine',
+    path: '/live-deal-engine',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedRegistryRoute = AuthenticatedRegistryRouteImport.update({
   id: '/registry',
   path: '/registry',
@@ -371,12 +372,12 @@ export interface FileRoutesByFullPath {
   '/auditor': typeof AuthenticatedAuditorRoute
   '/compliance': typeof AuthenticatedComplianceRoute
   '/credits': typeof AuthenticatedCreditsRoute
-  '/dashboard': typeof AuthenticatedDashboardRoute
   '/discover': typeof AuthenticatedDiscoverRoute
   '/facilitation': typeof AuthenticatedFacilitationRoute
   '/funder': typeof AuthenticatedFunderRoute
   '/guided': typeof AuthenticatedGuidedRoute
   '/inbox': typeof AuthenticatedInboxRoute
+  '/live-deal-engine': typeof AuthenticatedLiveDealEngineRoute
   '/registry': typeof AuthenticatedRegistryRoute
   '/support': typeof AuthenticatedSupportRoute
   '/trades': typeof AuthenticatedTradesRoute
@@ -426,12 +427,12 @@ export interface FileRoutesByTo {
   '/auditor': typeof AuthenticatedAuditorRoute
   '/compliance': typeof AuthenticatedComplianceRoute
   '/credits': typeof AuthenticatedCreditsRoute
-  '/dashboard': typeof AuthenticatedDashboardRoute
   '/discover': typeof AuthenticatedDiscoverRoute
   '/facilitation': typeof AuthenticatedFacilitationRoute
   '/funder': typeof AuthenticatedFunderRoute
   '/guided': typeof AuthenticatedGuidedRoute
   '/inbox': typeof AuthenticatedInboxRoute
+  '/live-deal-engine': typeof AuthenticatedLiveDealEngineRoute
   '/registry': typeof AuthenticatedRegistryRoute
   '/support': typeof AuthenticatedSupportRoute
   '/trades': typeof AuthenticatedTradesRoute
@@ -483,12 +484,12 @@ export interface FileRoutesById {
   '/_authenticated/auditor': typeof AuthenticatedAuditorRoute
   '/_authenticated/compliance': typeof AuthenticatedComplianceRoute
   '/_authenticated/credits': typeof AuthenticatedCreditsRoute
-  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/discover': typeof AuthenticatedDiscoverRoute
   '/_authenticated/facilitation': typeof AuthenticatedFacilitationRoute
   '/_authenticated/funder': typeof AuthenticatedFunderRoute
   '/_authenticated/guided': typeof AuthenticatedGuidedRoute
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
+  '/_authenticated/live-deal-engine': typeof AuthenticatedLiveDealEngineRoute
   '/_authenticated/registry': typeof AuthenticatedRegistryRoute
   '/_authenticated/support': typeof AuthenticatedSupportRoute
   '/_authenticated/trades': typeof AuthenticatedTradesRoute
@@ -540,12 +541,12 @@ export interface FileRouteTypes {
     | '/auditor'
     | '/compliance'
     | '/credits'
-    | '/dashboard'
     | '/discover'
     | '/facilitation'
     | '/funder'
     | '/guided'
     | '/inbox'
+    | '/live-deal-engine'
     | '/registry'
     | '/support'
     | '/trades'
@@ -595,12 +596,12 @@ export interface FileRouteTypes {
     | '/auditor'
     | '/compliance'
     | '/credits'
-    | '/dashboard'
     | '/discover'
     | '/facilitation'
     | '/funder'
     | '/guided'
     | '/inbox'
+    | '/live-deal-engine'
     | '/registry'
     | '/support'
     | '/trades'
@@ -651,12 +652,12 @@ export interface FileRouteTypes {
     | '/_authenticated/auditor'
     | '/_authenticated/compliance'
     | '/_authenticated/credits'
-    | '/_authenticated/dashboard'
     | '/_authenticated/discover'
     | '/_authenticated/facilitation'
     | '/_authenticated/funder'
     | '/_authenticated/guided'
     | '/_authenticated/inbox'
+    | '/_authenticated/live-deal-engine'
     | '/_authenticated/registry'
     | '/_authenticated/support'
     | '/_authenticated/trades'
@@ -847,13 +848,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCreditsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/dashboard': {
-      id: '/_authenticated/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/discover': {
       id: '/_authenticated/discover'
       path: '/discover'
@@ -887,6 +881,13 @@ declare module '@tanstack/react-router' {
       path: '/inbox'
       fullPath: '/inbox'
       preLoaderRoute: typeof AuthenticatedInboxRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/live-deal-engine': {
+      id: '/_authenticated/live-deal-engine'
+      path: '/live-deal-engine'
+      fullPath: '/live-deal-engine'
+      preLoaderRoute: typeof AuthenticatedLiveDealEngineRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/registry': {
@@ -1101,12 +1102,12 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAuditorRoute: typeof AuthenticatedAuditorRoute
   AuthenticatedComplianceRoute: typeof AuthenticatedComplianceRoute
   AuthenticatedCreditsRoute: typeof AuthenticatedCreditsRoute
-  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDiscoverRoute: typeof AuthenticatedDiscoverRoute
   AuthenticatedFacilitationRoute: typeof AuthenticatedFacilitationRoute
   AuthenticatedFunderRoute: typeof AuthenticatedFunderRoute
   AuthenticatedGuidedRoute: typeof AuthenticatedGuidedRoute
   AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
+  AuthenticatedLiveDealEngineRoute: typeof AuthenticatedLiveDealEngineRoute
   AuthenticatedRegistryRoute: typeof AuthenticatedRegistryRoute
   AuthenticatedSupportRoute: typeof AuthenticatedSupportRoute
   AuthenticatedTradesRoute: typeof AuthenticatedTradesRoute
@@ -1135,12 +1136,12 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAuditorRoute: AuthenticatedAuditorRoute,
   AuthenticatedComplianceRoute: AuthenticatedComplianceRoute,
   AuthenticatedCreditsRoute: AuthenticatedCreditsRoute,
-  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDiscoverRoute: AuthenticatedDiscoverRoute,
   AuthenticatedFacilitationRoute: AuthenticatedFacilitationRoute,
   AuthenticatedFunderRoute: AuthenticatedFunderRoute,
   AuthenticatedGuidedRoute: AuthenticatedGuidedRoute,
   AuthenticatedInboxRoute: AuthenticatedInboxRoute,
+  AuthenticatedLiveDealEngineRoute: AuthenticatedLiveDealEngineRoute,
   AuthenticatedRegistryRoute: AuthenticatedRegistryRoute,
   AuthenticatedSupportRoute: AuthenticatedSupportRoute,
   AuthenticatedTradesRoute: AuthenticatedTradesRoute,

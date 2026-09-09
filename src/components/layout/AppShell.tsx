@@ -56,7 +56,7 @@ export function AppShell({
     >
       <header className="sticky top-0 z-30 border-b border-border bg-background/70 backdrop-blur-xl">
         <div className={cn("mx-auto flex h-16 items-center gap-3 px-4 sm:px-6", width)}>
-          <Link to="/dashboard" className="shrink-0">
+          <Link to="/live-deal-engine" className="shrink-0">
             <Logo onDark className="h-7 w-auto" />
           </Link>
           <SearchButton />

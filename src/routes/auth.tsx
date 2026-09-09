@@ -23,7 +23,7 @@ export const Route = createFileRoute("/auth")({
 
 function safeNext(next: string | undefined) {
   if (next && next.startsWith("/") && !next.startsWith("//")) return next;
-  return "/dashboard";
+  return "/live-deal-engine";
 }
 
 function AuthPage() {
