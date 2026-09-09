@@ -8,18 +8,14 @@ import { cn } from "@/lib/utils";
 type ActivityRow = {
   id: string;
   user_id: string;
-  event_type: "click" | "navigation";
+  event_type: string;
   label: string | null;
-  path: string;
-  occurred_at: string;
+  path: string | null;
+  created_at: string;
 };
 
 type ProfileLite = { id: string; email: string | null; full_name: string | null };
 
-/**
- * user_activity_log isn't in the generated Supabase types until the next `types.ts`
- * regeneration picks up the migration, so these reads go through an untyped client.
- */
 const activityLog = supabase as unknown as {
   from(table: "user_activity_log"): {
     select(cols: string): {
@@ -48,8 +44,8 @@ export function AuditLogTab({ initialUserId }: { initialUserId?: string | undefi
     queryFn: async () => {
       const { data, error } = await activityLog
         .from("user_activity_log")
-        .select("id, user_id, event_type, label, path, occurred_at")
-        .order("occurred_at", { ascending: false })
+        .select("id, user_id, event_type, label, path, created_at")
+        .order("created_at", { ascending: false })
         .limit(1000);
       if (error) throw new Error(error.message);
       return data ?? [];
@@ -67,7 +63,7 @@ export function AuditLogTab({ initialUserId }: { initialUserId?: string | undefi
       (who?.full_name ?? "").toLowerCase().includes(q) ||
       (who?.email ?? "").toLowerCase().includes(q) ||
       (r.label ?? "").toLowerCase().includes(q) ||
-      r.path.toLowerCase().includes(q)
+      (r.path ?? "").toLowerCase().includes(q)
     );
   });
 
@@ -140,10 +136,10 @@ export function AuditLogTab({ initialUserId }: { initialUserId?: string | undefi
                       </td>
                       <td className="max-w-xs truncate px-4 py-2 text-muted-foreground">{r.label ?? "—"}</td>
                       <td className="max-w-xs truncate px-4 py-2 font-mono text-xs text-muted-foreground">
-                        {r.path}
+                        {r.path ?? "—"}
                       </td>
                       <td className="whitespace-nowrap px-4 py-2 text-muted-foreground">
-                        {new Date(r.occurred_at).toLocaleString()}
+                        {new Date(r.created_at).toLocaleString()}
                       </td>
                     </tr>
                   );
