@@ -236,13 +236,15 @@ export function SearchButton() {
     <>
       <Button
         variant="ghost"
-        size="sm"
+        size="icon"
         onClick={() => setOpen(true)}
-        className="w-[220px] justify-start gap-2 rounded-full border border-border bg-muted px-3"
+        title="Search"
+        aria-label="Search"
+        className="h-9 w-9 shrink-0 rounded-full border border-border bg-muted"
       >
-        <Search className="h-4 w-4 shrink-0" />
-        <span className="hidden sm:inline">Search</span>
+        <Search className="h-5 w-5 shrink-0" strokeWidth={2.25} />
       </Button>
+
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="glass max-h-[85vh] w-[min(680px,94vw)] overflow-y-auto sm:max-w-[min(680px,94vw)]">
