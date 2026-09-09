@@ -59,37 +59,47 @@ function Landing() {
       <main>
         <section className="ink-ground ink-grid relative overflow-hidden border-b border-border">
           <div className="mx-auto max-w-6xl px-5 py-24 sm:py-28">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-              Izenzo Governance Network
-            </span>
+            <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+              <div className="min-w-0">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                  Izenzo Governance Network
+                </span>
 
-            <h1 className="mt-6 max-w-3xl text-4xl font-semibold leading-[1.05] tracking-tight text-foreground sm:text-6xl">
-              Governance Infrastructure
-              <br />
-              for <span className="text-primary">Institutional Trade.</span>
-            </h1>
+                <h1 className="mt-6 max-w-3xl text-4xl font-semibold leading-[1.05] tracking-tight text-foreground sm:text-6xl">
+                  Governance Infrastructure
+                  <br />
+                  for <span className="text-primary">Institutional Trade.</span>
+                </h1>
 
-            <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground">
-              One cryptographic network. Access it via our turnkey Trade Desk, manage risk through
-              the Compliance Profile, or build directly on the API. All backed by hash-sealed,
-              independently verifiable execution.
-            </p>
+                <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground">
+                  One cryptographic network. Access it via our turnkey Trade Desk, manage risk through
+                  the Compliance Profile, or build directly on the API. All backed by hash-sealed,
+                  independently verifiable execution.
+                </p>
 
-            <div className="mt-8">
-              <a href="mailto:support@izenzo.co.za?subject=Demo%20request&body=I%20would%20like%20to%20request%20a%20demo%20of%20the%20Izenzo%20Trading%20Gateway.">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="gap-1.5 rounded-full border-border bg-transparent text-foreground hover:bg-muted"
-                >
-                  Request a Demo <ChevronRight className="h-4 w-4" />
-                </Button>
-              </a>
+                <div className="mt-8">
+                  <a href="mailto:support@izenzo.co.za?subject=Demo%20request&body=I%20would%20like%20to%20request%20a%20demo%20of%20the%20Izenzo%20Trading%20Gateway.">
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="gap-1.5 rounded-full border-border bg-transparent text-foreground hover:bg-muted"
+                    >
+                      Request a Demo <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </a>
+                </div>
+              </div>
+
+              <AuthTabs
+                next={safeNext(next)}
+                className="w-full rounded-2xl border border-border bg-background/80 p-6 shadow-sm backdrop-blur"
+              />
             </div>
 
             <div className="mt-14">
               <JourneyBanner />
             </div>
+
 
             <p className="mt-16 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
               Platform architecture &amp; standards
