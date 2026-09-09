@@ -48,6 +48,21 @@ export function AppShell({
   const viewMode = useViewMode();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const onEngine = pathname === "/live-deal-engine";
+
+  // Unread Inbox notifications — e.g. "this counterparty matched on all checks".
+  const { data: unread = 0 } = useQuery({
+    queryKey: ["notifications-unread", org?.id],
+    enabled: Boolean(org?.id),
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("read", false);
+      return count ?? 0;
+    },
+  });
+
   // Document-style screens (settings, admin, reporting, API docs) drop the canvas grid and give
   // every frame the same green edge — the grid belongs to the deal canvas, not to tables and forms.
   const flat = ["/account", "/admin", "/credits", "/trades", "/activity", "/developer", "/docs"].some(
