@@ -182,7 +182,7 @@ const GROUPS: { label: string; step: number; box: Box }[] = [
       x: BOXES.bid.x - GROUP_PAD,
       y: BOXES.bid.y - GROUP_PAD,
       w: BOXES.offer.x + BOXES.offer.w - BOXES.bid.x + GROUP_PAD * 2,
-      h: BOXES.choice.y + ROW - BOXES.bid.y + GROUP_PAD * 2,
+      h: BOXES.choice.y + ROW - BOXES.bid.y + GROUP_PAD + GROUP_PAD_TIGHT,
     },
   },
   {
@@ -190,9 +190,10 @@ const GROUPS: { label: string; step: number; box: Box }[] = [
     step: 2,
     box: {
       x: BOXES.poi.x - GROUP_PAD,
-      y: BOXES.poi.y - GROUP_PAD,
+      y: BOXES.poi.y - GROUP_PAD_TIGHT,
       w: BOXES.poi.w + GROUP_PAD * 2,
-      h: BOXES.kyc.y + ROW - BOXES.poi.y + GROUP_PAD * 2,
+      h: BOXES.kyc.y + ROW - BOXES.poi.y + GROUP_PAD_TIGHT + GROUP_PAD,
+
     },
   },
   {
