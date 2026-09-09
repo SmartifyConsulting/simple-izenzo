@@ -161,6 +161,16 @@ function LiveDealEngine() {
   const [finalizing, setFinalizing] = useState(false);
   /** Which gate step the right-hand panel is currently asking the user to complete. */
   const [stagePanel, setStagePanel] = useState<"intent" | "poi" | null>(null);
+  // Coming back to a deal that is already mid-gate reopens the step it stopped on.
+  const resumedStep = dealTx?.poi_sealed_at
+    ? null
+    : dealTx?.step === "intent" || dealTx?.step === "poi"
+      ? dealTx.step
+      : null;
+  useEffect(() => {
+    if (resumedStep) setStagePanel(resumedStep);
+  }, [resumedStep]);
+
   const [screeningProgress, setScreeningProgress] = useState<
     { done: number; total: number; failed?: boolean } | null
   >(null);
