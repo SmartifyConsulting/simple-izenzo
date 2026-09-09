@@ -835,6 +835,7 @@ export type Database = {
           rationale: string | null
           score: number | null
           sector: string | null
+          shortlisted: boolean
           source: string | null
           status: string
           transaction_id: string
@@ -861,6 +862,7 @@ export type Database = {
           rationale?: string | null
           score?: number | null
           sector?: string | null
+          shortlisted?: boolean
           source?: string | null
           status?: string
           transaction_id: string
@@ -887,6 +889,7 @@ export type Database = {
           rationale?: string | null
           score?: number | null
           sector?: string | null
+          shortlisted?: boolean
           source?: string | null
           status?: string
           transaction_id?: string

@@ -1,0 +1,1 @@
+ALTER TABLE public.counterparties ADD COLUMN IF NOT EXISTS shortlisted boolean NOT NULL DEFAULT false;

@@ -18,6 +18,8 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { advance, fingerprintOf, recordEvent, type Transaction } from "@/lib/tx";
 import { searchCounterparties } from "@/lib/izenzo.functions";
+import { runBackgroundScreening, type ScreeningResult } from "@/lib/screening.functions";
+
 import { useViewMode, setViewMode } from "@/lib/viewMode";
 import { cn } from "@/lib/utils";
 
@@ -135,12 +137,45 @@ function LiveDealEngine() {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [screening, setScreening] = useState(false);
+  const [screeningResults, setScreeningResults] = useState<ScreeningResult[] | null>(null);
+
 
   const [idFront, setIdFront] = useState<File[]>([]);
   const [idBack, setIdBack] = useState<File[]>([]);
   const [docFiles, setDocFiles] = useState<File[]>([]);
   const search = useServerFn(searchCounterparties);
+  const runScreening = useServerFn(runBackgroundScreening);
   const queryClient = useQueryClient();
+
+  // Which canvas step should pulse: the results panel pulses while matching runs, then Choice
+  // takes over, and Background screening pulses while the provider checks are being opened.
+  const throbStep =
+    screening ? "media" : flowStep === "results" ? "choice" : null;
+
+  /** Runs the background screening (registry lookup + Didit ID/KYB/AML) for whichever
+   * counterparties were ticked in the Record panel. */
+  async function startScreening(counterpartyIds: string[]) {
+    if (!dealTx || counterpartyIds.length === 0) return;
+    setScreening(true);
+    setScreeningResults(null);
+    try {
+      const results = await runScreening({
+        data: {
+          transactionId: dealTx.id,
+          counterpartyIds,
+          ...(typeof window !== "undefined" ? { origin: window.location.origin } : {}),
+        },
+      });
+      setScreeningResults(results);
+      toast.success("Background screening started");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setScreening(false);
+    }
+  }
+
 
   // Once something has been recorded, keep the split workspace open (and on the side it was
   // recorded for) even after the form resets — that's what the Live Workspace panel now shows.
@@ -371,8 +406,11 @@ function LiveDealEngine() {
               focusSide={side}
               forceRevealAll
               hideMatchingRibbon
+              openProofOfIntent={flowStep === "searching" || flowStep === "results"}
+              throbStep={throbStep}
             />
           </div>
+
         </div>
 
         {side && (
@@ -438,9 +476,13 @@ function LiveDealEngine() {
                       txId={dealTx.id}
                       searching={flowStep === "searching"}
                       error={searchError}
+                      screening={screening}
+                      screeningResults={screeningResults}
+                      onContinue={startScreening}
                     />
                   </div>
                 )}
+
               </div>
             ) : (
               <p className="mt-4 text-xs text-muted-foreground">Nothing recorded yet.</p>

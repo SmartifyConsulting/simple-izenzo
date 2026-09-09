@@ -385,6 +385,23 @@
   animation: signal-pulse 2.2s ease-in-out infinite;
 }
 
+@keyframes throb {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--primary) 45%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 8px color-mix(in oklab, var(--primary) 0%, transparent);
+  }
+}
+
+/** A soft attention pulse for whichever frame the user should look at next. */
+@utility animate-throb {
+  animation: throb 1.6s ease-in-out infinite;
+  border-color: color-mix(in oklab, var(--primary) 70%, transparent);
+}
+
+
 @utility animate-beam-sweep {
   animation: beam-sweep 2.6s ease-in-out infinite;
 }
