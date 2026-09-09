@@ -1,8 +1,8 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { CheckCircle2, Paperclip } from "lucide-react";
+import { CheckCircle2, Paperclip, UploadCloud, X } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import {
   CanvasStart,
@@ -33,6 +33,86 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 type Attachment = { name: string; kind: "ID front" | "ID back" | "Document" };
 type FlowStep = "documents" | "searching" | "results";
 
+/** A file picker that also accepts drag-and-drop, and lists the names of whatever's currently
+ * selected. `multiple` collects any number of files; otherwise a new pick replaces the old one. */
+function FileField({
+  id,
+  label,
+  files,
+  onChange,
+  multiple,
+}: {
+  id: string;
+  label: string;
+  files: File[];
+  onChange: (files: File[]) => void;
+  multiple?: boolean;
+}) {
+  const [dragOver, setDragOver] = useState(false);
+
+  function addFiles(list: FileList | null) {
+    if (!list || list.length === 0) return;
+    const picked = Array.from(list);
+    const first = picked[0];
+    if (!first) return;
+    onChange(multiple ? [...files, ...picked] : [first]);
+  }
+
+  function removeAt(i: number) {
+    onChange(files.filter((_, idx) => idx !== i));
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      <label
+        htmlFor={id}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragOver(false);
+          addFiles(e.dataTransfer.files);
+        }}
+        className={cn(
+          "flex cursor-pointer flex-col items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-4 text-center transition-colors hover:border-primary/50 hover:bg-muted/20",
+          dragOver && "border-primary bg-primary/10",
+        )}
+      >
+        <UploadCloud className="h-4 w-4 text-muted-foreground" />
+        <span className="text-xs text-muted-foreground">Drag a file here, or click to browse</span>
+        <input
+          id={id}
+          type="file"
+          multiple={multiple}
+          className="hidden"
+          onChange={(e) => addFiles(e.target.files)}
+        />
+      </label>
+      {files.length > 0 && (
+        <ul className="space-y-1">
+          {files.map((f, i) => (
+            <li key={i} className="flex items-center gap-2 rounded-md bg-muted/30 px-2.5 py-1.5 text-xs">
+              <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <span className="min-w-0 flex-1 truncate">{f.name}</span>
+              <button
+                type="button"
+                onClick={() => removeAt(i)}
+                className="shrink-0 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 /** The dashboard is the one screen users work from — the workflow canvas itself, never a
  * separate per-deal detail page. */
 function Dashboard() {
@@ -46,9 +126,9 @@ function Dashboard() {
   const [searchError, setSearchError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const idFrontRef = useRef<HTMLInputElement>(null);
-  const idBackRef = useRef<HTMLInputElement>(null);
-  const docsRef = useRef<HTMLInputElement>(null);
+  const [idFront, setIdFront] = useState<File[]>([]);
+  const [idBack, setIdBack] = useState<File[]>([]);
+  const [docFiles, setDocFiles] = useState<File[]>([]);
   const search = useServerFn(searchCounterparties);
 
   // Once something has been recorded, keep the split workspace open (and on the side it was
@@ -72,10 +152,11 @@ function Dashboard() {
   async function submitDocuments(e: React.FormEvent) {
     e.preventDefault();
     if (!dealTx) return;
-    const collected: Attachment[] = [];
-    if (idFrontRef.current?.files?.[0]) collected.push({ name: idFrontRef.current.files[0].name, kind: "ID front" });
-    if (idBackRef.current?.files?.[0]) collected.push({ name: idBackRef.current.files[0].name, kind: "ID back" });
-    for (const f of Array.from(docsRef.current?.files ?? [])) collected.push({ name: f.name, kind: "Document" });
+    const collected: Attachment[] = [
+      ...idFront.map((f) => ({ name: f.name, kind: "ID front" as const })),
+      ...idBack.map((f) => ({ name: f.name, kind: "ID back" as const })),
+      ...docFiles.map((f) => ({ name: f.name, kind: "Document" as const })),
+    ];
 
     if (collected.length === 0) {
       toast.error("Attach at least one file");
@@ -154,37 +235,10 @@ function Dashboard() {
             <form onSubmit={submitDocuments} className="glass-node animate-node-rise mt-3 space-y-4 p-5 sm:p-6">
               <p className="text-base font-semibold tracking-tight">Upload ID and documents</p>
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="id-front">ID upload — front</Label>
-                  <input
-                    id="id-front"
-                    ref={idFrontRef}
-                    type="file"
-                    accept="image/*,.pdf"
-                    className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-border file:bg-muted/40 file:px-3 file:py-1.5 file:text-xs file:font-medium"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="id-back">ID upload — back</Label>
-                  <input
-                    id="id-back"
-                    ref={idBackRef}
-                    type="file"
-                    accept="image/*,.pdf"
-                    className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-border file:bg-muted/40 file:px-3 file:py-1.5 file:text-xs file:font-medium"
-                  />
-                </div>
+                <FileField id="id-front" label="ID upload — front" files={idFront} onChange={setIdFront} />
+                <FileField id="id-back" label="ID upload — back" files={idBack} onChange={setIdBack} />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="docs">Documents</Label>
-                <input
-                  id="docs"
-                  ref={docsRef}
-                  type="file"
-                  multiple
-                  className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-border file:bg-muted/40 file:px-3 file:py-1.5 file:text-xs file:font-medium"
-                />
-              </div>
+              <FileField id="docs" label="Documents" files={docFiles} onChange={setDocFiles} multiple />
               <Button type="submit" disabled={busy} className="w-full">
                 {busy ? "Submitting…" : "Submit"}
               </Button>
