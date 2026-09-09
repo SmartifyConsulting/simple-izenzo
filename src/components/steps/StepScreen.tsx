@@ -1176,10 +1176,54 @@ function PoiStep({ tx, reload }: Props) {
     },
   });
 
+  /** The certificate text — identical whether it is filed against the deal or downloaded. */
+  function certificateBody(sealedAt: string | null, hash: string | null) {
+    return [
+      "IZENZO — PROOF OF INTENT",
+      "",
+      `Transaction: ${tx.title}`,
+      `Commodity:   ${tx.commodity ?? "—"}`,
+      `Quantity:    ${tx.quantity ?? "—"} ${tx.unit ?? ""}`,
+      `Price:       ${tx.price ?? "—"} ${tx.currency}`,
+      `Incoterms:   ${tx.incoterms ?? "—"}`,
+      `Jurisdiction:${tx.jurisdiction ?? "—"}`,
+      `Intent:      ${tx.intent_confirmed_at}`,
+      `Sealed:      ${sealedAt}`,
+      "",
+      `Fingerprint: ${hash}`,
+    ].join("\n");
+  }
+
   async function doSeal() {
     setBusy(true);
     try {
       await seal({ data: { transactionId: tx.id } });
+
+      // File the sealed certificate against the deal so it sits with the other attachments.
+      const { data: sealedTx } = await supabase
+        .from("transactions")
+        .select("poi_sealed_at, poi_hash")
+        .eq("id", tx.id)
+        .maybeSingle();
+      const name = `Proof of Intent — ${tx.title}.txt`;
+      const path = `deals/${tx.id}/${Date.now()}-proof-of-intent.txt`;
+      const body = certificateBody(sealedTx?.poi_sealed_at ?? null, sealedTx?.poi_hash ?? null);
+      const { error: upErr } = await supabase.storage
+        .from("documents")
+        .upload(path, new Blob([body], { type: "text/plain" }));
+      if (!upErr) {
+        await supabase.from("documents").insert({
+          transaction_id: tx.id,
+          name,
+          doc_type: "certificate",
+          notes: "Certificate",
+          sha256: sealedTx?.poi_hash ?? null,
+          storage_path: path,
+        });
+      } else {
+        toast.warning("Sealed, but the certificate could not be filed against the deal.");
+      }
+
       reload();
       toast.success("Proof of Intent sealed");
     } catch (err) {
@@ -1190,20 +1234,7 @@ function PoiStep({ tx, reload }: Props) {
   }
 
   function download() {
-    const body = [
-      "IZENZO — PROOF OF INTENT",
-      "",
-      `Transaction: ${tx.title}`,
-      `Commodity:   ${tx.commodity ?? "—"}`,
-      `Quantity:    ${tx.quantity ?? "—"} ${tx.unit ?? ""}`,
-      `Price:       ${tx.price ?? "—"} ${tx.currency}`,
-      `Incoterms:   ${tx.incoterms ?? "—"}`,
-      `Jurisdiction:${tx.jurisdiction ?? "—"}`,
-      `Intent:      ${tx.intent_confirmed_at}`,
-      `Sealed:      ${tx.poi_sealed_at}`,
-      "",
-      `Fingerprint: ${tx.poi_hash}`,
-    ].join("\n");
+    const body = certificateBody(tx.poi_sealed_at, tx.poi_hash);
     const url = URL.createObjectURL(new Blob([body], { type: "text/plain" }));
     const a = document.createElement("a");
     a.href = url;
@@ -1211,6 +1242,7 @@ function PoiStep({ tx, reload }: Props) {
     a.click();
     URL.revokeObjectURL(url);
   }
+
 
   if (tx.poi_sealed_at) {
     return (
