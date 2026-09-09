@@ -13,6 +13,7 @@ import {
   FLOWCHART_PREVIEW_TX,
   type RecordedActivity,
 } from "@/components/canvas/DealCanvas";
+import { TradeSummary } from "@/components/canvas/TradeSummary";
 
 import { MahjongView } from "@/components/canvas/MahjongView";
 import { Button } from "@/components/ui/button";
@@ -160,16 +161,19 @@ function LiveDealEngine() {
   const [screeningResults, setScreeningResults] = useState<ScreeningResult[] | null>(null);
   const [finalizing, setFinalizing] = useState(false);
   /** Which gate step the right-hand panel is currently asking the user to complete. */
-  const [stagePanel, setStagePanel] = useState<"intent" | "poi" | null>(null);
+  const [stagePanel, setStagePanel] = useState<"intent" | "poi" | "wad" | null>(null);
   // Coming back to a deal that is already mid-gate reopens the step it stopped on.
-  const resumedStep = dealTx?.poi_sealed_at
+  const resumedStep: "intent" | "poi" | "wad" | null = dealTx?.wad_completed_at
     ? null
-    : dealTx?.step === "intent" || dealTx?.step === "poi"
-      ? dealTx.step
-      : null;
+    : dealTx?.poi_sealed_at
+      ? "wad"
+      : dealTx?.step === "intent" || dealTx?.step === "poi"
+        ? dealTx.step
+        : null;
   useEffect(() => {
     if (resumedStep) setStagePanel(resumedStep);
   }, [resumedStep]);
+
 
   const [screeningProgress, setScreeningProgress] = useState<
     { done: number; total: number; failed?: boolean } | null
@@ -254,9 +258,18 @@ function LiveDealEngine() {
     if (tx) {
       const fresh = tx as Transaction;
       setDealTx(fresh);
-      // Intent signed → move the right panel on to Proof of Intent; sealed → fold it away.
-      setStagePanel(fresh.poi_sealed_at ? null : fresh.intent_confirmed_at ? "poi" : "intent");
+      // Intent signed → Proof of Intent; sealed → Without a Doubt; cleared → fold it away.
+      setStagePanel(
+        fresh.wad_completed_at
+          ? null
+          : fresh.poi_sealed_at
+            ? "wad"
+            : fresh.intent_confirmed_at
+              ? "poi"
+              : "intent",
+      );
     }
+
     const { data: docs } = await supabase
       .from("documents")
       .select("name, notes, storage_path")
@@ -784,12 +797,15 @@ function LiveDealEngine() {
                 {dealTx && stagePanel && (
                   <InlineFrame
                     tx={dealTx}
-                    stage="trading"
+                    stage={stagePanel === "wad" ? "compliance" : "trading"}
                     step={stagePanel}
                     reload={() => void reloadDeal()}
                     onClose={() => setStagePanel(null)}
                   />
                 )}
+
+                {dealTx?.wad_completed_at && <TradeSummary tx={dealTx} />}
+
 
 
 

@@ -561,7 +561,32 @@ export function DealCanvas({
         </>
       )}
 
-      {visible("compliance", "wad") && (
+      {/* Once Without a Doubt has cleared it folds away too — a green ticked list of what was
+          screened, with attention moving on to Execution. */}
+      {wad && (
+        <div className={cn("mt-3", stepsBoxClass)}>
+          <p className="label-caps mb-2 text-muted-foreground">Without a Doubt</p>
+          <div className="space-y-1.5">
+            {[
+              "KYC — individuals identified",
+              "KYB — entity verified",
+              "UBO — beneficial owners established",
+              "Sanctions screening clear",
+              "PEP screening reviewed",
+              "Authority to act confirmed",
+              "Without a Doubt cleared",
+              "Clearance certificate filed",
+            ].map((label) => (
+              <div key={label} className="flex items-center gap-2 text-xs text-emerald-500">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                {label}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!wad && visible("compliance", "wad") && (
         <>
           {poiSealed && (
             <p
@@ -577,7 +602,7 @@ export function DealCanvas({
             title="Without a Doubt"
             align={focusSide === "offer" ? "right" : "left"}
             forceOpen={poiSealed}
-            pulse={poiSealed && !wad}
+            pulse={poiSealed}
           >
             <div className={stepsBoxClass}>
               {node(
@@ -594,12 +619,39 @@ export function DealCanvas({
 
 
       {executionItems.length > 0 && (
-        <GateGroup title="Execution" align={focusSide === "offer" ? "right" : "left"}>
-          <div className={cn("grid gap-3", focusSide ? cn("grid-cols-1", stepsBoxClass) : "sm:grid-cols-3")}>
-            {executionItems.map((s) => node({ stage: "execution", step: s, icon: Hammer }, { compact: true }))}
-          </div>
-        </GateGroup>
+        <>
+          {wad && (
+            <p
+              className={cn(
+                "mt-4 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-white",
+                focusSide === "offer" && "text-right",
+              )}
+            >
+              Next steps
+            </p>
+          )}
+          <GateGroup
+            title="Execution"
+            align={focusSide === "offer" ? "right" : "left"}
+            forceOpen={wad}
+            pulse={wad && stateOf("execution", "entry") !== "done"}
+          >
+            <div className={cn("grid gap-3", focusSide ? cn("grid-cols-1", stepsBoxClass) : "sm:grid-cols-3")}>
+              {executionItems.map((s) => (
+                <div
+                  key={`exec-${s}`}
+                  className={cn(
+                    wad && s === "entry" && stateOf("execution", "entry") !== "done" && "animate-throb rounded-2xl",
+                  )}
+                >
+                  {node({ stage: "execution", step: s, icon: Hammer }, { compact: true })}
+                </div>
+              ))}
+            </div>
+          </GateGroup>
+        </>
       )}
+
 
       {finalityItems.length > 0 && (
         <GateGroup title="Finality" align={focusSide === "offer" ? "right" : "left"}>
