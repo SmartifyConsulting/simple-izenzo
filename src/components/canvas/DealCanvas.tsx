@@ -535,6 +535,8 @@ export function CounterpartyRecord({
   onContinue,
   screening = false,
   screeningResults = null,
+  onFinalize,
+  finalizing = false,
 }: {
   txId?: string | null;
   /** True while the AI/AI+ search is still running, so the panel polls for freshly saved rows. */
@@ -545,9 +547,15 @@ export function CounterpartyRecord({
   /** True while those screening checks are being opened with the providers. */
   screening?: boolean;
   screeningResults?: ScreeningResult[] | null;
+  /** Fires once the user has picked the single counterparty to actually trade with,
+   * once screening has come back. */
+  onFinalize?: (counterpartyId: string) => void;
+  /** True while that final pick is being recorded and the step is advancing to Intent. */
+  finalizing?: boolean;
 }) {
   const qc = useQueryClient();
   const setShortlist = useServerFn(setCounterpartyShortlist);
+  const [pickedId, setPickedId] = useState<string | null>(null);
 
   const { data: candidates = [] } = useQuery({
     queryKey: ["counterparties", txId],
@@ -643,12 +651,20 @@ export function CounterpartyRecord({
     }
   }
 
+  // Screening is done once every ticked counterparty has a result and nothing is still running —
+  // that's the moment the user can pick which one they actually want to trade with.
+  const screeningDone = !screening && screeningResults !== null && screeningResults.length > 0;
+
   return (
     <div
       className="rounded-2xl border-2 border-primary bg-slate-100 p-4"
     >
       <p className="label-caps text-black">
-        {continued ? "Selected counterparties" : "Tick counterparties of interest to continue"}
+        {screeningDone
+          ? "Tick who you want to trade with"
+          : continued
+            ? "Selected counterparties"
+            : "Tick counterparties of interest to continue"}
       </p>
       {candidates.length === 0 ? (
         <p className="mt-2 text-sm text-slate-500">
@@ -664,8 +680,10 @@ export function CounterpartyRecord({
             <li key={c.id} className="flex items-start gap-2.5">
               <Checkbox
                 id={`shortlist-${c.id}`}
-                checked={Boolean(c.shortlisted)}
-                onCheckedChange={(v) => toggle(c, Boolean(v))}
+                checked={screeningDone ? pickedId === c.id : Boolean(c.shortlisted)}
+                onCheckedChange={(v) =>
+                  screeningDone ? setPickedId(v ? c.id : null) : toggle(c, Boolean(v))
+                }
                 className="mt-0.5"
               />
               <label htmlFor={`shortlist-${c.id}`} className="min-w-0 flex-1 cursor-pointer">
@@ -724,19 +742,36 @@ export function CounterpartyRecord({
         </div>
       )}
 
-      {onContinue && candidates.length > 0 && !searching && (
+      {screeningDone && onFinalize ? (
         <Button
           type="button"
           className="mt-3 w-full"
-          disabled={screening || ticked.length === 0}
-          onClick={() => onContinue(ticked)}
+          disabled={finalizing || !pickedId}
+          onClick={() => pickedId && onFinalize(pickedId)}
         >
-          {screening
-            ? "Running background screening…"
-            : ticked.length === 0
-              ? "Tick a counterparty to continue"
-              : `Continue with ${ticked.length} counterpart${ticked.length === 1 ? "y" : "ies"}`}
+          {finalizing
+            ? "Recording your choice…"
+            : pickedId
+              ? "Continue"
+              : "Tick who you want to trade with"}
         </Button>
+      ) : (
+        onContinue &&
+        candidates.length > 0 &&
+        !searching && (
+          <Button
+            type="button"
+            className="mt-3 w-full"
+            disabled={screening || ticked.length === 0}
+            onClick={() => onContinue(ticked)}
+          >
+            {screening
+              ? "Running background screening…"
+              : ticked.length === 0
+                ? "Tick a counterparty to continue"
+                : `Continue with ${ticked.length} counterpart${ticked.length === 1 ? "y" : "ies"}`}
+          </Button>
+        )
       )}
     </div>
   );

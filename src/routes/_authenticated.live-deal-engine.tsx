@@ -148,6 +148,7 @@ function LiveDealEngine() {
   const [busy, setBusy] = useState(false);
   const [screening, setScreening] = useState(false);
   const [screeningResults, setScreeningResults] = useState<ScreeningResult[] | null>(null);
+  const [finalizing, setFinalizing] = useState(false);
   const [screeningProgress, setScreeningProgress] = useState<
     { done: number; total: number; failed?: boolean } | null
   >(null);
@@ -201,6 +202,35 @@ function LiveDealEngine() {
     }
   }
 
+
+  /** Records which screened counterparty the user actually wants to trade with, then moves the
+   * active-step pulse off Background screening and onto Intent. */
+  async function finalizeChoice(counterpartyId: string) {
+    if (!dealTx) return;
+    setFinalizing(true);
+    try {
+      const { error } = await supabase
+        .from("counterparties")
+        .update({ status: "chosen", chosen_at: new Date().toISOString() })
+        .eq("id", counterpartyId);
+      if (error) throw error;
+      await recordEvent({
+        transactionId: dealTx.id,
+        stage: "trading",
+        step: "media",
+        action: "counterparty_chosen",
+        summary: "Chose the counterparty to trade with",
+        payload: { counterpartyId },
+      });
+      await advance(dealTx.id, "trading", "intent");
+      setDealTx((prev) => (prev ? { ...prev, stage: "trading", step: "intent" } : prev));
+      toast.success("Choice recorded — background screening is done");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setFinalizing(false);
+    }
+  }
 
   // Once something has been recorded, keep the split workspace open (and on the side it was
   // recorded for) even after the form resets — that's what the Live Workspace panel now shows.
@@ -551,6 +581,8 @@ function LiveDealEngine() {
                       screening={screening}
                       screeningResults={screeningResults}
                       onContinue={startScreening}
+                      onFinalize={finalizeChoice}
+                      finalizing={finalizing}
                     />
                   </div>
                 )}

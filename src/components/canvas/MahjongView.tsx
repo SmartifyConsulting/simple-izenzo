@@ -50,6 +50,11 @@ const BRANCH_Y = TOP_Y + PITCH * 6 + 58 + STEP2_GAP_EXTRA;
 const GROUP_PAD = 18;
 // Used where two frames sit close together (Step 1 above Step 2), so their borders don't overlap.
 const GROUP_PAD_TIGHT = 10;
+// A touch more height on the Step 1 frame so its bottom border stays clear of the Step 2 label.
+const STEP1_EXTRA_H = 10;
+// Gap between the Step 2 frame's top border and the Proof of Intent box it contains, so the
+// "Step 2 · Compliance & Governance" label (which sits above that border) doesn't crowd it.
+const STEP2_TOP_PAD = GROUP_PAD_TIGHT + 12;
 
 
 // Steps 3, 4 and 5 are laid out as three frames with identical gaps between them (and the same
@@ -138,10 +143,6 @@ function branchDown(a: Point, targets: Point[], stub = 26): string[] {
   return targets.map((t) => `M ${a.x} ${a.y} L ${a.x} ${trunkY} L ${t.x} ${trunkY} L ${t.x} ${t.y}`);
 }
 
-// The KYC → Step 3/4 arrows stop on each frame's outer border rather than continuing inside it.
-const STEP3_FRAME_TOP = BOXES.projectPrep.y - GROUP_PAD;
-const STEP4_FRAME_TOP = BOXES.finality.y - GROUP_PAD;
-
 const ARROWS: { d: string; arrow?: boolean }[] = [
   { d: elbow(bottom(BOXES.bid), top(BOXES.loadDocs), "x") },
   { d: elbow(bottom(BOXES.offer), top(BOXES.counterparty), "x") },
@@ -156,13 +157,8 @@ const ARROWS: { d: string; arrow?: boolean }[] = [
   { d: elbow(bottom(BOXES.wad), top(BOXES.kyc), "x") },
   ...branchDown(
     bottom(BOXES.kyc),
-    [
-      { x: cx(BOXES.projectPrep), y: STEP3_FRAME_TOP },
-      { x: cx(BOXES.execution), y: STEP3_FRAME_TOP },
-      { x: cx(BOXES.finality), y: STEP4_FRAME_TOP },
-    ],
+    [top(BOXES.projectPrep), top(BOXES.execution), top(BOXES.finality)],
     44,
-
   ).map((d) => ({ d })),
 
   { d: elbow(bottom(BOXES.execution), top(BOXES.implementation), "x") },
@@ -192,7 +188,7 @@ const GROUPS: { label: string; step: number; box: Box }[] = [
       x: BOXES.bid.x - GROUP_PAD,
       y: BOXES.bid.y - GROUP_PAD,
       w: BOXES.offer.x + BOXES.offer.w - BOXES.bid.x + GROUP_PAD * 2,
-      h: BOXES.choice.y + ROW - BOXES.bid.y + GROUP_PAD + GROUP_PAD_TIGHT,
+      h: BOXES.choice.y + ROW - BOXES.bid.y + GROUP_PAD + GROUP_PAD_TIGHT + STEP1_EXTRA_H,
     },
   },
   {
@@ -200,10 +196,9 @@ const GROUPS: { label: string; step: number; box: Box }[] = [
     step: 2,
     box: {
       x: BOXES.poi.x - GROUP_PAD,
-      y: BOXES.poi.y - GROUP_PAD_TIGHT,
+      y: BOXES.poi.y - STEP2_TOP_PAD,
       w: BOXES.poi.w + GROUP_PAD * 2,
-      h: BOXES.kyc.y + ROW - BOXES.poi.y + GROUP_PAD_TIGHT + GROUP_PAD,
-
+      h: BOXES.kyc.y + ROW - BOXES.poi.y + STEP2_TOP_PAD + GROUP_PAD,
     },
   },
   {
