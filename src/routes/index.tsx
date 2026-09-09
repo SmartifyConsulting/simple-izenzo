@@ -1,9 +1,10 @@
 import { useEffect } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowRight, ChevronRight, Fingerprint, Hash, Landmark, Radio } from "lucide-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { ChevronRight, Fingerprint, Hash, Landmark, Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SiteFooter } from "@/components/layout/SiteFooter";
+import { JourneyBanner } from "@/components/JourneyBanner";
 import { useAuth } from "@/lib/auth";
 
 type Search = { next?: string | undefined };
@@ -86,21 +87,8 @@ function Landing() {
               </a>
             </div>
 
-            <div className="mt-14 grid gap-5 md:grid-cols-2">
-              <HeroFrame
-                side="Bidder"
-                title="Create a Bid"
-                body="Open a bid, upload what you have, and let the modules infer the rest. Responders surface on the right lane as the deal moves."
-                cta="Create a Bid"
-                next="/transactions/new"
-              />
-              <HeroFrame
-                side="Responder"
-                title="Respond to a Bid"
-                body="See bids matched to your profile, choose a counterparty, and answer through the same gated record — every choice sealed as it happens."
-                cta="Respond to a Bid"
-                next="/live-deal-engine"
-              />
+            <div className="mt-14">
+              <JourneyBanner />
             </div>
 
             <p className="mt-16 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
@@ -151,34 +139,6 @@ function Landing() {
       </main>
 
       <SiteFooter />
-    </div>
-  );
-}
-
-/** One of the two hero lanes: Bidder on the left, Responder on the right. */
-function HeroFrame({
-  side,
-  title,
-  body,
-  cta,
-  next,
-}: {
-  side: string;
-  title: string;
-  body: string;
-  cta: string;
-  next: string;
-}) {
-  return (
-    <div className="glass relative overflow-hidden rounded-2xl border border-border bg-card/60 p-6 backdrop-blur-xl transition-transform hover:-translate-y-0.5">
-      <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-primary">{side}</span>
-      <h2 className="mt-3 text-2xl font-semibold tracking-tight text-foreground">{title}</h2>
-      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{body}</p>
-      <Link to="/auth" search={{ mode: "signup", next }} className="mt-6 inline-block">
-        <Button className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90">
-          {cta} <ArrowRight className="h-4 w-4" />
-        </Button>
-      </Link>
     </div>
   );
 }

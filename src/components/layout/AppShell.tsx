@@ -68,7 +68,7 @@ export function AppShell({
             className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             <LayoutGrid className="h-3.5 w-3.5" />
-            {viewMode === "mahjong" ? "Classic View" : "Mahjong"}
+            {viewMode === "mahjong" ? "Classic View" : "Mahjong View"}
           </button>
           <div className="min-w-0 flex-1" />
           {org && (

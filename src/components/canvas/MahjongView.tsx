@@ -27,84 +27,13 @@ function nodeState(stage: StageKey, step: string, tx: Transaction): NodeState {
   return "open";
 }
 
-// The 5-stage journey banner shown above the diagram — same stage grouping the workflow itself
-// uses (Trading / Compliance & Governance / Execution / Finality / Memory), just narrated.
-const JOURNEY = [
-  {
-    step: 1,
-    title: "Trading",
-    tag: "Find. Match. Structure.",
-    body: "Source opportunities, load deal documents, search with AI/AI+, discover counterparties, make a choice and record a Proof of Intent (POI).",
-  },
-  {
-    step: 2,
-    title: "Compliance & Governance",
-    tag: "Verify. Assess. Authorise.",
-    body: "Run WaD (non-waivable hard gate), complete KYC/KYB, confirm authority and review supporting evidence.",
-  },
-  {
-    step: 3,
-    title: "Execution",
-    tag: "Plan. Implement. Deliver.",
-    body: "Move through project preparation (concept, pre-feasibility, feasibility, bankability) to implementation and execution.",
-  },
-  {
-    step: 4,
-    title: "Finality",
-    tag: "Settle. Complete.",
-    body: "Finalise contracts, process payment and complete the transaction.",
-  },
-  {
-    step: 5,
-    title: "Memory",
-    tag: "Record. Learn. Scale.",
-    body: "Store a verified record, capture insights and reuse intelligence for future opportunities.",
-  },
-];
-
-function JourneyBanner() {
-  return (
-    <div className="mb-6">
-      <h2 className="text-center text-xl font-semibold tracking-tight sm:text-2xl">
-        The Journey to Governance
-      </h2>
-      <p className="mt-1 text-center text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-        A single, integrated flow from opportunity to verified, executed and enduring outcomes.
-      </p>
-      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-5 sm:gap-2">
-        {JOURNEY.map((j, i) => (
-          <div key={j.step} className="flex items-stretch gap-2">
-            <div className="glass-node flex-1 p-3.5">
-              <div className="flex items-center gap-2">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/20 text-[11px] font-bold text-primary">
-                  {j.step}
-                </span>
-                <div className="min-w-0">
-                  <p className="truncate text-[12.5px] font-semibold tracking-tight">{j.title}</p>
-                  <p className="truncate text-[10px] text-muted-foreground">{j.tag}</p>
-                </div>
-              </div>
-              <p className="mt-2 text-[11px] leading-snug text-muted-foreground">{j.body}</p>
-            </div>
-            {i < JOURNEY.length - 1 && (
-              <div className="hidden shrink-0 items-center text-muted-foreground/40 sm:flex" aria-hidden>
-                →
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // Diagram coordinate system — everything below is placed on this fixed canvas and scaled to the
 // container with percentages, so boxes and their connecting arrows always stay aligned with each
 // other regardless of viewport width. Every step in the main flow (Search through KYC/KYB, plus
 // the branch headers and their sub-steps) shares one height and an equal vertical pitch between
 // rows; the center column shares Choice's width too.
 const W = 1246;
-const H = 900;
+const H = 960;
 const pctX = (v: number) => `${(v / W) * 100}%`;
 const pctY = (v: number) => `${(v / H) * 100}%`;
 
@@ -114,7 +43,7 @@ const CENTER_W = 310; // shared width for the center-column nodes, matched to Ch
 const SIDE_W = 220;
 // Extra breathing room before the three parallel branches split off from KYC/KYB, so the branch
 // frames sit clearly lower and don't crowd the gate row above them.
-const BRANCH_Y = 110 + PITCH * 5 + 40;
+const BRANCH_Y = 110 + PITCH * 5 + 100;
 
 type Box = { x: number; y: number; w: number; h: number };
 const BOXES = {
@@ -171,12 +100,23 @@ function elbow(a: Point, b: Point, via: "x" | "y" = "y"): string {
 /** A tree connector: a short vertical stub clears `a`'s box before the line fans out — so
  * multiple branches leaving the same point (e.g. three arrows off KYC/KYB's bottom edge) don't
  * bunch up and cross right at the box border — then drops straight down into each target's top. */
-function branchDown(a: Point, targets: Point[], stub = 18): string[] {
+function branchDown(a: Point, targets: Point[], stub = 9): string[] {
   const trunkY = a.y + stub;
   return targets.map((t) => `M ${a.x} ${a.y} L ${a.x} ${trunkY} L ${t.x} ${trunkY} L ${t.x} ${t.y}`);
 }
 
+// Frame padding, defined here (ahead of GROUPS below) so the KYC → Step 3/4 branch arrows can
+// stop right at each frame's outer border instead of continuing past it into the frame's
+// interior to touch the node itself.
+const GROUP_PAD = 16;
+const GROUP_PAD_TIGHT = 6;
+const STEP3_INSET = 14;
+const STEP3_FRAME_TOP = BOXES.projectPrep.y - GROUP_PAD;
+const STEP4_FRAME_TOP = BOXES.finality.y - GROUP_PAD;
+
 const ARROWS: { d: string; arrow?: boolean }[] = [
+  { d: elbow(bottom(BOXES.bid), top(BOXES.loadDocs)) },
+  { d: elbow(bottom(BOXES.offer), top(BOXES.counterparty)) },
   { d: elbow(right(BOXES.loadDocs), left(BOXES.search)) },
   { d: elbow(left(BOXES.counterparty), right(BOXES.search)) },
   { d: elbow(top(BOXES.surfaceRoutes), bottom(BOXES.counterparty)), arrow: false },
@@ -186,9 +126,11 @@ const ARROWS: { d: string; arrow?: boolean }[] = [
   { d: elbow(bottom(BOXES.choice), top(BOXES.poi)) },
   { d: elbow(bottom(BOXES.poi), top(BOXES.wad)) },
   { d: elbow(bottom(BOXES.wad), top(BOXES.kyc)) },
-  ...branchDown(bottom(BOXES.kyc), [top(BOXES.projectPrep), top(BOXES.execution), top(BOXES.finality)]).map(
-    (d) => ({ d }),
-  ),
+  ...branchDown(bottom(BOXES.kyc), [
+    { x: cx(BOXES.projectPrep), y: STEP3_FRAME_TOP },
+    { x: cx(BOXES.execution), y: STEP3_FRAME_TOP },
+    { x: cx(BOXES.finality), y: STEP4_FRAME_TOP },
+  ]).map((d) => ({ d })),
   { d: elbow(bottom(BOXES.execution), top(BOXES.implementation)) },
   { d: elbow(bottom(BOXES.finality), top(BOXES.payment)) },
   { d: elbow(bottom(BOXES.payment), top(BOXES.completion)) },
@@ -202,7 +144,6 @@ const ARROWS: { d: string; arrow?: boolean }[] = [
 // everything through Choice), Step 2 (Compliance & Governance: POI, WaD, KYC/KYB), Step 3
 // (Execution, spanning Project Preparation through Implementation), Step 4 (Finality) and Step 5
 // (Memory).
-const GROUP_PAD = 16;
 const GROUPS: { label: string; step: number; box: Box }[] = [
   {
     label: "Trading",
@@ -211,7 +152,7 @@ const GROUPS: { label: string; step: number; box: Box }[] = [
       x: BOXES.bid.x - GROUP_PAD,
       y: BOXES.bid.y - GROUP_PAD,
       w: BOXES.offer.x + BOXES.offer.w - BOXES.bid.x + GROUP_PAD * 2,
-      h: BOXES.choice.y + ROW - BOXES.bid.y + GROUP_PAD * 2,
+      h: BOXES.choice.y + ROW - BOXES.bid.y + GROUP_PAD + GROUP_PAD_TIGHT,
     },
   },
   {
@@ -219,18 +160,18 @@ const GROUPS: { label: string; step: number; box: Box }[] = [
     step: 2,
     box: {
       x: BOXES.poi.x - GROUP_PAD,
-      y: BOXES.poi.y - GROUP_PAD,
+      y: BOXES.poi.y - GROUP_PAD_TIGHT,
       w: BOXES.poi.w + GROUP_PAD * 2,
-      h: BOXES.kyc.y + ROW - BOXES.poi.y + GROUP_PAD * 2,
+      h: BOXES.kyc.y + ROW - BOXES.poi.y + GROUP_PAD_TIGHT + GROUP_PAD,
     },
   },
   {
     label: "Execution",
     step: 3,
     box: {
-      x: -GROUP_PAD,
+      x: -GROUP_PAD + STEP3_INSET,
       y: BOXES.projectPrep.y - GROUP_PAD,
-      w: 730 + GROUP_PAD * 2,
+      w: 730 + GROUP_PAD * 2 - STEP3_INSET * 2,
       h: BOXES.feasibility.y + ROW - BOXES.projectPrep.y + GROUP_PAD * 2,
     },
   },
@@ -240,7 +181,7 @@ const GROUPS: { label: string; step: number; box: Box }[] = [
     box: {
       x: 792 - GROUP_PAD,
       y: BOXES.finality.y - GROUP_PAD,
-      w: 216 + GROUP_PAD * 2,
+      w: 216 + GROUP_PAD + GROUP_PAD_TIGHT,
       h: BOXES.completion.y + ROW - BOXES.finality.y + GROUP_PAD * 2,
     },
   },
@@ -248,9 +189,9 @@ const GROUPS: { label: string; step: number; box: Box }[] = [
     label: "Memory",
     step: 5,
     box: {
-      x: 1042 - GROUP_PAD,
+      x: 1042 - GROUP_PAD_TIGHT,
       y: BOXES.memory.y - GROUP_PAD,
-      w: 196 + GROUP_PAD * 2,
+      w: 196 + GROUP_PAD_TIGHT + GROUP_PAD,
       h: BOXES.memory.h + GROUP_PAD * 2,
     },
   },
@@ -314,7 +255,7 @@ function MjNode({
   icon?: typeof Search;
   state: NodeState;
   onClick?: () => void;
-  tone?: "neutral" | "danger" | "header";
+  tone?: "neutral" | "danger" | "header" | "light";
 }) {
   return (
     <button
@@ -333,6 +274,14 @@ function MjNode({
           "cursor-not-allowed border-border/60 bg-muted/10 text-muted-foreground/60",
         tone === "danger" && state !== "done" && "border-[#F97316]/60 bg-[#F97316]/10 text-[#F97316]",
         tone === "danger" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
+        tone === "light" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
+        tone === "light" && state === "active" && "border-primary bg-primary/20 text-primary animate-signal-pulse",
+        tone === "light" &&
+          (state === "open" || state === "locked") &&
+          cn(
+            "border-white/80 bg-muted/20 text-foreground hover:border-white",
+            state === "locked" && "cursor-not-allowed text-muted-foreground/70",
+          ),
       )}
     >
       <span className="flex items-center gap-1.5">
@@ -377,7 +326,6 @@ export function MahjongView({
 
   return (
     <div className="ink-grid relative rounded-3xl border border-border p-4 sm:p-6">
-      <JourneyBanner />
 
       <div className="relative w-full" style={{ aspectRatio: `${W} / ${H}` }}>
         <ArrowLayer />
@@ -385,8 +333,8 @@ export function MahjongView({
           <GroupFrame key={g.label} {...g} />
         ))}
 
-        <MjNode box={BOXES.bid} label="Bid" tone="header" state="open" />
-        <MjNode box={BOXES.offer} label="Offer" tone="header" state="open" />
+        <MjNode box={BOXES.bid} label="Register Bid" tone="header" state="open" />
+        <MjNode box={BOXES.offer} label="Register Offer" tone="header" state="open" />
 
         <MjNode
           box={BOXES.loadDocs}
@@ -450,6 +398,7 @@ export function MahjongView({
 
         <MjNode
           box={BOXES.projectPrep}
+          tone="light"
           label="Project Preparation"
           icon={Briefcase}
           state={st("execution", "preparation")}
@@ -457,6 +406,7 @@ export function MahjongView({
         />
         <MjNode
           box={BOXES.execution}
+          tone="light"
           label="Execution"
           icon={Hammer}
           state={st("execution", "entry")}
@@ -464,6 +414,7 @@ export function MahjongView({
         />
         <MjNode
           box={BOXES.finality}
+          tone="light"
           label="Finality"
           icon={CheckCircle2}
           state={st("finality", "entry")}
@@ -472,36 +423,42 @@ export function MahjongView({
 
         <MjNode
           box={BOXES.concept}
+          tone="light"
           label="Concept"
           state={st("execution", "preparation")}
           onClick={() => open("execution", "preparation")}
         />
         <MjNode
           box={BOXES.prefeasibility}
+          tone="light"
           label="Pre-feasibility"
           state={st("execution", "preparation")}
           onClick={() => open("execution", "preparation")}
         />
         <MjNode
           box={BOXES.feasibility}
+          tone="light"
           label="Feasibility"
           state={st("execution", "preparation")}
           onClick={() => open("execution", "preparation")}
         />
         <MjNode
           box={BOXES.bankability}
+          tone="light"
           label="Bankability"
           state={st("execution", "bankability")}
           onClick={() => open("execution", "bankability")}
         />
         <MjNode
           box={BOXES.implementation}
+          tone="light"
           label="Implementation"
           state={st("execution", "implementation")}
           onClick={() => open("execution", "implementation")}
         />
         <MjNode
           box={BOXES.payment}
+          tone="light"
           label="Payment"
           icon={Banknote}
           state={st("finality", "type")}
@@ -509,12 +466,14 @@ export function MahjongView({
         />
         <MjNode
           box={BOXES.completion}
+          tone="light"
           label="Completion"
           state={st("finality", "record")}
           onClick={() => open("finality", "record")}
         />
         <MjNode
           box={BOXES.memory}
+          tone="light"
           label="Memory"
           icon={Database}
           state={st("memory", "ledger")}
