@@ -148,11 +148,9 @@ export function DealCanvas({
               <InlineFrame tx={tx} stage="trading" step="bid-offer" reload={reload} onClose={() => setDirection(null)} />
             ) : (
               <div style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
-                <CanvasNode
+                <PickButton
                   label="Bid"
                   blurb="Record the opening bid and its terms."
-                  state="active"
-                  icon={ArrowLeftRight}
                   side="left"
                   onClick={() => setDirection("bid")}
                 />
@@ -166,11 +164,9 @@ export function DealCanvas({
               <InlineFrame tx={tx} stage="trading" step="bid-offer" reload={reload} onClose={() => setDirection(null)} />
             ) : (
               <div className="ml-auto" style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
-                <CanvasNode
+                <PickButton
                   label="Offer"
                   blurb="Record the opening offer and its terms."
-                  state="active"
-                  icon={ArrowLeftRight}
                   side="right"
                   onClick={() => setDirection("offer")}
                 />
@@ -423,6 +419,38 @@ function SelectionRecord({ txId }: { txId?: string | null }) {
   );
 }
 
+/** The Bid/Offer picking affordance: plain content sitting directly on the canvas grid, not a
+ * card of its own — the canvas is the only frame. */
+function PickButton({
+  label,
+  blurb,
+  side,
+  onClick,
+}: {
+  label: string;
+  blurb: string;
+  side: "left" | "right";
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn("group block w-full animate-node-rise py-1", side === "right" ? "text-right" : "text-left")}
+    >
+      <span className={cn("flex items-center gap-2", side === "right" && "flex-row-reverse")}>
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-primary bg-primary/20 text-primary transition-transform group-hover:scale-105">
+          <ArrowLeftRight className="h-3.5 w-3.5" />
+        </span>
+        <span className="text-[13.5px] font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary">
+          {label}
+        </span>
+      </span>
+      <span className="mt-1.5 block text-[12px] leading-relaxed text-muted-foreground">{blurb}</span>
+    </button>
+  );
+}
+
 function LaneHeader({ label, side }: { label: string; side: "left" | "right" }) {
   return (
     <p
@@ -628,11 +656,9 @@ export function CanvasStart({ onCreated }: { onCreated: (id: string) => void }) 
             </div>
           ) : (
             <div style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
-              <CanvasNode
+              <PickButton
                 label="Bid"
                 blurb="Record the opening bid and its terms."
-                state="active"
-                icon={ArrowLeftRight}
                 side="left"
                 onClick={() => setDirection("bid")}
               />
@@ -658,11 +684,9 @@ export function CanvasStart({ onCreated }: { onCreated: (id: string) => void }) 
             </div>
           ) : (
             <div className="ml-auto" style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
-              <CanvasNode
+              <PickButton
                 label="Offer"
                 blurb="Record the opening offer and its terms."
-                state="active"
-                icon={ArrowLeftRight}
                 side="right"
                 onClick={() => setDirection("offer")}
               />
