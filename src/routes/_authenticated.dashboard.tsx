@@ -60,6 +60,10 @@ function Dashboard() {
     >
       {isLoading && <p className="text-sm text-muted-foreground">Opening the canvas…</p>}
 
+      {!isLoading && <DashboardSummary txs={txs} />}
+
+
+
       {!isLoading && !activeTx && (
         <CanvasStart
           onCreated={(id) => {
