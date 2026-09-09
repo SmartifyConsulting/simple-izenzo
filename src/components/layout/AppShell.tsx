@@ -7,6 +7,8 @@ import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
 import { SearchButton } from "@/components/layout/SearchButton";
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
+import { SiteFooter } from "@/components/layout/SiteFooter";
+
 import { initTheme } from "@/lib/theme";
 
 function greeting() {
