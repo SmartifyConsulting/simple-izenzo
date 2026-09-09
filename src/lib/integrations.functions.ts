@@ -174,6 +174,15 @@ async function probe(
   };
 
   switch (providerId) {
+    case "didit": {
+      const base = (config["base_url"] || "https://verification.didit.me").replace(/\/+$/, "");
+      const res = await fetch(`${base}/v2/workflows/`, {
+        headers: { "x-api-key": secrets["api_key"] ?? "", Accept: "application/json" },
+      });
+      if (res.status === 401 || res.status === 403)
+        return { ok: false, message: `Didit rejected the key [${res.status}].` };
+      return say(res, "Didit accepted the key.");
+    }
     case "onfido": {
       const region = (config["region"] || "eu").toLowerCase();
       const host = region === "us" ? "api.us.onfido.com" : region === "ca" ? "api.ca.onfido.com" : "api.eu.onfido.com";

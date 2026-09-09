@@ -5,6 +5,7 @@ import { Trash2 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { OrganisationsPanel } from "@/components/account/OrganisationsPanel";
+import { VerificationPanel } from "@/components/verification/VerificationPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -147,6 +148,11 @@ function SettingsPage() {
                   </div>
                 ))}
               </div>
+
+              <VerificationPanel
+                checks={["id_document"]}
+                description="Verify yourself once with a photo of your ID and a selfie. The result arrives on its own — there is nothing to fill in here."
+              />
 
               <DangerZone />
             </div>

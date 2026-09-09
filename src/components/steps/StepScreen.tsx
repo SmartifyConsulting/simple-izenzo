@@ -24,6 +24,7 @@ import { POI_COST, WAD_COST, type StageKey } from "@/lib/spine";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { routeIdentityVerification } from "@/lib/identityRouting";
+import { VerificationPanel } from "@/components/verification/VerificationPanel";
 import { COUNTRIES } from "@/lib/countries";
 
 /** Server-side token gates (POI, WaD) throw "Not enough tokens…" when the org's balance is too
@@ -1392,6 +1393,14 @@ function WadStep({ tx, reload }: Props) {
         <Field label="Case notes">
           <Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
         </Field>
+      </div>
+      <div className="mt-5">
+        <VerificationPanel
+          transactionId={tx.id}
+          checks={["id_document", "kyb", "aml"]}
+          title="Didit verification"
+          description="Run the live checks against the chosen counterparty. Results are recorded on the deal as they land; they inform the WaD decision but never make it."
+        />
       </div>
       <StubProviderPanel tx={tx} />
     </Panel>
