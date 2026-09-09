@@ -1,13 +1,8 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/layout/AppShell";
 import { CanvasStart, DealCanvas, FLOWCHART_PREVIEW_TX } from "@/components/canvas/DealCanvas";
 import { cn } from "@/lib/utils";
-
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/lib/auth";
-import type { Transaction } from "@/lib/tx";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -21,82 +16,41 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
 });
 
+/** The dashboard is the one screen users work from — the workflow canvas itself, never a
+ * separate per-deal detail page. */
 function Dashboard() {
-  const { org } = useAuth();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
   const [direction, setDirection] = useState<"bid" | "offer" | null>(null);
-  const [showWorkflow, setShowWorkflow] = useState(false);
-
-  const { data: txs = [], isLoading, refetch } = useQuery({
-    queryKey: ["transactions", org?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("transactions")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as Transaction[];
-    },
-  });
-
-  const activeTx = useMemo(() => {
-    if (selectedId) {
-      const picked = txs.find((t) => t.id === selectedId);
-      if (picked) return picked;
-    }
-    return txs.find((t) => t.status === "open") ?? txs[0];
-  }, [txs, selectedId]);
 
   return (
     <AppShell wide>
-      {isLoading && <p className="text-sm text-muted-foreground">Opening the canvas…</p>}
-
-      {!isLoading && (!activeTx || showWorkflow) && (
-        <div
-          className={cn(
-            // Once a direction is picked, the form and its next steps merge into one bordered,
-            // gridded frame confined to that side's half of the screen — the other half is left
-            // for match results once search runs.
-            direction && "w-full rounded-3xl border border-border p-3 ink-grid sm:w-1/2 sm:p-5",
-            direction === "offer" && "ml-auto",
-          )}
-        >
-          <CanvasStart
-            onCreated={(id) => {
-              setSelectedId(id);
-              setShowWorkflow(false);
-              void refetch();
-            }}
-            onPickingChange={setPicking}
-            onDirectionChange={setDirection}
-          />
-          <div className={direction ? "mt-3" : "mt-4"}>
-            <DealCanvas
-              tx={FLOWCHART_PREVIEW_TX}
-              reload={() => {}}
-              readOnly
-              hideBidOfferGroups={picking}
-              focusSide={direction}
-            />
-          </div>
-        </div>
-      )}
-
-      {activeTx && !showWorkflow && (
-        <DealCanvas
-          tx={activeTx}
-          deals={txs}
-          onSelectDeal={(id) => {
-            setSelectedId(id);
-            setShowWorkflow(false);
+      <div
+        className={cn(
+          // Once a direction is picked, the form and its next steps merge into one bordered,
+          // gridded frame confined to that side's half of the screen — the other half is left
+          // for match results once search runs.
+          direction && "w-full rounded-3xl border border-border p-3 ink-grid sm:w-1/2 sm:p-5",
+          direction === "offer" && "ml-auto",
+        )}
+      >
+        <CanvasStart
+          onCreated={() => {
+            setPicking(false);
+            setDirection(null);
           }}
-          reload={() => {
-            void refetch();
-          }}
-          onBackToWorkflow={() => setShowWorkflow(true)}
+          onPickingChange={setPicking}
+          onDirectionChange={setDirection}
         />
-      )}
+        <div className={direction ? "mt-3" : "mt-4"}>
+          <DealCanvas
+            tx={FLOWCHART_PREVIEW_TX}
+            reload={() => {}}
+            readOnly
+            hideBidOfferGroups={picking}
+            focusSide={direction}
+          />
+        </div>
+      </div>
     </AppShell>
   );
 }
