@@ -35,7 +35,16 @@ export const Route = createFileRoute("/_authenticated/live-deal-engine")({
   component: LiveDealEngine,
 });
 
-type Attachment = { name: string; kind: "ID front" | "ID back" | "Document" };
+type Attachment = {
+  name: string;
+  kind: "ID front" | "ID back" | "Document";
+  /** Location of the stored file in the private `documents` bucket, so it can be opened later. */
+  path?: string | null;
+};
+
+/** Files bigger than this are rejected before upload — the bucket rejects them anyway, and a
+ * clear message beats a raw storage error. */
+const MAX_FILE_BYTES = 20 * 1024 * 1024;
 type FlowStep = "documents" | "searching" | "results";
 
 // Keyed to the created transaction so a user who navigates away (or refreshes) lands back on the
@@ -221,7 +230,7 @@ function LiveDealEngine() {
         setFlowStep(tx.step === "documents" ? "documents" : "results");
         const { data: docs } = await supabase
           .from("documents")
-          .select("name, notes")
+          .select("name, notes, storage_path")
           .eq("transaction_id", saved.txId)
           .order("created_at", { ascending: true });
         if (docs) {
@@ -229,6 +238,7 @@ function LiveDealEngine() {
             docs.map((d) => ({
               name: d.name,
               kind: (d.notes as Attachment["kind"] | null) ?? "Document",
+              path: d.storage_path,
             })),
           );
         }
