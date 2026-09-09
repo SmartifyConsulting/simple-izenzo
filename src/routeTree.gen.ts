@@ -23,6 +23,7 @@ import { Route as StatusRouteImport } from './routes/status'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as WalkthroughRouteImport } from './routes/walkthrough'
+import { Route as AuthenticatedActivityRouteImport } from './routes/_authenticated.activity'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
 import { Route as AuthenticatedAuditorRouteImport } from './routes/_authenticated.auditor'
 import { Route as AuthenticatedComplianceRouteImport } from './routes/_authenticated.compliance'
@@ -131,6 +132,11 @@ const WalkthroughRoute = WalkthroughRouteImport.update({
   id: '/walkthrough',
   path: '/walkthrough',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedActivityRoute = AuthenticatedActivityRouteImport.update({
+  id: '/activity',
+  path: '/activity',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
@@ -360,6 +366,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/verify-email': typeof VerifyEmailRoute
   '/walkthrough': typeof WalkthroughRoute
+  '/activity': typeof AuthenticatedActivityRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/auditor': typeof AuthenticatedAuditorRoute
   '/compliance': typeof AuthenticatedComplianceRoute
@@ -414,6 +421,7 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/verify-email': typeof VerifyEmailRoute
   '/walkthrough': typeof WalkthroughRoute
+  '/activity': typeof AuthenticatedActivityRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/auditor': typeof AuthenticatedAuditorRoute
   '/compliance': typeof AuthenticatedComplianceRoute
@@ -470,6 +478,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/verify-email': typeof VerifyEmailRoute
   '/walkthrough': typeof WalkthroughRoute
+  '/_authenticated/activity': typeof AuthenticatedActivityRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/auditor': typeof AuthenticatedAuditorRoute
   '/_authenticated/compliance': typeof AuthenticatedComplianceRoute
@@ -526,6 +535,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/verify-email'
     | '/walkthrough'
+    | '/activity'
     | '/admin'
     | '/auditor'
     | '/compliance'
@@ -580,6 +590,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/verify-email'
     | '/walkthrough'
+    | '/activity'
     | '/admin'
     | '/auditor'
     | '/compliance'
@@ -635,6 +646,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/verify-email'
     | '/walkthrough'
+    | '/_authenticated/activity'
     | '/_authenticated/admin'
     | '/_authenticated/auditor'
     | '/_authenticated/compliance'
@@ -799,6 +811,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/walkthrough'
       preLoaderRoute: typeof WalkthroughRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/activity': {
+      id: '/_authenticated/activity'
+      path: '/activity'
+      fullPath: '/activity'
+      preLoaderRoute: typeof AuthenticatedActivityRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/admin': {
       id: '/_authenticated/admin'
@@ -1077,6 +1096,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedActivityRoute: typeof AuthenticatedActivityRoute
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedAuditorRoute: typeof AuthenticatedAuditorRoute
   AuthenticatedComplianceRoute: typeof AuthenticatedComplianceRoute
@@ -1110,6 +1130,7 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedActivityRoute: AuthenticatedActivityRoute,
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedAuditorRoute: AuthenticatedAuditorRoute,
   AuthenticatedComplianceRoute: AuthenticatedComplianceRoute,

@@ -34,8 +34,16 @@ export async function ensureOrg(userId: string, displayName: string): Promise<{ 
     .insert({ org_id: org.id, user_id: userId, role: "owner" });
   if (mErr) throw mErr;
 
-  const { error: pErr } = await supabase.from("profiles").update({ org_id: org.id }).eq("id", userId);
+  // Upsert, not update: accounts created before the profile trigger existed have no profile row,
+  // and a plain update would quietly change nothing — leaving the user with no company and every
+  // save blocked by the database's company check.
+  const { data: saved, error: pErr } = await supabase
+    .from("profiles")
+    .upsert({ id: userId, org_id: org.id, full_name: displayName }, { onConflict: "id" })
+    .select("id")
+    .maybeSingle();
   if (pErr) throw pErr;
+  if (!saved) throw new Error("Could not attach your account to a company. Please sign in again.");
 
   return org;
 }
