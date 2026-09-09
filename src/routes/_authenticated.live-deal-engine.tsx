@@ -652,7 +652,10 @@ function LiveDealEngine() {
               focusSide={side}
               forceRevealAll
               hideMatchingRibbon
-              openProofOfIntent={flowStep === "searching" || flowStep === "results"}
+              openProofOfIntent={
+                !dealTx?.poi_sealed_at && (flowStep === "searching" || flowStep === "results")
+              }
+
               throbStep={throbStep}
               screeningProgress={screeningProgress}
               matchProgress={
@@ -767,6 +770,18 @@ function LiveDealEngine() {
                     />
                   </div>
                 )}
+
+                {dealTx && stagePanel && (
+                  <InlineFrame
+                    tx={dealTx}
+                    stage="trading"
+                    step={stagePanel}
+                    reload={() => void reloadDeal()}
+                    onClose={() => setStagePanel(null)}
+                  />
+                )}
+
+
 
               </div>
             ) : (
