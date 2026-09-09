@@ -140,6 +140,7 @@ function LiveDealEngine() {
   const [idBack, setIdBack] = useState<File[]>([]);
   const [docFiles, setDocFiles] = useState<File[]>([]);
   const search = useServerFn(searchCounterparties);
+  const queryClient = useQueryClient();
 
   // Once something has been recorded, keep the split workspace open (and on the side it was
   // recorded for) even after the form resets — that's what the Live Workspace panel now shows.
