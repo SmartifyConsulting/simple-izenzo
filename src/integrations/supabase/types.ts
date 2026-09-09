@@ -2581,6 +2581,7 @@ export type Database = {
           poi_sealed_at: string | null
           price: number | null
           quantity: number | null
+          reference: string | null
           stage: Database["public"]["Enums"]["spine_stage"]
           status: string
           step: string
@@ -2605,6 +2606,7 @@ export type Database = {
           poi_sealed_at?: string | null
           price?: number | null
           quantity?: number | null
+          reference?: string | null
           stage?: Database["public"]["Enums"]["spine_stage"]
           status?: string
           step?: string
@@ -2629,6 +2631,7 @@ export type Database = {
           poi_sealed_at?: string | null
           price?: number | null
           quantity?: number | null
+          reference?: string | null
           stage?: Database["public"]["Enums"]["spine_stage"]
           status?: string
           step?: string
@@ -3059,6 +3062,10 @@ export type Database = {
       can_access_tx: { Args: { _tx: string }; Returns: boolean }
       current_funder_org_id: { Args: never; Returns: string }
       current_org_id: { Args: never; Returns: string }
+      deal_fallback_reference: {
+        Args: { _direction: string; _id: string }
+        Returns: string
+      }
       export_full_database: { Args: never; Returns: Json }
       funder_record_decision: {
         Args: {
