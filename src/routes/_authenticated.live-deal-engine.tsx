@@ -159,6 +159,10 @@ function LiveDealEngine() {
     if (!dealTx || counterpartyIds.length === 0) return;
     setScreening(true);
     setScreeningResults(null);
+    // Move the active-step pulse off Choice and onto Background screening the moment Continue
+    // is clicked, not once the checks finish — the whole point is to show the flow is moving.
+    await advance(dealTx.id, "trading", "media");
+    setDealTx((prev) => (prev ? { ...prev, stage: "trading", step: "media" } : prev));
     try {
       const results = await runScreening({
         data: {
@@ -237,8 +241,11 @@ function LiveDealEngine() {
       if (ai.status === "rejected" && aiPlus.status === "rejected") {
         throw ai.reason instanceof Error ? ai.reason : new Error("AI and AI+ search both failed");
       }
-      await advance(txId, "trading", "counterparties");
-      setDealTx((prev) => (prev ? { ...prev, stage: "trading", step: "counterparties" } : prev));
+      // Straight to "choice" — once every candidate has surfaced and no more are forthcoming,
+      // the counterparties step is already done, so the active-step pulse should land on Choice
+      // rather than sitting on Counterparties.
+      await advance(txId, "trading", "choice");
+      setDealTx((prev) => (prev ? { ...prev, stage: "trading", step: "choice" } : prev));
     } catch (err) {
       await minDuration;
       setSearchError((err as Error).message);

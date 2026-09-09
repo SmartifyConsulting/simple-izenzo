@@ -126,7 +126,7 @@ export function AppShell({
         </div>
       </header>
 
-      <main className={cn("mx-auto w-full px-4 pb-8 sm:px-6", width, wide ? "pt-3" : "pt-5")}>
+      <main className={cn("mx-auto w-full flex-1 px-4 pb-8 sm:px-6", width, wide ? "pt-3" : "pt-5")}>
         <div
           className={cn(
             "grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4",

@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
+  Download,
   FileUp,
   Radar,
   Users,
@@ -538,6 +539,71 @@ export function CounterpartyRecord({
   });
 
   const ticked = candidates.filter((c) => c.shortlisted).map((c) => c.id);
+  // Once Continue has been clicked (screening running or already back), only the counterparties
+  // that were actually ticked stay on screen — that's the only list still relevant, and it frees
+  // up room for the screening findings below it.
+  const continued = screening || screeningResults !== null;
+  const visibleCandidates = continued ? candidates.filter((c) => c.shortlisted) : candidates;
+
+  function downloadFindingsPdf() {
+    if (!screeningResults || screeningResults.length === 0) return;
+    void (async () => {
+      const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
+      const doc = await PDFDocument.create();
+      const font = await doc.embedFont(StandardFonts.Helvetica);
+      const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+      let page = doc.addPage([595, 842]);
+      let y = 800;
+      const drawLine = (text: string, opts: { size?: number; bold?: boolean } = {}) => {
+        if (y < 60) {
+          page = doc.addPage([595, 842]);
+          y = 800;
+        }
+        page.drawText(text, {
+          x: 50,
+          y,
+          size: opts.size ?? 10,
+          font: opts.bold ? bold : font,
+          color: rgb(0, 0, 0),
+        });
+        y -= (opts.size ?? 10) + 6;
+      };
+
+      drawLine("Background screening findings", { size: 16, bold: true });
+      y -= 8;
+      drawLine(`Generated ${new Date().toLocaleString()}`, { size: 9 });
+      y -= 10;
+
+      for (const r of screeningResults) {
+        drawLine(r.name, { size: 12, bold: true });
+        for (const chk of r.checks) {
+          const status =
+            chk.status === "started"
+              ? "in progress"
+              : chk.status === "matched"
+                ? "match found"
+                : chk.status === "no_match"
+                  ? "no match"
+                  : chk.status === "unavailable"
+                    ? "not connected"
+                    : "could not run";
+          drawLine(`  ${chk.label}: ${status} — ${chk.detail}`, { size: 10 });
+        }
+        y -= 6;
+      }
+
+      const bytes = await doc.save();
+      const buffer = new ArrayBuffer(bytes.byteLength);
+      new Uint8Array(buffer).set(bytes);
+      const blob = new Blob([buffer], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "background-screening-findings.pdf";
+      a.click();
+      URL.revokeObjectURL(url);
+    })();
+  }
 
   async function toggle(c: CounterpartyCandidate, next: boolean) {
     qc.setQueryData<CounterpartyCandidate[]>(["counterparties", txId], (prev) =>
@@ -558,7 +624,9 @@ export function CounterpartyRecord({
         searching && "animate-throb",
       )}
     >
-      <p className="label-caps text-black">Tick counterparties of interest to continue</p>
+      <p className="label-caps text-black">
+        {continued ? "Selected counterparties" : "Tick counterparties of interest to continue"}
+      </p>
       {candidates.length === 0 ? (
         <p className="mt-2 text-sm text-slate-500">
           {searching
@@ -569,7 +637,7 @@ export function CounterpartyRecord({
         </p>
       ) : (
         <ul className="mt-2 space-y-2.5">
-          {candidates.map((c) => (
+          {visibleCandidates.map((c) => (
             <li key={c.id} className="flex items-start gap-2.5">
               <Checkbox
                 id={`shortlist-${c.id}`}
@@ -597,7 +665,17 @@ export function CounterpartyRecord({
 
       {screeningResults && screeningResults.length > 0 && (
         <div className="mt-3 space-y-2 border-t border-slate-300 pt-3">
-          <p className="label-caps text-slate-600">Background screening</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="label-caps text-slate-600">Background screening</p>
+            <button
+              type="button"
+              onClick={downloadFindingsPdf}
+              className="flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+            >
+              <Download className="h-3 w-3" />
+              Download PDF
+            </button>
+          </div>
           {screeningResults.map((r) => (
             <div key={r.counterpartyId}>
               <p className="text-sm font-medium text-slate-900">{r.name}</p>
