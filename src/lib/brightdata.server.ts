@@ -20,8 +20,10 @@ export function brightDataConfigured() {
   return Boolean(process.env["BRIGHTDATA_BROWSER_URL"]);
 }
 
-/** Opens the socket. Serverless runtimes only allow the fetch-upgrade form; Node (dev) only the
- * WebSocket constructor — try both so the same code works in preview and in production. */
+/** Opens the socket. Serverless runtimes only allow the fetch-upgrade form; Node (dev) needs the
+ * `ws` client so the credentials can travel as an Authorization header — the browser-style
+ * WebSocket constructor silently drops user:pass from the URL. Try both so the same code works in
+ * preview and in production. */
 async function openSocket(): Promise<WebSocket> {
   const raw = process.env["BRIGHTDATA_BROWSER_URL"];
   if (!raw) throw new Error("Bright Data is not connected yet.");
@@ -49,31 +51,28 @@ async function openSocket(): Promise<WebSocket> {
     }
     if (res.status === 407 || res.status === 403) {
       throw new Error(
-        "Bright Data refused the connection (check the zone's allowed-IP setting is off).",
+        "Bright Data refused the connection (check the zone's password and allowed-IP setting).",
       );
     }
   } catch (err) {
     if ((err as Error).message.startsWith("Bright Data refused")) throw err;
-    // fall through to the constructor form
+    // fall through to the Node client
   }
 
+  const { default: NodeWebSocket } = await import("ws");
   return await new Promise<WebSocket>((resolve, reject) => {
-    let socket: WebSocket;
-    try {
-      socket = new WebSocket(raw);
-    } catch (err) {
-      reject(new Error(`Could not reach Bright Data: ${(err as Error).message}`));
-      return;
-    }
+    const socket = new NodeWebSocket(url.toString(), {
+      headers: authorization ? { Authorization: authorization } : {},
+    });
     const timer = setTimeout(() => reject(new Error("Bright Data did not answer in time.")), 20_000);
-    socket.onopen = () => {
+    socket.on("open", () => {
       clearTimeout(timer);
-      resolve(socket);
-    };
-    socket.onerror = () => {
+      resolve(socket as unknown as WebSocket);
+    });
+    socket.on("error", (err: Error) => {
       clearTimeout(timer);
-      reject(new Error("Bright Data refused the connection (check the zone's allowed-IP setting)."));
-    };
+      reject(new Error(`Bright Data refused the connection: ${err.message}`));
+    });
   });
 }
 
