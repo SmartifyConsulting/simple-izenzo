@@ -29,7 +29,7 @@ import { CommoditySearch } from "@/components/CommoditySearch";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { ensureOrg } from "@/lib/org";
-import { lockReason, stepDef, stepIndex, type StageKey } from "@/lib/spine";
+import { FLAT_STEPS, lockReason, stepDef, stepIndex, type StageKey } from "@/lib/spine";
 import { advance, money, recordEvent, when, type Transaction, type TxEvent } from "@/lib/tx";
 import { setCounterpartyShortlist } from "@/lib/izenzo.functions";
 import { CURRENCIES } from "@/lib/currencies";
@@ -92,6 +92,7 @@ export function DealCanvas({
   hideBidOfferGroups,
   focusSide,
   onBackToWorkflow,
+  forceRevealAll,
 }: {
   tx: Transaction;
   reload: () => void;
@@ -110,6 +111,11 @@ export function DealCanvas({
    * side — no Responder lane, no "Next steps" for Responder — since this deal is now Bidder-only
    * (or Responder-only). */
   focusSide?: "bid" | "offer" | null;
+  /** Shows every step in the pipeline regardless of how far the transaction has actually
+   * progressed — only what's visible is forced open; each node's tick/lock state still reflects
+   * the real transaction, so steps ahead of the current one show as open (not done) until reached
+   * in sequence. */
+  forceRevealAll?: boolean;
 }) {
   const [panel, setPanel] = useState<{ stage: StageKey; step: string } | null>(null);
   const [direction, setDirection] = useState<"bid" | "offer" | null>(null);
@@ -170,7 +176,11 @@ export function DealCanvas({
   // While AI/AI+ matching runs, cap reveal at "documents" so those three steps collapse into a
   // single ribbon rather than three individual frames.
   const currentIdx = stepIndex(tx.stage, tx.step);
-  const revealUpTo = matchingPhase ? stepIndex("trading", "documents") : currentIdx;
+  const revealUpTo = forceRevealAll
+    ? FLAT_STEPS.length - 1
+    : matchingPhase
+      ? stepIndex("trading", "documents")
+      : currentIdx;
   const visible = (stage: StageKey, step: string) => stepIndex(stage, step) <= revealUpTo;
 
   const executionItems = ["entry", "preparation", "bankability", "implementation", "stakeholders"].filter(
@@ -465,7 +475,7 @@ type CounterpartyCandidate = {
 /** Same "Record" panel as `SelectionRecord`, but for the AI/AI+ search results phase: each
  * candidate gets a checkbox so a bidder (or responder) can mark who they're interested in, without
  * yet making the single final pick (that stays ChoiceStep's job). */
-function CounterpartyRecord({ txId }: { txId?: string | null }) {
+export function CounterpartyRecord({ txId }: { txId?: string | null }) {
   const qc = useQueryClient();
   const setShortlist = useServerFn(setCounterpartyShortlist);
 
@@ -688,7 +698,7 @@ export function CanvasStart({
   onPickingChange,
   onDirectionChange,
 }: {
-  onCreated: (id: string, activity: RecordedActivity) => void;
+  onCreated: (tx: Transaction, activity: RecordedActivity) => void;
   /** Fires whenever picking starts/stops, so the caller can hide anything that would look like a
    * duplicate of this card (e.g. the read-only flowchart preview) while it's active. */
   onPickingChange?: (picking: boolean) => void;
@@ -769,7 +779,7 @@ export function CanvasStart({
         time: new Date().toISOString(),
       };
       setDirection(null);
-      onCreated(newTx.id, activity);
+      onCreated({ ...newTx, stage: "trading", step: "documents" } as Transaction, activity);
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
