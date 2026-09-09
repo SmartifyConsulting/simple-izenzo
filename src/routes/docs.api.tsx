@@ -19,7 +19,7 @@ const ENDPOINTS = [
 
 function DocsApi() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flat-frames min-h-screen bg-background">
       <SiteHeader logoClassName="h-7" containerClassName="max-w-6xl h-auto py-8 px-5" />
       <main className="mx-auto max-w-3xl px-5 py-16">
         <Link to="/docs" className="text-xs font-medium text-primary hover:underline">

@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { ArrowLeft, BarChart3, ChevronDown, Coins, LayoutGrid, Mail, Tag, TerminalSquare } from "lucide-react";
+import { ArrowLeft, BarChart3, ChevronDown, Coins, DollarSign, LayoutGrid, Mail, Plug } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { useViewMode, setViewMode } from "@/lib/viewMode";
@@ -48,6 +48,11 @@ export function AppShell({
   const viewMode = useViewMode();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const onEngine = pathname === "/live-deal-engine";
+  // Document-style screens (settings, admin, reporting, API docs) drop the canvas grid and give
+  // every frame the same green edge — the grid belongs to the deal canvas, not to tables and forms.
+  const flat = ["/account", "/admin", "/credits", "/trades", "/activity", "/developer", "/docs"].some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`),
+  );
 
   useEffect(() => {
     initTheme();
@@ -55,7 +60,11 @@ export function AppShell({
 
   return (
     <div
-      className={cn("ink-grid flex min-h-screen flex-col overflow-x-hidden", pureBlack ? "" : "bg-background")}
+      className={cn(
+        "flex min-h-screen flex-col overflow-x-hidden",
+        flat ? "flat-frames" : "ink-grid",
+        pureBlack ? "" : "bg-background",
+      )}
       style={pureBlack ? { backgroundColor: "#000" } : undefined}
     >
       <header className="sticky top-0 z-30 border-b border-border bg-background/70 backdrop-blur-xl">
@@ -86,13 +95,16 @@ export function AppShell({
             </Link>
           )}
           <nav className="flex shrink-0 items-center gap-2 text-sm font-medium text-muted-foreground sm:gap-4">
-            <a href="/pricing" className="flex items-center gap-1.5 hover:text-foreground" title="Pricing">
-              <Tag className="h-3.5 w-3.5" />
-              <span className="hidden lg:inline">Pricing</span>
+            <a
+              href="/pricing"
+              className="flex items-center hover:text-foreground"
+              title="Pricing"
+              aria-label="Pricing"
+            >
+              <DollarSign className="h-4 w-4" />
             </a>
-            <Link to="/docs" className="flex items-center gap-1.5 hover:text-foreground" title="API's">
-              <TerminalSquare className="h-3.5 w-3.5" />
-              <span className="hidden lg:inline">API's</span>
+            <Link to="/docs" className="flex items-center hover:text-foreground" title="API's" aria-label="API's">
+              <Plug className="h-4 w-4" />
             </Link>
             <DropdownMenu>
               <DropdownMenuTrigger

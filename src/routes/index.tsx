@@ -121,33 +121,6 @@ function Landing() {
         </section>
 
 
-        <section className="border-t border-border bg-muted/40">
-          <div className="mx-auto max-w-6xl px-5 py-16">
-            <div className="grid gap-8 md:grid-cols-3">
-              <div>
-                <h3 className="text-sm font-semibold text-foreground">Proof of Intent is a gate</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  Nothing past Trading opens until a person confirms intent and the Proof of Intent
-                  is sealed. One token, USD 10, charged on the server, not hidden in the interface.
-                </p>
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-foreground">WaD before execution</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  Without a Doubt — KYC, KYB, UBO, sanctions and PEP — must clear before execution
-                  can begin. Three further tokens, USD 30.
-                </p>
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-foreground">AI proposes, people decide</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  AI and AI+ read the record and put forward proposals. They are stored as
-                  proposals. A person adopts them, and that adoption is itself an event.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
       </main>
 
       <SiteFooter />

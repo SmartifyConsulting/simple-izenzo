@@ -35,7 +35,16 @@ export const Route = createFileRoute("/_authenticated/live-deal-engine")({
   component: LiveDealEngine,
 });
 
-type Attachment = { name: string; kind: "ID front" | "ID back" | "Document" };
+type Attachment = {
+  name: string;
+  kind: "ID front" | "ID back" | "Document";
+  /** Location of the stored file in the private `documents` bucket, so it can be opened later. */
+  path?: string | null;
+};
+
+/** Files bigger than this are rejected before upload — the bucket rejects them anyway, and a
+ * clear message beats a raw storage error. */
+const MAX_FILE_BYTES = 20 * 1024 * 1024;
 type FlowStep = "documents" | "searching" | "results";
 
 // Keyed to the created transaction so a user who navigates away (or refreshes) lands back on the
@@ -221,7 +230,7 @@ function LiveDealEngine() {
         setFlowStep(tx.step === "documents" ? "documents" : "results");
         const { data: docs } = await supabase
           .from("documents")
-          .select("name, notes")
+          .select("name, notes, storage_path")
           .eq("transaction_id", saved.txId)
           .order("created_at", { ascending: true });
         if (docs) {
@@ -229,6 +238,7 @@ function LiveDealEngine() {
             docs.map((d) => ({
               name: d.name,
               kind: (d.notes as Attachment["kind"] | null) ?? "Document",
+              path: d.storage_path,
             })),
           );
         }
@@ -269,13 +279,24 @@ function LiveDealEngine() {
     }
   }
 
+  /** The bucket is private, so a short-lived signed link is minted on demand rather than stored. */
+  async function openAttachment(a: Attachment) {
+    if (!a.path) return;
+    const { data, error } = await supabase.storage.from("documents").createSignedUrl(a.path, 60);
+    if (error || !data?.signedUrl) {
+      toast.error(`Could not open ${a.name}`);
+      return;
+    }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  }
+
   async function submitDocuments(e: React.FormEvent) {
     e.preventDefault();
     if (!dealTx) return;
-    const collected: Attachment[] = [
-      ...idFront.map((f) => ({ name: f.name, kind: "ID front" as const })),
-      ...idBack.map((f) => ({ name: f.name, kind: "ID back" as const })),
-      ...docFiles.map((f) => ({ name: f.name, kind: "Document" as const })),
+    const collected: { file: File; kind: Attachment["kind"] }[] = [
+      ...idFront.map((f) => ({ file: f, kind: "ID front" as const })),
+      ...idBack.map((f) => ({ file: f, kind: "ID back" as const })),
+      ...docFiles.map((f) => ({ file: f, kind: "Document" as const })),
     ];
 
     if (collected.length === 0) {
@@ -283,31 +304,52 @@ function LiveDealEngine() {
       return;
     }
 
+    const tooBig = collected.find(({ file }) => file.size > MAX_FILE_BYTES);
+    if (tooBig) {
+      toast.error(`${tooBig.file.name} is larger than 20 MB — please attach a smaller file`);
+      return;
+    }
+    const empty = collected.find(({ file }) => file.size === 0);
+    if (empty) {
+      toast.error(`${empty.file.name} is empty — please attach the actual file`);
+      return;
+    }
+
     setBusy(true);
     try {
       let version = 1;
-      for (const file of collected) {
-        const sha = await fingerprintOf({ name: file.name, kind: file.kind, at: Date.now() });
-        await supabase.from("documents").insert({
+      const saved: Attachment[] = [];
+      // Upload first, insert second: the row is only worth writing once the file itself is
+      // safely stored against this bid/offer.
+      for (const { file, kind } of collected) {
+        const path = `deals/${dealTx.id}/${Date.now()}-${file.name}`;
+        const { error: upErr } = await supabase.storage.from("documents").upload(path, file);
+        if (upErr) throw new Error(`Could not upload ${file.name}: ${upErr.message}`);
+
+        const sha = await fingerprintOf({ name: file.name, size: file.size, at: Date.now() });
+        const { error: insErr } = await supabase.from("documents").insert({
           transaction_id: dealTx.id,
           name: file.name,
-          doc_type: file.kind === "Document" ? "other" : "certificate",
-          notes: file.kind,
+          doc_type: kind === "Document" ? "other" : "certificate",
+          notes: kind,
           version: version++,
           sha256: sha,
+          storage_path: path,
         });
+        if (insErr) throw new Error(`Could not save ${file.name}: ${insErr.message}`);
+        saved.push({ name: file.name, kind, path });
       }
       await recordEvent({
         transactionId: dealTx.id,
         stage: "trading",
         step: "documents",
         action: "document_attached",
-        summary: `${collected.length} document${collected.length === 1 ? "" : "s"} attached`,
-        payload: { files: collected },
+        summary: `${saved.length} document${saved.length === 1 ? "" : "s"} attached`,
+        payload: { files: saved },
       });
       await advance(dealTx.id, "trading", "search");
       setDealTx((prev) => (prev ? { ...prev, stage: "trading", step: "search" } : prev));
-      setAttachments((prev) => [...prev, ...collected]);
+      setAttachments((prev) => [...prev, ...saved]);
       await runSearch(dealTx.id);
     } catch (err) {
       toast.error((err as Error).message);
@@ -480,7 +522,17 @@ function LiveDealEngine() {
                     {attachments.map((a, i) => (
                       <div key={i} className="flex items-center gap-2 text-sm">
                         <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        <span className="truncate">{a.name}</span>
+                        {a.path ? (
+                          <button
+                            type="button"
+                            onClick={() => openAttachment(a)}
+                            className="truncate text-left underline underline-offset-2 hover:text-primary"
+                          >
+                            {a.name}
+                          </button>
+                        ) : (
+                          <span className="truncate">{a.name}</span>
+                        )}
                         <span className="ml-auto shrink-0 text-xs text-muted-foreground">{a.kind}</span>
                       </div>
                     ))}

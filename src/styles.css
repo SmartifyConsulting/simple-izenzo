@@ -454,3 +454,17 @@
 @utility animate-marquee-left {
   animation: marquee-left 55s linear infinite;
 }
+
+/* Document-style screens (Settings, Admin, reporting, Pricing, API docs): no canvas grid behind
+ * the content, and every rounded frame carries the same green edge on a solid card surface. */
+.flat-frames {
+  background-image: none;
+}
+
+.flat-frames :is(.rounded-lg, .rounded-xl, .rounded-2xl, .rounded-3xl):is(.border, .border-border),
+.flat-frames .glass-node {
+  border-color: color-mix(in oklab, var(--success) 55%, transparent);
+  background-color: var(--card);
+  background-image: none;
+  backdrop-filter: none;
+}
