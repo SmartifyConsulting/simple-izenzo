@@ -434,7 +434,11 @@ function LiveDealEngine() {
                     {searchError && (
                       <p className="text-xs text-[#F97316]">Search failed: {searchError}</p>
                     )}
-                    <CounterpartyRecord txId={dealTx.id} />
+                    <CounterpartyRecord
+                      txId={dealTx.id}
+                      searching={flowStep === "searching"}
+                      error={searchError}
+                    />
                   </div>
                 )}
               </div>
