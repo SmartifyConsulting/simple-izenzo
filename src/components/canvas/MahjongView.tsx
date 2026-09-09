@@ -32,7 +32,7 @@ function nodeState(stage: StageKey, step: string, tx: Transaction): NodeState {
 // other regardless of viewport width. The canvas is deliberately wide-and-short so the whole
 // workflow fits on screen without scrolling.
 const W = 1246;
-const H = 720;
+const H = 760;
 const pctX = (v: number) => `${(v / W) * 100}%`;
 const pctY = (v: number) => `${(v / H) * 100}%`;
 
@@ -42,7 +42,7 @@ const CENTER_W = 310; // shared width for the center-column nodes, matched to Ch
 const SIDE_W = 220;
 const TOP_Y = 20;
 // A little breathing room before the three parallel branches split off from KYC/KYB.
-const BRANCH_Y = TOP_Y + PITCH * 6 + 20;
+const BRANCH_Y = TOP_Y + PITCH * 6 + 58;
 
 const GROUP_PAD = 18;
 // Used where two frames sit close together (Step 1 above Step 2), so their borders don't overlap.
