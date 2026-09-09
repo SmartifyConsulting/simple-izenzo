@@ -345,6 +345,53 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
     return { candidates, model, kind: data.kind };
   });
 
+const STOPWORDS = new Set([
+  "the", "and", "for", "with", "from", "that", "this", "your", "you", "are", "was",
+  "our", "their", "have", "has", "will", "can", "all", "not", "who", "what", "how",
+  "www", "com", "https", "http", "a", "an", "of", "to", "in", "on", "at", "by", "or",
+]);
+
+function keywords(text: string): Set<string> {
+  return new Set(
+    text
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter((w) => w.length > 2 && !STOPWORDS.has(w)),
+  );
+}
+
+/** Fetches a candidate's own website (via the counterparty-discovery edge function's scrape mode)
+ * and scores how well its content overlaps with the search query — a cheap signal for "do they
+ * actually sell what we're looking for", without a second LLM round trip per candidate. */
+export const checkCandidateProducts = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) =>
+    z
+      .object({
+        url: z.string().url(),
+        query: z.string().min(2).max(300),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+
+    const { data: result, error } = await supabase.functions.invoke("counterparty-discovery", {
+      body: { mode: "scrape", url: data.url },
+    });
+    if (error) return { text: "", matchScore: 0, note: error.message };
+
+    const text: string = result?.text ?? "";
+    if (!text) return { text: "", matchScore: 0, note: result?.note ?? "No content found" };
+
+    const pageWords = keywords(text);
+    const queryWords = keywords(data.query);
+    const overlap = [...queryWords].filter((w) => pageWords.has(w));
+    const matchScore = queryWords.size === 0 ? 0 : Math.round((overlap.length / queryWords.size) * 100);
+
+    return { text: text.slice(0, 400), matchScore, matchedTerms: overlap };
+  });
+
 /** AI and AI+ proposals. AI proposes; a person always confirms. */
 export const runAiProposal = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

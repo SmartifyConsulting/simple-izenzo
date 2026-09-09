@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { discoverCounterpartiesByQuery } from "@/lib/izenzo.functions";
+import { discoverCounterpartiesByQuery, checkCandidateProducts } from "@/lib/izenzo.functions";
 
 export const Route = createFileRoute("/_authenticated/discover")({
   head: () => ({
@@ -27,7 +27,13 @@ type Result = {
   detail: string;
   source: "registry" | "ai" | "ai_plus" | "web";
   matchPct?: number | undefined;
+  url?: string | undefined;
 };
+
+type ProductCheck = { matchScore: number; matchedTerms: string[]; loading?: boolean };
+
+/** Only worth checking a handful of sites per search — each is a live scrape. */
+const MAX_PRODUCT_CHECKS = 6;
 
 function Discover() {
   const [role, setRole] = useState<Party>("buyer");
@@ -36,6 +42,7 @@ function Discover() {
   const [aiResults, setAiResults] = useState<Result[] | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [productChecks, setProductChecks] = useState<Record<string, ProductCheck>>({});
 
   const { data: dbResults = [], isFetching } = useQuery({
     queryKey: ["discover-db", submittedQuery],
@@ -113,8 +120,34 @@ function Discover() {
       }
 
       setAiResults(collected);
+      setProductChecks({});
+      runProductChecks(collected, trimmed);
     } finally {
       setAiLoading(false);
+    }
+  }
+
+  /** Fires after results land: for a capped set of results with a real website, fetch the site
+   * and score how well it matches the search — runs in the background, each result updates as its
+   * check finishes rather than blocking the whole list. */
+  function runProductChecks(candidates: Result[], query: string) {
+    const withUrl = candidates.filter((c) => c.url).slice(0, MAX_PRODUCT_CHECKS);
+    for (const c of withUrl) {
+      setProductChecks((prev) => ({ ...prev, [c.id]: { matchScore: 0, matchedTerms: [], loading: true } }));
+      checkCandidateProducts({ data: { url: c.url!, query } })
+        .then((r) => {
+          setProductChecks((prev) => ({
+            ...prev,
+            [c.id]: { matchScore: r.matchScore, matchedTerms: r.matchedTerms ?? [] },
+          }));
+        })
+        .catch(() => {
+          setProductChecks((prev) => {
+            const next = { ...prev };
+            delete next[c.id];
+            return next;
+          });
+        });
     }
   }
 
@@ -218,6 +251,28 @@ function Discover() {
                     {r.source === "web" && (
                       <span className="flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
                         Web discovered
+                      </span>
+                    )}
+                    {productChecks[r.id]?.loading && (
+                      <span className="flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        Checking site…
+                      </span>
+                    )}
+                    {productChecks[r.id] && !productChecks[r.id]!.loading && (
+                      <span
+                        className={cn(
+                          "flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                          productChecks[r.id]!.matchScore >= 30
+                            ? "bg-emerald-500/15 text-emerald-600"
+                            : "bg-muted text-muted-foreground",
+                        )}
+                        title={
+                          productChecks[r.id]!.matchedTerms.length > 0
+                            ? `Matched: ${productChecks[r.id]!.matchedTerms.join(", ")}`
+                            : "No matching terms found on their site"
+                        }
+                      >
+                        {productChecks[r.id]!.matchScore}% product match
                       </span>
                     )}
                   </p>
