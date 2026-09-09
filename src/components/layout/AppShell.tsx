@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
-import { BarChart3, ChevronDown, Coins, LayoutGrid, Mail, Tag, TerminalSquare } from "lucide-react";
+import { Link, useRouterState } from "@tanstack/react-router";
+import { ArrowLeft, BarChart3, ChevronDown, Coins, LayoutGrid, Mail, Tag, TerminalSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { useViewMode, setViewMode } from "@/lib/viewMode";
@@ -46,6 +46,8 @@ export function AppShell({
   const firstName = (profile?.full_name ?? profile?.email ?? "").split(/[\s@]/)[0];
   const width = wide ? "max-w-[1680px]" : "max-w-7xl";
   const viewMode = useViewMode();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const onEngine = pathname === "/live-deal-engine";
 
   useEffect(() => {
     initTheme();
@@ -144,6 +146,15 @@ export function AppShell({
               >
                 {greeting()}, {firstName}
               </p>
+            )}
+            {!onEngine && (
+              <Link
+                to="/live-deal-engine"
+                className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                Return to Engine
+              </Link>
             )}
             {title && (
               <h1 className="mt-2 truncate text-sm font-semibold tracking-tight text-muted-foreground">

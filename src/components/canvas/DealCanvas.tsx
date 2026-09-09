@@ -394,7 +394,11 @@ export function DealCanvas({
                   { side: "center", note: "1 token · USD 10" },
                 )}
             </div>
-            {visible("trading", "poi") && <GateBar label="Proof of Intent" cleared={poi} />}
+            {visible("trading", "poi") && (
+              <div className={stepsBoxClass}>
+                <GateBar label="Proof of Intent" cleared={poi} />
+              </div>
+            )}
           </GateGroup>
         </>
       )}
@@ -871,6 +875,10 @@ export function CanvasStart({
       const activeOrg = org ?? (await ensureOrg(user.id, profile?.full_name ?? user.email ?? "My account"));
       if (!org) void refresh();
 
+      // Generated once, up front, so the same value goes onto the row (visible in Trades/reports)
+      // and into local `activity` (shown on this screen for the rest of the session).
+      const reference = nextReference(direction);
+
       const { data: newTx, error } = await supabase
         .from("transactions")
         .insert({
@@ -883,7 +891,11 @@ export function CanvasStart({
           unit: form.unit || null,
           price: form.price ? Number(form.price) : null,
           currency: form.currency || "USD",
-        })
+          // `reference` isn't in the generated Supabase types yet (added via migration, next
+          // `types.ts` regeneration will pick it up) — same untyped-write pattern already used
+          // for `counterparties.shortlisted`.
+          reference,
+        } as never)
         .select()
         .single();
       if (error) throw error;
@@ -915,7 +927,7 @@ export function CanvasStart({
         price: form.price || null,
         currency: form.currency || "USD",
         time: new Date().toISOString(),
-        reference: nextReference(direction),
+        reference,
       };
       setDirection(null);
       onCreated({ ...newTx, stage: "trading", step: "documents" } as Transaction, activity);

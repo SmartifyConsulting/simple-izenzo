@@ -80,7 +80,7 @@ export function CanvasNode({
         </span>
       )}
       {note && (
-        <span className="mt-2 inline-block rounded-full bg-primary/12 px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-primary">
+        <span className="mt-2 inline-block rounded-full bg-info px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-white">
           {note}
         </span>
       )}

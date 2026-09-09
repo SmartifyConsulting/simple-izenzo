@@ -22,6 +22,9 @@ export type Transaction = {
   wad_completed_at: string | null;
   finality_sealed_at: string | null;
   created_at: string;
+  /** BID.../OFF... shown wherever this deal is listed — generated once when the bid/offer was
+   * first recorded. Null for rows created before this column existed. */
+  reference?: string | null;
 };
 
 export type TxEvent = {
@@ -79,6 +82,19 @@ export async function fingerprintOf(value: unknown) {
 
 export async function advance(transactionId: string, stage: StageKey, step: string) {
   await supabase.from("transactions").update({ stage, step }).eq("id", transactionId);
+}
+
+/** Deterministic BID.../OFF... fallback for transactions recorded before the `reference` column
+ * existed — same shape as the ones generated at creation time, just derived from the row's own id
+ * so it's stable across reloads instead of random. */
+export function fallbackReference(id: string, direction: "bid" | "offer") {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  }
+  const base = direction === "bid" ? 9088778 : 8979667;
+  const suffix = base + (hash % 1000);
+  return `${direction === "bid" ? "BID" : "OFF"}${suffix}`;
 }
 
 export function money(value: number | null | undefined, currency = "USD") {
