@@ -814,26 +814,37 @@ function LiveDealEngine() {
                           <span className="truncate">{a.name}</span>
                         )}
                         <span className="shrink-0 text-xs text-muted-foreground">{a.kind}</span>
-                        {a.path && (
-                          <span className="ml-auto flex shrink-0 items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => openAttachment(a)}
-                              title={`Preview ${a.name}`}
-                              className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                            >
-                              <Eye className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => downloadAttachment(a)}
-                              title={`Download ${a.name}`}
-                              className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                            >
-                              <Download className="h-3.5 w-3.5" />
-                            </button>
-                          </span>
-                        )}
+                        {/* Both icons always show — greyed out for files recorded before uploads
+                            were kept, so a row never looks half-built. */}
+                        <span className="ml-auto flex shrink-0 items-center gap-1">
+                          <button
+                            type="button"
+                            disabled={!a.path}
+                            onClick={() => openAttachment(a)}
+                            title={
+                              a.path
+                                ? `Preview ${a.name}`
+                                : "No stored copy — this file was recorded before uploads were kept"
+                            }
+                            className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={!a.path}
+                            onClick={() => downloadAttachment(a)}
+                            title={
+                              a.path
+                                ? `Download ${a.name}`
+                                : "No stored copy — this file was recorded before uploads were kept"
+                            }
+                            className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                          </button>
+                        </span>
+
 
                       </div>
                     ))}
