@@ -51,9 +51,8 @@ function Dashboard() {
       {isLoading && <p className="text-sm text-muted-foreground">Opening the canvas…</p>}
 
       {!isLoading && !activeTx && (
-        <div className="ink-grid relative rounded-3xl border border-border p-3 sm:p-5">
+        <>
           <CanvasStart
-            noFrame
             onCreated={(id) => {
               setSelectedId(id);
               void refetch();
@@ -63,7 +62,6 @@ function Dashboard() {
           />
           <div className="mt-4">
             <DealCanvas
-              noFrame
               tx={FLOWCHART_PREVIEW_TX}
               reload={() => {}}
               readOnly
@@ -71,7 +69,7 @@ function Dashboard() {
               focusSide={direction}
             />
           </div>
-        </div>
+        </>
       )}
 
       {activeTx && (
