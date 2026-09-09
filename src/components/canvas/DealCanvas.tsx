@@ -447,8 +447,31 @@ export function DealCanvas({
         </div>
       )}
 
-      {visible("trading", "counterparties") && (
+      {/* Once the Proof of Intent is sealed the whole gate is history: it folds down into a green
+          ticked list, the way Deal Creation does, and attention moves on to Without a Doubt. */}
+      {poiSealed && (
+        <div className={cn("mt-3", stepsBoxClass)}>
+          <p className="label-caps mb-2 text-muted-foreground">Proof of Intent</p>
+          <div className="space-y-1.5">
+            {[
+              "Counterparties surfaced",
+              "Counterparty chosen",
+              "Background screening complete",
+              "Intent confirmed",
+              "Proof of Intent sealed",
+            ].map((label) => (
+              <div key={label} className="flex items-center gap-2 text-xs text-emerald-500">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                {label}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!poiSealed && visible("trading", "counterparties") && (
         <>
+
           <Connector />
           <GateGroup
             title="Proof of Intent"
