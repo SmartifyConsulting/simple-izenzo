@@ -17,6 +17,9 @@
 ## Account Status (Token Management)
 - The "Used" portion of the balance doughnut and its legend dot become green instead of the dark shade.
 
+## Didit
+- Didit credentials are now saved under Admin → Integrations, so run a live test of the ID document, company (KYB) and sanctions/PEP checks and report what comes back. Fix any wiring or webhook issues the test uncovers.
+
 ## Technical notes
 - `src/routes/_authenticated.admin.tsx`: flatten `ADMIN_GROUPS` into a single tab list with an `icon` per tab; card markup gets `border-success/55` plus a lucide icon; drop the `tokens` entry (keep `TokensTab` unused-free by removing it, or keep it reachable only from `/credits`).
 - `src/components/layout/AppShell.tsx`: icon sizes `h-4 w-4` → `h-5 w-5`, colour `text-muted-foreground` → `text-foreground/80` with `hover:text-primary`; remove the `Report` label span; token pill loses `title` and `hover:opacity-90`, icon coloured with the logo's `text-primary` mark colour.
