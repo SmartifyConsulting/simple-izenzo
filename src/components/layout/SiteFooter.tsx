@@ -18,6 +18,12 @@ export function SiteFooter() {
           <a href="/docs" className={linkClass}>
             Docs
           </a>
+          <a href="/status" className={linkClass}>
+            Status
+          </a>
+          <a href="/pricing" className={linkClass}>
+            Pricing
+          </a>
           <a href="/privacy" className={linkClass}>
             Privacy
           </a>
