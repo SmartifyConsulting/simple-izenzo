@@ -1453,8 +1453,9 @@ function WadStep({ tx, reload }: Props) {
             const hit = found.find((c) => c.kind === kind);
             if (hit?.status === "matched") next[key] = true;
           }
+          // KYB only ticks itself when the company register also confirms the entity.
           const registry = found.find((c) => c.kind === "registry");
-          if (registry?.status !== "matched") next["kyb"] = next["kyb"] && false;
+          if (registry?.status !== "matched") next["kyb"] = false;
           return next;
         });
       } catch (err) {
