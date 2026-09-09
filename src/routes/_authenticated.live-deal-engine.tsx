@@ -18,6 +18,8 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { advance, fingerprintOf, recordEvent, type Transaction } from "@/lib/tx";
 import { searchCounterparties } from "@/lib/izenzo.functions";
+import { runBackgroundScreening, type ScreeningResult } from "@/lib/screening.functions";
+
 import { useViewMode, setViewMode } from "@/lib/viewMode";
 import { cn } from "@/lib/utils";
 
@@ -135,6 +137,9 @@ function LiveDealEngine() {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [screening, setScreening] = useState(false);
+  const [screeningResults, setScreeningResults] = useState<ScreeningResult[] | null>(null);
+
 
   const [idFront, setIdFront] = useState<File[]>([]);
   const [idBack, setIdBack] = useState<File[]>([]);
