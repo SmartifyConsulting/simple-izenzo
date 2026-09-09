@@ -1024,18 +1024,22 @@ export function CanvasStart({
       // and into local `activity` (shown on this screen for the rest of the session).
       const reference = nextReference(direction);
 
-      const { data: newTx, error } = await supabase
+      const baseRow = {
+        org_id: activeOrg.id,
+        stage: "trading",
+        step: "bid-offer",
+        title: form.title || form.commodity || (direction === "bid" ? "New buy bid" : "New sell offer"),
+        commodity: form.commodity || null,
+        quantity: form.quantity ? Number(form.quantity) : null,
+        unit: form.unit || null,
+        price: form.price ? Number(form.price) : null,
+        currency: form.currency || "USD",
+      };
+
+      let { data: newTx, error } = await supabase
         .from("transactions")
         .insert({
-          org_id: activeOrg.id,
-          stage: "trading",
-          step: "bid-offer",
-          title: form.title || form.commodity || (direction === "bid" ? "New buy bid" : "New sell offer"),
-          commodity: form.commodity || null,
-          quantity: form.quantity ? Number(form.quantity) : null,
-          unit: form.unit || null,
-          price: form.price ? Number(form.price) : null,
-          currency: form.currency || "USD",
+          ...baseRow,
           // `reference` isn't in the generated Supabase types yet (added via migration, next
           // `types.ts` regeneration will pick it up) — same untyped-write pattern already used
           // for `counterparties.shortlisted`.
@@ -1043,7 +1047,18 @@ export function CanvasStart({
         } as never)
         .select()
         .single();
+      // The `reference` column's migration hasn't reached every environment yet — rather than
+      // losing the whole bid/offer over one missing column, fall back to recording it without a
+      // stored reference (the UI already falls back to a deterministic computed one for display).
+      if (error?.code === "42703") {
+        ({ data: newTx, error } = await supabase
+          .from("transactions")
+          .insert(baseRow as never)
+          .select()
+          .single());
+      }
       if (error) throw error;
+      if (!newTx) throw new Error("Could not record the bid/offer.");
 
       await supabase.from("bid_offers").insert({
         transaction_id: newTx.id,

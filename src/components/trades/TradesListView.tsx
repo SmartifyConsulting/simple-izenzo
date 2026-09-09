@@ -10,11 +10,11 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { fallbackReference, money, whenDate, type Transaction } from "@/lib/tx";
-import { stepDef, type StageKey } from "@/lib/spine";
+import { SPINE, type StageKey } from "@/lib/spine";
 import { cn } from "@/lib/utils";
 
 type Direction = "bid" | "offer";
-type TxWithDirection = Transaction & { direction: Direction };
+type TxWithDirection = Transaction & { direction: Direction; counterpartyName: string | null };
 
 function monthKey(iso: string) {
   const d = new Date(iso);
@@ -28,13 +28,9 @@ function monthLabel(key: string) {
   return new Date(y, m - 1, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" });
 }
 
-const STAGE_ABBR: Record<StageKey, string> = {
-  trading: "TG",
-  compliance: "CG",
-  execution: "EG",
-  finality: "FG",
-  memory: "MG",
-};
+const STAGE_LABEL: Record<StageKey, string> = Object.fromEntries(
+  SPINE.map((s) => [s.key, s.label]),
+) as Record<StageKey, string>;
 
 const STAGE_BADGE_CLASS: Record<StageKey, string> = {
   trading: "bg-info text-white",
@@ -62,12 +58,13 @@ function sortRows(rows: TxWithDirection[], sort: SortKey) {
 }
 
 function toCsv(rows: TxWithDirection[]) {
-  const header = ["Reference", "Title", "Commodity", "Stage", "Step", "Status", "Price", "Currency", "Quantity", "Created"];
+  const header = ["Reference", "Title", "Commodity", "Counterparty", "Stage", "Step", "Status", "Price", "Currency", "Quantity", "Created"];
   const lines = rows.map((t) =>
     [
       t.reference ?? fallbackReference(t.id, t.direction),
       t.title,
       t.commodity ?? "",
+      t.counterpartyName ?? "",
       t.stage,
       t.step,
       t.status,
@@ -98,15 +95,29 @@ export function TradesListView() {
         .select("*, bid_offers(direction, created_at)")
         .order("updated_at", { ascending: false });
       if (error) throw error;
-      return ((data ?? []) as unknown as (Transaction & { bid_offers: { direction: string; created_at: string }[] })[]).map(
-        (t) => {
-          // A transaction can pick up more than one bid_offers row over its life (e.g. a
-          // counter-offer) — the earliest one is the side that actually opened this deal.
-          const earliest = [...t.bid_offers].sort((a, b) => +new Date(a.created_at) - +new Date(b.created_at))[0];
-          const direction: Direction = earliest?.direction === "offer" ? "offer" : "bid";
-          return { ...t, direction } as TxWithDirection;
-        },
-      );
+      const rows = (data ?? []) as unknown as (Transaction & {
+        bid_offers: { direction: string; created_at: string }[];
+      })[];
+
+      // Whoever's been chosen as the counterparty on each deal — shown alongside it in the list
+      // so "who is this trade actually with" doesn't require opening the deal.
+      const ids = rows.map((t) => t.id);
+      const { data: chosen } = ids.length
+        ? await supabase
+            .from("counterparties")
+            .select("transaction_id, name")
+            .in("transaction_id", ids)
+            .eq("status", "chosen")
+        : { data: [] as { transaction_id: string; name: string }[] };
+      const counterpartyByTx = new Map((chosen ?? []).map((c) => [c.transaction_id, c.name]));
+
+      return rows.map((t): TxWithDirection => {
+        // A transaction can pick up more than one bid_offers row over its life (e.g. a
+        // counter-offer) — the earliest one is the side that actually opened this deal.
+        const earliest = [...t.bid_offers].sort((a, b) => +new Date(a.created_at) - +new Date(b.created_at))[0];
+        const direction: Direction = earliest?.direction === "offer" ? "offer" : "bid";
+        return { ...t, direction, counterpartyName: counterpartyByTx.get(t.id) ?? null };
+      });
     },
   });
 
@@ -224,6 +235,7 @@ export function TradesListView() {
                     <tr>
                       <th className="px-4 py-2 font-medium">Reference</th>
                       <th className="px-4 py-2 font-medium">Transaction</th>
+                      <th className="hidden px-4 py-2 font-medium md:table-cell">Counterparty</th>
                       <th className="hidden px-4 py-2 font-medium sm:table-cell">Value</th>
                       <th className="px-4 py-2 font-medium">Gate</th>
                       <th className="hidden px-4 py-2 font-medium md:table-cell">Updated</th>
@@ -252,6 +264,9 @@ export function TradesListView() {
                           </Link>
                           <p className="text-xs text-muted-foreground">{t.commodity ?? "—"}</p>
                         </td>
+                        <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
+                          {t.counterpartyName ?? "Not yet chosen"}
+                        </td>
                         <td className="hidden px-4 py-3 tabular-nums sm:table-cell">{money(t.price, t.currency)}</td>
                         <td className="px-4 py-3">
                           <Link to="/live-deal-engine" search={{ tx: t.id }}>
@@ -259,7 +274,7 @@ export function TradesListView() {
                               variant="outline"
                               className={cn("border-transparent font-normal", STAGE_BADGE_CLASS[t.stage])}
                             >
-                              {STAGE_ABBR[t.stage]} · {stepDef(t.stage, t.step)?.label ?? t.step}
+                              {STAGE_LABEL[t.stage]}
                             </Badge>
                           </Link>
                         </td>
