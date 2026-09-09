@@ -3,11 +3,12 @@ import { Link } from "@tanstack/react-router";
 const linkClass =
   "text-[11px] tracking-wide text-muted-foreground transition-colors hover:text-foreground sm:text-xs";
 
-/** The shared footer, used by the marketing site and every signed-in page. */
+/** The shared footer, used by the marketing site and every signed-in page — a ribbon the same
+ * height as the header bar (h-16), in black, holding the same links. */
 export function SiteFooter() {
   return (
-    <footer className="border-t border-border/60">
-      <div className="flex w-full items-center justify-between gap-4 px-5 py-6">
+    <footer className="border-t border-border/60 bg-black">
+      <div className="mx-auto flex h-16 w-full items-center justify-between gap-4 px-5">
         <p className="whitespace-nowrap text-[11px] tracking-wide text-muted-foreground sm:text-xs">
           Izenzo is the trading name of Starfair162 (Pty) Ltd Reg: 2018 / 331720 / 07.
         </p>
