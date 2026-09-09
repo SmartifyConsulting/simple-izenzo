@@ -24,6 +24,7 @@ function Dashboard() {
   const { org } = useAuth();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
+  const [direction, setDirection] = useState<"bid" | "offer" | null>(null);
 
   const { data: txs = [], isLoading, refetch } = useQuery({
     queryKey: ["transactions", org?.id],
@@ -57,9 +58,16 @@ function Dashboard() {
               void refetch();
             }}
             onPickingChange={setPicking}
+            onDirectionChange={setDirection}
           />
           <div className="mt-4">
-            <DealCanvas tx={FLOWCHART_PREVIEW_TX} reload={() => {}} readOnly hideBidOfferGroups={picking} />
+            <DealCanvas
+              tx={FLOWCHART_PREVIEW_TX}
+              reload={() => {}}
+              readOnly
+              hideBidOfferGroups={picking}
+              focusSide={direction}
+            />
           </div>
         </>
       )}

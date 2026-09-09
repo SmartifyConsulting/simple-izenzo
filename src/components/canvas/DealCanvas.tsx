@@ -90,6 +90,7 @@ export function DealCanvas({
   onSelectDeal,
   readOnly,
   hideBidOfferGroups,
+  focusSide,
 }: {
   tx: Transaction;
   reload: () => void;
@@ -101,6 +102,10 @@ export function DealCanvas({
   /** Hides the "{ Bid" / "{ Offer" groups — used on the read-only preview once the real
    * CanvasStart picker is active elsewhere on the page, so they don't look duplicated. */
   hideBidOfferGroups?: boolean;
+  /** Once a side is picked elsewhere on the page, the preview drops all mention of the other
+   * side — no Responder lane, no "Next steps" for Responder — since this deal is now Bidder-only
+   * (or Responder-only). */
+  focusSide?: "bid" | "offer" | null;
 }) {
   const [panel, setPanel] = useState<{ stage: StageKey; step: string } | null>(null);
   const [direction, setDirection] = useState<"bid" | "offer" | null>(null);
@@ -190,15 +195,19 @@ export function DealCanvas({
 
       {/* Lane headers */}
       <div className="grid grid-cols-2 gap-4 sm:gap-8">
-        <LaneHeader label="Bidder" side="left" />
-        <LaneHeader label="Responder" side="right" />
+        {focusSide !== "offer" && <LaneHeader label="Bidder" side="left" />}
+        {focusSide !== "bid" && <LaneHeader label="Responder" side="right" />}
       </div>
       {hideBidOfferGroups && (
         <div className="mt-1 grid grid-cols-2 gap-4 sm:gap-8">
-          <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-white">Next steps</p>
-          <p className="text-right text-[10.5px] font-semibold uppercase tracking-[0.12em] text-white">
-            Next steps
-          </p>
+          {focusSide !== "offer" && (
+            <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-white">Next steps</p>
+          )}
+          {focusSide !== "bid" && (
+            <p className="text-right text-[10.5px] font-semibold uppercase tracking-[0.12em] text-white">
+              Next steps
+            </p>
+          )}
         </div>
       )}
 
@@ -697,11 +706,14 @@ function GateGroup({
 export function CanvasStart({
   onCreated,
   onPickingChange,
+  onDirectionChange,
 }: {
   onCreated: (id: string) => void;
   /** Fires whenever picking starts/stops, so the caller can hide anything that would look like a
    * duplicate of this card (e.g. the read-only flowchart preview) while it's active. */
   onPickingChange?: (picking: boolean) => void;
+  /** Fires whenever the bid/offer side is picked or cleared. */
+  onDirectionChange?: (direction: "bid" | "offer" | null) => void;
 }) {
   const { org, user, profile, refresh } = useAuth();
   const [picking, setPickingState] = useState(false);
@@ -709,7 +721,11 @@ export function CanvasStart({
     setPickingState(v);
     onPickingChange?.(v);
   };
-  const [direction, setDirection] = useState<"bid" | "offer" | null>(null);
+  const [direction, setDirectionState] = useState<"bid" | "offer" | null>(null);
+  const setDirection = (v: "bid" | "offer" | null) => {
+    setDirectionState(v);
+    onDirectionChange?.(v);
+  };
   const [form, setForm] = useState({ title: "", commodity: "", quantity: "", unit: "", price: "", currency: "USD" });
   const [busy, setBusy] = useState(false);
 
@@ -905,11 +921,16 @@ export function CanvasStart({
 
   return (
     <>
-      <div className="ink-grid relative rounded-3xl border border-border p-4 sm:p-6">
-        <p className="label-caps text-center">Live deal engine</p>
-        <div className="mt-6">{startNode}</div>
-      </div>
-      <div className="ink-grid relative mt-4 rounded-3xl border border-border p-3 sm:p-5">
+      {!direction && (
+        <div className="ink-grid relative rounded-3xl border border-border p-4 sm:p-6">
+          <p className="label-caps text-center">Live deal engine</p>
+          <div className="mt-6">{startNode}</div>
+        </div>
+      )}
+      <div className={cn("ink-grid relative rounded-3xl border border-border p-3 sm:p-5", !direction && "mt-4")}>
+      <p className="label-caps mb-3">
+        {direction === "bid" ? "Live deal engine for Bidder" : direction === "offer" ? "Live deal engine for Responder" : "Live deal engine"}
+      </p>
       <div className="grid grid-cols-2 gap-4 sm:gap-8">
         {direction !== "offer" && <LaneHeader label="Bidder" side="left" />}
         {direction !== "bid" && <LaneHeader label="Responder" side="right" />}
