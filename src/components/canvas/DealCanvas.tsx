@@ -503,7 +503,10 @@ export function DealCanvas({
               { side: "center", note: "3 tokens · USD 30" },
             )}
           </div>
-          <GateBar label="Without a Doubt" cleared={wad} />
+          <div className={stepsBoxClass}>
+            <GateBar label="Without a Doubt" cleared={wad} />
+          </div>
+
         </GateGroup>
       )}
 
@@ -798,6 +801,32 @@ export function CounterpartyRecord({
           ))}
         </ul>
       )}
+
+      {/* Where the match search got to: sweeping while it runs, full and green once it's done. */}
+      <div className="mt-3">
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-300">
+          <div
+            className={cn(
+              "h-full rounded-full transition-all duration-500",
+              searching
+                ? "w-1/2 animate-ribbon-sweep bg-primary"
+                : error
+                  ? "w-full bg-red-500"
+                  : "w-full bg-emerald-500",
+            )}
+          />
+        </div>
+        <p className="mt-1 text-[11px] text-slate-600">
+          {searching
+            ? "Searching for counterparties…"
+            : error
+              ? `Search could not finish: ${error}`
+              : candidates.length > 0
+                ? `Search complete — ${candidates.length} match${candidates.length === 1 ? "" : "es"} found`
+                : "Search complete — no matches found"}
+        </p>
+      </div>
+
 
       {screeningResults && screeningResults.length > 0 && (
         <div className="mt-3 space-y-2.5 border-t border-slate-300 pt-3">
