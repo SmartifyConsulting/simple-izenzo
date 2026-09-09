@@ -682,15 +682,26 @@ function LiveDealEngine() {
                         )}
                         <span className="shrink-0 text-xs text-muted-foreground">{a.kind}</span>
                         {a.path && (
-                          <button
-                            type="button"
-                            onClick={() => downloadAttachment(a)}
-                            title={`Download ${a.name}`}
-                            className="ml-auto shrink-0 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                          >
-                            <Download className="h-3.5 w-3.5" />
-                          </button>
+                          <span className="ml-auto flex shrink-0 items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => openAttachment(a)}
+                              title={`Preview ${a.name}`}
+                              className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => downloadAttachment(a)}
+                              title={`Download ${a.name}`}
+                              className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                            </button>
+                          </span>
                         )}
+
                       </div>
                     ))}
                   </div>
