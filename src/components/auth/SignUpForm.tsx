@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/PasswordInput";
 import { mapAuthError } from "@/lib/auth";
+import { generateOrgBrief } from "@/lib/orgBrief.functions";
 
 function safeNext(next: string | undefined) {
   if (next && next.startsWith("/") && !next.startsWith("//")) return next;
@@ -35,6 +36,9 @@ export function SignUpForm({
   const [orgName, setOrgName] = useState("");
   const [registrationNo, setRegistrationNo] = useState("");
   const [country, setCountry] = useState("");
+  const [industry, setIndustry] = useState("");
+  const [yearsInBusiness, setYearsInBusiness] = useState("");
+  const [website, setWebsite] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -92,6 +96,12 @@ export function SignUpForm({
             name: isCompany ? orgName : fullName || email,
             registration_no: isCompany ? registrationNo : null,
             country,
+            industry: isCompany && industry ? industry : null,
+            years_in_business:
+              isCompany && yearsInBusiness.trim() !== "" ? Number(yearsInBusiness) : null,
+            website: isCompany && website ? website : null,
+            primary_contact_name: fullName || null,
+            primary_contact_email: email || null,
           })
           .select()
           .single();
@@ -107,6 +117,12 @@ export function SignUpForm({
           .update({ org_id: org.id })
           .eq("id", userId);
         if (pErr) throw pErr;
+
+        // Best effort: write the company profile from their website in the background. A failure
+        // here must never block a brand-new account from getting in.
+        if (isCompany && website) {
+          void generateOrgBrief({ data: { orgId: org.id } }).catch(() => undefined);
+        }
       }
 
       toast.success("Account created");
@@ -277,6 +293,37 @@ export function SignUpForm({
                   value={country}
                   onChange={(e) => setCountry(e.target.value)}
                 />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="org-industry">Industry</Label>
+                <Input
+                  id="org-industry"
+                  value={industry}
+                  onChange={(e) => setIndustry(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="org-years">Years in business</Label>
+                <Input
+                  id="org-years"
+                  type="number"
+                  min={0}
+                  value={yearsInBusiness}
+                  onChange={(e) => setYearsInBusiness(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="org-website">Website</Label>
+                <Input
+                  id="org-website"
+                  type="url"
+                  placeholder="https://"
+                  value={website}
+                  onChange={(e) => setWebsite(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  We use this to write a short profile of your company for you.
+                </p>
               </div>
             </>
           )}

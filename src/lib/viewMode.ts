@@ -11,8 +11,10 @@ const listeners = new Set<() => void>();
 function readStored(): ViewMode {
   if (typeof window === "undefined") return "mahjong";
   try {
-    // Mahjong is the default landing view — once a user explicitly toggles, that choice sticks.
-    return localStorage.getItem(KEY) === "classic" ? "classic" : "mahjong";
+    // Session-scoped on purpose: every sign-in starts on the Mahjong workflow map, and a toggle
+    // (or the automatic switch to Classic when registering a bid/offer) only sticks for that
+    // browsing session.
+    return sessionStorage.getItem(KEY) === "classic" ? "classic" : "mahjong";
   } catch {
     return "mahjong";
   }
@@ -27,7 +29,7 @@ export function getViewMode(): ViewMode {
 export function setViewMode(mode: ViewMode) {
   current = mode;
   try {
-    localStorage.setItem(KEY, mode);
+    sessionStorage.setItem(KEY, mode);
   } catch {
     // Best-effort — the toggle still works for this tab even if it can't persist.
   }

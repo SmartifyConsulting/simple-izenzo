@@ -139,6 +139,9 @@ function LiveDealEngine() {
   const [busy, setBusy] = useState(false);
   const [screening, setScreening] = useState(false);
   const [screeningResults, setScreeningResults] = useState<ScreeningResult[] | null>(null);
+  const [screeningProgress, setScreeningProgress] = useState<
+    { done: number; total: number; failed?: boolean } | null
+  >(null);
 
 
   const [idFront, setIdFront] = useState<File[]>([]);
@@ -159,22 +162,31 @@ function LiveDealEngine() {
     if (!dealTx || counterpartyIds.length === 0) return;
     setScreening(true);
     setScreeningResults(null);
+    setScreeningProgress({ done: 0, total: counterpartyIds.length });
     // Move the active-step pulse off Choice and onto Background screening the moment Continue
     // is clicked, not once the checks finish — the whole point is to show the flow is moving.
     await advance(dealTx.id, "trading", "media");
     setDealTx((prev) => (prev ? { ...prev, stage: "trading", step: "media" } : prev));
+    // One call per counterparty so the progress bar advances on real completions rather than a
+    // timer — the checks themselves are unchanged.
+    const collected: ScreeningResult[] = [];
     try {
-      const results = await runScreening({
-        data: {
-          transactionId: dealTx.id,
-          counterpartyIds,
-          ...(typeof window !== "undefined" ? { origin: window.location.origin } : {}),
-        },
-      });
-      setScreeningResults(results);
+      for (const [i, counterpartyId] of counterpartyIds.entries()) {
+        const results = await runScreening({
+          data: {
+            transactionId: dealTx.id,
+            counterpartyIds: [counterpartyId],
+            ...(typeof window !== "undefined" ? { origin: window.location.origin } : {}),
+          },
+        });
+        collected.push(...results);
+        setScreeningResults([...collected]);
+        setScreeningProgress({ done: i + 1, total: counterpartyIds.length });
+      }
       toast.success("Background screening started");
     } catch (err) {
       toast.error((err as Error).message);
+      setScreeningProgress((p) => (p ? { ...p, failed: true } : p));
     } finally {
       setScreening(false);
     }
@@ -415,6 +427,7 @@ function LiveDealEngine() {
               hideMatchingRibbon
               openProofOfIntent={flowStep === "searching" || flowStep === "results"}
               throbStep={throbStep}
+              screeningProgress={screeningProgress}
             />
           </div>
 

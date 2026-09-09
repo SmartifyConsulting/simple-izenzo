@@ -99,6 +99,7 @@ export function DealCanvas({
   hideMatchingRibbon,
   throbStep,
   openProofOfIntent,
+  screeningProgress,
 
 }: {
   tx: Transaction;
@@ -132,6 +133,8 @@ export function DealCanvas({
   /** Opens the Proof of Intent gate group without the user clicking it — used while the match
    * search runs, so the next steps are already in view when results land. */
   openProofOfIntent?: boolean;
+  /** Live progress of the background screening run, drawn as a bar under that node. */
+  screeningProgress?: { done: number; total: number; failed?: boolean } | null;
 
 }) {
   const [panel, setPanel] = useState<{ stage: StageKey; step: string } | null>(null);
@@ -382,11 +385,34 @@ export function DealCanvas({
               {node({ stage: "trading", step: "counterparties", icon: Users }, { side: "center" })}
               {visible("trading", "choice") &&
                 node({ stage: "trading", step: "choice", icon: MousePointerClick }, { side: "center" })}
-              {visible("trading", "media") &&
-                node(
-                  { stage: "trading", step: "media", label: "Background screening", icon: Newspaper },
-                  { side: "center", compact: true, note: "runs quietly" },
-                )}
+              {visible("trading", "media") && (
+                <div>
+                  {node(
+                    { stage: "trading", step: "media", label: "Background screening", icon: Newspaper },
+                    { side: "center", compact: true, note: "runs quietly" },
+                  )}
+                  {screeningProgress && screeningProgress.total > 0 && (
+                    <div className="mt-1.5 space-y-1">
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-all duration-500",
+                            screeningProgress.failed ? "bg-destructive" : "bg-primary",
+                          )}
+                          style={{
+                            width: `${Math.round((screeningProgress.done / screeningProgress.total) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        {screeningProgress.failed
+                          ? "Screening could not finish"
+                          : `${screeningProgress.done} of ${screeningProgress.total} checks complete`}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
               {visible("trading", "intent") &&
                 node({ stage: "trading", step: "intent", icon: Handshake }, { side: "center" })}
               {visible("trading", "poi") &&
@@ -619,10 +645,7 @@ export function CounterpartyRecord({
 
   return (
     <div
-      className={cn(
-        "rounded-2xl border-2 border-primary bg-slate-100 p-4",
-        searching && "animate-throb",
-      )}
+      className="rounded-2xl border-2 border-primary bg-slate-100 p-4"
     >
       <p className="label-caps text-black">
         {continued ? "Selected counterparties" : "Tick counterparties of interest to continue"}
