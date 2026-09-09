@@ -579,6 +579,36 @@ export function CounterpartyRecord({
     },
   });
 
+  // Follow the stored verification rows for this deal so a check that finishes (or a webhook that
+  // lands minutes later) updates the line in place, without re-running the screening.
+  const listVerifications = useServerFn(listVerificationsForTx);
+  const refreshOne = useServerFn(refreshVerification);
+  const [refreshingId, setRefreshingId] = useState<string | null>(null);
+  const trackedIds = (screeningResults ?? []).flatMap((r) =>
+    r.checks.map((c) => c.verificationId).filter(Boolean),
+  ) as string[];
+  const { data: verifications = [] } = useQuery({
+    queryKey: ["tx-verifications", txId],
+    enabled: !!txId && trackedIds.length > 0,
+    refetchInterval: 8000,
+    queryFn: () => listVerifications({ data: { transactionId: txId as string } }),
+  });
+  const verificationById = new Map(verifications.map((v) => [v.id, v]));
+
+  async function refreshCheck(id: string) {
+    setRefreshingId(id);
+    try {
+      await refreshOne({ data: { id } });
+      await qc.invalidateQueries({ queryKey: ["tx-verifications", txId] });
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setRefreshingId(null);
+    }
+  }
+
+
+
   const ticked = candidates.filter((c) => c.shortlisted).map((c) => c.id);
   // Once Continue has been clicked (screening running or already back), only the counterparties
   // that were actually ticked stay on screen — that's the only list still relevant, and it frees
