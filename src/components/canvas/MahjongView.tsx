@@ -42,7 +42,7 @@ const CENTER_W = 310; // shared width for the center-column nodes, matched to Ch
 const SIDE_W = 220;
 const TOP_Y = 20;
 // A little breathing room before the three parallel branches split off from KYC/KYB.
-const BRANCH_Y = TOP_Y + PITCH * 6 + 44;
+const BRANCH_Y = TOP_Y + PITCH * 6 + 20;
 
 const GROUP_PAD = 18;
 
@@ -145,11 +145,16 @@ const ARROWS: { d: string; arrow?: boolean }[] = [
   { d: elbow(bottom(BOXES.choice), top(BOXES.poi), "x") },
   { d: elbow(bottom(BOXES.poi), top(BOXES.wad), "x") },
   { d: elbow(bottom(BOXES.wad), top(BOXES.kyc), "x") },
-  ...branchDown(bottom(BOXES.kyc), [
-    { x: cx(BOXES.projectPrep), y: STEP3_FRAME_TOP },
-    { x: cx(BOXES.execution), y: STEP3_FRAME_TOP },
-    { x: cx(BOXES.finality), y: STEP4_FRAME_TOP },
-  ]).map((d) => ({ d })),
+  ...branchDown(
+    bottom(BOXES.kyc),
+    [
+      { x: cx(BOXES.projectPrep), y: STEP3_FRAME_TOP },
+      { x: cx(BOXES.execution), y: STEP3_FRAME_TOP },
+      { x: cx(BOXES.finality), y: STEP4_FRAME_TOP },
+    ],
+    14,
+  ).map((d) => ({ d })),
+
   { d: elbow(bottom(BOXES.execution), top(BOXES.implementation), "x") },
   { d: elbow(bottom(BOXES.finality), top(BOXES.payment), "x") },
   { d: elbow(bottom(BOXES.payment), top(BOXES.completion), "x") },
