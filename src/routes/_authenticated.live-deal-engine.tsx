@@ -18,12 +18,12 @@ import { advance, fingerprintOf, recordEvent, type Transaction } from "@/lib/tx"
 import { searchCounterparties } from "@/lib/izenzo.functions";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/_authenticated/dashboard")({
+export const Route = createFileRoute("/_authenticated/live-deal-engine")({
   head: () => ({
     meta: [
-      { title: "Dashboard — Izenzo" },
+      { title: "Live Deal Engine — Izenzo" },
       { name: "description", content: "Your live deal canvas on the Izenzo Trading Gateway." },
-      { property: "og:title", content: "Dashboard — Izenzo" },
+      { property: "og:title", content: "Live Deal Engine — Izenzo" },
       { property: "og:description", content: "Your live deal canvas on the Izenzo Trading Gateway." },
     ],
   }),

@@ -10,7 +10,7 @@ import {
 import { useAuth } from "@/lib/auth";
 
 export type ModuleTo =
-  | "/dashboard"
+  | "/live-deal-engine"
   | "/inbox"
   | "/facilitation"
   | "/auditor"
@@ -29,7 +29,7 @@ export function useModules(): ModuleDef[] {
   const isFunder = roles.includes("funder") || isAdmin;
 
   const modules: ModuleDef[] = [
-    { to: "/dashboard", label: "Deals", icon: LayoutDashboard, blurb: "Every live deal canvas" },
+    { to: "/live-deal-engine", label: "Live Deal Engine", icon: LayoutDashboard, blurb: "Every live deal canvas" },
     { to: "/inbox", label: "Inbox", icon: Inbox, blurb: "Requests waiting on you" },
     {
       to: "/facilitation",
