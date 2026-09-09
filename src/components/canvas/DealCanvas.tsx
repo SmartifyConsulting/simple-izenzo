@@ -91,6 +91,7 @@ export function DealCanvas({
   readOnly,
   hideBidOfferGroups,
   focusSide,
+  noFrame,
 }: {
   tx: Transaction;
   reload: () => void;
@@ -106,6 +107,9 @@ export function DealCanvas({
    * side — no Responder lane, no "Next steps" for Responder — since this deal is now Bidder-only
    * (or Responder-only). */
   focusSide?: "bid" | "offer" | null;
+  /** Skips this component's own outer frame (background/border/padding) entirely — used when a
+   * parent is providing one shared frame around multiple pieces. */
+  noFrame?: boolean;
 }) {
   const [panel, setPanel] = useState<{ stage: StageKey; step: string } | null>(null);
   const [direction, setDirection] = useState<"bid" | "offer" | null>(null);
@@ -185,7 +189,12 @@ export function DealCanvas({
   );
 
   return (
-    <div className={cn("relative rounded-3xl p-3 sm:p-5", focusSide ? "" : "ink-grid border border-border")}>
+    <div
+      className={cn(
+        "relative",
+        !noFrame && cn("rounded-3xl p-3 sm:p-5", focusSide ? "" : "ink-grid border border-border"),
+      )}
+    >
       {!readOnly && (
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div className="min-w-0">
@@ -718,6 +727,7 @@ export function CanvasStart({
   onCreated,
   onPickingChange,
   onDirectionChange,
+  noFrame,
 }: {
   onCreated: (id: string) => void;
   /** Fires whenever picking starts/stops, so the caller can hide anything that would look like a
@@ -725,6 +735,9 @@ export function CanvasStart({
   onPickingChange?: (picking: boolean) => void;
   /** Fires whenever the bid/offer side is picked or cleared. */
   onDirectionChange?: (direction: "bid" | "offer" | null) => void;
+  /** Skips this component's own outer frame(s) — used when a parent is providing one shared frame
+   * around this and the rest of the pipeline. */
+  noFrame?: boolean;
 }) {
   const { org, user, profile, refresh } = useAuth();
   const [picking, setPickingState] = useState(false);
@@ -838,7 +851,7 @@ export function CanvasStart({
 
   if (!picking) {
     return (
-      <div className="ink-grid relative rounded-3xl border border-border p-4 sm:p-6">
+      <div className={cn("relative", !noFrame && "ink-grid rounded-3xl border border-border p-4 sm:p-6")}>
         <p className="label-caps text-center">Live deal engine</p>
         <div className="mt-6">{startNode}</div>
         <Connector />
@@ -932,16 +945,17 @@ export function CanvasStart({
 
   return (
     <>
-      {!direction && (
+      {!direction && !noFrame && (
         <div className="ink-grid relative rounded-3xl border border-border p-4 sm:p-6">
           <p className="label-caps text-center">Live deal engine</p>
           <div className="mt-6">{startNode}</div>
         </div>
       )}
+      {!direction && noFrame && <div className="mb-3">{startNode}</div>}
       <div
         className={cn(
-          "relative rounded-3xl p-3 sm:p-5",
-          !direction && "ink-grid mt-4 border border-border",
+          "relative",
+          !noFrame && cn("rounded-3xl p-3 sm:p-5", !direction && "ink-grid mt-4 border border-border"),
         )}
       >
       <p className="label-caps mb-3">
