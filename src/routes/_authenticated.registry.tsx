@@ -222,6 +222,10 @@ function RegistryPage() {
 
                 </div>
 
+                {lookupId === c.id && <SiteLookup companyName={c.legal_name} />}
+
+
+
                 {claimingId === c.id && (
                   <form
                     onSubmit={(e) => {
