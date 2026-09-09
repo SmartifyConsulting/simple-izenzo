@@ -245,7 +245,7 @@ function ArrowLayer() {
       aria-hidden
     >
       <defs>
-        <marker id="mj-arrowhead" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+        <marker id="mj-arrowhead" markerWidth="8" markerHeight="8" refX="8" refY="4" orient="auto">
           <path d="M0,0 L8,4 L0,8 Z" className="fill-muted-foreground/50" />
         </marker>
       </defs>
@@ -351,9 +351,17 @@ export function MahjongView({
   const active = panel && !readOnly ? panel : null;
 
   return (
-    <div className="ink-grid relative rounded-3xl border border-border p-4 sm:p-6">
+    <div className="ink-grid relative rounded-3xl border border-border p-3 sm:p-4">
 
-      <div className="relative w-full" style={{ aspectRatio: `${W} / ${H}` }}>
+      <div
+        className="relative mx-auto"
+        style={{
+          aspectRatio: `${W} / ${H}`,
+          // Keeps the whole diagram inside the viewport, so it never needs scrolling.
+          width: `min(100%, calc((100vh - 230px) * ${W} / ${H}))`,
+        }}
+      >
+
         <ArrowLayer />
         {GROUPS.map((g) => (
           <GroupFrame key={g.label} {...g} />
