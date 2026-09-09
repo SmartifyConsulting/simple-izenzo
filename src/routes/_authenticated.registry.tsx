@@ -198,6 +198,13 @@ function RegistryPage() {
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setLookupId(lookupId === c.id ? null : c.id)}
+                    >
+                      Look up website
+                    </Button>
                     {c.claimed_org_id ? (
                       <Badge variant="secondary" className="font-normal">
                         Claimed
@@ -212,6 +219,7 @@ function RegistryPage() {
                       </Button>
                     )}
                   </div>
+
                 </div>
 
                 {claimingId === c.id && (
