@@ -340,6 +340,45 @@ function LiveDealEngine() {
     }
   }
 
+  /** Lets a user who changes their mind step back to the counterparty list: the chosen party is
+   * released, the unsigned intent is cleared, and the deal returns to the choice step. Only
+   * offered before the Proof of Intent is sealed — the sealed certificate names the party. */
+  async function reopenChoice() {
+    if (!dealTx || dealTx.poi_sealed_at) return;
+    try {
+      const { error: cpError } = await supabase
+        .from("counterparties")
+        .update({ status: "screened", chosen_at: null })
+        .eq("transaction_id", dealTx.id)
+        .eq("status", "chosen");
+      if (cpError) throw cpError;
+      const { error: txError } = await supabase
+        .from("transactions")
+        .update({ intent_confirmed_at: null })
+        .eq("id", dealTx.id);
+      if (txError) throw txError;
+      await recordEvent({
+        transactionId: dealTx.id,
+        stage: "trading",
+        step: "media",
+        action: "counterparty_choice_reopened",
+        summary: "Reopened the counterparty choice",
+      });
+      await advance(dealTx.id, "trading", "media");
+      setDealTx((prev) =>
+        prev ? { ...prev, stage: "trading", step: "media", intent_confirmed_at: null } : prev,
+      );
+      setHasChosen(false);
+      setStagePanel(null);
+
+      setFlowStep("results");
+      toast.success("Choice reopened — pick the party you want to trade with");
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  }
+
+
 
   // Once something has been recorded, keep the split workspace open (and on the side it was
   // recorded for) even after the form resets — that's what the Live Workspace panel now shows.
@@ -594,10 +633,7 @@ function LiveDealEngine() {
 
   if (viewMode === "mahjong") {
     return (
-      <AppShell
-        wide
-        actions={activity && <p className="text-sm font-bold text-white">{activity.reference}</p>}
-      >
+      <AppShell wide>
         <MahjongView
           tx={dealTx ?? FLOWCHART_PREVIEW_TX}
           reload={() => {}}
@@ -612,12 +648,8 @@ function LiveDealEngine() {
   }
 
   return (
-    <AppShell
-      wide
-      actions={
-        activity && <p className="text-sm font-bold text-white">{activity.reference}</p>
-      }
-    >
+    <AppShell wide>
+
       <div className={cn(side && "grid grid-cols-1 gap-4 sm:grid-cols-2 sm:items-stretch")}>
         <div
           className={cn(
@@ -725,7 +757,7 @@ function LiveDealEngine() {
             <div className="flex items-start justify-between gap-3">
               <p className="label-caps">Live workspace</p>
               {(dealTx?.reference ?? activity?.reference) && (
-                <span className="shrink-0 rounded-full border border-primary/40 bg-primary/12 px-2.5 py-1 text-[11px] font-bold tracking-wide text-primary">
+                <span className="shrink-0 rounded-full border border-white/30 bg-white/10 px-2.5 py-1 text-[11px] font-bold tracking-wide text-white">
                   {dealTx?.reference ?? activity?.reference}
                 </span>
               )}
@@ -782,26 +814,37 @@ function LiveDealEngine() {
                           <span className="truncate">{a.name}</span>
                         )}
                         <span className="shrink-0 text-xs text-muted-foreground">{a.kind}</span>
-                        {a.path && (
-                          <span className="ml-auto flex shrink-0 items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => openAttachment(a)}
-                              title={`Preview ${a.name}`}
-                              className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                            >
-                              <Eye className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => downloadAttachment(a)}
-                              title={`Download ${a.name}`}
-                              className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                            >
-                              <Download className="h-3.5 w-3.5" />
-                            </button>
-                          </span>
-                        )}
+                        {/* Both icons always show — greyed out for files recorded before uploads
+                            were kept, so a row never looks half-built. */}
+                        <span className="ml-auto flex shrink-0 items-center gap-1">
+                          <button
+                            type="button"
+                            disabled={!a.path}
+                            onClick={() => openAttachment(a)}
+                            title={
+                              a.path
+                                ? `Preview ${a.name}`
+                                : "No stored copy — this file was recorded before uploads were kept"
+                            }
+                            className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={!a.path}
+                            onClick={() => downloadAttachment(a)}
+                            title={
+                              a.path
+                                ? `Download ${a.name}`
+                                : "No stored copy — this file was recorded before uploads were kept"
+                            }
+                            className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                          </button>
+                        </span>
+
 
                       </div>
                     ))}
@@ -835,6 +878,8 @@ function LiveDealEngine() {
                     step={stagePanel}
                     reload={() => void reloadDeal()}
                     onClose={() => setStagePanel(null)}
+                    onChangeParty={() => void reopenChoice()}
+
                   />
                 )}
 

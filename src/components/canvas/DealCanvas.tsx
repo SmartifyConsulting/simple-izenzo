@@ -455,7 +455,7 @@ export function DealCanvas({
           ticked list, the way Deal Creation does, and attention moves on to Without a Doubt. */}
       {poiSealed && (
         <div className={cn("mt-3", stepsBoxClass)}>
-          <p className="label-caps mb-2 text-muted-foreground">Proof of Intent</p>
+          <GateBar label="Proof of Intent" cleared />
           <div className="space-y-1.5">
             {[
               "Counterparties surfaced",
@@ -525,7 +525,7 @@ export function DealCanvas({
                         <div
                           className={cn(
                             "h-full rounded-full transition-all duration-500",
-                            screeningProgress.failed ? "bg-destructive" : "bg-primary",
+                            screeningProgress.failed ? "bg-destructive" : "bg-info",
                           )}
                           style={{
                             width: `${Math.round((screeningProgress.done / screeningProgress.total) * 100)}%`,
@@ -537,8 +537,9 @@ export function DealCanvas({
                           ? "Screening could not finish"
                           : screeningProgress.done < screeningProgress.total
                             ? `${screeningProgress.done} of ${screeningProgress.total} checks opened`
-                            : `All ${screeningProgress.total} checks opened — waiting on results`}
+                            : `Screening complete — all ${screeningProgress.total} checks opened`}
                       </p>
+
 
                     </div>
                   )}
@@ -565,7 +566,7 @@ export function DealCanvas({
           screened, with attention moving on to Execution. */}
       {wad && (
         <div className={cn("mt-3", stepsBoxClass)}>
-          <p className="label-caps mb-2 text-muted-foreground">Without a Doubt</p>
+          <GateBar label="Without a Doubt" cleared />
           <div className="space-y-1.5">
             {[
               "KYC — individuals identified",
@@ -683,15 +684,21 @@ export function InlineFrame({
   step,
   reload,
   onClose,
+  onChangeParty,
 }: {
   tx: Transaction;
   stage: StageKey;
   step: string;
   reload: () => void;
   onClose: () => void;
+  /** Offered on Intent and Proof of Intent (before the seal is paid for) so a user who changes
+   * their mind can reopen the counterparty choice instead of being stuck with their first pick. */
+  onChangeParty?: (() => void) | undefined;
 }) {
   const def = stepDef(stage, step);
   const locked = lockReason(stage, step, tx);
+  const canChangeParty =
+    Boolean(onChangeParty) && !tx.poi_sealed_at && (step === "intent" || step === "poi");
   return (
     <div className="glass-node animate-node-rise mt-2 p-5 sm:p-6">
       <div className="mb-4 flex items-start justify-between gap-4">
@@ -712,9 +719,23 @@ export function InlineFrame({
       ) : (
         <StepScreen tx={tx} stage={stage} step={step} reload={reload} />
       )}
+      {canChangeParty && (
+        <button
+          type="button"
+          onClick={() => {
+            if (window.confirm("Release the party you chose and reopen the counterparty list?")) {
+              onChangeParty?.();
+            }
+          }}
+          className="mt-4 text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+        >
+          Choose a different party
+        </button>
+      )}
     </div>
   );
 }
+
 
 /** The static record panel that stands in for whichever side (Bid or Offer) wasn't picked —
  * a running log of everything recorded on the transaction so far. */
