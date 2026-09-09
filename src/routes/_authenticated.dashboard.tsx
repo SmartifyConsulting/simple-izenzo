@@ -58,7 +58,7 @@ function Dashboard() {
             }}
             onPickingChange={setPicking}
           />
-          <div className="mt-6">
+          <div className="mt-4">
             <DealCanvas tx={FLOWCHART_PREVIEW_TX} reload={() => {}} readOnly hideBidOfferGroups={picking} />
           </div>
         </>

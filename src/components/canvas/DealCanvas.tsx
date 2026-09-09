@@ -172,7 +172,7 @@ export function DealCanvas({
   );
 
   return (
-    <div className="ink-grid relative rounded-3xl border border-border p-4 sm:p-7">
+    <div className="ink-grid relative rounded-3xl border border-border p-3 sm:p-5">
       {!readOnly && (
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div className="min-w-0">
@@ -214,7 +214,7 @@ export function DealCanvas({
             ) : (
               <div style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
                 <PickButton
-                  label="Bid"
+                  label="Submit a Bid"
                   blurb="Record the opening bid and its terms."
                   side="left"
                   onClick={() => setDirection("bid")}
@@ -231,8 +231,8 @@ export function DealCanvas({
             ) : (
               <div className="ml-auto" style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
                 <PickButton
-                  label="Offer"
-                  blurb="Record the opening offer and its terms."
+                  label="Submit an Offer"
+                  blurb="State what you're supplying, at what price, and your delivery terms."
                   side="right"
                   onClick={() => setDirection("offer")}
                   examples={OFFER_EXAMPLES}
@@ -633,7 +633,7 @@ function PickButton({
         </span>
       </span>
       <span className="mt-1.5 block text-[12px] leading-relaxed text-muted-foreground">{blurb}</span>
-      <span className="mt-1 block text-[11px] leading-relaxed text-muted-foreground/80">
+      <span className="mt-1 block truncate text-[11px] text-muted-foreground/80">
         Try: {examples.map((e) => `"${e}"`).join("  ")}
       </span>
     </button>
@@ -667,7 +667,7 @@ function GateGroup({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="mt-5 flex items-start gap-3">
+    <div className="mt-3 flex items-start gap-3">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -811,7 +811,7 @@ export function CanvasStart({
 
   if (!picking) {
     return (
-      <div className="ink-grid relative rounded-3xl border border-border p-6 sm:p-10">
+      <div className="ink-grid relative rounded-3xl border border-border p-4 sm:p-6">
         <p className="label-caps text-center">Live deal engine</p>
         <div className="mt-6">{startNode}</div>
         <Connector />
@@ -905,11 +905,11 @@ export function CanvasStart({
 
   return (
     <>
-      <div className="ink-grid relative rounded-3xl border border-border p-6 sm:p-10">
+      <div className="ink-grid relative rounded-3xl border border-border p-4 sm:p-6">
         <p className="label-caps text-center">Live deal engine</p>
         <div className="mt-6">{startNode}</div>
       </div>
-      <div className="ink-grid relative mt-6 rounded-3xl border border-border p-4 sm:p-7">
+      <div className="ink-grid relative mt-4 rounded-3xl border border-border p-3 sm:p-5">
       <div className="grid grid-cols-2 gap-4 sm:gap-8">
         {direction !== "offer" && <LaneHeader label="Bidder" side="left" />}
         {direction !== "bid" && <LaneHeader label="Responder" side="right" />}
@@ -934,7 +934,7 @@ export function CanvasStart({
             ) : (
               <div style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
                 <PickButton
-                  label="Bid"
+                  label="Submit a Bid"
                   blurb="Record the opening bid and its terms."
                   side="left"
                   onClick={() => setDirection("bid")}
@@ -963,8 +963,8 @@ export function CanvasStart({
             ) : (
               <div className="ml-auto" style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
                 <PickButton
-                  label="Offer"
-                  blurb="Record the opening offer and its terms."
+                  label="Submit an Offer"
+                  blurb="State what you're supplying, at what price, and your delivery terms."
                   side="right"
                   onClick={() => setDirection("offer")}
                   examples={OFFER_EXAMPLES}

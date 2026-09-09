@@ -34,7 +34,7 @@ export function CanvasNode({
       className={cn(
         "glass-node group w-full text-left",
         state === "active" ? "animate-node-rise-active" : "animate-node-rise",
-        compact ? "px-3.5 py-3" : "px-4 py-4",
+        compact ? "px-3.5 py-2.5" : "px-4 py-3",
         locked
           ? "node-locked cursor-not-allowed"
           : "hover:-translate-y-0.5 hover:border-primary/50",
@@ -103,7 +103,7 @@ export function Connector({ pulse }: { pulse?: boolean }) {
 
 export function GateBar({ label, cleared }: { label: string; cleared: boolean }) {
   return (
-    <div className="my-5 flex items-center gap-3" aria-hidden>
+    <div className="my-3 flex items-center gap-3" aria-hidden>
       <span className="h-px flex-1 bg-gradient-to-r from-transparent to-border" />
       <span
         className={cn(
