@@ -43,7 +43,7 @@ function Pricing() {
           Infrastructure pricing. Scalable and predictable.
         </h1>
         <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Pay only for the Proof-of-Intent records you mint. No opaque licenses, no hidden fees.
+          Pay only for the Proof-of-Intent records you mint. No opaque licenses, No hidden fees.
           Volume pricing available for institutions.
         </p>
 

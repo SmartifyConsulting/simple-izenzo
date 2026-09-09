@@ -59,6 +59,17 @@ export function AppShell({
               {org.credits}
             </Link>
           )}
+          <nav className="flex shrink-0 items-center gap-4 text-sm font-medium text-muted-foreground">
+            <a href="/pricing" className="hover:text-foreground">
+              Pricing
+            </a>
+            <Link to="/developer/keys" className="hover:text-foreground">
+              API's
+            </Link>
+            <Link to="/support" className="hover:text-foreground">
+              Support
+            </Link>
+          </nav>
           <Link
             to="/inbox"
             title="Inbox"

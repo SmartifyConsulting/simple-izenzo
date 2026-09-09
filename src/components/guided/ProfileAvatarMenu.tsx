@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { LifeBuoy, LogOut, Moon, Settings, Sun, TerminalSquare } from "lucide-react";
+import { LogOut, Moon, Settings, Sun } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import {
@@ -11,8 +11,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-/** The app's one profile menu — identity destinations (Settings, Support), then the
- * light/dark switch, then sign out, then the legal footer links. */
+/** The app's one profile menu — Settings, then the light/dark switch, then sign out, then the
+ * legal footer links. Pricing/API's/Support live in the top nav instead. */
 export function ProfileAvatarMenu() {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
@@ -43,16 +43,6 @@ export function ProfileAvatarMenu() {
             <Link to="/account/settings" className="flex items-center">
               <Settings className="mr-2 h-3.5 w-3.5" /> Settings
             </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link to="/developer/keys" className="flex items-center">
-              <TerminalSquare className="mr-2 h-3.5 w-3.5" /> Developer Centre
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <a href="/support" className="flex items-center">
-              <LifeBuoy className="mr-2 h-3.5 w-3.5" /> Support
-            </a>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={toggleTheme}>
             {theme === "dark" ? (
