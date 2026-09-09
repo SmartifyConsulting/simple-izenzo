@@ -1,18 +1,36 @@
-# Workflow diagram: three small fixes
+# Fix: matches found but never shown after "Submit"
 
-## 1. Arrow into "Surface routes / paths"
-The link between Counterparty and Surface routes / paths currently has no arrowhead. Draw it downward from Counterparty into the top of Surface routes / paths, with a visible arrow tip touching that box.
+## What's actually happening
 
-## 2. Lower the shared line above the Step 3 / Step 4 arrows
-The horizontal line that fans out from KYC / KYB into the three downward arrows sits close under the box. Drop it further down so it sits in the clear space between the Compliance frame and the Step 3 / Step 4 frames, with the three arrows still landing on the frame borders.
+The AI search is working. After the last submit at 20:32 today, 11 candidate
+counterparties were created and saved against your Copper deal (5 from AI, 6 from AI+),
+each with a score. Both AI calls returned successfully.
 
-## 3. Resize and align Memory
-Make the Memory block the same height as Completion and place it on the same line, so the arrow from Completion runs straight across into it. Shrink the Step 5 frame to fit the smaller block.
+The problem is on screen only: the "Record" panel loads its list once, at the moment the
+search starts — when there are still zero results — and then never reloads. So it stays on
+"Searching for counterparties…" even after the matches land.
 
-## Technical notes
-All changes are in `src/components/canvas/MahjongView.tsx`:
-- Replace the `arrow: false` connector at Counterparty/Surface routes with a downward elbow ending on `top(BOXES.surfaceRoutes)`.
-- Increase the `branchDown` stub for the KYC fan-out so the trunk sits mid-gap between the Step 2 frame bottom and the Step 3/4 frame tops.
-- Set `memory` to `h: ROW` at `y: BOXES.completion.y`, and derive the Step 5 frame height from that; the Completion → Memory connector becomes a straight horizontal line.
+## The fix
 
-No data, routing, permissions, or workflow rules change.
+1. Refresh the Record list as soon as the search finishes, and again while it is running,
+   so results appear the moment they are saved.
+2. Give the panel honest states: "Searching…" while the search runs, the ranked list when
+   results arrive, and a clear "No matches found — try again" message only when the search
+   genuinely returned nothing.
+3. Surface a failure properly: if both AI and AI+ fail, show the reason in the panel instead
+   of an endless searching message.
+4. Reopening the deal later shows the saved matches immediately, including the 11 already
+   stored for the Copper deal.
+
+## Technical detail
+
+- `runSearch` in `src/routes/_authenticated.live-deal-engine.tsx` calls the
+  `searchCounterparties` server function, which inserts rows into `counterparties`, but never
+  invalidates the `["counterparties", txId]` React Query cache.
+- Add `queryClient.invalidateQueries({ queryKey: ["counterparties", txId] })` after the search
+  settles, plus a short polling interval on that query in `CounterpartyRecord`
+  (`src/components/canvas/DealCanvas.tsx`) while the flow step is "searching".
+- Split `CounterpartyRecord`'s empty state into searching / empty / error via a new optional
+  prop, instead of always rendering "Searching for counterparties…".
+
+No changes to the database, RLS, gates, token costs, or workflow rules.
