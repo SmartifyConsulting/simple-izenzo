@@ -1,8 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { Coins, LayoutDashboard, Mail, TerminalSquare } from "lucide-react";
+import { Coins, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
 import { SearchButton } from "@/components/layout/SearchButton";
@@ -41,25 +40,11 @@ export function AppShell({
   }, []);
 
   return (
-    <div className="ink-grid min-h-screen bg-background">
+    <div className="ink-grid flex min-h-screen flex-col bg-background">
       <header className="sticky top-0 z-30 border-b border-border bg-background/70 backdrop-blur-xl">
         <div className={cn("mx-auto flex h-16 items-center gap-3 px-4 sm:px-6", width)}>
           <Link to="/dashboard" className="shrink-0">
             <Logo onDark className="h-7 w-auto" />
-          </Link>
-          <Link to="/dashboard">
-            <Button variant="ghost" size="sm" className="gap-2 rounded-full border border-border bg-muted px-3">
-              <LayoutDashboard className="h-4 w-4" />
-              <span className="hidden sm:inline">Dashboard</span>
-            </Button>
-          </Link>
-
-          <SearchButton />
-          <Link to="/developer/keys">
-            <Button variant="ghost" size="sm" className="gap-2 rounded-full border border-border bg-muted px-3">
-              <TerminalSquare className="h-4 w-4" />
-              <span className="hidden sm:inline">Developer Centre</span>
-            </Button>
           </Link>
           <div className="min-w-0 flex-1" />
           {org && (
@@ -85,7 +70,10 @@ export function AppShell({
         </div>
       </header>
 
-      <main className={cn("mx-auto px-4 pb-14 sm:px-6", width, wide ? "pt-4" : "pt-6")}>
+      <main className={cn("mx-auto w-full flex-1 px-4 pb-14 sm:px-6", width, wide ? "pt-4" : "pt-6")}>
+        <div className="mb-4">
+          <SearchButton />
+        </div>
         <div
           className={cn(
             "grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4",

@@ -144,6 +144,7 @@ export function DealCanvas({
                   blurb="Record the opening bid and its terms."
                   side="left"
                   onClick={() => setDirection("bid")}
+                  examples={BID_EXAMPLES}
                 />
               </div>
             )}
@@ -160,6 +161,7 @@ export function DealCanvas({
                   blurb="Record the opening offer and its terms."
                   side="right"
                   onClick={() => setDirection("offer")}
+                  examples={OFFER_EXAMPLES}
                 />
               </div>
             )}
@@ -412,16 +414,21 @@ function SelectionRecord({ txId }: { txId?: string | null }) {
 
 /** The Bid/Offer picking affordance: plain content sitting directly on the canvas grid, not a
  * card of its own — the canvas is the only frame. */
+const BID_EXAMPLES = ["buyers for cashew in India", "copper cathode suppliers", "hemp fibre wholesalers South Africa"];
+const OFFER_EXAMPLES = ["cashew nuts ready to ship ex-Lagos", "copper cathode available FOB Durban", "hemp fibre bulk lot for export"];
+
 function PickButton({
   label,
   blurb,
   side,
   onClick,
+  examples,
 }: {
   label: string;
   blurb: string;
   side: "left" | "right";
   onClick: () => void;
+  examples: string[];
 }) {
   return (
     <button
@@ -438,6 +445,9 @@ function PickButton({
         </span>
       </span>
       <span className="mt-1.5 block text-[12px] leading-relaxed text-muted-foreground">{blurb}</span>
+      <span className="mt-1 block text-[11px] leading-relaxed text-muted-foreground/80">
+        Try: {examples.map((e) => `"${e}"`).join("  ")}
+      </span>
     </button>
   );
 }
@@ -652,6 +662,7 @@ export function CanvasStart({ onCreated }: { onCreated: (id: string) => void }) 
                 blurb="Record the opening bid and its terms."
                 side="left"
                 onClick={() => setDirection("bid")}
+                examples={BID_EXAMPLES}
               />
             </div>
           )}
@@ -680,6 +691,7 @@ export function CanvasStart({ onCreated }: { onCreated: (id: string) => void }) 
                 blurb="Record the opening offer and its terms."
                 side="right"
                 onClick={() => setDirection("offer")}
+                examples={OFFER_EXAMPLES}
               />
             </div>
           )}

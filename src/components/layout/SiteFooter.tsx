@@ -13,7 +13,7 @@ export function SiteFooter() {
         </p>
         <nav aria-label="Footer" className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
           <Link to="/glossary" className={linkClass}>
-            Terms &amp; Glossary
+            Glossary
           </Link>
           <a href="/docs" className={linkClass}>
             Docs

@@ -1,9 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { LifeBuoy, LogOut, Moon, Settings, Sun, UserRound } from "lucide-react";
-import { useState } from "react";
+import { LifeBuoy, LogOut, Moon, Settings, Sun, TerminalSquare } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,14 +17,12 @@ export function ProfileAvatarMenu() {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
   const [theme, toggleTheme] = useTheme();
-  const [viewing, setViewing] = useState(false);
 
   const name = profile?.full_name ?? profile?.email ?? "";
   const initials = (name || "?").slice(0, 2).toUpperCase();
 
   return (
-    <>
-      <DropdownMenu>
+    <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button className="flex shrink-0 items-center gap-2 rounded-full hover:opacity-80">
             <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-primary bg-primary text-[12px] font-semibold text-black">
@@ -43,12 +39,14 @@ export function ProfileAvatarMenu() {
             {profile?.email}
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setViewing(true)}>
-            <UserRound className="mr-2 h-3.5 w-3.5" /> View picture
-          </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link to="/account/settings" className="flex items-center">
               <Settings className="mr-2 h-3.5 w-3.5" /> Settings
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/developer/keys" className="flex items-center">
+              <TerminalSquare className="mr-2 h-3.5 w-3.5" /> Developer Centre
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
@@ -85,30 +83,7 @@ export function ProfileAvatarMenu() {
             </div>
             <p className="text-[11px] text-muted-foreground">© Izenzo 2026</p>
           </div>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      <Dialog open={viewing} onOpenChange={setViewing}>
-        <DialogContent className="max-w-sm">
-          <DialogTitle className="text-sm font-medium">{name || "Profile picture"}</DialogTitle>
-          <div className="flex flex-col items-center gap-4 pt-2">
-            <div className="flex h-56 w-56 items-center justify-center overflow-hidden rounded-full border border-border bg-muted text-4xl font-semibold text-muted-foreground">
-              {profile?.avatar_url ? (
-                <img src={profile.avatar_url} alt={name} className="h-full w-full object-cover" />
-              ) : (
-                <span>{initials}</span>
-              )}
-            </div>
-            <Link
-              to="/account/settings"
-              onClick={() => setViewing(false)}
-              className="text-xs font-medium text-foreground hover:underline"
-            >
-              Change image
-            </Link>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
