@@ -479,20 +479,30 @@ type CounterpartyCandidate = {
 /** Same "Record" panel as `SelectionRecord`, but for the AI/AI+ search results phase: each
  * candidate gets a checkbox so a bidder (or responder) can mark who they're interested in, without
  * yet making the single final pick (that stays ChoiceStep's job). */
-export function CounterpartyRecord({ txId }: { txId?: string | null }) {
+export function CounterpartyRecord({
+  txId,
+  searching = false,
+  error = null,
+}: {
+  txId?: string | null;
+  /** True while the AI/AI+ search is still running, so the panel polls for freshly saved rows. */
+  searching?: boolean;
+  error?: string | null;
+}) {
   const qc = useQueryClient();
   const setShortlist = useServerFn(setCounterpartyShortlist);
 
   const { data: candidates = [] } = useQuery({
     queryKey: ["counterparties", txId],
     enabled: !!txId,
+    refetchInterval: searching ? 1500 : false,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error: qErr } = await supabase
         .from("counterparties")
         .select("*")
         .eq("transaction_id", txId as string)
         .order("created_at", { ascending: false });
-      if (error) throw error;
+      if (qErr) throw qErr;
       return (data ?? []) as unknown as CounterpartyCandidate[];
     },
   });
@@ -513,7 +523,13 @@ export function CounterpartyRecord({ txId }: { txId?: string | null }) {
     <div className="rounded-2xl border-2 border-primary bg-slate-100 p-4">
       <p className="label-caps text-primary">Record</p>
       {candidates.length === 0 ? (
-        <p className="mt-2 text-sm text-slate-500">Searching for counterparties…</p>
+        <p className="mt-2 text-sm text-slate-500">
+          {searching
+            ? "Searching for counterparties…"
+            : error
+              ? `Search could not finish: ${error}`
+              : "No matches found yet — run the search again."}
+        </p>
       ) : (
         <ul className="mt-2 space-y-2.5">
           {candidates.map((c) => (

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CheckCircle2, Paperclip, UploadCloud, X } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
@@ -139,6 +140,7 @@ function LiveDealEngine() {
   const [idBack, setIdBack] = useState<File[]>([]);
   const [docFiles, setDocFiles] = useState<File[]>([]);
   const search = useServerFn(searchCounterparties);
+  const queryClient = useQueryClient();
 
   // Once something has been recorded, keep the split workspace open (and on the side it was
   // recorded for) even after the form resets — that's what the Live Workspace panel now shows.
@@ -207,6 +209,9 @@ function LiveDealEngine() {
       setSearchError((err as Error).message);
     } finally {
       setFlowStep("results");
+      // The candidates are written server-side, so the Record panel's cached (empty) list has to
+      // be refreshed or it stays stuck on "Searching for counterparties…".
+      await queryClient.invalidateQueries({ queryKey: ["counterparties", txId] });
     }
   }
 
@@ -429,7 +434,11 @@ function LiveDealEngine() {
                     {searchError && (
                       <p className="text-xs text-[#F97316]">Search failed: {searchError}</p>
                     )}
-                    <CounterpartyRecord txId={dealTx.id} />
+                    <CounterpartyRecord
+                      txId={dealTx.id}
+                      searching={flowStep === "searching"}
+                      error={searchError}
+                    />
                   </div>
                 )}
               </div>
