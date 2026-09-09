@@ -25,7 +25,9 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { routeIdentityVerification } from "@/lib/identityRouting";
 import { VerificationPanel } from "@/components/verification/VerificationPanel";
+import { CommoditySearch } from "@/components/CommoditySearch";
 import { COUNTRIES } from "@/lib/countries";
+import { UNITS } from "@/lib/units";
 
 /** Server-side token gates (POI, WaD) throw "Not enough tokens…" when the org's balance is too
  * low. Surface that specific failure with a direct link to the Buy Tokens screen instead of a
@@ -254,11 +256,7 @@ function BidOffer({ tx, reload }: Props) {
             </Select>
           </Field>
           <Field label="Commodity">
-            <Input
-              required
-              value={form.commodity}
-              onChange={(e) => setForm({ ...form, commodity: e.target.value })}
-            />
+            <CommoditySearch value={form.commodity} onChange={(v) => setForm({ ...form, commodity: v })} />
           </Field>
           <Field label={`Price (${tx.currency})`}>
             <Input
@@ -276,17 +274,24 @@ function BidOffer({ tx, reload }: Props) {
               type="number"
               step="any"
               min="0"
+              className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
               value={form.quantity}
               onChange={(e) => setForm({ ...form, quantity: e.target.value })}
             />
           </Field>
           <Field label="Unit">
-            <Input
-              required
-              placeholder="e.g. metric tonnes"
-              value={form.unit}
-              onChange={(e) => setForm({ ...form, unit: e.target.value })}
-            />
+            <Select value={form.unit} onValueChange={(v) => setForm({ ...form, unit: v })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a unit" />
+              </SelectTrigger>
+              <SelectContent>
+                {UNITS.map((u) => (
+                  <SelectItem key={u} value={u}>
+                    {u}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </Field>
           <Field label="Incoterms">
             <Select

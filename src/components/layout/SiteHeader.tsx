@@ -1,9 +1,15 @@
 import { Link } from "@tanstack/react-router";
-import { Mail } from "lucide-react";
+import { ChevronDown, Mail } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { SearchButton } from "@/components/layout/SearchButton";
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +41,22 @@ export function SiteHeader({
               <Link to="/docs" className="hover:text-foreground">
                 API's
               </Link>
+              <DropdownMenu>
+                <DropdownMenuTrigger className="flex items-center gap-1 outline-none hover:text-foreground">
+                  Report
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem asChild>
+                    <Link to="/trades">All Deals</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/credits" search={{ returnTo: undefined }}>
+                      Token Management
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Link to="/support" className="hover:text-foreground">
                 Support
               </Link>

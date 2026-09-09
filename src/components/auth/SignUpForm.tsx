@@ -31,6 +31,7 @@ export function SignUpForm({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [accountType, setAccountType] = useState<"company" | "individual" | null>(null);
   const [orgName, setOrgName] = useState("");
   const [registrationNo, setRegistrationNo] = useState("");
   const [country, setCountry] = useState("");
@@ -59,8 +60,12 @@ export function SignUpForm({
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setMessage("");
-    if (!orgName.trim()) {
-      setMessage("Organisation name is required.");
+    if (!accountType) {
+      setMessage("Choose whether you're registering as a company or an individual.");
+      return;
+    }
+    if (accountType === "company" && !orgName.trim()) {
+      setMessage("Company name is required.");
       return;
     }
     setBusy(true);
@@ -77,9 +82,17 @@ export function SignUpForm({
 
       const userId = signUpData.user?.id;
       if (userId) {
+        // Individuals still get an organisation record behind the scenes — every deal is tied to
+        // an org_id, so this is what keeps the rest of the app (e.g. "Record and continue") from
+        // demanding company details a solo trader was never asked for.
+        const isCompany = accountType === "company";
         const { data: org, error: orgErr } = await supabase
           .from("organisations")
-          .insert({ name: orgName, registration_no: registrationNo, country })
+          .insert({
+            name: isCompany ? orgName : fullName || email,
+            registration_no: isCompany ? registrationNo : null,
+            country,
+          })
           .select()
           .single();
         if (orgErr) throw orgErr;
@@ -207,30 +220,77 @@ export function SignUpForm({
       ) : (
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="org-name">Registered name</Label>
-            <Input
-              id="org-name"
-              value={orgName}
-              onChange={(e) => setOrgName(e.target.value)}
-              required
-            />
+            <Label>Registering as</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setAccountType("company")}
+                className={
+                  "rounded-md border px-3 py-2.5 text-left text-sm transition-colors " +
+                  (accountType === "company"
+                    ? "border-primary bg-primary/10 text-foreground"
+                    : "border-input text-muted-foreground hover:bg-accent")
+                }
+              >
+                <span className="block font-medium">Company</span>
+                <span className="block text-xs text-muted-foreground">Trading as an organisation</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setAccountType("individual")}
+                className={
+                  "rounded-md border px-3 py-2.5 text-left text-sm transition-colors " +
+                  (accountType === "individual"
+                    ? "border-primary bg-primary/10 text-foreground"
+                    : "border-input text-muted-foreground hover:bg-accent")
+                }
+              >
+                <span className="block font-medium">Individual</span>
+                <span className="block text-xs text-muted-foreground">Trading in your own name</span>
+              </button>
+            </div>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="org-reg">Registration number</Label>
-            <Input
-              id="org-reg"
-              value={registrationNo}
-              onChange={(e) => setRegistrationNo(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="org-country">Country of domicile</Label>
-            <Input
-              id="org-country"
-              value={country}
-              onChange={(e) => setCountry(e.target.value)}
-            />
-          </div>
+
+          {accountType === "company" && (
+            <>
+              <div className="space-y-1.5">
+                <Label htmlFor="org-name">Registered name</Label>
+                <Input
+                  id="org-name"
+                  value={orgName}
+                  onChange={(e) => setOrgName(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="org-reg">Registration number</Label>
+                <Input
+                  id="org-reg"
+                  value={registrationNo}
+                  onChange={(e) => setRegistrationNo(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="org-country">Country of domicile</Label>
+                <Input
+                  id="org-country"
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                />
+              </div>
+            </>
+          )}
+
+          {accountType === "individual" && (
+            <div className="space-y-1.5">
+              <Label htmlFor="org-country">Country</Label>
+              <Input
+                id="org-country"
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+              />
+            </div>
+          )}
 
           {message && (
             <p aria-live="polite" className="text-sm text-destructive">

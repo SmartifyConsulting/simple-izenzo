@@ -24,11 +24,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CommoditySearch } from "@/components/CommoditySearch";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { lockReason, stepDef, stepIndex, type StageKey } from "@/lib/spine";
 import { advance, money, recordEvent, when, type Transaction, type TxEvent } from "@/lib/tx";
 import { setCounterpartyShortlist } from "@/lib/izenzo.functions";
+import { CURRENCIES } from "@/lib/currencies";
+import { UNITS } from "@/lib/units";
 import { cn } from "@/lib/utils";
 
 type NodeRef = { stage: StageKey; step: string; label?: string; icon?: typeof Radar };
@@ -701,10 +705,10 @@ export function CanvasStart({ onCreated }: { onCreated: (id: string) => void }) 
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="cs-commodity">Commodity or asset</Label>
-        <Input
+        <CommoditySearch
           id="cs-commodity"
           value={form.commodity}
-          onChange={(e) => setForm({ ...form, commodity: e.target.value })}
+          onChange={(v) => setForm({ ...form, commodity: v })}
         />
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -714,13 +718,25 @@ export function CanvasStart({ onCreated }: { onCreated: (id: string) => void }) 
             id="cs-qty"
             type="number"
             step="any"
+            className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
             value={form.quantity}
             onChange={(e) => setForm({ ...form, quantity: e.target.value })}
           />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="cs-unit">Unit</Label>
-          <Input id="cs-unit" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} />
+          <Select value={form.unit} onValueChange={(v) => setForm({ ...form, unit: v })}>
+            <SelectTrigger id="cs-unit">
+              <SelectValue placeholder="Select a unit" />
+            </SelectTrigger>
+            <SelectContent>
+              {UNITS.map((u) => (
+                <SelectItem key={u} value={u}>
+                  {u}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -736,11 +752,18 @@ export function CanvasStart({ onCreated }: { onCreated: (id: string) => void }) 
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="cs-currency">Currency</Label>
-          <Input
-            id="cs-currency"
-            value={form.currency}
-            onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase() })}
-          />
+          <Select value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })}>
+            <SelectTrigger id="cs-currency">
+              <SelectValue placeholder="Currency" />
+            </SelectTrigger>
+            <SelectContent>
+              {CURRENCIES.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
       <Button type="submit" disabled={busy} className="w-full">

@@ -316,6 +316,16 @@
   background-size: auto, auto, 44px 44px, 44px 44px;
 }
 
+/* The grid lines above are white-on-dark and vanish on light mode's white surfaces — swap them to
+ * a dark line at the same low opacity so the grid stays visible in both themes. */
+[data-theme="light"] .ink-grid {
+  background-image:
+    radial-gradient(900px 520px at 18% 0%, color-mix(in oklab, var(--signal) 12%, transparent), transparent 70%),
+    radial-gradient(760px 480px at 88% 12%, oklch(0.68 0.11 220 / 12%), transparent 72%),
+    linear-gradient(oklch(0 0 0 / 6%) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0 0 0 / 6%) 1px, transparent 1px);
+}
+
 /* Marketing hero keeps the Ink & Aqua dark ground even when the app is in light theme. */
 @utility ink-ground {
   --background: oklch(0.16 0.008 260);

@@ -6,9 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CommoditySearch } from "@/components/CommoditySearch";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { recordEvent } from "@/lib/tx";
+import { CURRENCIES } from "@/lib/currencies";
+import { UNITS } from "@/lib/units";
 
 export const Route = createFileRoute("/_authenticated/transactions/new")({
   head: () => ({
@@ -128,10 +131,10 @@ function NewTransaction() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="commodity">Commodity or asset</Label>
-              <Input
+              <CommoditySearch
                 id="commodity"
                 value={form.commodity}
-                onChange={(e) => setForm({ ...form, commodity: e.target.value })}
+                onChange={(v) => setForm({ ...form, commodity: v })}
               />
             </div>
             <div className="space-y-1.5">
@@ -148,18 +151,25 @@ function NewTransaction() {
                 id="quantity"
                 type="number"
                 step="any"
+                className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 value={form.quantity}
                 onChange={(e) => setForm({ ...form, quantity: e.target.value })}
               />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="unit">Unit</Label>
-              <Input
-                id="unit"
-                placeholder="tonnes"
-                value={form.unit}
-                onChange={(e) => setForm({ ...form, unit: e.target.value })}
-              />
+              <Select value={form.unit} onValueChange={(v) => setForm({ ...form, unit: v })}>
+                <SelectTrigger id="unit">
+                  <SelectValue placeholder="Select a unit" />
+                </SelectTrigger>
+                <SelectContent>
+                  {UNITS.map((u) => (
+                    <SelectItem key={u} value={u}>
+                      {u}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="price">Indicative price</Label>
@@ -173,11 +183,18 @@ function NewTransaction() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="currency">Currency</Label>
-              <Input
-                id="currency"
-                value={form.currency}
-                onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase() })}
-              />
+              <Select value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })}>
+                <SelectTrigger id="currency">
+                  <SelectValue placeholder="Currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CURRENCIES.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="incoterms">Incoterms</Label>

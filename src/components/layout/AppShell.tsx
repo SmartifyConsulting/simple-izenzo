@@ -1,12 +1,18 @@
 import { useEffect, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { Coins, Mail } from "lucide-react";
+import { ChevronDown, Coins, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
 import { SearchButton } from "@/components/layout/SearchButton";
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
 import { SiteFooter } from "@/components/layout/SiteFooter";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { initTheme } from "@/lib/theme";
 
@@ -73,6 +79,22 @@ export function AppShell({
             <Link to="/docs" className="hover:text-foreground">
               API's
             </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center gap-1 outline-none hover:text-foreground">
+                Report
+                <ChevronDown className="h-3.5 w-3.5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem asChild>
+                  <Link to="/trades">All Deals</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/credits" search={{ returnTo: undefined }}>
+                    Token Management
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Link to="/support" className="hover:text-foreground">
               Support
             </Link>

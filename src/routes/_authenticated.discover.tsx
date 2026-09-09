@@ -151,7 +151,19 @@ function Discover() {
     }
   }
 
-  const results = [...dbResults, ...(aiResults ?? [])];
+  /** Combines however many relevance signals a result has (AI/registry match %, live
+   * product-match %) into one score, so the strongest matches for this search sort to the top
+   * instead of just being grouped by source. */
+  function rankScore(r: Result): number {
+    const signals: number[] = [];
+    if (r.matchPct != null) signals.push(r.matchPct);
+    const check = productChecks[r.id];
+    if (check && !check.loading) signals.push(check.matchScore);
+    if (signals.length === 0) return -1;
+    return signals.reduce((a, b) => a + b, 0) / signals.length;
+  }
+
+  const results = [...dbResults, ...(aiResults ?? [])].sort((a, b) => rankScore(b) - rankScore(a));
 
   return (
     <AppShell
