@@ -684,10 +684,6 @@ export function CanvasStart({ onCreated }: { onCreated: (id: string) => void }) 
             <span className="mt-3 block text-[15px] font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary">
               Open a bid or an offer
             </span>
-            <span className="mt-1.5 block text-[12.5px] text-muted-foreground">
-              The canvas draws itself from here: your lane on the left, the counterparty on the
-              right.
-            </span>
           </button>
         </div>
         <Connector />
