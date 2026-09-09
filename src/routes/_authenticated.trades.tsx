@@ -4,7 +4,7 @@ import { TradesListView } from "@/components/trades/TradesListView";
 
 export const Route = createFileRoute("/_authenticated/trades")({
   head: () => ({
-    meta: [{ title: "My Trades — Izenzo" }],
+    meta: [{ title: "All Trades — Izenzo" }],
   }),
   component: MyTrades,
 });
@@ -12,7 +12,7 @@ export const Route = createFileRoute("/_authenticated/trades")({
 function MyTrades() {
   return (
     <AppShell
-      title="My Trades"
+      title="All Trades"
       description="Every trade you have started, from early drafts to sealed agreements."
     >
       <TradesListView />

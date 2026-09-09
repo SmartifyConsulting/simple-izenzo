@@ -51,7 +51,7 @@ export function SiteHeader({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
                   <DropdownMenuItem asChild>
-                    <Link to="/trades">All Deals</Link>
+                    <Link to="/trades">All Trades</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/credits" search={{ returnTo: undefined }}>
