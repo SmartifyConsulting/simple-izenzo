@@ -1040,27 +1040,12 @@ export function CanvasStart({
         currency: form.currency || "USD",
       };
 
-      let { data: newTx, error } = await supabase
+      const { data: newTx, error } = await supabase
         .from("transactions")
-        .insert({
-          ...baseRow,
-          // `reference` isn't in the generated Supabase types yet (added via migration, next
-          // `types.ts` regeneration will pick it up) — same untyped-write pattern already used
-          // for `counterparties.shortlisted`.
-          reference,
-        } as never)
+        .insert({ ...baseRow, reference } as never)
         .select()
         .single();
-      // The `reference` column's migration hasn't reached every environment yet — rather than
-      // losing the whole bid/offer over one missing column, fall back to recording it without a
-      // stored reference (the UI already falls back to a deterministic computed one for display).
-      if (error?.code === "42703") {
-        ({ data: newTx, error } = await supabase
-          .from("transactions")
-          .insert(baseRow as never)
-          .select()
-          .single());
-      }
+
       if (error) throw error;
       if (!newTx) throw new Error("Could not record the bid/offer.");
 
