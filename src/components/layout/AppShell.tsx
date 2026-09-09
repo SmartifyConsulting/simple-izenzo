@@ -1,23 +1,28 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Coins, LayoutGrid, ChevronDown } from "lucide-react";
+import { Coins, LayoutGrid, Moon, Sun, TerminalSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
-import { useLayoutPreference, setLayoutPreference } from "@/lib/layoutPreference";
-import { SidebarShell } from "@/components/layout/SidebarShell";
 import { useModules } from "@/lib/useModules";
-import { WorkspaceSwitcher } from "@/components/layout/WorkspaceSwitcher";
-import { ViewSwitcher } from "@/components/layout/ViewSwitcher";
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
+import { initTheme, useTheme } from "@/lib/theme";
+
+function ThemeToggle() {
+  const [theme, toggle] = useTheme();
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground hover:text-foreground"
+    >
+      {theme === "dark" ? <Sun className="h-4 w-4 text-white" /> : <Moon className="h-4 w-4" />}
+    </button>
+  );
+}
 
 function greeting() {
   const hour = new Date().getHours();
@@ -40,12 +45,12 @@ function ModuleLauncher() {
         className="gap-2 rounded-full border border-border bg-muted px-3"
       >
         <LayoutGrid className="h-4 w-4" />
-        <span className="hidden sm:inline">Modules</span>
+        <span className="hidden sm:inline">Quick Access</span>
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="glass w-[min(760px,94vw)] p-6 sm:max-w-[min(760px,94vw)]">
-          <DialogTitle className="text-base tracking-tight">Open a module</DialogTitle>
+          <DialogTitle className="text-base tracking-tight">Quick Access</DialogTitle>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             {modules.map((m) => {
               const active = pathname.startsWith(m.to);
@@ -74,19 +79,8 @@ function ModuleLauncher() {
   );
 }
 
-export function AppShell(props: {
-  title?: string;
-  description?: string;
-  actions?: ReactNode;
-  children: ReactNode;
-  wide?: boolean;
-}) {
-  const [layout] = useLayoutPreference();
-  if (layout === "sidebar") return <SidebarShell {...props} />;
-  return <ClassicShell {...props} />;
-}
-
-function ClassicShell({
+/** Classic is the app's one committed view — no layout or view selector, just this shell. */
+export function AppShell({
   title,
   description,
   actions,
@@ -103,6 +97,10 @@ function ClassicShell({
   const firstName = (profile?.full_name ?? profile?.email ?? "").split(/[\s@]/)[0];
   const width = wide ? "max-w-[1680px]" : "max-w-7xl";
 
+  useEffect(() => {
+    initTheme();
+  }, []);
+
   return (
     <div className="ink-grid min-h-screen bg-background">
       <header className="sticky top-0 z-30 border-b border-border bg-background/70 backdrop-blur-xl">
@@ -111,8 +109,13 @@ function ClassicShell({
             <Logo onDark className="h-7 w-auto" />
           </Link>
           <ModuleLauncher />
-          <WorkspaceSwitcher current={org?.name ?? "Trade Desk"} variant="compact" />
-          <ViewSwitcher variant="compact" />
+          <Link
+            to="/developer/keys"
+            className="flex shrink-0 items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground"
+          >
+            <TerminalSquare className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Developer Centre</span>
+          </Link>
           <div className="min-w-0 flex-1" />
           {org && (
             <Link
@@ -123,19 +126,7 @@ function ClassicShell({
               {org.credits} token{org.credits === 1 ? "" : "s"}
             </Link>
           )}
-          <DropdownMenu>
-            <DropdownMenuTrigger className="hidden shrink-0 items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground outline-none hover:text-foreground sm:flex">
-              Layout <ChevronDown className="h-3 w-3" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setLayoutPreference("classic")}>
-                Classic top header (this one)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setLayoutPreference("sidebar")}>
-                Sidebar
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <ThemeToggle />
           <ProfileAvatarMenu />
         </div>
       </header>

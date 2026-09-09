@@ -34,7 +34,6 @@ import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated.
 import { Route as AuthenticatedRegistryRouteImport } from './routes/_authenticated.registry'
 import { Route as AuthenticatedSupportRouteImport } from './routes/_authenticated.support'
 import { Route as AuthenticatedTradesRouteImport } from './routes/_authenticated.trades'
-import { Route as AuthenticatedWorkflowRouteImport } from './routes/_authenticated.workflow'
 import { Route as DocsApiRouteImport } from './routes/docs.api'
 import { Route as DocsWebhooksRouteImport } from './routes/docs.webhooks'
 import { Route as ProductsAuditLedgerRouteImport } from './routes/products.audit-ledger'
@@ -184,11 +183,6 @@ const AuthenticatedSupportRoute = AuthenticatedSupportRouteImport.update({
 const AuthenticatedTradesRoute = AuthenticatedTradesRouteImport.update({
   id: '/trades',
   path: '/trades',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedWorkflowRoute = AuthenticatedWorkflowRouteImport.update({
-  id: '/workflow',
-  path: '/workflow',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const DocsApiRoute = DocsApiRouteImport.update({
@@ -359,7 +353,6 @@ export interface FileRoutesByFullPath {
   '/registry': typeof AuthenticatedRegistryRoute
   '/support': typeof AuthenticatedSupportRoute
   '/trades': typeof AuthenticatedTradesRoute
-  '/workflow': typeof AuthenticatedWorkflowRoute
   '/docs/api': typeof DocsApiRoute
   '/docs/webhooks': typeof DocsWebhooksRoute
   '/products/audit-ledger': typeof ProductsAuditLedgerRoute
@@ -411,7 +404,6 @@ export interface FileRoutesByTo {
   '/registry': typeof AuthenticatedRegistryRoute
   '/support': typeof AuthenticatedSupportRoute
   '/trades': typeof AuthenticatedTradesRoute
-  '/workflow': typeof AuthenticatedWorkflowRoute
   '/docs/api': typeof DocsApiRoute
   '/docs/webhooks': typeof DocsWebhooksRoute
   '/products/audit-ledger': typeof ProductsAuditLedgerRoute
@@ -465,7 +457,6 @@ export interface FileRoutesById {
   '/_authenticated/registry': typeof AuthenticatedRegistryRoute
   '/_authenticated/support': typeof AuthenticatedSupportRoute
   '/_authenticated/trades': typeof AuthenticatedTradesRoute
-  '/_authenticated/workflow': typeof AuthenticatedWorkflowRoute
   '/docs/api': typeof DocsApiRoute
   '/docs/webhooks': typeof DocsWebhooksRoute
   '/products/audit-ledger': typeof ProductsAuditLedgerRoute
@@ -519,7 +510,6 @@ export interface FileRouteTypes {
     | '/registry'
     | '/support'
     | '/trades'
-    | '/workflow'
     | '/docs/api'
     | '/docs/webhooks'
     | '/products/audit-ledger'
@@ -571,7 +561,6 @@ export interface FileRouteTypes {
     | '/registry'
     | '/support'
     | '/trades'
-    | '/workflow'
     | '/docs/api'
     | '/docs/webhooks'
     | '/products/audit-ledger'
@@ -624,7 +613,6 @@ export interface FileRouteTypes {
     | '/_authenticated/registry'
     | '/_authenticated/support'
     | '/_authenticated/trades'
-    | '/_authenticated/workflow'
     | '/docs/api'
     | '/docs/webhooks'
     | '/products/audit-ledger'
@@ -850,13 +838,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTradesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/workflow': {
-      id: '/_authenticated/workflow'
-      path: '/workflow'
-      fullPath: '/workflow'
-      preLoaderRoute: typeof AuthenticatedWorkflowRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/docs/api': {
       id: '/docs/api'
       path: '/api'
@@ -1049,7 +1030,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedRegistryRoute: typeof AuthenticatedRegistryRoute
   AuthenticatedSupportRoute: typeof AuthenticatedSupportRoute
   AuthenticatedTradesRoute: typeof AuthenticatedTradesRoute
-  AuthenticatedWorkflowRoute: typeof AuthenticatedWorkflowRoute
   AuthenticatedAccountBillingRoute: typeof AuthenticatedAccountBillingRoute
   AuthenticatedAccountSettingsRoute: typeof AuthenticatedAccountSettingsRoute
   AuthenticatedDealIdRoute: typeof AuthenticatedDealIdRoute
@@ -1083,7 +1063,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedRegistryRoute: AuthenticatedRegistryRoute,
   AuthenticatedSupportRoute: AuthenticatedSupportRoute,
   AuthenticatedTradesRoute: AuthenticatedTradesRoute,
-  AuthenticatedWorkflowRoute: AuthenticatedWorkflowRoute,
   AuthenticatedAccountBillingRoute: AuthenticatedAccountBillingRoute,
   AuthenticatedAccountSettingsRoute: AuthenticatedAccountSettingsRoute,
   AuthenticatedDealIdRoute: AuthenticatedDealIdRoute,

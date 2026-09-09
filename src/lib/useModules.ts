@@ -8,6 +8,7 @@ import {
   LifeBuoy,
   ShieldAlert,
   Banknote,
+  TerminalSquare,
   type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
@@ -19,6 +20,7 @@ export type ModuleTo =
   | "/registry"
   | "/facilitation"
   | "/support"
+  | "/developer/keys"
   | "/auditor"
   | "/funder"
   | "/admin";
@@ -45,6 +47,7 @@ export function useModules(): ModuleDef[] {
       blurb: "Find and surface a party",
     },
     { to: "/support", label: "Support", icon: LifeBuoy, blurb: "Talk to us" },
+    { to: "/developer/keys", label: "Developer Centre", icon: TerminalSquare, blurb: "Keys, webhooks, schema" },
   ];
   if (isFunder)
     modules.push({ to: "/funder", label: "Funder", icon: Banknote, blurb: "Funding positions" });

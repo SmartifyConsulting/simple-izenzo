@@ -50,15 +50,11 @@ export function DealCanvas({
   reload,
   deals,
   onSelectDeal,
-  gridTheme = "light",
 }: {
   tx: Transaction;
   reload: () => void;
   deals?: Transaction[];
   onSelectDeal?: (id: string) => void;
-  /** "none" for a clean flowchart with no grid backdrop (Workflow View); "light" (default) is
-   * the original look, unchanged everywhere else. */
-  gridTheme?: "none" | "light";
 }) {
   const [panel, setPanel] = useState<{ stage: StageKey; step: string } | null>(null);
   const [direction, setDirection] = useState<"bid" | "offer" | null>(null);
@@ -112,12 +108,7 @@ export function DealCanvas({
   );
 
   return (
-    <div
-      className={cn(
-        "relative rounded-3xl border border-border p-4 sm:p-7",
-        gridTheme === "light" && "ink-grid",
-      )}
-    >
+    <div className="ink-grid relative rounded-3xl border border-border p-4 sm:p-7">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
           <p className="label-caps">Live deal canvas</p>

@@ -1,15 +1,13 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, LayoutGrid, List } from "lucide-react";
+import { Plus } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
 import { CanvasStart, DealCanvas } from "@/components/canvas/DealCanvas";
-import { TradesListView } from "@/components/trades/TradesListView";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import type { Transaction } from "@/lib/tx";
-import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -26,7 +24,6 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 function Dashboard() {
   const { org } = useAuth();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [view, setView] = useState<"canvas" | "list">("canvas");
 
   const { data: txs = [], isLoading, refetch } = useQuery({
     queryKey: ["transactions", org?.id],
@@ -52,61 +49,33 @@ function Dashboard() {
     <AppShell
       wide
       actions={
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 rounded-md border border-border p-1">
-            <button
-              onClick={() => setView("canvas")}
-              className={cn(
-                "flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors",
-                view === "canvas" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <LayoutGrid className="h-3.5 w-3.5" /> Canvas
-            </button>
-            <button
-              onClick={() => setView("list")}
-              className={cn(
-                "flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors",
-                view === "list" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <List className="h-3.5 w-3.5" /> Menu
-            </button>
-          </div>
-          <Link to="/transactions/new">
-            <Button size="sm" variant="ghost" className="gap-2">
-              <Plus className="h-3.5 w-3.5" /> New bid or offer
-            </Button>
-          </Link>
-        </div>
+        <Link to="/transactions/new">
+          <Button size="sm" variant="ghost" className="gap-2">
+            <Plus className="h-3.5 w-3.5" /> New bid or offer
+          </Button>
+        </Link>
       }
     >
-      {view === "list" ? (
-        <TradesListView />
-      ) : (
-        <>
-          {isLoading && <p className="text-sm text-muted-foreground">Opening the canvas…</p>}
+      {isLoading && <p className="text-sm text-muted-foreground">Opening the canvas…</p>}
 
-          {!isLoading && !activeTx && (
-            <CanvasStart
-              onCreated={(id) => {
-                setSelectedId(id);
-                void refetch();
-              }}
-            />
-          )}
+      {!isLoading && !activeTx && (
+        <CanvasStart
+          onCreated={(id) => {
+            setSelectedId(id);
+            void refetch();
+          }}
+        />
+      )}
 
-          {activeTx && (
-            <DealCanvas
-              tx={activeTx}
-              deals={txs}
-              onSelectDeal={setSelectedId}
-              reload={() => {
-                void refetch();
-              }}
-            />
-          )}
-        </>
+      {activeTx && (
+        <DealCanvas
+          tx={activeTx}
+          deals={txs}
+          onSelectDeal={setSelectedId}
+          reload={() => {
+            void refetch();
+          }}
+        />
       )}
     </AppShell>
   );
