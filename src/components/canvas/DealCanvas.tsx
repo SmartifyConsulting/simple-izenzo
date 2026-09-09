@@ -65,7 +65,9 @@ export const FLOWCHART_PREVIEW_TX: Transaction = {
   intent_confirmed_at: new Date(0).toISOString(),
   poi_sealed_at: new Date(0).toISOString(),
   poi_hash: "preview",
-  wad_completed_at: new Date(0).toISOString(),
+  // Left uncleared on purpose — with everything else cleared, this is the one place the preview
+  // demonstrates the "<gate> to be cleared" wording rather than only ever showing "cleared".
+  wad_completed_at: null,
   finality_sealed_at: new Date(0).toISOString(),
   created_at: new Date(0).toISOString(),
 };
@@ -167,13 +169,15 @@ export function DealCanvas({
 
   return (
     <div className="ink-grid relative rounded-3xl border border-border p-4 sm:p-7">
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0">
-          <p className="label-caps">Live deal engine</p>
-          <h2 className="mt-1 truncate text-xl font-semibold tracking-tight">{tx.title}</h2>
+      {!readOnly && (
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div className="min-w-0">
+            <p className="label-caps">Live deal engine</p>
+            <h2 className="mt-1 truncate text-xl font-semibold tracking-tight">{tx.title}</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">{money(tx.price, tx.currency)}</p>
         </div>
-        <p className="text-sm text-muted-foreground">{money(tx.price, tx.currency)}</p>
-      </div>
+      )}
 
       {deals && deals.length > 1 && onSelectDeal && (
         <DealTicker deals={deals} currentId={tx.id} onSelectDeal={onSelectDeal} />
@@ -222,6 +226,22 @@ export function DealCanvas({
                   examples={OFFER_EXAMPLES}
                 />
               </div>
+            )}
+          </div>
+        </div>
+      ) : readOnly ? (
+        // Preview: collapse the Bid/Offer + Deal documents pair into one summary node per side.
+        <div className="mt-3 grid grid-cols-2 gap-4 sm:gap-8">
+          <div className="space-y-3" style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
+            {node(
+              { stage: "trading", step: "bid-offer", label: "Submit a Bid", icon: ArrowLeftRight },
+              { side: "left", delay: 0 },
+            )}
+          </div>
+          <div className="ml-auto space-y-3" style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
+            {node(
+              { stage: "trading", step: "bid-offer", label: "Submit an Offer", icon: ArrowLeftRight },
+              { side: "right", delay: 45 },
             )}
           </div>
         </div>
@@ -668,9 +688,21 @@ function GateGroup({
  * and Offer frames inline — nothing else on the flowchart shows until one of them is opened and
  * completed, at which point the parent (given the new transaction id) switches to the real
  * DealCanvas, which then reveals its own next frame the same way. */
-export function CanvasStart({ onCreated }: { onCreated: (id: string) => void }) {
+export function CanvasStart({
+  onCreated,
+  onPickingChange,
+}: {
+  onCreated: (id: string) => void;
+  /** Fires whenever picking starts/stops, so the caller can hide anything that would look like a
+   * duplicate of this card (e.g. the read-only flowchart preview) while it's active. */
+  onPickingChange?: (picking: boolean) => void;
+}) {
   const { org, user, profile, refresh } = useAuth();
-  const [picking, setPicking] = useState(false);
+  const [picking, setPickingState] = useState(false);
+  const setPicking = (v: boolean) => {
+    setPickingState(v);
+    onPickingChange?.(v);
+  };
   const [direction, setDirection] = useState<"bid" | "offer" | null>(null);
   const [form, setForm] = useState({ title: "", commodity: "", quantity: "", unit: "", price: "", currency: "USD" });
   const [busy, setBusy] = useState(false);
@@ -733,27 +765,49 @@ export function CanvasStart({ onCreated }: { onCreated: (id: string) => void }) 
     }
   }
 
+  const startNode = (
+    <div className="mx-auto max-w-md">
+      <button
+        type="button"
+        onClick={() => {
+          if (picking) {
+            // Clicking the start node again resets back to the beginning.
+            setPicking(false);
+            setDirection(null);
+          } else {
+            setPicking(true);
+          }
+        }}
+        className="group block w-full animate-node-rise px-6 py-5 text-center"
+      >
+        <span
+          className={cn(
+            "mx-auto flex h-10 w-10 items-center justify-center rounded-full border border-primary text-primary transition-transform",
+            picking ? "bg-primary/20" : "bg-primary/20 group-hover:scale-105",
+          )}
+        >
+          <ArrowLeftRight className="h-4.5 w-4.5" />
+        </span>
+        <span
+          className={cn(
+            "mt-3 block text-[15px] font-semibold tracking-tight text-foreground transition-colors",
+            !picking && "group-hover:text-primary",
+          )}
+        >
+          Open a bid or an offer
+        </span>
+        <span className="mt-1 block text-[12.5px] font-medium text-muted-foreground">
+          Bids to the left, Offers to the right.
+        </span>
+      </button>
+    </div>
+  );
+
   if (!picking) {
     return (
       <div className="ink-grid relative rounded-3xl border border-border p-6 sm:p-10">
         <p className="label-caps text-center">Live deal engine</p>
-        <div className="mx-auto mt-6 max-w-md">
-          <button
-            type="button"
-            onClick={() => setPicking(true)}
-            className="group block w-full animate-node-rise px-6 py-5 text-center"
-          >
-            <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full border border-primary bg-primary/20 text-primary transition-transform group-hover:scale-105">
-              <ArrowLeftRight className="h-4.5 w-4.5" />
-            </span>
-            <span className="mt-3 block text-[15px] font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary">
-              Open a bid or an offer
-            </span>
-            <span className="mt-1 block text-[12.5px] font-medium text-muted-foreground">
-              Bids to the left, Offers to the right.
-            </span>
-          </button>
-        </div>
+        <div className="mt-6">{startNode}</div>
         <Connector />
         <p className="text-center text-[11.5px] text-muted-foreground">
           Matching · Proof of Intent · Without a Doubt · Execution · Finality
@@ -844,72 +898,77 @@ export function CanvasStart({ onCreated }: { onCreated: (id: string) => void }) 
   );
 
   return (
-    <div className="ink-grid relative rounded-3xl border border-border p-4 sm:p-7">
-      <p className="label-caps mb-4">Live deal engine</p>
+    <>
+      <div className="ink-grid relative rounded-3xl border border-border p-6 sm:p-10">
+        <p className="label-caps text-center">Live deal engine</p>
+        <div className="mt-6">{startNode}</div>
+      </div>
+      <div className="ink-grid relative mt-6 rounded-3xl border border-border p-4 sm:p-7">
       <div className="grid grid-cols-2 gap-4 sm:gap-8">
-        <LaneHeader label="Bidder" side="left" />
-        <LaneHeader label="Responder" side="right" />
+        {direction !== "offer" && <LaneHeader label="Bidder" side="left" />}
+        {direction !== "bid" && <LaneHeader label="Responder" side="right" />}
       </div>
       <div className="mt-3 grid grid-cols-2 gap-4 sm:gap-8">
-        <div className="space-y-3">
-          {direction === "offer" ? (
-            <SelectionRecord />
-          ) : direction === "bid" ? (
-            <div className="glass-node animate-node-rise p-5 sm:p-6">
-              <div className="mb-4 flex items-start justify-between gap-4">
-                <p className="text-base font-semibold tracking-tight">Submit a Bid</p>
-                <button
-                  type="button"
-                  onClick={() => setDirection(null)}
-                  className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+        {direction !== "offer" && (
+          <div className="space-y-3">
+            {direction === "bid" ? (
+              <div className="glass-node animate-node-rise p-5 sm:p-6">
+                <div className="mb-4 flex items-start justify-between gap-4">
+                  <p className="text-base font-semibold tracking-tight">Submit a Bid</p>
+                  <button
+                    type="button"
+                    onClick={() => setDirection(null)}
+                    className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                {form_}
               </div>
-              {form_}
-            </div>
-          ) : (
-            <div style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
-              <PickButton
-                label="Bid"
-                blurb="Record the opening bid and its terms."
-                side="left"
-                onClick={() => setDirection("bid")}
-                examples={BID_EXAMPLES}
-              />
-            </div>
-          )}
-        </div>
-        <div className="space-y-3">
-          {direction === "bid" ? (
-            <SelectionRecord />
-          ) : direction === "offer" ? (
-            <div className="glass-node animate-node-rise p-5 sm:p-6">
-              <div className="mb-4 flex items-start justify-between gap-4">
-                <p className="text-base font-semibold tracking-tight">Submit an Offer</p>
-                <button
-                  type="button"
-                  onClick={() => setDirection(null)}
-                  className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+            ) : (
+              <div style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
+                <PickButton
+                  label="Bid"
+                  blurb="Record the opening bid and its terms."
+                  side="left"
+                  onClick={() => setDirection("bid")}
+                  examples={BID_EXAMPLES}
+                />
               </div>
-              {form_}
-            </div>
-          ) : (
-            <div className="ml-auto" style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
-              <PickButton
-                label="Offer"
-                blurb="Record the opening offer and its terms."
-                side="right"
-                onClick={() => setDirection("offer")}
-                examples={OFFER_EXAMPLES}
-              />
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
+        {direction !== "bid" && (
+          <div className="space-y-3">
+            {direction === "offer" ? (
+              <div className="glass-node animate-node-rise p-5 sm:p-6">
+                <div className="mb-4 flex items-start justify-between gap-4">
+                  <p className="text-base font-semibold tracking-tight">Submit an Offer</p>
+                  <button
+                    type="button"
+                    onClick={() => setDirection(null)}
+                    className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                {form_}
+              </div>
+            ) : (
+              <div className="ml-auto" style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
+                <PickButton
+                  label="Offer"
+                  blurb="Record the opening offer and its terms."
+                  side="right"
+                  onClick={() => setDirection("offer")}
+                  examples={OFFER_EXAMPLES}
+                />
+              </div>
+            )}
+          </div>
+        )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }
