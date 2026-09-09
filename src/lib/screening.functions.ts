@@ -10,7 +10,10 @@ export type ScreeningCheck = {
   detail: string;
   /** Hosted Didit link, when the provider returned one. */
   url?: string;
+  /** The stored verification row, so the UI can follow this check to its result. */
+  verificationId?: string;
 };
+
 
 export type ScreeningResult = {
   counterpartyId: string;
