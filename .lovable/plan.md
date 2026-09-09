@@ -36,9 +36,16 @@ After this change:
 - For a file with no stored copy, the icons appear greyed out with a short tooltip explaining the file was recorded before uploads were kept, so the row never looks broken.
 - The same icon pair is applied to the attachment list on the Documents step so both places behave alike.
 
+## 5. One Bid/Offer ID, inside the Live Workspace
+
+- The Bid/Offer ID currently printed in the page header, above the canvas, is removed.
+- The badge in the top-right corner of the Live Workspace becomes bold white text, so it reads as the single, clear deal identifier.
+
+
 ## Technical notes
 
 - `GateBar` in `src/components/canvas/CanvasNode.tsx`: cleared state moves from `primary` tones to emerald tones; the folded POI/WaD blocks in `src/components/canvas/DealCanvas.tsx` render a cleared `GateBar` in place of the muted `label-caps` heading.
 - New handler in `src/routes/_authenticated.live-deal-engine.tsx`: reset `counterparties.status` from `chosen` to `screened` with `chosen_at` nulled, null `transactions.intent_confirmed_at`, `advance(tx, "trading", "media")`, `recordEvent` action `counterparty_choice_reopened`, then `setStagePanel(null)`. Button is passed into `InlineFrame`/`StepScreen` for the `intent` and `poi` steps, hidden when `poi_sealed_at` is set.
 - `DealCanvas` screening block: keep `screeningProgress` rendered after completion (do not clear it on finish), swap the fill class to `bg-info` to match the note badge, keep `bg-destructive` for failures.
 - Attachment rows in `_authenticated.live-deal-engine.tsx` (and the documents list in `StepScreen.tsx`): render the `Eye`/`Download` buttons unconditionally, disabled with a tooltip when `storage_path` is null.
+- Remove the `actions={activity && ...reference}` header prop from both `AppShell` returns in `_authenticated.live-deal-engine.tsx`; restyle the Live Workspace reference badge to bold white text.
