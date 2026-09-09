@@ -203,6 +203,14 @@ export function DealCanvas({
   const [direction, setDirection] = useState<"bid" | "offer" | null>(null);
   const stateOf = useNodeState(tx);
 
+  // Match count for the bar under Counterparties — read straight from the candidate list the
+  // Record panel already keeps in cache, so this never fires a second request of its own.
+  const { data: cachedCandidates } = useQuery<CounterpartyCandidate[]>({
+    queryKey: ["counterparties", tx.id],
+    enabled: false,
+  });
+  const matchCount = cachedCandidates?.length ?? 0;
+
   // Which side placed the bid vs offer — read from the record itself (not just local `direction`
   // state, which resets on reload) so the results panel mirrors correctly at every step.
   const { data: recordedDirection } = useQuery({
@@ -448,7 +456,34 @@ export function DealCanvas({
             forceOpen={Boolean(openProofOfIntent)}
           >
             <div className={cn(stepsBoxClass, "space-y-3")}>
-              {node({ stage: "trading", step: "counterparties", icon: Users }, { side: "center" })}
+              <div>
+                {node({ stage: "trading", step: "counterparties", icon: Users }, { side: "center" })}
+                {matchProgress && (
+                  <div className="mt-1.5 space-y-1">
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all duration-500",
+                          matchProgress.searching
+                            ? "w-1/2 animate-ribbon-sweep bg-primary"
+                            : matchProgress.error
+                              ? "w-full bg-destructive"
+                              : "w-full bg-emerald-500",
+                        )}
+                      />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      {matchProgress.searching
+                        ? "Searching for counterparties…"
+                        : matchProgress.error
+                          ? `Search could not finish: ${matchProgress.error}`
+                          : matchCount > 0
+                            ? `Search complete — ${matchCount} match${matchCount === 1 ? "" : "es"} found`
+                            : "Search complete — no matches found"}
+                    </p>
+                  </div>
+                )}
+              </div>
               {visible("trading", "choice") &&
                 node({ stage: "trading", step: "choice", icon: MousePointerClick }, { side: "center" })}
               {visible("trading", "media") && (
