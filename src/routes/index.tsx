@@ -154,3 +154,32 @@ function Landing() {
     </div>
   );
 }
+
+/** One of the two hero lanes: Bidder on the left, Responder on the right. */
+function HeroFrame({
+  side,
+  title,
+  body,
+  cta,
+  next,
+}: {
+  side: string;
+  title: string;
+  body: string;
+  cta: string;
+  next: string;
+}) {
+  return (
+    <div className="glass-panel relative overflow-hidden rounded-2xl border border-border bg-card/60 p-6 backdrop-blur-xl transition-transform hover:-translate-y-0.5">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-primary">{side}</span>
+      <h2 className="mt-3 text-2xl font-semibold tracking-tight text-foreground">{title}</h2>
+      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{body}</p>
+      <Link to="/auth" search={{ mode: "signup", next }} className="mt-6 inline-block">
+        <Button className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90">
+          {cta} <ArrowRight className="h-4 w-4" />
+        </Button>
+      </Link>
+    </div>
+  );
+}
+
