@@ -27,7 +27,7 @@ export const Route = createFileRoute("/_authenticated/live-deal-engine")({
       { property: "og:description", content: "Your live deal canvas on the Izenzo Trading Gateway." },
     ],
   }),
-  component: Dashboard,
+  component: LiveDealEngine,
 });
 
 type Attachment = { name: string; kind: "ID front" | "ID back" | "Document" };
@@ -113,9 +113,9 @@ function FileField({
   );
 }
 
-/** The dashboard is the one screen users work from — the workflow canvas itself, never a
+/** The Live Deal Engine is the one screen users work from — the workflow canvas itself, never a
  * separate per-deal detail page. */
-function Dashboard() {
+function LiveDealEngine() {
   const [picking, setPicking] = useState(false);
   const [direction, setDirection] = useState<"bid" | "offer" | null>(null);
   const [activity, setActivity] = useState<RecordedActivity | null>(null);
