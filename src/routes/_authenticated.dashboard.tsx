@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/layout/AppShell";
 import { CanvasStart, DealCanvas, FLOWCHART_PREVIEW_TX } from "@/components/canvas/DealCanvas";
+import { cn } from "@/lib/utils";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -52,7 +53,15 @@ function Dashboard() {
       {isLoading && <p className="text-sm text-muted-foreground">Opening the canvas…</p>}
 
       {!isLoading && (!activeTx || showWorkflow) && (
-        <>
+        <div
+          className={cn(
+            // Once a direction is picked, the form and its next steps merge into one bordered,
+            // gridded frame confined to that side's half of the screen — the other half is left
+            // for match results once search runs.
+            direction && "w-full rounded-3xl border border-border p-3 ink-grid sm:w-1/2 sm:p-5",
+            direction === "offer" && "ml-auto",
+          )}
+        >
           <CanvasStart
             onCreated={(id) => {
               setSelectedId(id);
@@ -62,7 +71,7 @@ function Dashboard() {
             onPickingChange={setPicking}
             onDirectionChange={setDirection}
           />
-          <div className="mt-4">
+          <div className={direction ? "mt-3" : "mt-4"}>
             <DealCanvas
               tx={FLOWCHART_PREVIEW_TX}
               reload={() => {}}
@@ -71,7 +80,7 @@ function Dashboard() {
               focusSide={direction}
             />
           </div>
-        </>
+        </div>
       )}
 
       {activeTx && !showWorkflow && (

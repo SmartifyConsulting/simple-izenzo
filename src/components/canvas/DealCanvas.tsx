@@ -219,12 +219,17 @@ export function DealCanvas({
         </div>
       )}
       {hideBidOfferGroups && (
-        <div className="mt-1 grid grid-cols-2 gap-4 sm:gap-8">
+        <div className={cn("mt-1", !focusSide && "grid grid-cols-2 gap-4 sm:gap-8")}>
           {focusSide !== "offer" && (
             <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-white">Next steps</p>
           )}
           {focusSide !== "bid" && (
-            <p className="text-right text-[10.5px] font-semibold uppercase tracking-[0.12em] text-white">
+            <p
+              className={cn(
+                "text-[10.5px] font-semibold uppercase tracking-[0.12em] text-white",
+                (focusSide === "offer" || !focusSide) && "text-right",
+              )}
+            >
               Next steps
             </p>
           )}
@@ -339,7 +344,7 @@ export function DealCanvas({
       {visible("trading", "counterparties") && (
         <>
           <Connector />
-          <GateGroup title="Proof of Intent">
+          <GateGroup title="Proof of Intent" align={focusSide === "offer" ? "right" : "left"}>
             <div className={cn(stepsBoxClass, "space-y-3")}>
               {node({ stage: "trading", step: "counterparties", icon: Users }, { side: "center" })}
               {visible("trading", "choice") &&
@@ -363,7 +368,7 @@ export function DealCanvas({
       )}
 
       {visible("compliance", "wad") && (
-        <GateGroup title="Without a Doubt">
+        <GateGroup title="Without a Doubt" align={focusSide === "offer" ? "right" : "left"}>
           <div className={stepsBoxClass}>
             {node(
               { stage: "compliance", step: "wad", icon: ShieldCheck },
@@ -375,7 +380,7 @@ export function DealCanvas({
       )}
 
       {executionItems.length > 0 && (
-        <GateGroup title="Execution">
+        <GateGroup title="Execution" align={focusSide === "offer" ? "right" : "left"}>
           <div className={cn("grid gap-3", focusSide ? cn("grid-cols-1", stepsBoxClass) : "sm:grid-cols-3")}>
             {executionItems.map((s) => node({ stage: "execution", step: s, icon: Hammer }, { compact: true }))}
           </div>
@@ -383,7 +388,7 @@ export function DealCanvas({
       )}
 
       {finalityItems.length > 0 && (
-        <GateGroup title="Finality">
+        <GateGroup title="Finality" align={focusSide === "offer" ? "right" : "left"}>
           <div className={cn("grid gap-3", focusSide ? cn("grid-cols-1", stepsBoxClass) : "sm:grid-cols-3")}>
             {finalityItems.map((s) => node({ stage: "finality", step: s, icon: Landmark }, { compact: true }))}
           </div>
@@ -391,7 +396,7 @@ export function DealCanvas({
       )}
 
       {visible("memory", "ledger") && (
-        <GateGroup title="Memory">
+        <GateGroup title="Memory" align={focusSide === "offer" ? "right" : "left"}>
           <div className={stepsBoxClass}>
             {node({ stage: "memory", step: "ledger", icon: BookLock }, { side: "center" })}
           </div>
@@ -629,14 +634,18 @@ function GateGroup({
   title,
   children,
   defaultOpen = false,
+  align = "left",
 }: {
   title: string;
   children: React.ReactNode;
   defaultOpen?: boolean;
+  /** "right" mirrors the whole group — brace, title, and steps — onto the right edge, for use
+   * once the canvas is focused on the Responder side. */
+  align?: "left" | "right";
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="mt-3 flex items-start gap-3">
+    <div className={cn("mt-3 flex items-start gap-3", align === "right" && "flex-row-reverse")}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}

@@ -110,7 +110,7 @@ export function GateBar({ label, cleared }: { label: string; cleared: boolean })
           "rounded-full border px-3 py-1 text-[10.5px] font-semibold uppercase tracking-[0.12em]",
           cleared
             ? "border-primary/50 bg-primary/12 text-primary"
-            : "border-[#E2725B]/50 bg-[#E2725B]/12 text-[#E2725B]",
+            : "border-[#F97316]/50 bg-[#F97316]/12 text-[#F97316]",
         )}
       >
         {cleared ? `${label} · cleared` : `${label} to be cleared`}
