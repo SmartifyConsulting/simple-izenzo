@@ -13,6 +13,7 @@ import {
   FLOWCHART_PREVIEW_TX,
   type RecordedActivity,
 } from "@/components/canvas/DealCanvas";
+import { TradeSummary } from "@/components/canvas/TradeSummary";
 
 import { MahjongView } from "@/components/canvas/MahjongView";
 import { Button } from "@/components/ui/button";
