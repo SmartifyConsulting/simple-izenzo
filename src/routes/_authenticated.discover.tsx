@@ -26,7 +26,7 @@ type Result = {
   name: string;
   detail: string;
   source: "registry" | "ai" | "ai_plus" | "web";
-  matchPct?: number;
+  matchPct?: number | undefined;
 };
 
 function Discover() {
