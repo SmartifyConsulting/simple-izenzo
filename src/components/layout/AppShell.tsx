@@ -135,10 +135,16 @@ export function AppShell({
           <Link
             to="/inbox"
             title="Inbox"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-foreground/80 transition-colors hover:text-primary"
+            className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-foreground/80 transition-colors hover:text-primary"
           >
             <Mail className="h-5 w-5" strokeWidth={2.25} />
+            {unread > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                {unread}
+              </span>
+            )}
           </Link>
+
           <ProfileAvatarMenu />
         </div>
       </header>
