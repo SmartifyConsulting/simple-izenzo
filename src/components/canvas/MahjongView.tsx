@@ -41,8 +41,11 @@ const PITCH = 72; // vertical distance from one row's top to the next
 const CENTER_W = 310; // shared width for the center-column nodes, matched to Choice
 const SIDE_W = 220;
 const TOP_Y = 20;
+// Extra vertical room between the Step 1 and Step 2 frames — without it the two frames' borders
+// (and Step 2's "Step 2 · Compliance & Governance" label, which sits above its own frame) overlap.
+const STEP2_GAP_EXTRA = 34;
 // A little breathing room before the three parallel branches split off from KYC/KYB.
-const BRANCH_Y = TOP_Y + PITCH * 6 + 58;
+const BRANCH_Y = TOP_Y + PITCH * 6 + 58 + STEP2_GAP_EXTRA;
 
 const GROUP_PAD = 18;
 // Used where two frames sit close together (Step 1 above Step 2), so their borders don't overlap.
@@ -83,9 +86,9 @@ const BOXES = {
   surfaceRoutes: { x: 860, y: TOP_Y + PITCH * 2, w: SIDE_W, h: ROW },
   choice: { x: 470, y: TOP_Y + PITCH * 2, w: CENTER_W, h: ROW },
 
-  poi: { x: 470, y: TOP_Y + PITCH * 3, w: CENTER_W, h: ROW },
-  wad: { x: 470, y: TOP_Y + PITCH * 4, w: CENTER_W, h: ROW },
-  kyc: { x: 470, y: TOP_Y + PITCH * 5, w: CENTER_W, h: ROW },
+  poi: { x: 470, y: TOP_Y + PITCH * 3 + STEP2_GAP_EXTRA, w: CENTER_W, h: ROW },
+  wad: { x: 470, y: TOP_Y + PITCH * 4 + STEP2_GAP_EXTRA, w: CENTER_W, h: ROW },
+  kyc: { x: 470, y: TOP_Y + PITCH * 5 + STEP2_GAP_EXTRA, w: CENTER_W, h: ROW },
 
   projectPrep: { x: S3_L, y: BRANCH_Y, w: PREP_W, h: ROW },
   execution: { x: S3_R - EXEC_W, y: BRANCH_Y, w: EXEC_W, h: ROW },
