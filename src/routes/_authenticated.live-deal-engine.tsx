@@ -633,10 +633,7 @@ function LiveDealEngine() {
 
   if (viewMode === "mahjong") {
     return (
-      <AppShell
-        wide
-        actions={activity && <p className="text-sm font-bold text-white">{activity.reference}</p>}
-      >
+      <AppShell wide>
         <MahjongView
           tx={dealTx ?? FLOWCHART_PREVIEW_TX}
           reload={() => {}}
@@ -651,12 +648,8 @@ function LiveDealEngine() {
   }
 
   return (
-    <AppShell
-      wide
-      actions={
-        activity && <p className="text-sm font-bold text-white">{activity.reference}</p>
-      }
-    >
+    <AppShell wide>
+
       <div className={cn(side && "grid grid-cols-1 gap-4 sm:grid-cols-2 sm:items-stretch")}>
         <div
           className={cn(
