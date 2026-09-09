@@ -201,11 +201,14 @@ export function DealCanvas({
       )}
 
 
-      {/* Lane headers */}
-      <div className="grid grid-cols-2 gap-4 sm:gap-8">
-        {focusSide !== "offer" && <LaneHeader label="Bidder" side="left" />}
-        {focusSide !== "bid" && <LaneHeader label="Responder" side="right" />}
-      </div>
+      {/* Lane headers — once a side is focused elsewhere (top panel), the "Bidder"/"Responder"
+          label doesn't need repeating here too; "Next steps" below is enough context. */}
+      {!focusSide && (
+        <div className="grid grid-cols-2 gap-4 sm:gap-8">
+          <LaneHeader label="Bidder" side="left" />
+          <LaneHeader label="Responder" side="right" />
+        </div>
+      )}
       {hideBidOfferGroups && (
         <div className="mt-1 grid grid-cols-2 gap-4 sm:gap-8">
           {focusSide !== "offer" && (
