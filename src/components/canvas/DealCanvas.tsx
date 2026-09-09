@@ -16,6 +16,8 @@ import {
   ArrowLeftRight,
   Newspaper,
   Loader2,
+  ExternalLink,
+  RefreshCw,
   X,
 } from "lucide-react";
 import { CanvasNode, Connector, GateBar, type NodeState } from "./CanvasNode";
@@ -33,7 +35,63 @@ import { ensureOrg } from "@/lib/org";
 import { FLAT_STEPS, lockReason, stepDef, stepIndex, type StageKey } from "@/lib/spine";
 import { advance, money, recordEvent, when, type Transaction, type TxEvent } from "@/lib/tx";
 import { setCounterpartyShortlist } from "@/lib/izenzo.functions";
-import type { ScreeningResult } from "@/lib/screening.functions";
+import type { ScreeningCheck, ScreeningResult } from "@/lib/screening.functions";
+import {
+  listVerificationsForTx,
+  refreshVerification,
+  type VerificationRow,
+} from "@/lib/didit.functions";
+
+/** How one screening check should read on screen, folding in the live verification row when the
+ * provider has since moved it on. */
+function describeCheck(
+  chk: ScreeningCheck,
+  live?: VerificationRow,
+): { label: string; detail: string; tone: string; pending: boolean } {
+  const WAITING = "bg-amber-100 text-amber-800";
+  const OK = "bg-emerald-100 text-emerald-800";
+  const BAD = "bg-red-100 text-red-700";
+  const MUTED = "bg-slate-200 text-slate-600";
+
+  if (live) {
+    switch (live.status) {
+      case "passed":
+        return { label: "Passed", detail: live.reason ?? "Provider returned a clear result.", tone: OK, pending: false };
+      case "failed":
+        return { label: "Failed", detail: live.reason ?? "Provider returned a negative result.", tone: BAD, pending: false };
+      case "review":
+        return {
+          label: "Needs review",
+          detail: live.reason ?? "A person needs to look at this result.",
+          tone: WAITING,
+          pending: false,
+        };
+      case "expired":
+        return { label: "Expired", detail: "The check expired before it was completed.", tone: MUTED, pending: false };
+      default:
+        return {
+          label: "Waiting",
+          detail: "Opened with the provider — the result lands here on its own.",
+          tone: WAITING,
+          pending: true,
+        };
+    }
+  }
+
+  switch (chk.status) {
+    case "started":
+      return { label: "Waiting", detail: chk.detail, tone: WAITING, pending: true };
+    case "matched":
+      return { label: "Match found", detail: chk.detail, tone: OK, pending: false };
+    case "no_match":
+      return { label: "No match", detail: chk.detail, tone: MUTED, pending: false };
+    case "unavailable":
+      return { label: "Not connected", detail: chk.detail, tone: MUTED, pending: false };
+    default:
+      return { label: "Could not run", detail: chk.detail, tone: BAD, pending: false };
+  }
+}
+
 
 import { CURRENCIES } from "@/lib/currencies";
 import { UNITS } from "@/lib/units";
