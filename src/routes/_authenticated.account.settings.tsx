@@ -192,7 +192,7 @@ function SettingsPage() {
         {isAdmin && (
           <TabsContent value="admin" className="mt-6 space-y-4">
             <p className="text-sm text-muted-foreground">
-              Restricted to administrators. Opens the full System Admin console.
+              Restricted to administrators. Opens the full Admin console.
             </p>
             <div className="grid gap-4 sm:grid-cols-3">
               <AdminLinkCard

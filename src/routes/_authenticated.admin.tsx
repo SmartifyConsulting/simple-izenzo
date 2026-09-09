@@ -22,9 +22,9 @@ type AdminSearch = { group?: string; tab?: string; activityUser?: string };
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
     meta: [
-      { title: "System Admin — Izenzo" },
+      { title: "Admin — Izenzo" },
       { name: "description", content: "Administer users, tokens and reporting for the whole book." },
-      { property: "og:title", content: "System Admin — Izenzo" },
+      { property: "og:title", content: "Admin — Izenzo" },
       { property: "og:description", content: "Administer users, tokens and reporting." },
     ],
   }),
@@ -93,9 +93,8 @@ const ADMIN_GROUPS: { id: string; label: string; tabs: AdminTab[] }[] = [
 ];
 
 function AdminPage() {
-  const { roles, user, loading, refresh } = useAuth();
+  const { roles, loading, refresh } = useAuth();
   const isAdmin = roles.includes("admin");
-  const isSuperuser = (user?.email ?? "").toLowerCase() === SUPERUSER_EMAIL;
   const search = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const [rechecking, setRechecking] = useState(false);
@@ -107,7 +106,7 @@ function AdminPage() {
 
   if (loading) {
     return (
-      <AppShell title="System Admin">
+      <AppShell title="Admin">
         <p className="text-sm text-muted-foreground">Checking your access…</p>
       </AppShell>
     );
@@ -115,7 +114,7 @@ function AdminPage() {
 
   if (!isAdmin) {
     return (
-      <AppShell title="System Admin">
+      <AppShell title="Admin">
         <p className="text-sm text-muted-foreground">
           This area is for administrators. Your seat does not have that role.
         </p>
@@ -134,10 +133,7 @@ function AdminPage() {
     );
   }
 
-  const groups = ADMIN_GROUPS.map((g) => ({
-    ...g,
-    tabs: g.tabs.filter((t) => !t.superuserOnly || isSuperuser),
-  })).filter((g) => g.tabs.length > 0);
+  const groups = ADMIN_GROUPS;
 
   const activeGroup = search.group ? groups.find((g) => g.id === search.group) : undefined;
   const activeTab = activeGroup?.tabs.find((t) => t.value === search.tab);
@@ -146,7 +142,7 @@ function AdminPage() {
   // Admin tab's card layout in Settings. No tab bar anywhere.
   if (!activeGroup || !activeTab) {
     return (
-      <AppShell title="System Admin" description="Users, tokens and reporting for the whole book">
+      <AppShell title="Admin" description="Users, tokens and reporting for the whole book">
         <div className="space-y-8">
           {groups.map((g) => (
             <div key={g.id}>
@@ -171,7 +167,7 @@ function AdminPage() {
   }
 
   return (
-    <AppShell title="System Admin" description="Users, tokens and reporting for the whole book">
+    <AppShell title="Admin" description="Users, tokens and reporting for the whole book">
       <button
         type="button"
         onClick={() => navigate({ search: {} })}
@@ -197,9 +193,6 @@ const SUPERUSER_EMAIL = "georgia.adams@smartify.co.za";
 
 function UsersTab() {
   const qc = useQueryClient();
-  const { user } = useAuth();
-  const isSuperuser = (user?.email ?? "").toLowerCase() === SUPERUSER_EMAIL;
-  const navigate = useNavigate({ from: "/admin" });
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"created" | "accessed">("created");
 
@@ -313,21 +306,8 @@ function UsersTab() {
                 <div className="flex shrink-0 items-center gap-2">
                   {isUserAdmin && (
                     <Badge variant="secondary" className="font-normal">
-                      admin
+                      System Admin
                     </Badge>
-                  )}
-                  {isSuperuser && (
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8"
-                      title="View activity log"
-                      onClick={() =>
-                        navigate({ search: { group: "platform", tab: "activity-log", activityUser: u.id } })
-                      }
-                    >
-                      <History className="h-4 w-4" />
-                    </Button>
                   )}
                   <Button size="sm" variant="outline" onClick={() => toggleAdmin(u.id, isUserAdmin, u.email)}>
                     {isUserAdmin ? "Revoke admin" : "Make admin"}
@@ -346,7 +326,6 @@ function UsersTab() {
 function TokensTab() {
   const qc = useQueryClient();
   const [issue, setIssue] = useState({ orgId: "", amount: "1" });
-  const [nudge, setNudge] = useState({ orgId: "", title: "", body: "" });
   const [countryFilter, setCountryFilter] = useState("");
   const [orgSearch, setOrgSearch] = useState("");
 
@@ -364,12 +343,6 @@ function TokensTab() {
   const filteredOrgs = orgs
     .filter((o) => !countryFilter || o.country === countryFilter)
     .filter((o) => !orgQ || o.name.toLowerCase().includes(orgQ));
-
-  function nudgeRow(orgId: string) {
-    setNudge((n) => ({ ...n, orgId }));
-    document.getElementById("nudge-message")?.focus();
-    document.getElementById("nudge-form")?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }
 
   async function issueTokens(e: React.FormEvent) {
     e.preventDefault();
@@ -390,94 +363,42 @@ function TokensTab() {
     }
   }
 
-  async function sendNudge(e: React.FormEvent) {
-    e.preventDefault();
-    try {
-      const { error } = await supabase.from("notifications").insert({
-        org_id: nudge.orgId || null,
-        title: nudge.title,
-        body: nudge.body || null,
-      });
-      if (error) throw error;
-      setNudge({ orgId: "", title: "", body: "" });
-      toast.success("Nudge sent");
-    } catch (err) {
-      toast.error((err as Error).message);
-    }
-  }
-
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 lg:grid-cols-2">
-        <form onSubmit={issueTokens} className="rounded-md border border-border p-5">
-          <h2 className="text-sm font-semibold">Issue tokens</h2>
-          <div className="mt-4 space-y-3">
-            <div className="space-y-1.5">
-              <Label>Organisation</Label>
-              <select
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={issue.orgId}
-                onChange={(e) => setIssue({ ...issue, orgId: e.target.value })}
-              >
-                <option value="">Choose…</option>
-                {orgs.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name} — {o.credits} tokens
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Tokens</Label>
-              <Input
-                type="number"
-                min="1"
-                value={issue.amount}
-                onChange={(e) => setIssue({ ...issue, amount: e.target.value })}
-              />
-            </div>
-            <Button size="sm" type="submit">
-              Issue
-            </Button>
+      <form onSubmit={issueTokens} className="max-w-md rounded-md border border-primary p-5">
+        <h2 className="text-sm font-semibold">Issue tokens</h2>
+        <div className="mt-4 space-y-3">
+          <div className="space-y-1.5">
+            <Label>Organisation</Label>
+            <select
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+              value={issue.orgId}
+              onChange={(e) => setIssue({ ...issue, orgId: e.target.value })}
+            >
+              <option value="">Choose…</option>
+              {orgs.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name} — {o.credits} tokens
+                </option>
+              ))}
+            </select>
           </div>
-        </form>
-
-        <form id="nudge-form" onSubmit={sendNudge} className="rounded-md border border-border p-5">
-          <h2 className="text-sm font-semibold">Nudge</h2>
-          <p className="text-xs text-muted-foreground">Sends to everyone, or pick one organisation below.</p>
-          <div className="mt-4 space-y-3">
-            <div className="space-y-1.5">
-              <Label>Organisation</Label>
-              <select
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={nudge.orgId}
-                onChange={(e) => setNudge({ ...nudge, orgId: e.target.value })}
-              >
-                <option value="">Everyone</option>
-                {orgs.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Message</Label>
-              <Input
-                id="nudge-message"
-                required
-                value={nudge.title}
-                onChange={(e) => setNudge({ ...nudge, title: e.target.value })}
-              />
-            </div>
-            <Button size="sm" type="submit" variant="outline">
-              Send nudge
-            </Button>
+          <div className="space-y-1.5">
+            <Label>Tokens</Label>
+            <Input
+              type="number"
+              min="1"
+              value={issue.amount}
+              onChange={(e) => setIssue({ ...issue, amount: e.target.value })}
+            />
           </div>
-        </form>
-      </div>
+          <Button size="sm" type="submit">
+            Issue
+          </Button>
+        </div>
+      </form>
 
-      <div className="rounded-md border border-border">
+      <div className="rounded-md border border-primary">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-5">
           <div>
             <h2 className="text-sm font-semibold">Organisations</h2>
@@ -526,9 +447,6 @@ function TokensTab() {
                   <Badge variant="secondary" className="font-normal">
                     {o.credits} token{o.credits === 1 ? "" : "s"}
                   </Badge>
-                  <Button size="sm" variant="outline" onClick={() => nudgeRow(o.id)}>
-                    Nudge
-                  </Button>
                 </div>
               </li>
             ))}
