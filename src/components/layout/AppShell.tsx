@@ -63,7 +63,7 @@ export function AppShell({
             <a href="/pricing" className="hover:text-foreground">
               Pricing
             </a>
-            <Link to="/developer/keys" className="hover:text-foreground">
+            <Link to="/docs" className="hover:text-foreground">
               API's
             </Link>
             <Link to="/support" className="hover:text-foreground">

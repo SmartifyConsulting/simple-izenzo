@@ -15,9 +15,6 @@ export function SiteFooter() {
           <Link to="/glossary" className={linkClass}>
             Glossary
           </Link>
-          <a href="/docs" className={linkClass}>
-            Docs
-          </a>
           <a href="/status" className={linkClass}>
             Status
           </a>

@@ -86,7 +86,7 @@ function Glossary() {
       <SiteHeader />
       <main className="mx-auto max-w-3xl px-5 py-14">
         <p className="label-caps">Reference</p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight">Terms & Glossary</h1>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight">Definitions</h1>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
           The words below mean exactly one thing inside Izenzo. Where a term is a gate, the gate is
           enforced on the server, not in the interface.
