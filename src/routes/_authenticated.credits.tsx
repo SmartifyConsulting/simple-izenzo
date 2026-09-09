@@ -20,7 +20,7 @@ import { formatHomeCurrency } from "@/lib/currency";
 
 export const Route = createFileRoute("/_authenticated/credits")({
   validateSearch: (search: Record<string, unknown>) => ({
-    returnTo: typeof search.returnTo === "string" ? search.returnTo : undefined,
+    returnTo: typeof search["returnTo"] === "string" ? search["returnTo"] : undefined,
   }),
   head: () => ({
     meta: [

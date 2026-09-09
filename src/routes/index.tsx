@@ -56,41 +56,57 @@ function Landing() {
       <SiteHeader logoClassName="h-7" containerClassName="max-w-6xl h-auto py-8 px-5" />
 
       <main>
-        <section className="relative overflow-hidden bg-gradient-to-b from-primary/5 via-background to-background">
-          <div className="mx-auto max-w-4xl px-5 py-24 text-center sm:py-28">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+        <section className="ink-ground ink-grid relative overflow-hidden border-b border-border">
+          <div className="mx-auto max-w-6xl px-5 py-24 sm:py-28">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
               Izenzo Governance Network
             </span>
 
-            <h1 className="mt-6 text-4xl font-semibold leading-[1.1] tracking-tight text-foreground sm:text-6xl">
+            <h1 className="mt-6 max-w-3xl text-4xl font-semibold leading-[1.05] tracking-tight text-foreground sm:text-6xl">
               Governance Infrastructure
               <br />
               for <span className="text-primary">Institutional Trade.</span>
             </h1>
 
-            <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground">
+            <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground">
               One cryptographic network. Access it via our turnkey Trade Desk, manage risk through
               the Compliance Profile, or build directly on the API. All backed by hash-sealed,
               independently verifiable execution.
             </p>
 
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <Link to="/auth" search={{ mode: "signup", next: undefined }}>
-                <Button size="lg" className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90">
-                  Provision Workspace <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
+            <div className="mt-8">
               <a href="mailto:support@izenzo.co.za?subject=Demo%20request&body=I%20would%20like%20to%20request%20a%20demo%20of%20the%20Izenzo%20Trading%20Gateway.">
-                <Button size="lg" variant="outline" className="gap-1.5 border-primary/20 text-primary">
-                  Read the Docs <ChevronRight className="h-4 w-4" />
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="gap-1.5 rounded-full border-border bg-transparent text-foreground hover:bg-muted"
+                >
+                  Request a Demo <ChevronRight className="h-4 w-4" />
                 </Button>
               </a>
+            </div>
+
+            <div className="mt-14 grid gap-5 md:grid-cols-2">
+              <HeroFrame
+                side="Bidder"
+                title="Create a Bid"
+                body="Open a bid, upload what you have, and let the modules infer the rest. Responders surface on the right lane as the deal moves."
+                cta="Create a Bid"
+                next="/transactions/new"
+              />
+              <HeroFrame
+                side="Responder"
+                title="Respond to a Bid"
+                body="See bids matched to your profile, choose a counterparty, and answer through the same gated record — every choice sealed as it happens."
+                cta="Respond to a Bid"
+                next="/dashboard"
+              />
             </div>
 
             <p className="mt-16 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
               Platform architecture &amp; standards
             </p>
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-x-8 gap-y-2">
+            <div className="mt-4 flex flex-wrap items-center gap-x-8 gap-y-2">
               {STATS.map((s) => (
                 <span
                   key={s.label}
@@ -103,6 +119,7 @@ function Landing() {
             </div>
           </div>
         </section>
+
 
         <section className="border-t border-border bg-muted/40">
           <div className="mx-auto max-w-6xl px-5 py-16">
@@ -137,3 +154,32 @@ function Landing() {
     </div>
   );
 }
+
+/** One of the two hero lanes: Bidder on the left, Responder on the right. */
+function HeroFrame({
+  side,
+  title,
+  body,
+  cta,
+  next,
+}: {
+  side: string;
+  title: string;
+  body: string;
+  cta: string;
+  next: string;
+}) {
+  return (
+    <div className="glass relative overflow-hidden rounded-2xl border border-border bg-card/60 p-6 backdrop-blur-xl transition-transform hover:-translate-y-0.5">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-primary">{side}</span>
+      <h2 className="mt-3 text-2xl font-semibold tracking-tight text-foreground">{title}</h2>
+      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{body}</p>
+      <Link to="/auth" search={{ mode: "signup", next }} className="mt-6 inline-block">
+        <Button className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90">
+          {cta} <ArrowRight className="h-4 w-4" />
+        </Button>
+      </Link>
+    </div>
+  );
+}
+

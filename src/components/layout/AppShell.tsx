@@ -62,6 +62,8 @@ export function AppShell({
           {org && (
             <Link
               to="/credits"
+              search={{ returnTo: undefined }}
+
               title={`${org.credits} token${org.credits === 1 ? "" : "s"} — open Token Management`}
               className="flex h-6 shrink-0 items-center gap-1 rounded-full border border-primary/40 bg-primary/12 px-2 text-[11px] font-semibold text-primary transition-opacity hover:opacity-90"
             >
