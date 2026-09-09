@@ -36,6 +36,12 @@ After this change:
 - For a file with no stored copy, the icons appear greyed out with a short tooltip explaining the file was recorded before uploads were kept, so the row never looks broken.
 - The same icon pair is applied to the attachment list on the Documents step so both places behave alike.
 
+## 5. One Bid/Offer ID, inside the Live Workspace
+
+- The Bid/Offer ID currently printed in the page header, above the canvas, is removed.
+- The badge in the top-right corner of the Live Workspace becomes bold white text, so it reads as the single, clear deal identifier.
+
+
 ## Technical notes
 
 - `GateBar` in `src/components/canvas/CanvasNode.tsx`: cleared state moves from `primary` tones to emerald tones; the folded POI/WaD blocks in `src/components/canvas/DealCanvas.tsx` render a cleared `GateBar` in place of the muted `label-caps` heading.
