@@ -503,7 +503,10 @@ export function DealCanvas({
               { side: "center", note: "3 tokens · USD 30" },
             )}
           </div>
-          <GateBar label="Without a Doubt" cleared={wad} />
+          <div className={stepsBoxClass}>
+            <GateBar label="Without a Doubt" cleared={wad} />
+          </div>
+
         </GateGroup>
       )}
 
