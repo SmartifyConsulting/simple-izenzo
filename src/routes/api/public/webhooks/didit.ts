@@ -17,10 +17,18 @@ export const Route = createFileRoute("/api/public/webhooks/didit")({
         let creds;
         try {
           creds = await loadDiditCreds();
-        } catch {
-          return new Response("Not configured", { status: 503 });
+        } catch (err) {
+          return new Response(
+            `Didit is not set up yet: ${(err as Error).message}`,
+            { status: 503 },
+          );
         }
-        if (!creds.webhookSecret) return new Response("Not configured", { status: 503 });
+        if (!creds.webhookSecret) {
+          return new Response(
+            "Didit webhook secret is missing. Add it under Admin → Integrations.",
+            { status: 503 },
+          );
+        }
 
         const expected = await hmacHex(creds.webhookSecret, raw);
         if (!signature || !safeEqualHex(signature, expected)) {
