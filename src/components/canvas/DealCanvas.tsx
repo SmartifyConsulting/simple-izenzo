@@ -370,7 +370,11 @@ export function DealCanvas({
       {visible("trading", "counterparties") && (
         <>
           <Connector />
-          <GateGroup title="Proof of Intent" align={focusSide === "offer" ? "right" : "left"}>
+          <GateGroup
+            title="Proof of Intent"
+            align={focusSide === "offer" ? "right" : "left"}
+            forceOpen={Boolean(openProofOfIntent)}
+          >
             <div className={cn(stepsBoxClass, "space-y-3")}>
               {node({ stage: "trading", step: "counterparties", icon: Users }, { side: "center" })}
               {visible("trading", "choice") &&
@@ -677,6 +681,7 @@ function GateGroup({
   children,
   defaultOpen = false,
   align = "left",
+  forceOpen = false,
 }: {
   title: string;
   children: React.ReactNode;
@@ -684,8 +689,22 @@ function GateGroup({
   /** "right" mirrors the whole group — brace, title, and steps — onto the right edge, for use
    * once the canvas is focused on the Responder side. */
   align?: "left" | "right";
+  /** Opens the group from outside, e.g. while the match search is running. */
+  forceOpen?: boolean;
 }) {
+
   const [open, setOpen] = useState(defaultOpen);
+  // A caller can force the group open (the search flow does this for Proof of Intent); the user
+  // can still collapse it again afterwards.
+  const [forcedFor, setForcedFor] = useState(false);
+  useEffect(() => {
+    if (forceOpen && !forcedFor) {
+      setForcedFor(true);
+      setOpen(true);
+    }
+    if (!forceOpen && forcedFor) setForcedFor(false);
+  }, [forceOpen, forcedFor]);
+
   return (
     <div className={cn("mt-3 flex items-start gap-3", align === "right" && "flex-row-reverse")}>
       <button
