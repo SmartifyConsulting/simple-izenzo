@@ -24,12 +24,16 @@ export function AppShell({
   actions,
   children,
   wide,
+  pureBlack,
 }: {
   title?: string;
   description?: string;
   actions?: ReactNode;
   children: ReactNode;
   wide?: boolean;
+  /** Forces the page background to literal black instead of the theme's near-black
+   * `--background`, for screens meant to sit flush with the header/nav's own black chrome. */
+  pureBlack?: boolean;
 }) {
   const { profile, org } = useAuth();
   const firstName = (profile?.full_name ?? profile?.email ?? "").split(/[\s@]/)[0];
@@ -40,7 +44,10 @@ export function AppShell({
   }, []);
 
   return (
-    <div className="ink-grid flex min-h-screen flex-col bg-background">
+    <div
+      className={cn("ink-grid flex min-h-screen flex-col", pureBlack ? "" : "bg-background")}
+      style={pureBlack ? { backgroundColor: "#000" } : undefined}
+    >
       <header className="sticky top-0 z-30 border-b border-border bg-background/70 backdrop-blur-xl">
         <div className={cn("mx-auto flex h-16 items-center gap-3 px-4 sm:px-6", width)}>
           <Link to="/dashboard" className="shrink-0">

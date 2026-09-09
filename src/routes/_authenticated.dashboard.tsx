@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
@@ -26,6 +26,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 function Dashboard() {
   const { org } = useAuth();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
 
   const { data: txs = [], isLoading, refetch } = useQuery({
     queryKey: ["transactions", org?.id],
@@ -47,37 +48,50 @@ function Dashboard() {
     return txs.find((t) => t.status === "open") ?? txs[0];
   }, [txs, selectedId]);
 
+  // "New bid or offer" no longer jumps to a separate page — it shows the same first workflow
+  // block (CanvasStart) that already opens automatically when there's no active deal, so starting
+  // a new one never leaves the deal canvas.
+  const showStart = !isLoading && (!activeTx || creating);
+
   return (
     <AppShell
       wide
       actions={
-        <Link to="/transactions/new">
-          <Button size="sm" variant="ghost" className="gap-2">
-            <Plus className="h-3.5 w-3.5" /> New bid or offer
-          </Button>
-        </Link>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="gap-2"
+          onClick={() => {
+            setSelectedId(null);
+            setCreating(true);
+          }}
+        >
+          <Plus className="h-3.5 w-3.5" /> New bid or offer
+        </Button>
       }
     >
       {isLoading && <p className="text-sm text-muted-foreground">Opening the canvas…</p>}
 
       {!isLoading && <DashboardSummary txs={txs} />}
 
-
-
-      {!isLoading && !activeTx && (
+      {showStart && (
         <CanvasStart
           onCreated={(id) => {
+            setCreating(false);
             setSelectedId(id);
             void refetch();
           }}
         />
       )}
 
-      {activeTx && (
+      {activeTx && !showStart && (
         <DealCanvas
           tx={activeTx}
           deals={txs}
-          onSelectDeal={setSelectedId}
+          onSelectDeal={(id) => {
+            setCreating(false);
+            setSelectedId(id);
+          }}
           reload={() => {
             void refetch();
           }}

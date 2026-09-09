@@ -106,6 +106,7 @@ function SupportPage() {
 
   return (
     <AppShell
+      pureBlack
       title="Support"
       description="Submit and track support tickets"
       actions={
@@ -121,30 +122,34 @@ function SupportPage() {
       }
     >
       {showForm && (
-        <form onSubmit={submit} className="mb-6 space-y-4 rounded-md border border-border p-5">
-          <div className="space-y-1.5">
-            <Label htmlFor="subject">Subject</Label>
-            <Input id="subject" required value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} />
+        <form onSubmit={submit} className="mb-6 rounded-2xl border border-border bg-card p-7">
+          <p className="text-xs font-semibold uppercase tracking-wide text-primary">New ticket</p>
+          <h2 className="mt-1 text-lg font-semibold">Log a support request</h2>
+          <div className="mt-5 space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="subject">Subject</Label>
+              <Input id="subject" required value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="priority">Priority</Label>
+              <select
+                id="priority"
+                className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                value={form.priority}
+                onChange={(e) => setForm({ ...form, priority: e.target.value })}
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="description">Description</Label>
+              <Textarea id="description" required rows={4} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            </div>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="priority">Priority</Label>
-            <select
-              id="priority"
-              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-              value={form.priority}
-              onChange={(e) => setForm({ ...form, priority: e.target.value })}
-            >
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="urgent">Urgent</option>
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="description">Description</Label>
-            <Textarea id="description" required rows={4} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-          </div>
-          <div className="text-right">
+          <div className="mt-6 text-right">
             <Button type="submit" size="sm">
               Submit ticket
             </Button>
@@ -157,7 +162,7 @@ function SupportPage() {
           <Button size="sm" variant="ghost" onClick={() => setSelectedId(null)}>
             ← Back to tickets
           </Button>
-          <div className="rounded-md border border-border p-4">
+          <div className="rounded-2xl border border-border bg-card p-7">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-semibold">{selected.subject}</p>
               <Badge variant="secondary" className="font-normal">
@@ -185,7 +190,7 @@ function SupportPage() {
           </div>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-md border border-border">
+        <div className="overflow-hidden rounded-2xl border border-border bg-card">
           {isLoading ? (
             <p className="p-6 text-sm text-muted-foreground">Loading…</p>
           ) : tickets.length === 0 ? (
