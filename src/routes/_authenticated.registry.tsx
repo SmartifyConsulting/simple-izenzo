@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/AppShell";
@@ -10,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { lookupCompanySite } from "@/lib/brightdata.functions";
+
 
 export const Route = createFileRoute("/_authenticated/registry")({
   head: () => ({
@@ -43,13 +46,80 @@ type RegistryCompany = {
   claimed_org_id: string | null;
 };
 
+function SiteLookup({ companyName }: { companyName: string }) {
+  const runLookup = useServerFn(lookupCompanySite);
+  const [url, setUrl] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ excerpt: string; wordCount: number; note: string } | null>(
+    null,
+  );
+
+  async function go() {
+    const trimmed = url.trim();
+    if (!/^https?:\/\//i.test(trimmed)) {
+      toast.error("Enter the full web address, starting with https://");
+      return;
+    }
+    setBusy(true);
+    setResult(null);
+    try {
+      const res = await runLookup({ data: { url: trimmed, companyName } });
+      setResult({ excerpt: res.excerpt, wordCount: res.wordCount, note: res.note });
+      if (!res.ok) toast.error(res.note);
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-4 space-y-3 rounded-md border border-border bg-muted/30 p-4">
+      <div className="space-y-1.5">
+        <Label htmlFor={`site-${companyName}`}>Company website</Label>
+        <div className="flex gap-2">
+          <Input
+            id={`site-${companyName}`}
+            placeholder="https://company.co.za"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+          />
+          <Button size="sm" onClick={() => void go()} disabled={busy}>
+            {busy ? "Reading…" : "Read site"}
+          </Button>
+        </div>
+      </div>
+      {result && (
+        <div className="text-xs text-muted-foreground">
+          {result.excerpt ? (
+            <>
+              <p className="mb-1 font-medium text-foreground">
+                What the site says ({result.wordCount} words read)
+              </p>
+              <p>{result.excerpt}</p>
+              <p className="mt-2">
+                This is read straight from the company&apos;s own site for your review. Nothing is
+                saved to the registry record.
+              </p>
+            </>
+          ) : (
+            <p>{result.note}</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function RegistryPage() {
   const { profile } = useAuth();
   const qc = useQueryClient();
   const [query, setQuery] = useState("");
   const [claimingId, setClaimingId] = useState<string | null>(null);
+  const [lookupId, setLookupId] = useState<string | null>(null);
   const [form, setForm] = useState({ role: "director", note: "", evidenceUrl: "" });
   const [busy, setBusy] = useState(false);
+
 
   const { data: companies = [], isLoading } = useQuery({
     queryKey: ["registry-companies"],
@@ -128,6 +198,13 @@ function RegistryPage() {
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setLookupId(lookupId === c.id ? null : c.id)}
+                    >
+                      Look up website
+                    </Button>
                     {c.claimed_org_id ? (
                       <Badge variant="secondary" className="font-normal">
                         Claimed
@@ -142,7 +219,12 @@ function RegistryPage() {
                       </Button>
                     )}
                   </div>
+
                 </div>
+
+                {lookupId === c.id && <SiteLookup companyName={c.legal_name} />}
+
+
 
                 {claimingId === c.id && (
                   <form
