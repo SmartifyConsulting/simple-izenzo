@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { KeyRound, Plug, Trash2, Users as UsersIcon, type LucideIcon } from "lucide-react";
+import { Coins, KeyRound, Plug, Trash2, Users as UsersIcon, type LucideIcon } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { OrganisationsPanel } from "@/components/account/OrganisationsPanel";
@@ -215,6 +215,13 @@ function SettingsPage() {
                 icon={KeyRound}
                 title="API's"
                 description="Issue and revoke API keys for external access."
+              />
+              <AdminLinkCard
+                to="/admin"
+                search={{ group: "money", tab: "tokens" }}
+                icon={Coins}
+                title="Tokens"
+                description="Adjust balances and review token issuance across organisations."
               />
             </div>
           </TabsContent>

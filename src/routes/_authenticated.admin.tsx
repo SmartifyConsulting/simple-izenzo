@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { when, type Transaction } from "@/lib/tx";
@@ -140,51 +139,56 @@ function AdminPage() {
     tabs: g.tabs.filter((t) => !t.superuserOnly || isSuperuser),
   })).filter((g) => g.tabs.length > 0);
 
-  const activeGroup = groups.find((g) => g.id === search.group) ?? groups[0]!;
-  const activeTab = activeGroup.tabs.find((t) => t.value === search.tab) ?? activeGroup.tabs[0]!;
+  const activeGroup = search.group ? groups.find((g) => g.id === search.group) : undefined;
+  const activeTab = activeGroup?.tabs.find((t) => t.value === search.tab);
+
+  // No card selected yet — a plain grid of cards grouped under section headings, matching the
+  // Admin tab's card layout in Settings. No tab bar anywhere.
+  if (!activeGroup || !activeTab) {
+    return (
+      <AppShell title="System Admin" description="Users, tokens and reporting for the whole book">
+        <div className="space-y-8">
+          {groups.map((g) => (
+            <div key={g.id}>
+              <h2 className="text-sm font-semibold">{g.label}</h2>
+              <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {g.tabs.map((t) => (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => navigate({ search: { group: g.id, tab: t.value } })}
+                    className="rounded-md border border-border p-5 text-left transition-colors hover:border-primary/40 hover:bg-accent/40"
+                  >
+                    <p className="text-sm font-semibold">{t.label}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell title="System Admin" description="Users, tokens and reporting for the whole book">
-      <Tabs
-        value={activeGroup.id}
-        onValueChange={(v) => {
-          const g = groups.find((x) => x.id === v)!;
-          navigate({ search: { group: v, tab: g.tabs[0]!.value } });
-        }}
+      <button
+        type="button"
+        onClick={() => navigate({ search: {} })}
+        className="mb-4 flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
       >
-        <TabsList>
-          {groups.map((g) => (
-            <TabsTrigger key={g.id} value={g.id}>
-              {g.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-        {groups.map((g) => (
-          <TabsContent key={g.id} value={g.id} className="mt-6">
-            <Tabs
-              value={g.id === activeGroup.id ? activeTab.value : g.tabs[0]!.value}
-              onValueChange={(v) => navigate({ search: { group: g.id, tab: v } })}
-            >
-              <TabsList>
-                {g.tabs.map((t) => (
-                  <TabsTrigger key={t.value} value={t.value}>
-                    {t.label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              {g.tabs.map((t) => (
-                <TabsContent key={t.value} value={t.value} className="mt-6">
-                  {t.value === "activity-log" ? (
-                    <AuditLogTab initialUserId={g.id === activeGroup.id ? search.activityUser : undefined} />
-                  ) : (
-                    <t.Component />
-                  )}
-                </TabsContent>
-              ))}
-            </Tabs>
-          </TabsContent>
-        ))}
-      </Tabs>
+        ← All admin sections
+      </button>
+      <div className="rounded-md border border-border p-5">
+        <h2 className="text-sm font-semibold">{activeTab.label}</h2>
+        <div className="mt-4">
+          {activeTab.value === "activity-log" ? (
+            <AuditLogTab initialUserId={search.activityUser} />
+          ) : (
+            <activeTab.Component />
+          )}
+        </div>
+      </div>
     </AppShell>
   );
 }
