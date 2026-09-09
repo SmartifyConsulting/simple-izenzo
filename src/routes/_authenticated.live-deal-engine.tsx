@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CheckCircle2, Download, Paperclip, UploadCloud, X } from "lucide-react";
+import { CheckCircle2, Download, Eye, Paperclip, UploadCloud, X } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import {
   CanvasStart,
