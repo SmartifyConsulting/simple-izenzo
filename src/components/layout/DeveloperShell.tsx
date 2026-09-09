@@ -103,6 +103,8 @@ export function DeveloperShell({
           </div>
         )}
         {children}
+        <SiteFooter />
+
       </main>
     </div>
   );
