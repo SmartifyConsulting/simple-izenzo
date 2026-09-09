@@ -1382,18 +1382,41 @@ function StubProviderPanel({ tx }: { tx: Transaction }) {
   );
 }
 
+/** Which provider check satisfies each WaD item. UBO and Authority have no provider behind
+ * them, so they stay manual confirmations rather than pretending to a screened result. */
+const WAD_CHECK_SOURCE: Record<string, ScreeningCheck["kind"] | null> = {
+  kyc: "id_document",
+  kyb: "kyb",
+  ubo: null,
+  sanctions: "aml",
+  pep: "aml",
+  authority: null,
+};
+
+async function sha256Hex(text: string) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 function WadStep({ tx, reload }: Props) {
   const complete = useServerFn(completeWad);
+  const runScreening = useServerFn(runBackgroundScreening);
   const navigate = useNavigate();
   const [checks, setChecks] = useState<Record<string, boolean>>({});
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
+  const [screening, setScreening] = useState(false);
+  const [screened, setScreened] = useState<ScreeningCheck[] | null>(null);
+  const [screenError, setScreenError] = useState<string | null>(null);
+  const startedRef = useRef(false);
   const { data: chosenCp } = useQuery({
     queryKey: ["chosen-counterparty-rating", tx.id],
     queryFn: async () => {
       const { data } = await supabase
         .from("counterparties")
-        .select("name, rating_band, rating_override")
+        .select("id, name, rating_band, rating_override")
         .eq("transaction_id", tx.id)
         .eq("status", "chosen")
         .maybeSingle();
@@ -1402,7 +1425,138 @@ function WadStep({ tx, reload }: Props) {
   });
   const flagged = chosenCp && (chosenCp.rating_override ?? chosenCp.rating_band) === "flagged";
 
+  // Screening runs on its own as soon as the gate opens, against the counterparty that was
+  // chosen. Nothing about the gate, its cost or its decision changes — this only fills in what
+  // the providers already know.
+  useEffect(() => {
+    if (tx.wad_completed_at || !chosenCp?.id || startedRef.current) return;
+    startedRef.current = true;
+    (async () => {
+      setScreening(true);
+      setScreenError(null);
+      try {
+        const results = await runScreening({
+          data: {
+            transactionId: tx.id,
+            counterpartyIds: [chosenCp.id as string],
+            ...(typeof window !== "undefined" ? { origin: window.location.origin } : {}),
+          },
+        });
+        const found = results[0]?.checks ?? [];
+        setScreened(found);
+        // Anything that came back clear ticks itself; anything else stays open.
+        setChecks((prev) => {
+          const next = { ...prev };
+          for (const [key, kind] of Object.entries(WAD_CHECK_SOURCE)) {
+            if (!kind) continue;
+            const hit = found.find((c) => c.kind === kind);
+            if (hit?.status === "matched") next[key] = true;
+          }
+          const registry = found.find((c) => c.kind === "registry");
+          if (registry?.status !== "matched") next["kyb"] = next["kyb"] && false;
+          return next;
+        });
+      } catch (err) {
+        setScreenError((err as Error).message);
+      } finally {
+        setScreening(false);
+      }
+    })();
+  }, [tx.id, tx.wad_completed_at, chosenCp?.id, runScreening]);
+
+  const settled = (screened ?? []).filter((c) =>
+    ["matched", "no_match", "unavailable", "failed"].includes(c.status),
+  ).length;
+  const totalChecks = 4;
+
+  function statusFor(key: string) {
+    const kind = WAD_CHECK_SOURCE[key];
+    if (!kind) return null;
+    if (screening && !screened) return { tone: "muted", text: "Screening…" } as const;
+    const hit = (screened ?? []).find((c) => c.kind === kind);
+    if (!hit) return null;
+    if (hit.status === "matched") return { tone: "ok", text: `Matched — ${hit.detail}` } as const;
+    if (hit.status === "started") return { tone: "muted", text: `Screening — ${hit.detail}` } as const;
+    if (hit.status === "unavailable") return { tone: "warn", text: `Could not run — ${hit.detail}` } as const;
+    return { tone: "warn", text: `Needs review — ${hit.detail}` } as const;
+  }
+
   const allChecked = WAD_CHECKS.every((c) => checks[c.key]);
+
+  /** The clearance certificate text — identical whether filed against the deal or downloaded. */
+  function certificateBody(clearedAt: string | null, hash: string | null) {
+    return [
+      "IZENZO — WITHOUT A DOUBT CLEARANCE",
+      "",
+      `Transaction:  ${tx.title}`,
+      `Commodity:    ${tx.commodity ?? "—"}`,
+      `Quantity:     ${tx.quantity ?? "—"} ${tx.unit ?? ""}`,
+      `Price:        ${tx.price ?? "—"} ${tx.currency}`,
+      `Incoterms:    ${tx.incoterms ?? "—"}`,
+      `Jurisdiction: ${tx.jurisdiction ?? "—"}`,
+      `Counterparty: ${chosenCp?.name ?? "—"}`,
+      `Cleared:      ${clearedAt}`,
+      "",
+      "Checks satisfied:",
+      ...WAD_CHECKS.map((c) => {
+        const s = statusFor(c.key);
+        return `  • ${c.label} — ${s?.text ?? "Confirmed by the compliance reviewer"}`;
+      }),
+      "",
+      notes ? `Case notes: ${notes}` : "",
+      `Fingerprint: ${hash ?? "—"}`,
+    ]
+      .filter((l) => l !== "")
+      .join("\n");
+  }
+
+  async function fileCertificate() {
+    const { data: fresh } = await supabase
+      .from("transactions")
+      .select("wad_completed_at")
+      .eq("id", tx.id)
+      .maybeSingle();
+    const clearedAt = fresh?.wad_completed_at ?? new Date().toISOString();
+    const unhashed = certificateBody(clearedAt, null);
+    const hash = await sha256Hex(unhashed);
+    const body = certificateBody(clearedAt, hash);
+    const path = `deals/${tx.id}/${Date.now()}-without-a-doubt.txt`;
+    const { error: upErr } = await supabase.storage
+      .from("documents")
+      .upload(path, new Blob([body], { type: "text/plain" }));
+    if (upErr) {
+      toast.warning("Cleared, but the certificate could not be filed against the deal.");
+      return;
+    }
+    await supabase.from("documents").insert({
+      transaction_id: tx.id,
+      name: `Without a Doubt — ${tx.title}.txt`,
+      doc_type: "certificate",
+      notes: "Certificate",
+      sha256: hash,
+      storage_path: path,
+    });
+  }
+
+  async function downloadCleared() {
+    const { data: doc } = await supabase
+      .from("documents")
+      .select("storage_path, name")
+      .eq("transaction_id", tx.id)
+      .eq("doc_type", "certificate")
+      .ilike("name", "Without a Doubt%")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!doc?.storage_path) {
+      toast.error("The clearance certificate is not on file for this deal.");
+      return;
+    }
+    const { data: signed } = await supabase.storage
+      .from("documents")
+      .createSignedUrl(doc.storage_path, 120, { download: doc.name });
+    if (signed?.signedUrl) window.open(signed.signedUrl, "_blank");
+  }
 
   async function decide(decision: "cleared" | "referred" | "blocked") {
     setBusy(true);
@@ -1416,6 +1570,7 @@ function WadStep({ tx, reload }: Props) {
           ),
         },
       });
+      if (decision === "cleared") await fileCertificate();
       reload();
       toast.success(`WaD ${decision}`);
     } catch (err) {
@@ -1427,8 +1582,27 @@ function WadStep({ tx, reload }: Props) {
 
   if (tx.wad_completed_at) {
     return (
-      <Panel title="WaD — cleared" description={`Cleared ${when(tx.wad_completed_at)}`}>
-        <p className="text-sm text-muted-foreground">
+      <Panel
+        title="WaD — cleared"
+        description={`Cleared ${when(tx.wad_completed_at)}`}
+        footer={
+          <div className="text-right">
+            <Button size="sm" variant="outline" className="gap-2" onClick={() => void downloadCleared()}>
+              <Download className="h-3.5 w-3.5" /> Download certificate
+            </Button>
+          </div>
+        }
+      >
+        <div className="seal-block">
+          IZENZO WITHOUT A DOUBT CLEARANCE
+          <br />
+          {tx.title}
+          <br />
+          KYC · KYB · UBO · sanctions · PEP · authority to act
+          <br />
+          cleared {tx.wad_completed_at}
+        </div>
+        <p className="mt-3 text-sm text-muted-foreground">
           Without a Doubt has cleared. Execution is open.
         </p>
       </Panel>
@@ -1460,9 +1634,32 @@ function WadStep({ tx, reload }: Props) {
           compliance gate on its own.
         </div>
       )}
+
+      {(screening || screened || screenError) && (
+        <div className="mb-4 space-y-1">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+            <div
+              className={cn(
+                "h-full rounded-full transition-all duration-500",
+                screenError ? "w-full bg-destructive" : screening ? "w-1/2 animate-ribbon-sweep bg-primary" : "bg-emerald-500",
+              )}
+              style={!screening && !screenError ? { width: `${Math.round((settled / totalChecks) * 100)}%` } : undefined}
+            />
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            {screenError
+              ? `Screening could not finish: ${screenError}`
+              : screening
+                ? `Screening ${chosenCp?.name ?? "the counterparty"}…`
+                : `${settled} of ${totalChecks} checks returned`}
+          </p>
+        </div>
+      )}
+
       <ul className="space-y-2.5">
         {WAD_CHECKS.map((c) => {
           const route = c.key === "kyc" ? routeIdentityVerification(tx.jurisdiction) : null;
+          const status = statusFor(c.key);
           return (
             <li key={c.key} className="text-sm">
               <div className="flex items-center gap-2.5">
@@ -1471,7 +1668,26 @@ function WadStep({ tx, reload }: Props) {
                   onCheckedChange={(v) => setChecks({ ...checks, [c.key]: Boolean(v) })}
                 />
                 {c.label}
+                {!WAD_CHECK_SOURCE[c.key] && (
+                  <Badge variant="secondary" className="font-normal">
+                    manual
+                  </Badge>
+                )}
               </div>
+              {status && (
+                <p
+                  className={cn(
+                    "ml-6 mt-1 whitespace-pre-line text-xs",
+                    status.tone === "ok"
+                      ? "text-emerald-500"
+                      : status.tone === "warn"
+                        ? "text-[#F97316]"
+                        : "text-muted-foreground",
+                  )}
+                >
+                  {status.text}
+                </p>
+              )}
               {route && (
                 <p className="ml-6 mt-1 text-xs text-muted-foreground">
                   Identity verification route: <span className="font-medium">{route.provider}</span>
@@ -1500,6 +1716,7 @@ function WadStep({ tx, reload }: Props) {
     </Panel>
   );
 }
+
 
 /* ---------- execution ---------- */
 
