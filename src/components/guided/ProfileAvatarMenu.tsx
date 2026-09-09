@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { History, LogOut, Moon, Settings, Sun } from "lucide-react";
+import { LogOut, Moon, Settings, Sun } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import {
@@ -39,11 +39,6 @@ export function ProfileAvatarMenu() {
             {profile?.email}
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem asChild>
-            <Link to="/activity" className="flex items-center">
-              <History className="mr-2 h-3.5 w-3.5" /> Activity Log
-            </Link>
-          </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link to="/account/settings" className="flex items-center">
               <Settings className="mr-2 h-3.5 w-3.5" /> Settings

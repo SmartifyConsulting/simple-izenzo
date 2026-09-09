@@ -1,7 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Coins, KeyRound, Plug, Trash2, Users as UsersIcon, type LucideIcon } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { OrganisationsPanel } from "@/components/account/OrganisationsPanel";
@@ -25,8 +25,7 @@ export const Route = createFileRoute("/_authenticated/account/settings")({
 });
 
 function SettingsPage() {
-  const { profile, refresh, roles } = useAuth();
-  const isAdmin = roles.includes("admin");
+  const { profile, refresh } = useAuth();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -73,7 +72,6 @@ function SettingsPage() {
           <TabsTrigger value="profile">My Profile</TabsTrigger>
           <TabsTrigger value="kyb">Organisations</TabsTrigger>
           <TabsTrigger value="data">My Data</TabsTrigger>
-          {isAdmin && <TabsTrigger value="admin">Admin</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="profile" className="mt-6">
@@ -189,43 +187,6 @@ function SettingsPage() {
           </div>
         </TabsContent>
 
-        {isAdmin && (
-          <TabsContent value="admin" className="mt-6 space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Restricted to administrators. Opens the full Admin console.
-            </p>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <AdminLinkCard
-                to="/admin"
-                search={{ group: "platform", tab: "users" }}
-                icon={UsersIcon}
-                title="Users"
-                description="View and manage every account on the platform."
-              />
-              <AdminLinkCard
-                to="/admin"
-                search={{ group: "platform", tab: "integrations" }}
-                icon={Plug}
-                title="Integrations"
-                description="Configure third-party providers and API credentials."
-              />
-              <AdminLinkCard
-                to="/admin"
-                search={{ group: "platform", tab: "api-keys" }}
-                icon={KeyRound}
-                title="API's"
-                description="Issue and revoke API keys for external access."
-              />
-              <AdminLinkCard
-                to="/admin"
-                search={{ group: "money", tab: "tokens" }}
-                icon={Coins}
-                title="Tokens"
-                description="Adjust balances and review token issuance across organisations."
-              />
-            </div>
-          </TabsContent>
-        )}
       </Tabs>
     </AppShell>
   );
@@ -267,28 +228,3 @@ function DangerZone() {
   );
 }
 
-function AdminLinkCard({
-  to,
-  search,
-  icon: Icon,
-  title,
-  description,
-}: {
-  to: string;
-  search: { group: string; tab: string };
-  icon: LucideIcon;
-  title: string;
-  description: string;
-}) {
-  return (
-    <Link
-      to={to}
-      search={search}
-      className="block rounded-md border border-border p-5 transition-colors hover:border-primary/40 hover:bg-accent/40"
-    >
-      <Icon className="h-5 w-5 text-primary" />
-      <p className="mt-3 text-sm font-semibold">{title}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{description}</p>
-    </Link>
-  );
-}

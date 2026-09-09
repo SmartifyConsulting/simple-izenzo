@@ -36,7 +36,9 @@ export function GovernanceShell({
     <div className="flex min-h-screen bg-background">
       <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r border-border bg-sidebar">
         <div className="border-b border-border px-4 py-4">
-          <Logo className="h-6" />
+          <Link to="/live-deal-engine">
+            <Logo className="h-6" />
+          </Link>
         </div>
 
         <div className="border-b border-border px-4 py-3">

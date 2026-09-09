@@ -54,19 +54,8 @@ const ADMIN_GROUPS: { id: string; label: string; tabs: AdminTab[] }[] = [
     tabs: [
       { value: "users", label: "Users", Component: UsersTab },
       { value: "api-keys", label: "API Keys", Component: ApiKeysTab },
-      { value: "integrations", label: "Integrations", Component: IntegrationsTab, superuserOnly: true },
-      { value: "activity-log", label: "Activity Log", Component: AuditLogTab, superuserOnly: true },
-    ],
-  },
-  {
-    id: "trust-compliance",
-    label: "Trust & Compliance",
-    tabs: [
-      { value: "registry", label: "Registry", Component: RegistryTab },
-      { value: "facilitation", label: "Facilitation", Component: FacilitationTab },
-      { value: "compliance-cases", label: "Compliance Cases", Component: ComplianceCasesTab },
-      { value: "ai-suggestions", label: "AI Suggestions", Component: AiSuggestionsTab },
-      { value: "auditors", label: "Auditors", Component: AuditorsTab },
+      { value: "integrations", label: "Integrations", Component: IntegrationsTab },
+      { value: "activity-log", label: "Activity Log", Component: AuditLogTab },
     ],
   },
   {
@@ -75,19 +64,6 @@ const ADMIN_GROUPS: { id: string; label: string; tabs: AdminTab[] }[] = [
     tabs: [
       { value: "tokens", label: "Tokens", Component: TokensTab },
       { value: "payments", label: "Payments", Component: PaymentsTab },
-    ],
-  },
-  {
-    id: "partners",
-    label: "Partners",
-    tabs: [{ value: "funders", label: "Funders", Component: FundersTab }],
-  },
-  {
-    id: "operations",
-    label: "Operations",
-    tabs: [
-      { value: "support", label: "Support", Component: SupportTab },
-      { value: "reporting", label: "Reporting", Component: ReportingTab },
     ],
   },
 ];
