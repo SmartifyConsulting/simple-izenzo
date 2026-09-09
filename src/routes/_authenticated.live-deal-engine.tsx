@@ -227,8 +227,39 @@ function LiveDealEngine() {
 
 
 
-  /** Records which screened counterparty the user actually wants to trade with, then moves the
-   * active-step pulse off Background screening and onto Intent. */
+  /** Re-reads the deal (and its attachments) after a step completes, so the Intent → Proof of
+   * Intent hand-off and the newly filed certificate both show up without a page refresh. */
+  async function reloadDeal() {
+    if (!dealTx) return;
+    const { data: tx } = await supabase
+      .from("transactions")
+      .select("*")
+      .eq("id", dealTx.id)
+      .maybeSingle();
+    if (tx) {
+      const fresh = tx as Transaction;
+      setDealTx(fresh);
+      // Intent signed → move the right panel on to Proof of Intent; sealed → fold it away.
+      setStagePanel(fresh.poi_sealed_at ? null : fresh.intent_confirmed_at ? "poi" : "intent");
+    }
+    const { data: docs } = await supabase
+      .from("documents")
+      .select("name, notes, storage_path")
+      .eq("transaction_id", dealTx.id)
+      .order("created_at", { ascending: true });
+    if (docs) {
+      setAttachments(
+        docs.map((d) => ({
+          name: d.name,
+          kind: (d.notes as Attachment["kind"] | null) ?? "Document",
+          path: d.storage_path,
+        })),
+      );
+    }
+  }
+
+  /** Records which screened counterparty the user actually wants to trade with, then opens the
+   * Intent sign-off on the right so the terms can be signed and accepted. */
   async function finalizeChoice(counterpartyId: string) {
     if (!dealTx) return;
     setFinalizing(true);
@@ -248,13 +279,15 @@ function LiveDealEngine() {
       });
       await advance(dealTx.id, "trading", "intent");
       setDealTx((prev) => (prev ? { ...prev, stage: "trading", step: "intent" } : prev));
-      toast.success("Choice recorded — background screening is done");
+      setStagePanel("intent");
+      toast.success("Choice recorded — confirm the intent to continue");
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
       setFinalizing(false);
     }
   }
+
 
   // Once something has been recorded, keep the split workspace open (and on the side it was
   // recorded for) even after the form resets — that's what the Live Workspace panel now shows.
