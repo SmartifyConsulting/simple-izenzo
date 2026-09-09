@@ -514,18 +514,20 @@ export function CanvasStart({ onCreated }: { onCreated: (id: string) => void }) 
       <div className="ink-grid relative rounded-3xl border border-border p-8 sm:p-14">
         <p className="label-caps text-center">Live deal canvas</p>
         <div className="mx-auto mt-6 max-w-md">
-          <button type="button" onClick={() => setPicking(true)} className="block w-full text-left">
-            <span className="glass-node node-active animate-node-rise block px-6 py-7 text-center">
-              <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full border border-primary bg-primary/20 text-primary">
-                <ArrowLeftRight className="h-4.5 w-4.5" />
-              </span>
-              <span className="mt-3 block text-[15px] font-semibold tracking-tight">
-                Open a bid or an offer
-              </span>
-              <span className="mt-1.5 block text-[12.5px] text-muted-foreground">
-                The canvas draws itself from here: your lane on the left, the counterparty on the
-                right.
-              </span>
+          <button
+            type="button"
+            onClick={() => setPicking(true)}
+            className="group block w-full animate-node-rise px-6 py-7 text-center"
+          >
+            <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full border border-primary bg-primary/20 text-primary transition-transform group-hover:scale-105">
+              <ArrowLeftRight className="h-4.5 w-4.5" />
+            </span>
+            <span className="mt-3 block text-[15px] font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary">
+              Open a bid or an offer
+            </span>
+            <span className="mt-1.5 block text-[12.5px] text-muted-foreground">
+              The canvas draws itself from here: your lane on the left, the counterparty on the
+              right.
             </span>
           </button>
         </div>
