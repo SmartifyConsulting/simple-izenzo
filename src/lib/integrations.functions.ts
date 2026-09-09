@@ -191,28 +191,45 @@ async function probe(
   switch (providerId) {
     case "didit": {
       const base = (config["base_url"] || "https://verification.didit.me").replace(/\/+$/, "");
-      // Creating a session is the only reliable probe: it checks both the key and the workflow ID.
-      const res = await fetch(`${base}/v2/session/`, {
-        method: "POST",
-        headers: { "x-api-key": secrets["api_key"] ?? "", "Content-Type": "application/json" },
-        body: JSON.stringify({
-          workflow_id: config["workflow_id_document"] ?? "",
-          vendor_data: "connection-test",
-        }),
-      });
-      if (res.status === 401 || res.status === 403)
-        return { ok: false, message: `Didit rejected the key [${res.status}].` };
-      if (res.status === 400) {
-        const body = await res.text();
-        return {
-          ok: false,
-          message: /uuid/i.test(body)
-            ? "The key works, but the ID-document workflow ID is not a valid Didit workflow ID. Copy the workflow ID (a UUID) from your Didit console."
-            : `Didit rejected the request: ${body.slice(0, 200)}`,
-        };
+      const checks: Array<[string, string]> = [
+        ["ID document", config["workflow_id_document"] ?? ""],
+        ["Company (KYB)", config["workflow_kyb"] ?? ""],
+        ["Sanctions / PEP", config["workflow_aml"] ?? ""],
+      ];
+      const notes: string[] = [];
+      let allOk = true;
+      for (const [label, workflow] of checks) {
+        if (!workflow) {
+          allOk = false;
+          notes.push(`${label}: no workflow saved.`);
+          continue;
+        }
+        // Creating a session is the only reliable probe: it checks both the key and the workflow.
+        const res = await fetch(`${base}/v2/session/`, {
+          method: "POST",
+          headers: { "x-api-key": secrets["api_key"] ?? "", "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workflow_id: workflow,
+            vendor_data: `connection-test-${Date.now()}`,
+          }),
+        });
+        if (res.status === 401 || res.status === 403)
+          return { ok: false, message: `Didit rejected the key [${res.status}].` };
+        if (res.ok) {
+          notes.push(`${label}: OK.`);
+          continue;
+        }
+        allOk = false;
+        const body = (await res.text()).slice(0, 200);
+        if (/uuid/i.test(body)) notes.push(`${label}: that workflow ID is not a valid Didit workflow ID.`);
+        else if (/portrait_image|stored face/i.test(body))
+          notes.push(`${label}: that workflow is a face-match workflow needing an existing photo — use the ID document + liveness workflow instead.`);
+        else notes.push(`${label}: rejected [${res.status}] ${body}`);
       }
-      return say(res, "Didit accepted the key and workflow.");
+      return { ok: allOk, message: `Key accepted. ${notes.join(" ")}` };
     }
+
+
 
     case "onfido": {
       const region = (config["region"] || "eu").toLowerCase();
