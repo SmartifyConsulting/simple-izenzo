@@ -722,7 +722,15 @@ function LiveDealEngine() {
               side === "offer" && "sm:order-1",
             )}
           >
-            <p className="label-caps">Live workspace</p>
+            <div className="flex items-start justify-between gap-3">
+              <p className="label-caps">Live workspace</p>
+              {(dealTx?.reference ?? activity?.reference) && (
+                <span className="shrink-0 rounded-full border border-primary/40 bg-primary/12 px-2.5 py-1 text-[11px] font-bold tracking-wide text-primary">
+                  {dealTx?.reference ?? activity?.reference}
+                </span>
+              )}
+            </div>
+
 
             {activity ? (
               <div className="mt-4 space-y-3">
@@ -800,7 +808,9 @@ function LiveDealEngine() {
                   </div>
                 )}
 
-                {(flowStep === "searching" || flowStep === "results") && dealTx && (
+                {/* Once a party is chosen the gate panel takes over the workspace — leaving the
+                    match list open below it is what made the screen look stuck. */}
+                {(flowStep === "searching" || flowStep === "results") && dealTx && !stagePanel && (
                   <div className="space-y-2">
                     {searchError && (
                       <p className="text-xs text-[#F97316]">Search failed: {searchError}</p>
