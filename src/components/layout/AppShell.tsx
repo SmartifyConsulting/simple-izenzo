@@ -117,6 +117,9 @@ export function AppShell({
         </div>
         {children}
       </main>
+
+      <SiteFooter />
     </div>
   );
+
 }
