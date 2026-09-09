@@ -62,6 +62,35 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
     testable: true,
   },
   {
+    id: "didit",
+    name: "Didit",
+    group: "KYC & Identity",
+    summary:
+      "ID document + selfie, company (KYB) and sanctions/PEP checks. Used for self-verification and at the WaD compliance gate.",
+    docsUrl: "https://docs.didit.me",
+    environments: ["sandbox", "production"],
+    fields: [
+      { key: "api_key", label: "API key", secret: true, help: "From the Didit console, Business settings → API keys." },
+      {
+        key: "webhook_secret",
+        label: "Webhook secret",
+        secret: true,
+        help: "Paste the same value into Didit's webhook settings so results can be trusted.",
+      },
+      { key: "workflow_id_document", label: "Workflow ID — ID document + selfie", secret: false },
+      { key: "workflow_kyb", label: "Workflow ID — company (KYB)", secret: false },
+      { key: "workflow_aml", label: "Workflow ID — sanctions / PEP", secret: false },
+      {
+        key: "base_url",
+        label: "API base URL",
+        secret: false,
+        placeholder: "https://verification.didit.me",
+        help: "Leave blank to use Didit's default.",
+      },
+    ],
+    testable: true,
+  },
+  {
     id: "cipc",
     name: "CIPC",
     group: "Business Registry & Tax",

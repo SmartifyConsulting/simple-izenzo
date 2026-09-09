@@ -60,6 +60,7 @@ import { Route as AuthenticatedGovernanceHealthRouteImport } from './routes/_aut
 import { Route as AuthenticatedGovernanceNotificationsRouteImport } from './routes/_authenticated.governance.notifications'
 import { Route as AuthenticatedGovernanceTriageRouteImport } from './routes/_authenticated.governance.triage'
 import { Route as AuthenticatedTransactionsNewRouteImport } from './routes/_authenticated.transactions.new'
+import { Route as ApiPublicWebhooksDiditRouteImport } from './routes/api/public/webhooks/didit'
 import { Route as AuthenticatedTxIdStageStepRouteImport } from './routes/_authenticated.tx.$id.$stage.$step'
 
 const IndexRoute = IndexRouteImport.update({
@@ -333,6 +334,11 @@ const AuthenticatedTransactionsNewRoute =
     path: '/transactions/new',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const ApiPublicWebhooksDiditRoute = ApiPublicWebhooksDiditRouteImport.update({
+  id: '/api/public/webhooks/didit',
+  path: '/api/public/webhooks/didit',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedTxIdStageStepRoute =
   AuthenticatedTxIdStageStepRouteImport.update({
     id: '/tx/$id/$stage/$step',
@@ -391,6 +397,7 @@ export interface FileRoutesByFullPath {
   '/governance/notifications': typeof AuthenticatedGovernanceNotificationsRoute
   '/governance/triage': typeof AuthenticatedGovernanceTriageRoute
   '/transactions/new': typeof AuthenticatedTransactionsNewRoute
+  '/api/public/webhooks/didit': typeof ApiPublicWebhooksDiditRoute
   '/tx/$id/$stage/$step': typeof AuthenticatedTxIdStageStepRoute
 }
 export interface FileRoutesByTo {
@@ -444,6 +451,7 @@ export interface FileRoutesByTo {
   '/governance/notifications': typeof AuthenticatedGovernanceNotificationsRoute
   '/governance/triage': typeof AuthenticatedGovernanceTriageRoute
   '/transactions/new': typeof AuthenticatedTransactionsNewRoute
+  '/api/public/webhooks/didit': typeof ApiPublicWebhooksDiditRoute
   '/tx/$id/$stage/$step': typeof AuthenticatedTxIdStageStepRoute
 }
 export interface FileRoutesById {
@@ -499,6 +507,7 @@ export interface FileRoutesById {
   '/_authenticated/governance/notifications': typeof AuthenticatedGovernanceNotificationsRoute
   '/_authenticated/governance/triage': typeof AuthenticatedGovernanceTriageRoute
   '/_authenticated/transactions/new': typeof AuthenticatedTransactionsNewRoute
+  '/api/public/webhooks/didit': typeof ApiPublicWebhooksDiditRoute
   '/_authenticated/tx/$id/$stage/$step': typeof AuthenticatedTxIdStageStepRoute
 }
 export interface FileRouteTypes {
@@ -554,6 +563,7 @@ export interface FileRouteTypes {
     | '/governance/notifications'
     | '/governance/triage'
     | '/transactions/new'
+    | '/api/public/webhooks/didit'
     | '/tx/$id/$stage/$step'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -607,6 +617,7 @@ export interface FileRouteTypes {
     | '/governance/notifications'
     | '/governance/triage'
     | '/transactions/new'
+    | '/api/public/webhooks/didit'
     | '/tx/$id/$stage/$step'
   id:
     | '__root__'
@@ -661,6 +672,7 @@ export interface FileRouteTypes {
     | '/_authenticated/governance/notifications'
     | '/_authenticated/governance/triage'
     | '/_authenticated/transactions/new'
+    | '/api/public/webhooks/didit'
     | '/_authenticated/tx/$id/$stage/$step'
   fileRoutesById: FileRoutesById
 }
@@ -685,6 +697,7 @@ export interface RootRouteChildren {
   SolutionsFinanceRoute: typeof SolutionsFinanceRoute
   SolutionsSovereignsRoute: typeof SolutionsSovereignsRoute
   SolutionsTradersRoute: typeof SolutionsTradersRoute
+  ApiPublicWebhooksDiditRoute: typeof ApiPublicWebhooksDiditRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1046,6 +1059,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTransactionsNewRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/api/public/webhooks/didit': {
+      id: '/api/public/webhooks/didit'
+      path: '/api/public/webhooks/didit'
+      fullPath: '/api/public/webhooks/didit'
+      preLoaderRoute: typeof ApiPublicWebhooksDiditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/tx/$id/$stage/$step': {
       id: '/_authenticated/tx/$id/$stage/$step'
       path: '/tx/$id/$stage/$step'
@@ -1161,6 +1181,7 @@ const rootRouteChildren: RootRouteChildren = {
   SolutionsFinanceRoute: SolutionsFinanceRoute,
   SolutionsSovereignsRoute: SolutionsSovereignsRoute,
   SolutionsTradersRoute: SolutionsTradersRoute,
+  ApiPublicWebhooksDiditRoute: ApiPublicWebhooksDiditRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
