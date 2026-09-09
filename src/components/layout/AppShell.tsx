@@ -1,12 +1,11 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
-import { Coins, LayoutGrid, Moon, Sun, TerminalSquare } from "lucide-react";
+import { useEffect, type ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
+import { Coins, LayoutDashboard, Mail, Moon, Sun, TerminalSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
-import { useModules } from "@/lib/useModules";
+import { SearchButton } from "@/components/layout/SearchButton";
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
 import { initTheme, useTheme } from "@/lib/theme";
 
@@ -29,54 +28,6 @@ function greeting() {
   if (hour < 12) return "Good morning";
   if (hour < 18) return "Good afternoon";
   return "Good evening";
-}
-
-function ModuleLauncher() {
-  const [open, setOpen] = useState(false);
-  const modules = useModules();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-
-  return (
-    <>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => setOpen(true)}
-        className="gap-2 rounded-full border border-border bg-muted px-3"
-      >
-        <LayoutGrid className="h-4 w-4" />
-        <span className="hidden sm:inline">Quick Access</span>
-      </Button>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="glass w-[min(760px,94vw)] p-6 sm:max-w-[min(760px,94vw)]">
-          <DialogTitle className="text-base tracking-tight">Quick Access</DialogTitle>
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            {modules.map((m) => {
-              const active = pathname.startsWith(m.to);
-              return (
-                <Link
-                  key={m.to}
-                  to={m.to}
-                  onClick={() => setOpen(false)}
-                  className={cn(
-                    "glass-node block px-4 py-3.5 transition-transform hover:-translate-y-0.5",
-                    active && "node-active",
-                  )}
-                >
-                  <span className="flex items-center gap-2 text-[13.5px] font-semibold tracking-tight">
-                    <m.icon className="h-4 w-4 text-primary" />
-                    {m.label}
-                  </span>
-                  <span className="mt-1 block text-[12px] text-muted-foreground">{m.blurb}</span>
-                </Link>
-              );
-            })}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
 }
 
 /** Classic is the app's one committed view — no layout or view selector, just this shell. */
@@ -108,7 +59,13 @@ export function AppShell({
           <Link to="/dashboard" className="shrink-0">
             <Logo onDark className="h-7 w-auto" />
           </Link>
-          <ModuleLauncher />
+          <Link to="/dashboard">
+            <Button variant="ghost" size="sm" className="gap-2 rounded-full border border-border bg-muted px-3">
+              <LayoutDashboard className="h-4 w-4" />
+              <span className="hidden sm:inline">Deals</span>
+            </Button>
+          </Link>
+          <SearchButton />
           <Link to="/developer/keys">
             <Button variant="ghost" size="sm" className="gap-2 rounded-full border border-border bg-muted px-3">
               <TerminalSquare className="h-4 w-4" />
@@ -126,6 +83,13 @@ export function AppShell({
             </Link>
           )}
           <ThemeToggle />
+          <Link
+            to="/inbox"
+            title="Inbox"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground hover:text-foreground"
+          >
+            <Mail className="h-4 w-4" />
+          </Link>
           <ProfileAvatarMenu />
         </div>
       </header>
