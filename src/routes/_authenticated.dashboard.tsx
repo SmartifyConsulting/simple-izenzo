@@ -25,6 +25,7 @@ function Dashboard() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
   const [direction, setDirection] = useState<"bid" | "offer" | null>(null);
+  const [showWorkflow, setShowWorkflow] = useState(false);
 
   const { data: txs = [], isLoading, refetch } = useQuery({
     queryKey: ["transactions", org?.id],
@@ -50,11 +51,12 @@ function Dashboard() {
     <AppShell wide>
       {isLoading && <p className="text-sm text-muted-foreground">Opening the canvas…</p>}
 
-      {!isLoading && !activeTx && (
+      {!isLoading && (!activeTx || showWorkflow) && (
         <>
           <CanvasStart
             onCreated={(id) => {
               setSelectedId(id);
+              setShowWorkflow(false);
               void refetch();
             }}
             onPickingChange={setPicking}
@@ -72,14 +74,18 @@ function Dashboard() {
         </>
       )}
 
-      {activeTx && (
+      {activeTx && !showWorkflow && (
         <DealCanvas
           tx={activeTx}
           deals={txs}
-          onSelectDeal={setSelectedId}
+          onSelectDeal={(id) => {
+            setSelectedId(id);
+            setShowWorkflow(false);
+          }}
           reload={() => {
             void refetch();
           }}
+          onBackToWorkflow={() => setShowWorkflow(true)}
         />
       )}
     </AppShell>

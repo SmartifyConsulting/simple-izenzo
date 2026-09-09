@@ -51,7 +51,7 @@ export function AppShell({
 
   return (
     <div
-      className={cn("ink-grid flex min-h-screen flex-col", pureBlack ? "" : "bg-background")}
+      className={cn("ink-grid flex min-h-screen flex-col overflow-x-hidden", pureBlack ? "" : "bg-background")}
       style={pureBlack ? { backgroundColor: "#000" } : undefined}
     >
       <header className="sticky top-0 z-30 border-b border-border bg-background/70 backdrop-blur-xl">
@@ -73,19 +73,22 @@ export function AppShell({
               {org.credits}
             </Link>
           )}
-          <nav className="flex shrink-0 items-center gap-4 text-sm font-medium text-muted-foreground">
-            <a href="/pricing" className="flex items-center gap-1.5 hover:text-foreground">
+          <nav className="flex shrink-0 items-center gap-2 text-sm font-medium text-muted-foreground sm:gap-4">
+            <a href="/pricing" className="flex items-center gap-1.5 hover:text-foreground" title="Pricing">
               <Tag className="h-3.5 w-3.5" />
-              Pricing
+              <span className="hidden lg:inline">Pricing</span>
             </a>
-            <Link to="/docs" className="flex items-center gap-1.5 hover:text-foreground">
+            <Link to="/docs" className="flex items-center gap-1.5 hover:text-foreground" title="API's">
               <TerminalSquare className="h-3.5 w-3.5" />
-              API's
+              <span className="hidden lg:inline">API's</span>
             </Link>
             <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-1.5 outline-none hover:text-foreground">
+              <DropdownMenuTrigger
+                className="flex items-center gap-1.5 outline-none hover:text-foreground"
+                title="Report"
+              >
                 <BarChart3 className="h-3.5 w-3.5" />
-                Report
+                <span className="hidden lg:inline">Report</span>
                 <ChevronDown className="h-3.5 w-3.5" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
