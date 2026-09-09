@@ -100,7 +100,7 @@ export function FlightSearchBoard() {
     enabled: !!txId,
     refetchInterval: openTxId ? 2000 : false,
     queryFn: async () => {
-      const { data } = await supabase.from("transactions").select("*").eq("id", txId).maybeSingle();
+      const { data } = await supabase.from("transactions").select("*").eq("id", txId!).maybeSingle();
       return data as Transaction | null;
     },
   });

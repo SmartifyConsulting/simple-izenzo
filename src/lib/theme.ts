@@ -11,7 +11,7 @@ function getTheme(): Theme {
 }
 
 function applyTheme(theme: Theme) {
-  document.documentElement.dataset.theme = theme;
+  document.documentElement.dataset["theme"] = theme;
 }
 
 function setTheme(theme: Theme) {

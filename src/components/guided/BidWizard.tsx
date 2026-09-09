@@ -49,7 +49,7 @@ export function BidWizard({
     queryKey: ["wizard-tx", txId],
     enabled: !!txId,
     queryFn: async () => {
-      const { data, error } = await supabase.from("transactions").select("*").eq("id", txId).single();
+      const { data, error } = await supabase.from("transactions").select("*").eq("id", txId!).single();
       if (error) throw error;
       return data as Transaction;
     },
