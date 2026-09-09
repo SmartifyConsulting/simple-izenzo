@@ -324,7 +324,7 @@ export function DealCanvas({
           <LaneHeader label="Responder" side="right" />
         </div>
       )}
-      {hideBidOfferGroups && (
+      {hideBidOfferGroups && !poiSealed && (
         <div className={cn("mt-1", !focusSide && "grid grid-cols-2 gap-4 sm:gap-8")}>
           {focusSide !== "offer" && (
             <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-white">Next steps</p>
