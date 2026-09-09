@@ -43,13 +43,80 @@ type RegistryCompany = {
   claimed_org_id: string | null;
 };
 
+function SiteLookup({ companyName }: { companyName: string }) {
+  const runLookup = useServerFn(lookupCompanySite);
+  const [url, setUrl] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ excerpt: string; wordCount: number; note: string } | null>(
+    null,
+  );
+
+  async function go() {
+    const trimmed = url.trim();
+    if (!/^https?:\/\//i.test(trimmed)) {
+      toast.error("Enter the full web address, starting with https://");
+      return;
+    }
+    setBusy(true);
+    setResult(null);
+    try {
+      const res = await runLookup({ data: { url: trimmed, companyName } });
+      setResult({ excerpt: res.excerpt, wordCount: res.wordCount, note: res.note });
+      if (!res.ok) toast.error(res.note);
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-4 space-y-3 rounded-md border border-border bg-muted/30 p-4">
+      <div className="space-y-1.5">
+        <Label htmlFor={`site-${companyName}`}>Company website</Label>
+        <div className="flex gap-2">
+          <Input
+            id={`site-${companyName}`}
+            placeholder="https://company.co.za"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+          />
+          <Button size="sm" onClick={() => void go()} disabled={busy}>
+            {busy ? "Reading…" : "Read site"}
+          </Button>
+        </div>
+      </div>
+      {result && (
+        <div className="text-xs text-muted-foreground">
+          {result.excerpt ? (
+            <>
+              <p className="mb-1 font-medium text-foreground">
+                What the site says ({result.wordCount} words read)
+              </p>
+              <p>{result.excerpt}</p>
+              <p className="mt-2">
+                This is read straight from the company&apos;s own site for your review. Nothing is
+                saved to the registry record.
+              </p>
+            </>
+          ) : (
+            <p>{result.note}</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function RegistryPage() {
   const { profile } = useAuth();
   const qc = useQueryClient();
   const [query, setQuery] = useState("");
   const [claimingId, setClaimingId] = useState<string | null>(null);
+  const [lookupId, setLookupId] = useState<string | null>(null);
   const [form, setForm] = useState({ role: "director", note: "", evidenceUrl: "" });
   const [busy, setBusy] = useState(false);
+
 
   const { data: companies = [], isLoading } = useQuery({
     queryKey: ["registry-companies"],
