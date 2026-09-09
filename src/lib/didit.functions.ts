@@ -174,11 +174,12 @@ export const refreshVerification = createServerFn({ method: "POST" })
 
     const { data: row } = await supabaseAdmin
       .from("identity_verifications")
-      .select("provider_session_id")
+      .select("provider_session_id, subject_counterparty_id")
       .eq("id", data.id)
       .maybeSingle();
     const sessionId = row?.provider_session_id as string | null;
     if (!sessionId) throw new Error("This verification has no Didit session yet.");
+
 
     const creds = await loadDiditCreds();
     const decision = await fetchDiditDecision(creds, sessionId);
