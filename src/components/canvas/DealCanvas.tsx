@@ -425,7 +425,7 @@ export function DealCanvas({
  * scrollbar either way. */
 /** A step's completion form, rendered inline right where its node sits — continuing the canvas
  * as a frame rather than popping up as a modal window. */
-function InlineFrame({
+export function InlineFrame({
   tx,
   stage,
   step,

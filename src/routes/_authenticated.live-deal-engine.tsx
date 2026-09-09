@@ -11,11 +11,13 @@ import {
   FLOWCHART_PREVIEW_TX,
   type RecordedActivity,
 } from "@/components/canvas/DealCanvas";
+import { MahjongView } from "@/components/canvas/MahjongView";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { advance, fingerprintOf, recordEvent, type Transaction } from "@/lib/tx";
 import { searchCounterparties } from "@/lib/izenzo.functions";
+import { useViewMode } from "@/lib/viewMode";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/live-deal-engine")({
@@ -250,6 +252,19 @@ function LiveDealEngine() {
     } finally {
       setBusy(false);
     }
+  }
+
+  const viewMode = useViewMode();
+
+  if (viewMode === "mahjong") {
+    return (
+      <AppShell
+        wide
+        actions={activity && <p className="text-sm font-bold text-white">{activity.reference}</p>}
+      >
+        <MahjongView tx={dealTx ?? FLOWCHART_PREVIEW_TX} reload={() => {}} readOnly={!dealTx} />
+      </AppShell>
+    );
   }
 
   return (

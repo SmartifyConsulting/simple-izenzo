@@ -1,8 +1,9 @@
 import { useEffect, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { BarChart3, ChevronDown, Coins, Mail, Tag, TerminalSquare } from "lucide-react";
+import { BarChart3, ChevronDown, Coins, LayoutGrid, Mail, Tag, TerminalSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
+import { useViewMode, setViewMode } from "@/lib/viewMode";
 import { Logo } from "@/components/Logo";
 import { SearchButton } from "@/components/layout/SearchButton";
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
@@ -44,6 +45,7 @@ export function AppShell({
   const { profile, org } = useAuth();
   const firstName = (profile?.full_name ?? profile?.email ?? "").split(/[\s@]/)[0];
   const width = wide ? "max-w-[1680px]" : "max-w-7xl";
+  const viewMode = useViewMode();
 
   useEffect(() => {
     initTheme();
@@ -60,6 +62,14 @@ export function AppShell({
             <Logo onDark className="h-7 w-auto" />
           </Link>
           <SearchButton />
+          <button
+            type="button"
+            onClick={() => setViewMode(viewMode === "mahjong" ? "classic" : "mahjong")}
+            className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+            {viewMode === "mahjong" ? "Classic View" : "Mahjong"}
+          </button>
           <div className="min-w-0 flex-1" />
           {org && (
             <Link
