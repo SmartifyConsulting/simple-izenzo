@@ -838,7 +838,11 @@ export function CanvasStart({
    * decided which side the user wants. */
   initialDirection?: "bid" | "offer" | null;
 }) {
-  const { org, user, profile, refresh } = useAuth();
+  const { org, orgs, user, profile, refresh } = useAuth();
+  // Which company this bid/offer is traded as — only shown as a choice when the user belongs to
+  // more than one; otherwise the account's default org is used without asking.
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const activeCompanyId = companyId ?? org?.id ?? null;
   const [picking, setPickingState] = useState(Boolean(initialDirection));
   const setPicking = (v: boolean) => {
     setPickingState(v);
@@ -872,7 +876,12 @@ export function CanvasStart({
     try {
       // Some accounts (Google sign-up, or older ones) never got an organisation — provision a
       // personal one on the fly instead of blocking here, same as new individual sign-ups do.
-      const activeOrg = org ?? (await ensureOrg(user.id, profile?.full_name ?? user.email ?? "My account"));
+      // Otherwise trade as whichever company was picked (or the account's default, when there's
+      // only one).
+      const activeOrg =
+        orgs.find((o) => o.id === activeCompanyId) ??
+        org ??
+        (await ensureOrg(user.id, profile?.full_name ?? user.email ?? "My account"));
       if (!org) void refresh();
 
       // Generated once, up front, so the same value goes onto the row (visible in Trades/reports)
@@ -991,6 +1000,23 @@ export function CanvasStart({
 
   const form_ = (
     <form onSubmit={submit} className="mt-2 space-y-3">
+      {orgs.length > 1 && activeCompanyId && (
+        <div className="space-y-1.5">
+          <Label htmlFor="cs-company">Trading as</Label>
+          <Select value={activeCompanyId} onValueChange={setCompanyId}>
+            <SelectTrigger id="cs-company">
+              <SelectValue placeholder="Select a company" />
+            </SelectTrigger>
+            <SelectContent>
+              {orgs.map((o) => (
+                <SelectItem key={o.id} value={o.id}>
+                  {o.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
       <div className="space-y-1.5">
         <Label htmlFor="cs-title">Transaction title</Label>
         <Input
