@@ -207,6 +207,9 @@ function LiveDealEngine() {
       setSearchError((err as Error).message);
     } finally {
       setFlowStep("results");
+      // The candidates are written server-side, so the Record panel's cached (empty) list has to
+      // be refreshed or it stays stuck on "Searching for counterparties…".
+      await queryClient.invalidateQueries({ queryKey: ["counterparties", txId] });
     }
   }
 
