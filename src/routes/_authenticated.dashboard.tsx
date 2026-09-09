@@ -39,22 +39,29 @@ function Dashboard() {
             side === "offer" && "sm:order-2",
           )}
         >
-          <CanvasStart
-            onCreated={(_id, recorded) => {
-              setPicking(false);
-              setDirection(null);
-              setActivity(recorded);
-            }}
-            onPickingChange={setPicking}
-            onDirectionChange={setDirection}
-          />
+          {!activity && (
+            <CanvasStart
+              onCreated={(_id, recorded) => {
+                setPicking(false);
+                setDirection(null);
+                setActivity(recorded);
+              }}
+              onPickingChange={setPicking}
+              onDirectionChange={setDirection}
+            />
+          )}
+          {activity && (
+            <p className="label-caps">
+              Live deal engine for {activity.direction === "bid" ? "The Bid" : "Responder"}
+            </p>
+          )}
           <div className={side ? "mt-3" : "mt-4"}>
             <DealCanvas
               tx={FLOWCHART_PREVIEW_TX}
               reload={() => {}}
               readOnly
-              hideBidOfferGroups={picking}
-              focusSide={direction}
+              hideBidOfferGroups={picking || Boolean(activity)}
+              focusSide={side}
             />
           </div>
         </div>

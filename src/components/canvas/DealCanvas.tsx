@@ -214,7 +214,7 @@ export function DealCanvas({
           label doesn't need repeating here too; "Next steps" below is enough context. */}
       {!focusSide && (
         <div className="grid grid-cols-2 gap-4 sm:gap-8">
-          <LaneHeader label="Bidder" side="left" />
+          <LaneHeader label="The Bid" side="left" />
           <LaneHeader label="Responder" side="right" />
         </div>
       )}
@@ -924,11 +924,11 @@ export function CanvasStart({
         )}
       >
       <p className="label-caps mb-3">
-        {direction === "bid" ? "Live deal engine for Bidder" : direction === "offer" ? "Live deal engine for Responder" : "Live deal engine"}
+        {direction === "bid" ? "Live deal engine for The Bid" : direction === "offer" ? "Live deal engine for Responder" : "Live deal engine"}
       </p>
       {!direction && (
         <div className="grid grid-cols-2 gap-4 sm:gap-8">
-          <LaneHeader label="Bidder" side="left" />
+          <LaneHeader label="The Bid" side="left" />
           <LaneHeader label="Responder" side="right" />
         </div>
       )}
