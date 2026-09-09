@@ -1890,48 +1890,66 @@ export type Database = {
       organisations: {
         Row: {
           address: string | null
+          ai_brief: string | null
+          ai_brief_generated_at: string | null
           avatar_url: string | null
           country: string | null
           created_at: string
           created_by: string | null
           credits: number
           id: string
+          industry: string | null
           name: string
           offerings: string | null
+          primary_contact_email: string | null
+          primary_contact_name: string | null
           registration_no: string | null
           sector: string | null
           updated_at: string
           website: string | null
+          years_in_business: number | null
         }
         Insert: {
           address?: string | null
+          ai_brief?: string | null
+          ai_brief_generated_at?: string | null
           avatar_url?: string | null
           country?: string | null
           created_at?: string
           created_by?: string | null
           credits?: number
           id?: string
+          industry?: string | null
           name: string
           offerings?: string | null
+          primary_contact_email?: string | null
+          primary_contact_name?: string | null
           registration_no?: string | null
           sector?: string | null
           updated_at?: string
           website?: string | null
+          years_in_business?: number | null
         }
         Update: {
           address?: string | null
+          ai_brief?: string | null
+          ai_brief_generated_at?: string | null
           avatar_url?: string | null
           country?: string | null
           created_at?: string
           created_by?: string | null
           credits?: number
           id?: string
+          industry?: string | null
           name?: string
           offerings?: string | null
+          primary_contact_email?: string | null
+          primary_contact_name?: string | null
           registration_no?: string | null
           sector?: string | null
           updated_at?: string
           website?: string | null
+          years_in_business?: number | null
         }
         Relationships: []
       }

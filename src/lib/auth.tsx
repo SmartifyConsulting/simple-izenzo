@@ -24,6 +24,12 @@ export type Org = {
   avatar_url?: string | null;
   offerings?: string | null;
   website?: string | null;
+  industry?: string | null;
+  years_in_business?: number | null;
+  primary_contact_name?: string | null;
+  primary_contact_email?: string | null;
+  ai_brief?: string | null;
+  ai_brief_generated_at?: string | null;
 };
 
 type AuthValue = {

@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { LogOut, Moon, Settings, Sun } from "lucide-react";
+import { LogOut, Moon, Settings, ShieldCheck, Sun } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import {
@@ -14,7 +14,7 @@ import {
 /** The app's one profile menu — Settings, then the light/dark switch, then sign out, then the
  * legal footer links. Pricing/API's/Support live in the top nav instead. */
 export function ProfileAvatarMenu() {
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, roles } = useAuth();
   const navigate = useNavigate();
   const [theme, toggleTheme] = useTheme();
 
@@ -39,6 +39,13 @@ export function ProfileAvatarMenu() {
             {profile?.email}
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
+          {roles.includes("admin") && (
+            <DropdownMenuItem asChild>
+              <Link to="/admin" className="flex items-center">
+                <ShieldCheck className="mr-2 h-3.5 w-3.5" /> Admin
+              </Link>
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem asChild>
             <Link to="/account/settings" className="flex items-center">
               <Settings className="mr-2 h-3.5 w-3.5" /> Settings

@@ -1,8 +1,16 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { generateOrgBrief } from "@/lib/orgBrief.functions";
 import { toast } from "sonner";
 import { Check, Pencil, Plus, Trash2 } from "lucide-react";
 import { AvatarUpload } from "@/components/AvatarUpload";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,10 +23,29 @@ const EMPTY_FORM = {
   registration_no: "",
   country: "",
   sector: "",
+  industry: "",
+  years_in_business: "",
+  primary_contact_name: "",
+  primary_contact_email: "",
   address: "",
   offerings: "",
   website: "",
+  ai_brief: "",
 };
+
+/** The form keeps every field as a string for the inputs; the database wants a number (or null)
+ * for years in business, and nulls rather than empty strings. */
+function toRow(form: typeof EMPTY_FORM) {
+  const years = form.years_in_business.trim();
+  return {
+    ...form,
+    years_in_business: years === "" ? null : Number(years),
+    primary_contact_name: form.primary_contact_name || null,
+    primary_contact_email: form.primary_contact_email || null,
+    industry: form.industry || null,
+    ai_brief: form.ai_brief || null,
+  };
+}
 
 export function OrganisationsPanel() {
   const { org, orgs, profile, refresh, switchOrg, loading } = useAuth();
@@ -26,6 +53,28 @@ export function OrganisationsPanel() {
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [busy, setBusy] = useState(false);
+  const [briefBusy, setBriefBusy] = useState(false);
+  const writeBriefFn = useServerFn(generateOrgBrief);
+
+  /** Saves whatever is on screen first (so the website the user just typed is the one read), then
+   * asks the AI for the brief and drops it straight into the form. */
+  async function writeBrief(orgId: string) {
+    setBriefBusy(true);
+    try {
+      const { error } = await supabase.from("organisations").update(toRow(form)).eq("id", orgId);
+      if (error) throw error;
+      const { brief, usedWebsite } = await writeBriefFn({ data: { orgId } });
+      setForm((f) => ({ ...f, ai_brief: brief }));
+      await refresh();
+      toast.success(
+        usedWebsite ? "Brief written from the company website" : "Brief written from the details captured",
+      );
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setBriefBusy(false);
+    }
+  }
 
   useEffect(() => {
     if (!loading && orgs.length === 0) setCreating(true);
@@ -39,9 +88,14 @@ export function OrganisationsPanel() {
       registration_no: o.registration_no ?? "",
       country: o.country ?? "",
       sector: o.sector ?? "",
+      industry: o.industry ?? "",
+      years_in_business: o.years_in_business == null ? "" : String(o.years_in_business),
+      primary_contact_name: o.primary_contact_name ?? "",
+      primary_contact_email: o.primary_contact_email ?? "",
       address: o.address ?? "",
       offerings: o.offerings ?? "",
       website: o.website ?? "",
+      ai_brief: o.ai_brief ?? "",
     });
   }
 
@@ -56,13 +110,13 @@ export function OrganisationsPanel() {
     setBusy(true);
     try {
       if (editingId) {
-        const { error } = await supabase.from("organisations").update(form).eq("id", editingId);
+        const { error } = await supabase.from("organisations").update(toRow(form)).eq("id", editingId);
         if (error) throw error;
         toast.success("Organisation updated");
       } else {
         const { data, error } = await supabase
           .from("organisations")
-          .insert(form)
+          .insert(toRow(form))
           .select()
           .single();
         if (error) throw error;
@@ -154,6 +208,26 @@ export function OrganisationsPanel() {
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {o.credits} token{o.credits === 1 ? "" : "s"}
                     </p>
+                    <Accordion type="single" collapsible className="mt-1">
+                      <AccordionItem value="details" className="border-none">
+                        <AccordionTrigger className="py-1 text-xs text-muted-foreground hover:no-underline">
+                          Company profile
+                        </AccordionTrigger>
+                        <AccordionContent className="space-y-1 pb-2 text-xs text-muted-foreground">
+                          <p>Industry: {o.industry || "Not captured"}</p>
+                          <p>
+                            Years in business:{" "}
+                            {o.years_in_business == null ? "Not captured" : o.years_in_business}
+                          </p>
+                          <p>Country: {o.country || "Not captured"}</p>
+                          <p>Primary contact: {o.primary_contact_name || "Not captured"}</p>
+                          <p>Contact email: {o.primary_contact_email || "Not captured"}</p>
+                          <p className="pt-1 text-foreground">
+                            {o.ai_brief || "No company brief written yet."}
+                          </p>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
                   </div>
                 </div>
                 <div className="flex shrink-0 gap-2">
@@ -241,6 +315,67 @@ export function OrganisationsPanel() {
                 value={form.website}
                 onChange={(e) => setForm({ ...form, website: e.target.value })}
               />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="industry">Industry</Label>
+              <Input
+                id="industry"
+                value={form.industry}
+                onChange={(e) => setForm({ ...form, industry: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="years">Years in business</Label>
+              <Input
+                id="years"
+                type="number"
+                min={0}
+                value={form.years_in_business}
+                onChange={(e) => setForm({ ...form, years_in_business: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="contact-name">Primary contact</Label>
+              <Input
+                id="contact-name"
+                value={form.primary_contact_name}
+                onChange={(e) => setForm({ ...form, primary_contact_name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="contact-email">Primary contact email</Label>
+              <Input
+                id="contact-email"
+                type="email"
+                value={form.primary_contact_email}
+                onChange={(e) => setForm({ ...form, primary_contact_email: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="brief">About this company</Label>
+                {editingId && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={briefBusy}
+                    onClick={() => writeBrief(editingId)}
+                  >
+                    {briefBusy ? "Writing…" : form.ai_brief ? "Rewrite with AI" : "Write with AI"}
+                  </Button>
+                )}
+              </div>
+              <Textarea
+                id="brief"
+                rows={4}
+                placeholder="A short description of the company. Save the website first, then let AI write this for you."
+                value={form.ai_brief}
+                onChange={(e) => setForm({ ...form, ai_brief: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">
+                Written from the company website and the details above. You can edit it freely.
+              </p>
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="address">Registered address</Label>
