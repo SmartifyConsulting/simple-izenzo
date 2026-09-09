@@ -165,14 +165,18 @@ export function DealCanvas({
   ) => {
     const def = stepDef(n.stage, n.step);
     const isOpen = panel?.stage === n.stage && panel?.step === n.step;
-    const throbbing = Boolean(throbStep) && n.stage === "trading" && n.step === throbStep;
+    const nodeState = stateOf(n.stage, n.step);
+    // A step that's already ticked done never pulses, no matter what the caller passes as
+    // throbStep — the pulse means "look here next", which is never true of a completed step.
+    const throbbing =
+      Boolean(throbStep) && n.stage === "trading" && n.step === throbStep && nodeState !== "done";
     return (
       <div className={cn(throbbing && "animate-throb rounded-2xl")} key={`${n.stage}-${n.step}`}>
 
         <CanvasNode
           label={n.label ?? def?.label ?? n.step}
           blurb={opts?.compact ? undefined : def?.blurb}
-          state={stateOf(n.stage, n.step)}
+          state={nodeState}
           icon={n.icon}
           side={opts?.side}
           note={opts?.note}

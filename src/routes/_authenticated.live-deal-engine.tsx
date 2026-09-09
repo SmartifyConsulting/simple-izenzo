@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CheckCircle2, Paperclip, UploadCloud, X } from "lucide-react";
+import { CheckCircle2, Download, Paperclip, UploadCloud, X } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import {
   CanvasStart,
@@ -169,10 +169,17 @@ function LiveDealEngine() {
   const runScreening = useServerFn(runBackgroundScreening);
   const queryClient = useQueryClient();
 
-  // Which canvas step should pulse: the results panel pulses while matching runs, then Choice
-  // takes over, and Background screening pulses while the provider checks are being opened.
-  const throbStep =
-    screening ? "media" : flowStep === "results" ? "choice" : null;
+  // Which canvas step should pulse, on top of whichever step the canvas already highlights as
+  // "active": Choice, until results have come back at least once; Background screening, while the
+  // provider checks are actually running. Once screening has returned, the step it's attached to
+  // is already the active one (or, after the final pick, already ticked done) — so there's nothing
+  // left for this supplementary pulse to add, and leaving it pointed at "choice" here is exactly
+  // what made an already-ticked frame keep pulsing after Continue was clicked.
+  const throbStep = screening
+    ? "media"
+    : flowStep === "results" && !screeningResults
+      ? "choice"
+      : null;
 
   /** Runs the background screening (registry lookup + Didit ID/KYB/AML) for whichever
    * counterparties were ticked in the Record panel. */
@@ -402,6 +409,23 @@ function LiveDealEngine() {
       return;
     }
     window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  }
+
+  /** Same signed-URL flow as opening it, but asks storage for a `Content-Disposition: attachment`
+   * link so the browser saves the file instead of just previewing it inline. */
+  async function downloadAttachment(a: Attachment) {
+    if (!a.path) return;
+    const { data, error } = await supabase.storage
+      .from("documents")
+      .createSignedUrl(a.path, 60, { download: a.name });
+    if (error || !data?.signedUrl) {
+      toast.error(`Could not download ${a.name}`);
+      return;
+    }
+    const link = document.createElement("a");
+    link.href = data.signedUrl;
+    link.download = a.name;
+    link.click();
   }
 
   async function submitDocuments(e: React.FormEvent) {
@@ -647,7 +671,17 @@ function LiveDealEngine() {
                         ) : (
                           <span className="truncate">{a.name}</span>
                         )}
-                        <span className="ml-auto shrink-0 text-xs text-muted-foreground">{a.kind}</span>
+                        <span className="shrink-0 text-xs text-muted-foreground">{a.kind}</span>
+                        {a.path && (
+                          <button
+                            type="button"
+                            onClick={() => downloadAttachment(a)}
+                            title={`Download ${a.name}`}
+                            className="ml-auto shrink-0 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>
