@@ -32,6 +32,8 @@ import { ensureOrg } from "@/lib/org";
 import { FLAT_STEPS, lockReason, stepDef, stepIndex, type StageKey } from "@/lib/spine";
 import { advance, money, recordEvent, when, type Transaction, type TxEvent } from "@/lib/tx";
 import { setCounterpartyShortlist } from "@/lib/izenzo.functions";
+import type { ScreeningResult } from "@/lib/screening.functions";
+
 import { CURRENCIES } from "@/lib/currencies";
 import { UNITS } from "@/lib/units";
 import { cn } from "@/lib/utils";
@@ -499,11 +501,19 @@ export function CounterpartyRecord({
   txId,
   searching = false,
   error = null,
+  onContinue,
+  screening = false,
+  screeningResults = null,
 }: {
   txId?: string | null;
   /** True while the AI/AI+ search is still running, so the panel polls for freshly saved rows. */
   searching?: boolean;
   error?: string | null;
+  /** Fires the background screening for the ticked counterparties. */
+  onContinue?: (counterpartyIds: string[]) => void;
+  /** True while those screening checks are being opened with the providers. */
+  screening?: boolean;
+  screeningResults?: ScreeningResult[] | null;
 }) {
   const qc = useQueryClient();
   const setShortlist = useServerFn(setCounterpartyShortlist);
@@ -523,6 +533,8 @@ export function CounterpartyRecord({
     },
   });
 
+  const ticked = candidates.filter((c) => c.shortlisted).map((c) => c.id);
+
   async function toggle(c: CounterpartyCandidate, next: boolean) {
     qc.setQueryData<CounterpartyCandidate[]>(["counterparties", txId], (prev) =>
       (prev ?? []).map((row) => (row.id === c.id ? { ...row, shortlisted: next } : row)),
@@ -536,7 +548,12 @@ export function CounterpartyRecord({
   }
 
   return (
-    <div className="rounded-2xl border-2 border-primary bg-slate-100 p-4">
+    <div
+      className={cn(
+        "rounded-2xl border-2 border-primary bg-slate-100 p-4",
+        searching && "animate-throb",
+      )}
+    >
       <p className="label-caps text-primary">Record</p>
       {candidates.length === 0 ? (
         <p className="mt-2 text-sm text-slate-500">
@@ -573,9 +590,53 @@ export function CounterpartyRecord({
           ))}
         </ul>
       )}
+
+      {screeningResults && screeningResults.length > 0 && (
+        <div className="mt-3 space-y-2 border-t border-slate-300 pt-3">
+          <p className="label-caps text-slate-600">Background screening</p>
+          {screeningResults.map((r) => (
+            <div key={r.counterpartyId}>
+              <p className="text-sm font-medium text-slate-900">{r.name}</p>
+              <ul className="mt-0.5 space-y-0.5">
+                {r.checks.map((chk) => (
+                  <li key={chk.kind} className="text-[11px] text-slate-600">
+                    <span className="font-medium">{chk.label}:</span>{" "}
+                    {chk.status === "started"
+                      ? "in progress"
+                      : chk.status === "matched"
+                        ? "match found"
+                        : chk.status === "no_match"
+                          ? "no match"
+                          : chk.status === "unavailable"
+                            ? "not connected"
+                            : "could not run"}{" "}
+                    — {chk.detail}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {onContinue && candidates.length > 0 && !searching && (
+        <Button
+          type="button"
+          className="mt-3 w-full"
+          disabled={screening || ticked.length === 0}
+          onClick={() => onContinue(ticked)}
+        >
+          {screening
+            ? "Running background screening…"
+            : ticked.length === 0
+              ? "Tick a counterparty to continue"
+              : `Continue with ${ticked.length} counterpart${ticked.length === 1 ? "y" : "ies"}`}
+        </Button>
+      )}
     </div>
   );
 }
+
 
 function SelectionRecord({ txId }: { txId?: string | null }) {
   const { data: events = [] } = useQuery({
