@@ -93,6 +93,7 @@ export function DealCanvas({
   focusSide,
   onBackToWorkflow,
   forceRevealAll,
+  hideMatchingRibbon,
 }: {
   tx: Transaction;
   reload: () => void;
@@ -116,6 +117,9 @@ export function DealCanvas({
    * the real transaction, so steps ahead of the current one show as open (not done) until reached
    * in sequence. */
   forceRevealAll?: boolean;
+  /** Hides the built-in "Running AI search and match…" ribbon and its counterparty results —
+   * used when the caller renders its own search progress and results elsewhere on the page. */
+  hideMatchingRibbon?: boolean;
 }) {
   const [panel, setPanel] = useState<{ stage: StageKey; step: string } | null>(null);
   const [direction, setDirection] = useState<"bid" | "offer" | null>(null);
@@ -322,7 +326,7 @@ export function DealCanvas({
         )
       )}
 
-      {matchingPhase && tx.step === "search" && (
+      {!hideMatchingRibbon && matchingPhase && tx.step === "search" && (
         <div className="mx-auto mt-4 max-w-3xl overflow-hidden rounded-xl border border-primary/20">
           <div className="flex items-center gap-3 bg-primary/5 px-4 py-3">
             <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
@@ -332,7 +336,7 @@ export function DealCanvas({
         </div>
       )}
 
-      {matchingPhase && (tx.step === "ai" || tx.step === "ai-plus") && (
+      {!hideMatchingRibbon && matchingPhase && (tx.step === "ai" || tx.step === "ai-plus") && (
         <div className="mt-4 grid grid-cols-2 gap-4 sm:gap-8">
           <div className={cn(bidDirection === "bid" ? "" : "flex flex-col items-end")}>
             {bidDirection === "offer" && (

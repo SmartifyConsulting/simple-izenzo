@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -32,6 +32,11 @@ export const Route = createFileRoute("/_authenticated/live-deal-engine")({
 
 type Attachment = { name: string; kind: "ID front" | "ID back" | "Document" };
 type FlowStep = "documents" | "searching" | "results";
+
+// Keyed to the created transaction so a user who navigates away (or refreshes) lands back on the
+// same bid/offer instead of starting over — the reference number lives here too, since it's
+// generated client-side and has nowhere else to persist.
+const ACTIVE_DEAL_KEY = "izenzo:active-deal";
 
 /** A file picker that also accepts drag-and-drop, and lists the names of whatever's currently
  * selected. `multiple` collects any number of files; otherwise a new pick replaces the old one. */
@@ -122,7 +127,6 @@ function LiveDealEngine() {
   const [dealTx, setDealTx] = useState<Transaction | null>(null);
   const [flowStep, setFlowStep] = useState<FlowStep>("documents");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -135,14 +139,66 @@ function LiveDealEngine() {
   // recorded for) even after the form resets — that's what the Live Workspace panel now shows.
   const side = direction ?? activity?.direction ?? null;
 
+  // Resume whatever bid/offer this user last recorded, so a refresh or a later visit doesn't
+  // lose their place.
+  useEffect(() => {
+    let raw: string | null = null;
+    try {
+      raw = localStorage.getItem(ACTIVE_DEAL_KEY);
+    } catch {
+      return;
+    }
+    if (!raw) return;
+    (async () => {
+      try {
+        const saved = JSON.parse(raw as string) as { txId: string; activity: RecordedActivity };
+        const { data: tx } = await supabase
+          .from("transactions")
+          .select("*")
+          .eq("id", saved.txId)
+          .maybeSingle();
+        if (!tx) return;
+        setActivity(saved.activity);
+        setDealTx(tx as Transaction);
+        setFlowStep(tx.step === "documents" ? "documents" : "results");
+        const { data: docs } = await supabase
+          .from("documents")
+          .select("name, notes")
+          .eq("transaction_id", saved.txId)
+          .order("created_at", { ascending: true });
+        if (docs) {
+          setAttachments(
+            docs.map((d) => ({
+              name: d.name,
+              kind: (d.notes as Attachment["kind"] | null) ?? "Document",
+            })),
+          );
+        }
+      } catch {
+        // Stale/corrupt entry — ignore and let the user start fresh.
+      }
+    })();
+  }, []);
+
   async function runSearch(txId: string) {
     setFlowStep("searching");
     setSearchError(null);
+    // Runs long enough to actually read as "AI and AI+ are searching" — otherwise, when both
+    // calls happen to resolve fast, the step flashes past before anyone can see it.
+    const minDuration = new Promise((resolve) => setTimeout(resolve, 3200));
     try {
-      await search({ data: { transactionId: txId, kind: "ai" } });
+      const [ai, aiPlus] = await Promise.allSettled([
+        search({ data: { transactionId: txId, kind: "ai" } }),
+        search({ data: { transactionId: txId, kind: "ai_plus" } }),
+      ]);
+      await minDuration;
+      if (ai.status === "rejected" && aiPlus.status === "rejected") {
+        throw ai.reason instanceof Error ? ai.reason : new Error("AI and AI+ search both failed");
+      }
       await advance(txId, "trading", "counterparties");
       setDealTx((prev) => (prev ? { ...prev, stage: "trading", step: "counterparties" } : prev));
     } catch (err) {
+      await minDuration;
       setSearchError((err as Error).message);
     } finally {
       setFlowStep("results");
@@ -188,7 +244,6 @@ function LiveDealEngine() {
       await advance(dealTx.id, "trading", "search");
       setDealTx((prev) => (prev ? { ...prev, stage: "trading", step: "search" } : prev));
       setAttachments((prev) => [...prev, ...collected]);
-      setSuccessMessage("Success. Next step: Search for counterparties.");
       await runSearch(dealTx.id);
     } catch (err) {
       toast.error((err as Error).message);
@@ -198,7 +253,12 @@ function LiveDealEngine() {
   }
 
   return (
-    <AppShell wide>
+    <AppShell
+      wide
+      actions={
+        activity && <p className="text-sm font-bold text-white">{activity.reference}</p>
+      }
+    >
       <div className={cn(side && "grid grid-cols-1 gap-4 sm:grid-cols-2 sm:items-stretch")}>
         <div
           className={cn(
@@ -216,6 +276,11 @@ function LiveDealEngine() {
                 setActivity(recorded);
                 setDealTx(tx);
                 setFlowStep("documents");
+                try {
+                  localStorage.setItem(ACTIVE_DEAL_KEY, JSON.stringify({ txId: tx.id, activity: recorded }));
+                } catch {
+                  // Best-effort — resuming later just won't work if storage is unavailable.
+                }
               }}
               onPickingChange={setPicking}
               onDirectionChange={setDirection}
@@ -223,12 +288,9 @@ function LiveDealEngine() {
           )}
 
           {activity && (
-            <div className="flex items-center justify-between gap-3">
-              <p className="label-caps">
-                Live deal engine for {activity.direction === "bid" ? "The Bid" : "Responder"}
-              </p>
-              <p className="text-sm font-bold text-white">{activity.reference}</p>
-            </div>
+            <p className="label-caps">
+              Live deal engine for {activity.direction === "bid" ? "The Bid" : "Responder"}
+            </p>
           )}
 
           {activity && dealTx && flowStep === "documents" && (
@@ -248,16 +310,22 @@ function LiveDealEngine() {
           {activity && dealTx && flowStep === "searching" && (
             <div className="mt-3 overflow-hidden rounded-xl border border-primary/20">
               <div className="flex items-center gap-3 bg-primary/5 px-4 py-3">
-                <p className="text-sm text-primary">Searching · Matching Counterparties…</p>
+                <p className="text-sm text-primary">Running AI and AI+ search for matching counterparties…</p>
               </div>
               <div className="h-1.5 w-full animate-ribbon-sweep" />
             </div>
           )}
 
-          {successMessage && flowStep !== "documents" && (
-            <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-primary/40 bg-primary/10 px-4 py-3">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <p className="text-sm text-primary">{successMessage}</p>
+          {activity && flowStep !== "documents" && (
+            <div className="mt-3 space-y-1.5">
+              <div className="flex items-center gap-2 text-sm text-primary">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                Bid Creation
+              </div>
+              <div className="flex items-center gap-2 text-sm text-primary">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                Submission of documents
+              </div>
             </div>
           )}
 
@@ -269,6 +337,7 @@ function LiveDealEngine() {
               hideBidOfferGroups={picking || Boolean(activity)}
               focusSide={side}
               forceRevealAll
+              hideMatchingRibbon
             />
           </div>
         </div>
