@@ -600,12 +600,21 @@ function PickButton({
   );
 }
 
-function LaneHeader({ label, side }: { label: string; side: "left" | "right" }) {
+function LaneHeader({
+  label,
+  side,
+  className,
+}: {
+  label: string;
+  side: "left" | "right";
+  className?: string;
+}) {
   return (
     <p
       className={cn(
         "label-caps flex items-center gap-2 text-primary/80",
         side === "right" && "flex-row-reverse",
+        className,
       )}
     >
       <span className="h-1.5 w-1.5 rounded-full bg-primary animate-signal-pulse" />
@@ -889,7 +898,7 @@ export function CanvasStart({
       </p>
       <div className="grid grid-cols-2 gap-4 sm:gap-8">
         {direction !== "offer" && <LaneHeader label="Bidder" side="left" />}
-        {direction !== "bid" && <LaneHeader label="Responder" side="right" />}
+        {direction !== "bid" && <LaneHeader label="Responder" side="right" className="col-start-2" />}
       </div>
       <div className="mt-3 grid grid-cols-2 gap-4 sm:gap-8">
         {direction !== "offer" && (
@@ -922,7 +931,7 @@ export function CanvasStart({
           </div>
         )}
         {direction !== "bid" && (
-          <div className="space-y-3">
+          <div className="col-start-2 space-y-3">
             {direction === "offer" ? (
               <div className="glass-node animate-node-rise p-5 sm:p-6">
                 <div className="mb-4 flex items-start justify-between gap-4">
