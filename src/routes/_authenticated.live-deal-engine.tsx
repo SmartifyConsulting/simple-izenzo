@@ -757,7 +757,7 @@ function LiveDealEngine() {
             <div className="flex items-start justify-between gap-3">
               <p className="label-caps">Live workspace</p>
               {(dealTx?.reference ?? activity?.reference) && (
-                <span className="shrink-0 rounded-full border border-primary/40 bg-primary/12 px-2.5 py-1 text-[11px] font-bold tracking-wide text-primary">
+                <span className="shrink-0 rounded-full border border-white/30 bg-white/10 px-2.5 py-1 text-[11px] font-bold tracking-wide text-white">
                   {dealTx?.reference ?? activity?.reference}
                 </span>
               )}
