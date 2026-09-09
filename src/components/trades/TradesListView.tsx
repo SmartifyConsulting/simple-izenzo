@@ -115,7 +115,10 @@ export function TradesListView() {
     if (commodityFilter.trim()) {
       const q = commodityFilter.trim().toLowerCase();
       rows = rows.filter(
-        (t) => (t.commodity ?? "").toLowerCase().includes(q) || t.title.toLowerCase().includes(q),
+        (t) =>
+          (t.commodity ?? "").toLowerCase().includes(q) ||
+          t.title.toLowerCase().includes(q) ||
+          (t.reference ?? fallbackReference(t.id, t.direction)).toLowerCase().includes(q),
       );
     }
     if (statusFilter !== "all") {
@@ -161,7 +164,7 @@ export function TradesListView() {
           <Input
             value={commodityFilter}
             onChange={(e) => setCommodityFilter(e.target.value)}
-            placeholder="Search by commodity…"
+            placeholder="Search by commodity, title, or Bid/Offer ID…"
             className="h-8 pl-8 text-xs"
           />
         </div>

@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { advance, fingerprintOf, recordEvent, type Transaction } from "@/lib/tx";
 import { searchCounterparties } from "@/lib/izenzo.functions";
 import { runBackgroundScreening, type ScreeningResult } from "@/lib/screening.functions";
+import { pushRecentDeal } from "@/lib/recentDeals";
 
 import { useViewMode, setViewMode } from "@/lib/viewMode";
 import { cn } from "@/lib/utils";
@@ -347,6 +348,19 @@ function LiveDealEngine() {
       }
     })();
   }, []);
+
+  // Keeps the Search dialog's "Recent" shortcuts up to date with whatever deal is actually on
+  // screen, however it got there (resumed, opened from the trades list, or just recorded).
+  useEffect(() => {
+    if (!dealTx || !activity) return;
+    pushRecentDeal({
+      id: dealTx.id,
+      reference: activity.reference || dealTx.reference || "",
+      title: activity.title || dealTx.title,
+      direction: activity.direction,
+      time: new Date().toISOString(),
+    });
+  }, [dealTx?.id, activity]);
 
   async function runSearch(txId: string) {
     setFlowStep("searching");

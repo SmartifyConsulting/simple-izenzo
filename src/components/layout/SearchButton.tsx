@@ -1,12 +1,16 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Users, Package, Plus, Check, X, Sparkles, Globe } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { Search, Users, Package, Plus, Check, X, Sparkles, Globe, FileText, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { discoverCounterpartiesByQuery, checkCandidateProducts } from "@/lib/izenzo.functions";
 import { useScreenList, type ScreenListItem } from "@/lib/screenList";
+import { useRecentDeals } from "@/lib/recentDeals";
+import { useAuth } from "@/lib/auth";
+import { fallbackReference, type Transaction } from "@/lib/tx";
 import { cn } from "@/lib/utils";
 
 /** Search for traders (registry companies and known counterparties) or items to trade, ask AI and
@@ -22,6 +26,15 @@ type Match = ScreenListItem & {
   note?: string | undefined;
 };
 
+type DealMatch = {
+  id: string;
+  reference: string;
+  title: string;
+  direction: "bid" | "offer" | null;
+  stage: string;
+  step: string;
+};
+
 /** Live site checks are real page fetches — only worth running for the top few candidates. */
 const MAX_SITE_CHECKS = 4;
 
@@ -33,6 +46,7 @@ const SOURCE_LABEL: Record<MatchSource, string> = {
 };
 
 export function SearchButton() {
+  const { org } = useAuth();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [deepQuery, setDeepQuery] = useState("");
@@ -40,6 +54,49 @@ export function SearchButton() {
   const [deepLoading, setDeepLoading] = useState(false);
   const [deepNote, setDeepNote] = useState<string | null>(null);
   const screenList = useScreenList();
+  const recentDeals = useRecentDeals();
+
+  // Reuses the same cache the My Trades list fills — every deal this account can see, with its
+  // opening direction — so a Bid/Offer ID (real or the deterministic fallback shown for deals
+  // without a stored reference yet) can be matched entirely client-side, without querying a
+  // `reference` column that may not exist on every environment yet.
+  const { data: myDeals = [] } = useQuery({
+    queryKey: ["my-trades", org?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("*, bid_offers(direction, created_at)")
+        .order("updated_at", { ascending: false });
+      if (error) throw error;
+      return (
+        (data ?? []) as unknown as (Transaction & {
+          bid_offers: { direction: string; created_at: string }[];
+        })[]
+      ).map((t): DealMatch => {
+        const earliest = [...t.bid_offers].sort(
+          (a, b) => +new Date(a.created_at) - +new Date(b.created_at),
+        )[0];
+        const direction: "bid" | "offer" = earliest?.direction === "offer" ? "offer" : "bid";
+        return {
+          id: t.id,
+          reference: t.reference ?? fallbackReference(t.id, direction),
+          title: t.title,
+          direction,
+          stage: t.stage,
+          step: t.step,
+        };
+      });
+    },
+    staleTime: 60_000,
+  });
+
+  const dealMatches = (() => {
+    const q = query.trim().toLowerCase();
+    if (q.length < 2) return [];
+    return myDeals
+      .filter((d) => d.reference.toLowerCase().includes(q) || d.title.toLowerCase().includes(q))
+      .slice(0, 8);
+  })();
 
   const { data, isFetching } = useQuery({
     queryKey: ["global-search", query],
@@ -200,7 +257,7 @@ export function SearchButton() {
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 autoFocus
-                placeholder="Search traders or commodities…"
+                placeholder="Search traders, commodities, or a Bid/Offer ID…"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && runDeepSearch()}
@@ -221,7 +278,46 @@ export function SearchButton() {
             <div className="mt-4 space-y-4">
               {isFetching && <p className="text-sm text-muted-foreground">Searching…</p>}
 
-              {!isFetching && traders.length === 0 && items.length === 0 && (
+              {dealMatches.length > 0 && (
+                <div>
+                  <p className="label-caps flex items-center gap-1.5">
+                    <FileText className="h-3 w-3" /> Your deals
+                  </p>
+                  <ul className="mt-2 divide-y divide-border rounded-md border border-border">
+                    {dealMatches.map((d) => (
+                      <li key={d.id}>
+                        <Link
+                          to="/live-deal-engine"
+                          search={{ tx: d.id }}
+                          onClick={() => setOpen(false)}
+                          className="flex items-center justify-between gap-3 px-3 py-2 hover:bg-accent/40"
+                        >
+                          <span className="min-w-0">
+                            <span className="flex min-w-0 items-center gap-1.5">
+                              <span
+                                className={cn(
+                                  "shrink-0 rounded-full px-1.5 py-0.5 font-mono text-[10px] font-medium",
+                                  d.direction === "bid"
+                                    ? "bg-primary/12 text-primary"
+                                    : "bg-muted text-foreground",
+                                )}
+                              >
+                                {d.reference}
+                              </span>
+                              <span className="truncate text-sm font-medium">{d.title}</span>
+                            </span>
+                            <span className="block truncate text-xs text-muted-foreground">
+                              {d.stage} · {d.step}
+                            </span>
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {!isFetching && traders.length === 0 && items.length === 0 && dealMatches.length === 0 && (
                 <p className="text-sm text-muted-foreground">
                   Nothing in our records matches "{query}" — try matching with AI.
                 </p>
@@ -233,6 +329,36 @@ export function SearchButton() {
               {items.length > 0 && (
                 <ResultGroup title="Items to trade" icon={Package} results={items} screenList={screenList} />
               )}
+            </div>
+          )}
+
+          {query.trim().length < 2 && recentDeals.length > 0 && (
+            <div className="mt-4">
+              <p className="label-caps flex items-center gap-1.5">
+                <Clock className="h-3 w-3" /> Recent
+              </p>
+              <ul className="mt-2 divide-y divide-border rounded-md border border-border">
+                {recentDeals.map((d) => (
+                  <li key={d.id}>
+                    <Link
+                      to="/live-deal-engine"
+                      search={{ tx: d.id }}
+                      onClick={() => setOpen(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 hover:bg-accent/40"
+                    >
+                      <span
+                        className={cn(
+                          "shrink-0 rounded-full px-1.5 py-0.5 font-mono text-[10px] font-medium",
+                          d.direction === "bid" ? "bg-primary/12 text-primary" : "bg-muted text-foreground",
+                        )}
+                      >
+                        {d.reference}
+                      </span>
+                      <span className="min-w-0 truncate text-sm">{d.title}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 
