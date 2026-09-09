@@ -4,7 +4,8 @@ Bring back the dark hero you saw earlier, using the copy from the screenshot, an
 
 ## What changes
 
-- The top of the home page goes black again, with the big headline "Match a bid to the right counterparty, with proof at every gate." and the line "Bidders on the left, responders on the right. Each module opens as the deal moves, and every choice is recorded as it happens."
+- The top of the home page goes black again, with the headline "Governance Infrastructure for Institutional Trade." and the paragraph "One cryptographic network. Access it via our turnkey Trade Desk, manage risk through the Compliance Profile, or build directly on the API. All backed by hash-sealed, independently verifiable execution."
+
 - A "Request a Demo" button sits under the text, as in the screenshot.
 - Below the headline, two glass panels side by side: left "Create a Bid" (starts a bid), right "Respond to a Bid" (browse and respond). On a phone they stack, bid first.
 - The rest of the page (menu, the three explanation blocks, footer) stays as it is.
