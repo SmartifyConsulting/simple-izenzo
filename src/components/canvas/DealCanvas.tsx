@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
   FileUp,
@@ -21,10 +22,13 @@ import { StepScreen } from "@/components/steps/StepScreen";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { lockReason, stepDef, stepIndex, type StageKey } from "@/lib/spine";
 import { advance, money, recordEvent, when, type Transaction, type TxEvent } from "@/lib/tx";
+import { setCounterpartyShortlist } from "@/lib/izenzo.functions";
 import { cn } from "@/lib/utils";
 
 type NodeRef = { stage: StageKey; step: string; label?: string; icon?: typeof Radar };
@@ -59,6 +63,23 @@ export function DealCanvas({
   const [panel, setPanel] = useState<{ stage: StageKey; step: string } | null>(null);
   const [direction, setDirection] = useState<"bid" | "offer" | null>(null);
   const stateOf = useNodeState(tx);
+
+  // Which side placed the bid vs offer — read from the record itself (not just local `direction`
+  // state, which resets on reload) so the results panel mirrors correctly at every step.
+  const { data: recordedDirection } = useQuery({
+    queryKey: ["bid-direction", tx.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("bid_offers")
+        .select("direction")
+        .eq("transaction_id", tx.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return (data?.direction as "bid" | "offer" | undefined) ?? null;
+    },
+  });
+  const bidDirection = direction ?? recordedDirection ?? "bid";
 
   const node = (
     n: NodeRef,
@@ -194,13 +215,32 @@ export function DealCanvas({
         </div>
       )}
 
-      {matchingPhase && (
+      {matchingPhase && tx.step === "search" && (
         <div className="mx-auto mt-4 max-w-3xl overflow-hidden rounded-xl border border-primary/20">
           <div className="flex items-center gap-3 bg-primary/5 px-4 py-3">
             <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
             <p className="text-sm text-primary">Running AI search and match…</p>
           </div>
           <div className="h-1.5 w-full animate-ribbon-sweep" />
+        </div>
+      )}
+
+      {matchingPhase && (tx.step === "ai" || tx.step === "ai-plus") && (
+        <div className="mt-4 grid grid-cols-2 gap-4 sm:gap-8">
+          <div className={cn(bidDirection === "bid" ? "" : "flex flex-col items-end")}>
+            {bidDirection === "offer" && (
+              <div style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
+                <CounterpartyRecord txId={tx.id} />
+              </div>
+            )}
+          </div>
+          <div className={cn(bidDirection === "offer" ? "" : "ml-auto")}>
+            {bidDirection === "bid" && (
+              <div style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
+                <CounterpartyRecord txId={tx.id} />
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -378,6 +418,85 @@ function InlineFrame({
 
 /** The static record panel that stands in for whichever side (Bid or Offer) wasn't picked —
  * a running log of everything recorded on the transaction so far. */
+type CounterpartyCandidate = {
+  id: string;
+  name: string;
+  jurisdiction: string | null;
+  sector: string | null;
+  score: number | null;
+  source: string | null;
+  shortlisted?: boolean;
+};
+
+/** Same "Record" panel as `SelectionRecord`, but for the AI/AI+ search results phase: each
+ * candidate gets a checkbox so a bidder (or responder) can mark who they're interested in, without
+ * yet making the single final pick (that stays ChoiceStep's job). */
+function CounterpartyRecord({ txId }: { txId?: string | null }) {
+  const qc = useQueryClient();
+  const setShortlist = useServerFn(setCounterpartyShortlist);
+
+  const { data: candidates = [] } = useQuery({
+    queryKey: ["counterparties", txId],
+    enabled: !!txId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("counterparties")
+        .select("*")
+        .eq("transaction_id", txId as string)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as CounterpartyCandidate[];
+    },
+  });
+
+  async function toggle(c: CounterpartyCandidate, next: boolean) {
+    qc.setQueryData<CounterpartyCandidate[]>(["counterparties", txId], (prev) =>
+      (prev ?? []).map((row) => (row.id === c.id ? { ...row, shortlisted: next } : row)),
+    );
+    try {
+      await setShortlist({ data: { counterpartyId: c.id, shortlisted: next } });
+    } catch (err) {
+      toast.error((err as Error).message);
+      qc.invalidateQueries({ queryKey: ["counterparties", txId] });
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border-2 border-primary bg-slate-100 p-4">
+      <p className="label-caps text-primary">Record</p>
+      {candidates.length === 0 ? (
+        <p className="mt-2 text-sm text-slate-500">Searching for counterparties…</p>
+      ) : (
+        <ul className="mt-2 space-y-2.5">
+          {candidates.map((c) => (
+            <li key={c.id} className="flex items-start gap-2.5">
+              <Checkbox
+                id={`shortlist-${c.id}`}
+                checked={Boolean(c.shortlisted)}
+                onCheckedChange={(v) => toggle(c, Boolean(v))}
+                className="mt-0.5"
+              />
+              <label htmlFor={`shortlist-${c.id}`} className="min-w-0 flex-1 cursor-pointer">
+                <span className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-slate-900">{c.name}</span>
+                  {c.score != null && (
+                    <Badge variant="secondary" className="font-normal">
+                      {c.score}/100
+                    </Badge>
+                  )}
+                </span>
+                <span className="block text-[11px] text-slate-500">
+                  {[c.jurisdiction, c.sector].filter(Boolean).join(" · ") || (c.source ?? "manual")}
+                </span>
+              </label>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function SelectionRecord({ txId }: { txId?: string | null }) {
   const { data: events = [] } = useQuery({
     queryKey: ["canvas-record", txId],

@@ -297,6 +297,40 @@ export const searchCounterparties = createServerFn({ method: "POST" })
     return { candidates: inserted ?? [], model };
   });
 
+/** Marks/unmarks a discovered counterparty as shortlisted — a non-committal "interested" flag a
+ * bidder or responder can toggle from the Record panel. Separate from `status:"chosen"`, which is
+ * the existing single, final pick made later in ChoiceStep.
+ *
+ * `shortlisted` isn't in the generated Supabase types until the next `types.ts` regeneration
+ * picks up the migration, so this write goes through an untyped client (same pattern already used
+ * for `user_activity_log`). */
+export const setCounterpartyShortlist = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) =>
+    z
+      .object({
+        counterpartyId: z.string().uuid(),
+        shortlisted: z.boolean(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const table = supabase as unknown as {
+      from(t: "counterparties"): {
+        update(v: { shortlisted: boolean }): {
+          eq(col: string, val: string): Promise<{ error: { message: string } | null }>;
+        };
+      };
+    };
+    const { error } = await table.from("counterparties").update({ shortlisted: data.shortlisted }).eq(
+      "id",
+      data.counterpartyId,
+    );
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
+  });
+
 /** Free-text AI/AI+ counterparty discovery for the Discover Counterparties screen — not tied to
  * a transaction, so results are returned to the caller rather than written to `counterparties`
  * (that table requires a transaction_id). A person adds a result to a real case from there. */

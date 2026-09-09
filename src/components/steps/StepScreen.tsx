@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -546,7 +546,7 @@ function SearchStep({ tx, reload }: Props) {
   const [candidate, setCandidate] = useState({ name: "", jurisdiction: "", source: "manual" });
   const [running, setRunning] = useState(false);
 
-  const { data: candidates = [] } = useQuery({
+  const { data: candidates = [], isLoading: candidatesLoading } = useQuery({
     queryKey: ["counterparties", tx.id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -559,8 +559,23 @@ function SearchStep({ tx, reload }: Props) {
     },
   });
 
+  const [searchFailed, setSearchFailed] = useState(false);
+  const autoRunFired = useRef(false);
+
+  /** Fires once, automatically, the moment this step is reached — search is no longer a manual
+   * click. Skips if candidates already exist (e.g. returning to this step after a page reload). */
+  useEffect(() => {
+    if (candidatesLoading || autoRunFired.current) return;
+    autoRunFired.current = true;
+    if (candidates.length === 0) {
+      runSearch();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [candidatesLoading]);
+
   async function runSearch() {
     setRunning(true);
+    setSearchFailed(false);
     try {
       await recordEvent({
         transactionId: tx.id,
@@ -581,6 +596,7 @@ function SearchStep({ tx, reload }: Props) {
       toast.success(`${total} candidate(s) found`);
     } catch (err) {
       toast.error((err as Error).message);
+      setSearchFailed(true);
     } finally {
       setRunning(false);
     }
@@ -616,17 +632,23 @@ function SearchStep({ tx, reload }: Props) {
     <div className="space-y-6">
       <Panel
         title="Search for counterparties"
-        description="AI and AI+ scan for organisations matching this bid's commodity, price, incoterms and jurisdiction. What was searched is part of the record."
+        description="AI and AI+ scan for organisations matching this bid's commodity, price, incoterms and jurisdiction, as soon as this step opens. What was searched is part of the record."
         footer={
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button size="sm" onClick={runSearch} disabled={running} className="gap-2">
-              {running ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-              Search with AI &amp; AI+
-            </Button>
-          </div>
+          running ? (
+            <div className="flex items-center justify-end gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Searching…
+            </div>
+          ) : searchFailed ? (
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button size="sm" onClick={runSearch} className="gap-2">
+                <Sparkles className="h-3.5 w-3.5" />
+                Search again
+              </Button>
+            </div>
+          ) : null
         }
       >
-        <Field label="Preferred counterparty region (optional)">
+        <Field label="Preferred counterparty region (optional) — used if you search again">
           <Select value={region || "any"} onValueChange={(v) => setRegion(v === "any" ? "" : v)}>
             <SelectTrigger>
               <SelectValue placeholder="Any country" />
@@ -645,7 +667,7 @@ function SearchStep({ tx, reload }: Props) {
 
       <Panel title="Candidates surfaced">
         {candidates.length === 0 ? (
-          <Empty text="No candidates yet. Run a search above." />
+          <Empty text={running ? "Searching…" : "No candidates yet."} />
         ) : (
           <ul className="divide-y divide-border">
             {candidates.map((c) => (
