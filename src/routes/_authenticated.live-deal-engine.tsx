@@ -279,6 +279,17 @@ function LiveDealEngine() {
     }
   }
 
+  /** The bucket is private, so a short-lived signed link is minted on demand rather than stored. */
+  async function openAttachment(a: Attachment) {
+    if (!a.path) return;
+    const { data, error } = await supabase.storage.from("documents").createSignedUrl(a.path, 60);
+    if (error || !data?.signedUrl) {
+      toast.error(`Could not open ${a.name}`);
+      return;
+    }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  }
+
   async function submitDocuments(e: React.FormEvent) {
     e.preventDefault();
     if (!dealTx) return;
