@@ -558,7 +558,7 @@ export function CounterpartyRecord({
         searching && "animate-throb",
       )}
     >
-      <p className="label-caps text-primary">Record</p>
+      <p className="label-caps text-black">Tick counterparties of interest to continue</p>
       {candidates.length === 0 ? (
         <p className="mt-2 text-sm text-slate-500">
           {searching
