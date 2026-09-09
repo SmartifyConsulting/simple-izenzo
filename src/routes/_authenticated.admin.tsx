@@ -45,27 +45,24 @@ type ProfileRow = {
   last_accessed_at?: string | null;
 };
 
-type AdminTab = { value: string; label: string; Component: () => React.JSX.Element; superuserOnly?: boolean };
+type AdminTab = {
+  value: string;
+  label: string;
+  Component: () => React.JSX.Element;
+  Icon: LucideIcon;
+  superuserOnly?: boolean;
+  /** Reachable by link, but not shown as a card (tokens live in Token Management now). */
+  hidden?: boolean;
+};
 
-const ADMIN_GROUPS: { id: string; label: string; tabs: AdminTab[] }[] = [
-  {
-    id: "platform",
-    label: "Platform",
-    tabs: [
-      { value: "users", label: "Users", Component: UsersTab },
-      { value: "api-keys", label: "API Keys", Component: ApiKeysTab },
-      { value: "integrations", label: "Integrations", Component: IntegrationsTab },
-      { value: "activity-log", label: "Activity Log", Component: AuditLogTab },
-    ],
-  },
-  {
-    id: "money",
-    label: "Money",
-    tabs: [
-      { value: "tokens", label: "Tokens", Component: TokensTab },
-      { value: "payments", label: "Payments", Component: PaymentsTab },
-    ],
-  },
+// One flat list — no categories. Cards read as icon + name, green-edged like every other frame.
+const ADMIN_TABS: AdminTab[] = [
+  { value: "users", label: "Users", Component: UsersTab, Icon: Users },
+  { value: "api-keys", label: "API Keys", Component: ApiKeysTab, Icon: KeyRound },
+  { value: "payments", label: "Payments", Component: PaymentsTab, Icon: CreditCard },
+  { value: "integrations", label: "Integrations", Component: IntegrationsTab, Icon: Plug, superuserOnly: true },
+  { value: "activity-log", label: "Activity Log", Component: AuditLogTab, Icon: History, superuserOnly: true },
+  { value: "tokens", label: "Tokens", Component: TokensTab, Icon: Coins, hidden: true },
 ];
 
 function AdminPage() {
