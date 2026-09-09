@@ -340,6 +340,43 @@ function LiveDealEngine() {
     }
   }
 
+  /** Lets a user who changes their mind step back to the counterparty list: the chosen party is
+   * released, the unsigned intent is cleared, and the deal returns to the choice step. Only
+   * offered before the Proof of Intent is sealed — the sealed certificate names the party. */
+  async function reopenChoice() {
+    if (!dealTx || dealTx.poi_sealed_at) return;
+    try {
+      const { error: cpError } = await supabase
+        .from("counterparties")
+        .update({ status: "screened", chosen_at: null })
+        .eq("transaction_id", dealTx.id)
+        .eq("status", "chosen");
+      if (cpError) throw cpError;
+      const { error: txError } = await supabase
+        .from("transactions")
+        .update({ intent_confirmed_at: null })
+        .eq("id", dealTx.id);
+      if (txError) throw txError;
+      await recordEvent({
+        transactionId: dealTx.id,
+        stage: "trading",
+        step: "media",
+        action: "counterparty_choice_reopened",
+        summary: "Reopened the counterparty choice",
+      });
+      await advance(dealTx.id, "trading", "media");
+      setDealTx((prev) =>
+        prev ? { ...prev, stage: "trading", step: "media", intent_confirmed_at: null } : prev,
+      );
+      setStagePanel(null);
+      setFlowStep("results");
+      toast.success("Choice reopened — pick the party you want to trade with");
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  }
+
+
 
   // Once something has been recorded, keep the split workspace open (and on the side it was
   // recorded for) even after the form resets — that's what the Live Workspace panel now shows.
