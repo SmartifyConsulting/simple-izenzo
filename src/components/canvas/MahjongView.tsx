@@ -45,6 +45,9 @@ const TOP_Y = 20;
 const BRANCH_Y = TOP_Y + PITCH * 6 + 20;
 
 const GROUP_PAD = 18;
+// Used where two frames sit close together (Step 1 above Step 2), so their borders don't overlap.
+const GROUP_PAD_TIGHT = 10;
+
 
 // Steps 3, 4 and 5 are laid out as three frames with identical gaps between them (and the same
 // gap to each canvas edge), so the bottom band reads as evenly spaced columns.
