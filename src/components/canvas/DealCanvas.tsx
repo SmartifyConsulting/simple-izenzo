@@ -16,6 +16,8 @@ import {
   ArrowLeftRight,
   Newspaper,
   Loader2,
+  ExternalLink,
+  RefreshCw,
   X,
 } from "lucide-react";
 import { CanvasNode, Connector, GateBar, type NodeState } from "./CanvasNode";
@@ -33,7 +35,63 @@ import { ensureOrg } from "@/lib/org";
 import { FLAT_STEPS, lockReason, stepDef, stepIndex, type StageKey } from "@/lib/spine";
 import { advance, money, recordEvent, when, type Transaction, type TxEvent } from "@/lib/tx";
 import { setCounterpartyShortlist } from "@/lib/izenzo.functions";
-import type { ScreeningResult } from "@/lib/screening.functions";
+import type { ScreeningCheck, ScreeningResult } from "@/lib/screening.functions";
+import {
+  listVerificationsForTx,
+  refreshVerification,
+  type VerificationRow,
+} from "@/lib/didit.functions";
+
+/** How one screening check should read on screen, folding in the live verification row when the
+ * provider has since moved it on. */
+function describeCheck(
+  chk: ScreeningCheck,
+  live?: VerificationRow,
+): { label: string; detail: string; tone: string; pending: boolean } {
+  const WAITING = "bg-amber-100 text-amber-800";
+  const OK = "bg-emerald-100 text-emerald-800";
+  const BAD = "bg-red-100 text-red-700";
+  const MUTED = "bg-slate-200 text-slate-600";
+
+  if (live) {
+    switch (live.status) {
+      case "passed":
+        return { label: "Passed", detail: live.reason ?? "Provider returned a clear result.", tone: OK, pending: false };
+      case "failed":
+        return { label: "Failed", detail: live.reason ?? "Provider returned a negative result.", tone: BAD, pending: false };
+      case "review":
+        return {
+          label: "Needs review",
+          detail: live.reason ?? "A person needs to look at this result.",
+          tone: WAITING,
+          pending: false,
+        };
+      case "expired":
+        return { label: "Expired", detail: "The check expired before it was completed.", tone: MUTED, pending: false };
+      default:
+        return {
+          label: "Waiting",
+          detail: "Opened with the provider — the result lands here on its own.",
+          tone: WAITING,
+          pending: true,
+        };
+    }
+  }
+
+  switch (chk.status) {
+    case "started":
+      return { label: "Waiting", detail: chk.detail, tone: WAITING, pending: true };
+    case "matched":
+      return { label: "Match found", detail: chk.detail, tone: OK, pending: false };
+    case "no_match":
+      return { label: "No match", detail: chk.detail, tone: MUTED, pending: false };
+    case "unavailable":
+      return { label: "Not connected", detail: chk.detail, tone: MUTED, pending: false };
+    default:
+      return { label: "Could not run", detail: chk.detail, tone: BAD, pending: false };
+  }
+}
+
 
 import { CURRENCIES } from "@/lib/currencies";
 import { UNITS } from "@/lib/units";
@@ -411,8 +469,11 @@ export function DealCanvas({
                       <p className="text-[11px] text-muted-foreground">
                         {screeningProgress.failed
                           ? "Screening could not finish"
-                          : `${screeningProgress.done} of ${screeningProgress.total} checks complete`}
+                          : screeningProgress.done < screeningProgress.total
+                            ? `${screeningProgress.done} of ${screeningProgress.total} checks opened`
+                            : `All ${screeningProgress.total} checks opened — waiting on results`}
                       </p>
+
                     </div>
                   )}
                 </div>
@@ -576,6 +637,36 @@ export function CounterpartyRecord({
     },
   });
 
+  // Follow the stored verification rows for this deal so a check that finishes (or a webhook that
+  // lands minutes later) updates the line in place, without re-running the screening.
+  const listVerifications = useServerFn(listVerificationsForTx);
+  const refreshOne = useServerFn(refreshVerification);
+  const [refreshingId, setRefreshingId] = useState<string | null>(null);
+  const trackedIds = (screeningResults ?? []).flatMap((r) =>
+    r.checks.map((c) => c.verificationId).filter(Boolean),
+  ) as string[];
+  const { data: verifications = [] } = useQuery({
+    queryKey: ["tx-verifications", txId],
+    enabled: !!txId && trackedIds.length > 0,
+    refetchInterval: 8000,
+    queryFn: () => listVerifications({ data: { transactionId: txId as string } }),
+  });
+  const verificationById = new Map(verifications.map((v) => [v.id, v]));
+
+  async function refreshCheck(id: string) {
+    setRefreshingId(id);
+    try {
+      await refreshOne({ data: { id } });
+      await qc.invalidateQueries({ queryKey: ["tx-verifications", txId] });
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setRefreshingId(null);
+    }
+  }
+
+
+
   const ticked = candidates.filter((c) => c.shortlisted).map((c) => c.id);
   // Once Continue has been clicked (screening running or already back), only the counterparties
   // that were actually ticked stay on screen — that's the only list still relevant, and it frees
@@ -709,7 +800,7 @@ export function CounterpartyRecord({
       )}
 
       {screeningResults && screeningResults.length > 0 && (
-        <div className="mt-3 space-y-2 border-t border-slate-300 pt-3">
+        <div className="mt-3 space-y-2.5 border-t border-slate-300 pt-3">
           <div className="flex items-center justify-between gap-2">
             <p className="label-caps text-slate-600">Background screening</p>
             <button
@@ -721,30 +812,78 @@ export function CounterpartyRecord({
               Download PDF
             </button>
           </div>
-          {screeningResults.map((r) => (
-            <div key={r.counterpartyId}>
-              <p className="text-sm font-medium text-slate-900">{r.name}</p>
-              <ul className="mt-0.5 space-y-0.5">
-                {r.checks.map((chk) => (
-                  <li key={chk.kind} className="text-[11px] text-slate-600">
-                    <span className="font-medium">{chk.label}:</span>{" "}
-                    {chk.status === "started"
-                      ? "in progress"
-                      : chk.status === "matched"
-                        ? "match found"
-                        : chk.status === "no_match"
-                          ? "no match"
-                          : chk.status === "unavailable"
-                            ? "not connected"
-                            : "could not run"}{" "}
-                    — {chk.detail}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          {screeningResults.map((r) => {
+            const cand = candidates.find((c) => c.id === r.counterpartyId);
+            return (
+              <div key={r.counterpartyId} className="rounded-xl border border-slate-300 bg-white p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-slate-900">{r.name}</p>
+                  {cand?.score != null && (
+                    <Badge variant="secondary" className="font-normal">
+                      {cand.score}/100
+                    </Badge>
+                  )}
+                </div>
+                <ul className="mt-2 divide-y divide-slate-200">
+                  {r.checks.map((chk) => {
+                    const live = chk.verificationId ? verificationById.get(chk.verificationId) : undefined;
+                    const view = describeCheck(chk, live);
+                    return (
+                      <li key={chk.kind} className="py-1.5 first:pt-0 last:pb-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-medium text-slate-800">{chk.label}</span>
+                          <span
+                            className={cn(
+                              "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                              view.tone,
+                            )}
+                          >
+                            {view.label}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 whitespace-pre-line break-words text-[11px] leading-snug text-slate-500">
+                          {view.detail}
+                        </p>
+                        {(chk.url || (chk.verificationId && view.pending)) && (
+                          <div className="mt-1 flex items-center gap-3">
+                            {chk.url && (
+                              <a
+                                href={chk.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+                              >
+                                <ExternalLink className="h-3 w-3" /> Open check
+                              </a>
+                            )}
+                            {chk.verificationId && view.pending && (
+                              <button
+                                type="button"
+                                onClick={() => refreshCheck(chk.verificationId as string)}
+                                disabled={refreshingId === chk.verificationId}
+                                className="flex items-center gap-1 text-[11px] font-medium text-slate-600 hover:underline disabled:opacity-50"
+                              >
+                                <RefreshCw
+                                  className={cn(
+                                    "h-3 w-3",
+                                    refreshingId === chk.verificationId && "animate-spin",
+                                  )}
+                                />
+                                Refresh
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            );
+          })}
         </div>
       )}
+
 
       {screeningDone && onFinalize ? (
         <Button
@@ -1040,27 +1179,12 @@ export function CanvasStart({
         currency: form.currency || "USD",
       };
 
-      let { data: newTx, error } = await supabase
+      const { data: newTx, error } = await supabase
         .from("transactions")
-        .insert({
-          ...baseRow,
-          // `reference` isn't in the generated Supabase types yet (added via migration, next
-          // `types.ts` regeneration will pick it up) — same untyped-write pattern already used
-          // for `counterparties.shortlisted`.
-          reference,
-        } as never)
+        .insert({ ...baseRow, reference } as never)
         .select()
         .single();
-      // The `reference` column's migration hasn't reached every environment yet — rather than
-      // losing the whole bid/offer over one missing column, fall back to recording it without a
-      // stored reference (the UI already falls back to a deterministic computed one for display).
-      if (error?.code === "42703") {
-        ({ data: newTx, error } = await supabase
-          .from("transactions")
-          .insert(baseRow as never)
-          .select()
-          .single());
-      }
+
       if (error) throw error;
       if (!newTx) throw new Error("Could not record the bid/offer.");
 

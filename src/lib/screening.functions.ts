@@ -10,7 +10,10 @@ export type ScreeningCheck = {
   detail: string;
   /** Hosted Didit link, when the provider returned one. */
   url?: string;
+  /** The stored verification row, so the UI can follow this check to its result. */
+  verificationId?: string;
 };
+
 
 export type ScreeningResult = {
   counterpartyId: string;
@@ -97,7 +100,8 @@ export const runBackgroundScreening = createServerFn({ method: "POST" })
               .map((h) =>
                 [h.legal_name, h.registration_no, h.country].filter(Boolean).join(" · "),
               )
-              .join(" | "),
+              .join("\n"),
+
           });
         } else {
           checks.push({
@@ -171,6 +175,7 @@ export const runBackgroundScreening = createServerFn({ method: "POST" })
             status: "started",
             detail: "Screening opened — the result lands here on its own.",
             url: session.url,
+            verificationId: row.id as string,
           });
         } catch (err) {
           await supabaseAdmin
@@ -182,8 +187,10 @@ export const runBackgroundScreening = createServerFn({ method: "POST" })
             label: check.label,
             status: "failed",
             detail: (err as Error).message,
+            verificationId: row.id as string,
           });
         }
+
       }
 
       await supabaseAdmin.from("transaction_events").insert({
