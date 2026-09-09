@@ -1,3 +1,5 @@
+import { ArrowRight } from "lucide-react";
+
 // The 5-stage journey banner — same stage grouping the workflow itself uses (Trading /
 // Compliance & Governance / Execution / Finality / Memory), narrated for a first-time visitor.
 const JOURNEY = [
@@ -42,10 +44,12 @@ export function JourneyBanner() {
       <p className="mt-1 text-center text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
         A single, integrated flow from opportunity to verified, executed and enduring outcomes.
       </p>
-      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-5 sm:gap-2">
+      {/* Boxes share one flex basis so all five come out exactly the same width; the arrows sit
+       * in their own fixed-width cells between them (rotated to point down when stacked). */}
+      <div className="mt-5 flex flex-col items-stretch gap-2 sm:flex-row sm:gap-0">
         {JOURNEY.map((j, i) => (
-          <div key={j.step} className="flex items-stretch gap-2">
-            <div className="glass-node flex-1 p-3.5">
+          <div key={j.step} className="contents">
+            <div className="glass-node flex min-w-0 flex-1 basis-0 flex-col p-3.5">
               <div className="flex items-center gap-2">
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/20 text-[11px] font-bold text-primary">
                   {j.step}
@@ -58,8 +62,11 @@ export function JourneyBanner() {
               <p className="mt-2 text-[11px] leading-snug text-muted-foreground">{j.body}</p>
             </div>
             {i < JOURNEY.length - 1 && (
-              <div className="hidden shrink-0 items-center text-muted-foreground/40 sm:flex" aria-hidden>
-                →
+              <div
+                className="flex w-full shrink-0 items-center justify-center py-1 sm:w-9 sm:py-0"
+                aria-hidden
+              >
+                <ArrowRight className="h-4 w-4 rotate-90 text-primary/70 sm:rotate-0" />
               </div>
             )}
           </div>

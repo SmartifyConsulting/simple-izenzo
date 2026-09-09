@@ -33,17 +33,17 @@ function nodeState(stage: StageKey, step: string, tx: Transaction): NodeState {
 // the branch headers and their sub-steps) shares one height and an equal vertical pitch between
 // rows; the center column shares Choice's width too.
 const W = 1246;
-const H = 960;
+const H = 1010;
 const pctX = (v: number) => `${(v / W) * 100}%`;
 const pctY = (v: number) => `${(v / H) * 100}%`;
 
-const ROW = 46; // shared node height
-const PITCH = 82; // vertical distance from one row's top to the next
+const ROW = 48; // shared node height
+const PITCH = 100; // vertical distance from one row's top to the next
 const CENTER_W = 310; // shared width for the center-column nodes, matched to Choice
 const SIDE_W = 220;
 // Extra breathing room before the three parallel branches split off from KYC/KYB, so the branch
 // frames sit clearly lower and don't crowd the gate row above them.
-const BRANCH_Y = 110 + PITCH * 5 + 100;
+const BRANCH_Y = 110 + PITCH * 5 + 110;
 
 type Box = { x: number; y: number; w: number; h: number };
 const BOXES = {
@@ -77,9 +77,9 @@ const BOXES = {
   memory: { x: 1050, y: BRANCH_Y + PITCH, w: 180, h: PITCH + ROW },
 } as const satisfies Record<string, Box>;
 
-// Every connector point sits a few units clear of its box's actual border, so lines stop short
-// of the edge instead of visually running into (or under) the node.
-const EDGE_GAP = 5;
+// Every connector point sits clear of its box's actual border, so lines (and their arrowheads)
+// stop short of the edge instead of visually running into or under the node.
+const EDGE_GAP = 12;
 const cx = (b: Box) => b.x + b.w / 2;
 const cy = (b: Box) => b.y + b.h / 2;
 const top = (b: Box) => ({ x: cx(b), y: b.y - EDGE_GAP });
@@ -89,18 +89,19 @@ const right = (b: Box) => ({ x: b.x + b.w + EDGE_GAP, y: cy(b) });
 
 type Point = { x: number; y: number };
 /** An elbow connector: straight from `a`, turning once, ending at `b`. `via: "x"` turns
- * horizontally first then vertically (so the final leg is vertical — use this when `b` is a
- * box's top/bottom); `"y"` turns vertically first then horizontally (final leg horizontal — use
- * when `b` is a box's left/right). */
+ * horizontally first then vertically (so the final leg is vertical, and the arrowhead points
+ * down — use this when `b` is a box's top/bottom); `"y"` turns vertically first then
+ * horizontally (final leg horizontal — use when `b` is a box's left/right). */
 function elbow(a: Point, b: Point, via: "x" | "y" = "y"): string {
   const mid: Point = via === "y" ? { x: a.x, y: b.y } : { x: b.x, y: a.y };
   return `M ${a.x} ${a.y} L ${mid.x} ${mid.y} L ${b.x} ${b.y}`;
 }
 
-/** A tree connector: a short vertical stub clears `a`'s box before the line fans out — so
- * multiple branches leaving the same point (e.g. three arrows off KYC/KYB's bottom edge) don't
- * bunch up and cross right at the box border — then drops straight down into each target's top. */
-function branchDown(a: Point, targets: Point[], stub = 9): string[] {
+/** A tree connector: a vertical stub clears `a`'s box before the line fans out along a shared
+ * trunk — so multiple branches leaving the same point (e.g. three arrows off KYC/KYB's bottom
+ * edge) don't bunch up and cross right at the box border — then drops straight down into each
+ * target's top so every arrowhead points down. */
+function branchDown(a: Point, targets: Point[], stub = 34): string[] {
   const trunkY = a.y + stub;
   return targets.map((t) => `M ${a.x} ${a.y} L ${a.x} ${trunkY} L ${t.x} ${trunkY} L ${t.x} ${t.y}`);
 }
@@ -108,37 +109,43 @@ function branchDown(a: Point, targets: Point[], stub = 9): string[] {
 // Frame padding, defined here (ahead of GROUPS below) so the KYC → Step 3/4 branch arrows can
 // stop right at each frame's outer border instead of continuing past it into the frame's
 // interior to touch the node itself.
-const GROUP_PAD = 16;
-const GROUP_PAD_TIGHT = 6;
+const GROUP_PAD = 18;
+const GROUP_PAD_TIGHT = 8;
 const STEP3_INSET = 14;
-const STEP3_FRAME_TOP = BOXES.projectPrep.y - GROUP_PAD;
-const STEP4_FRAME_TOP = BOXES.finality.y - GROUP_PAD;
+const STEP3_FRAME_TOP = BOXES.projectPrep.y - GROUP_PAD - EDGE_GAP;
+const STEP4_FRAME_TOP = BOXES.finality.y - GROUP_PAD - EDGE_GAP;
 
 const ARROWS: { d: string; arrow?: boolean }[] = [
-  { d: elbow(bottom(BOXES.bid), top(BOXES.loadDocs)) },
-  { d: elbow(bottom(BOXES.offer), top(BOXES.counterparty)) },
-  { d: elbow(right(BOXES.loadDocs), left(BOXES.search)) },
-  { d: elbow(left(BOXES.counterparty), right(BOXES.search)) },
-  { d: elbow(top(BOXES.surfaceRoutes), bottom(BOXES.counterparty)), arrow: false },
-  { d: elbow(bottom(BOXES.search), top(BOXES.choice)) },
+  { d: elbow(bottom(BOXES.bid), top(BOXES.loadDocs), "x") },
+  { d: elbow(bottom(BOXES.offer), top(BOXES.counterparty), "x") },
+  { d: elbow(right(BOXES.loadDocs), left(BOXES.search), "y") },
+  { d: elbow(left(BOXES.counterparty), right(BOXES.search), "y") },
+  { d: elbow(top(BOXES.surfaceRoutes), bottom(BOXES.counterparty), "x"), arrow: false },
+  { d: elbow(bottom(BOXES.search), top(BOXES.choice), "x") },
   { d: elbow(bottom(BOXES.loadDocs), left(BOXES.choice), "y") },
   { d: elbow(bottom(BOXES.surfaceRoutes), right(BOXES.choice), "y") },
-  { d: elbow(bottom(BOXES.choice), top(BOXES.poi)) },
-  { d: elbow(bottom(BOXES.poi), top(BOXES.wad)) },
-  { d: elbow(bottom(BOXES.wad), top(BOXES.kyc)) },
+  { d: elbow(bottom(BOXES.choice), top(BOXES.poi), "x") },
+  { d: elbow(bottom(BOXES.poi), top(BOXES.wad), "x") },
+  { d: elbow(bottom(BOXES.wad), top(BOXES.kyc), "x") },
   ...branchDown(bottom(BOXES.kyc), [
     { x: cx(BOXES.projectPrep), y: STEP3_FRAME_TOP },
     { x: cx(BOXES.execution), y: STEP3_FRAME_TOP },
     { x: cx(BOXES.finality), y: STEP4_FRAME_TOP },
   ]).map((d) => ({ d })),
-  { d: elbow(bottom(BOXES.execution), top(BOXES.implementation)) },
-  { d: elbow(bottom(BOXES.finality), top(BOXES.payment)) },
-  { d: elbow(bottom(BOXES.payment), top(BOXES.completion)) },
-  { d: elbow(right(BOXES.completion), left(BOXES.memory), "x") },
-  ...branchDown(bottom(BOXES.projectPrep), [top(BOXES.concept), top(BOXES.prefeasibility)]).map((d) => ({ d })),
-  { d: elbow(bottom(BOXES.concept), top(BOXES.feasibility)) },
-  { d: elbow(bottom(BOXES.prefeasibility), top(BOXES.bankability)) },
+  { d: elbow(bottom(BOXES.execution), top(BOXES.implementation), "x") },
+  { d: elbow(bottom(BOXES.finality), top(BOXES.payment), "x") },
+  { d: elbow(bottom(BOXES.payment), top(BOXES.completion), "x") },
+  { d: elbow(right(BOXES.completion), left(BOXES.memory), "y") },
+  ...branchDown(
+    bottom(BOXES.projectPrep),
+    [top(BOXES.concept), top(BOXES.prefeasibility)],
+    14,
+  ).map((d) => ({ d })),
+
+  { d: elbow(bottom(BOXES.concept), top(BOXES.feasibility), "x") },
+  { d: elbow(bottom(BOXES.prefeasibility), top(BOXES.bankability), "x") },
 ];
+
 
 // Frames the diagram into the same 5 stages as the Journey banner above it — Step 1 (Trading,
 // everything through Choice), Step 2 (Compliance & Governance: POI, WaD, KYC/KYB), Step 3
