@@ -89,6 +89,7 @@ export function DealCanvas({
   deals,
   onSelectDeal,
   readOnly,
+  hideBidOfferGroups,
 }: {
   tx: Transaction;
   reload: () => void;
@@ -97,6 +98,9 @@ export function DealCanvas({
   /** Renders the pipeline for display only — no node opens, nothing mutates. Used for the
    * flowchart preview shown before any real deal exists. */
   readOnly?: boolean;
+  /** Hides the "{ Bid" / "{ Offer" groups — used on the read-only preview once the real
+   * CanvasStart picker is active elsewhere on the page, so they don't look duplicated. */
+  hideBidOfferGroups?: boolean;
 }) {
   const [panel, setPanel] = useState<{ stage: StageKey; step: string } | null>(null);
   const [direction, setDirection] = useState<"bid" | "offer" | null>(null);
@@ -189,6 +193,14 @@ export function DealCanvas({
         <LaneHeader label="Bidder" side="left" />
         <LaneHeader label="Responder" side="right" />
       </div>
+      {hideBidOfferGroups && (
+        <div className="mt-1 grid grid-cols-2 gap-4 sm:gap-8">
+          <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-white">Next steps</p>
+          <p className="text-right text-[10.5px] font-semibold uppercase tracking-[0.12em] text-white">
+            Next steps
+          </p>
+        </div>
+      )}
 
       {pickingDirection ? (
         // Choosing bid vs offer: clicking one hides the other, opens the recording form inline
@@ -230,38 +242,40 @@ export function DealCanvas({
           </div>
         </div>
       ) : (
-        <div className="mt-3 grid grid-cols-2 gap-4 sm:gap-8">
-          <div style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
-            <GateGroup title="Bid">
-              <div className="space-y-3">
-                {node(
-                  { stage: "trading", step: "bid-offer", label: "Bid", icon: ArrowLeftRight },
-                  { side: "left", delay: 0 },
-                )}
-                {visible("trading", "documents") &&
-                  node(
-                    { stage: "trading", step: "documents", label: "Deal documents", icon: FileUp },
-                    { side: "left", delay: 90 },
+        !hideBidOfferGroups && (
+          <div className="mt-3 grid grid-cols-2 gap-4 sm:gap-8">
+            <div style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
+              <GateGroup title="Bid">
+                <div className="space-y-3">
+                  {node(
+                    { stage: "trading", step: "bid-offer", label: "Bid", icon: ArrowLeftRight },
+                    { side: "left", delay: 0 },
                   )}
-              </div>
-            </GateGroup>
-          </div>
-          <div className="ml-auto" style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
-            <GateGroup title="Offer">
-              <div className="space-y-3">
-                {node(
-                  { stage: "trading", step: "bid-offer", label: "Offer", icon: ArrowLeftRight },
-                  { side: "right", delay: 45 },
-                )}
-                {visible("trading", "documents") &&
-                  node(
-                    { stage: "trading", step: "documents", label: "Deal documents", icon: FileUp },
-                    { side: "right", delay: 135 },
+                  {visible("trading", "documents") &&
+                    node(
+                      { stage: "trading", step: "documents", label: "Deal documents", icon: FileUp },
+                      { side: "left", delay: 90 },
+                    )}
+                </div>
+              </GateGroup>
+            </div>
+            <div className="ml-auto" style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
+              <GateGroup title="Offer">
+                <div className="space-y-3">
+                  {node(
+                    { stage: "trading", step: "bid-offer", label: "Offer", icon: ArrowLeftRight },
+                    { side: "right", delay: 45 },
                   )}
-              </div>
-            </GateGroup>
+                  {visible("trading", "documents") &&
+                    node(
+                      { stage: "trading", step: "documents", label: "Deal documents", icon: FileUp },
+                      { side: "right", delay: 135 },
+                    )}
+                </div>
+              </GateGroup>
+            </div>
           </div>
-        </div>
+        )
       )}
 
       {matchingPhase && tx.step === "search" && (
