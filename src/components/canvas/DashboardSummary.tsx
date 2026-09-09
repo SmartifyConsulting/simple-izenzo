@@ -109,7 +109,7 @@ export function DashboardSummary({ txs }: { txs: Transaction[] }) {
                   >
                     <span className="truncate">{t.title ?? "Untitled deal"}</span>
                     <span className="shrink-0 text-[11px] text-muted-foreground">
-                      {t.status} · {when(t.updated_at ?? t.created_at)}
+                      {t.status} · {when(t.created_at)}
                     </span>
                   </Link>
                 </li>
