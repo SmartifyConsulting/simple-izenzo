@@ -1004,10 +1004,11 @@ function ChoiceStep({ tx, reload }: Props) {
       summary: `Chose ${name}`,
       payload: { id, name },
     });
-    await advance(tx.id, "trading", "media");
+    // Choosing hands straight over to Intent sign-off — the same place the workflow screen goes.
+    await advance(tx.id, "trading", "intent");
     await qc.invalidateQueries({ queryKey: ["counterparties", tx.id] });
     reload();
-    toast.success("Choice recorded");
+    toast.success("Choice recorded — confirm the intent to continue");
   }
 
   const chosen = cps.find((c) => c.status === "chosen");
