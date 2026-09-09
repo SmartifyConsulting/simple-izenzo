@@ -713,6 +713,7 @@ export function CanvasStart({
   onCreated,
   onPickingChange,
   onDirectionChange,
+  initialDirection,
 }: {
   onCreated: (tx: Transaction, activity: RecordedActivity) => void;
   /** Fires whenever picking starts/stops, so the caller can hide anything that would look like a
@@ -720,20 +721,33 @@ export function CanvasStart({
   onPickingChange?: (picking: boolean) => void;
   /** Fires whenever the bid/offer side is picked or cleared. */
   onDirectionChange?: (direction: "bid" | "offer" | null) => void;
+  /** Opens straight into the Bid or Offer form on mount instead of the picker — used when a
+   * caller elsewhere on the page (e.g. the Mahjong diagram's "Register Bid/Offer" nodes) already
+   * decided which side the user wants. */
+  initialDirection?: "bid" | "offer" | null;
 }) {
   const { org, user, profile, refresh } = useAuth();
-  const [picking, setPickingState] = useState(false);
+  const [picking, setPickingState] = useState(Boolean(initialDirection));
   const setPicking = (v: boolean) => {
     setPickingState(v);
     onPickingChange?.(v);
   };
-  const [direction, setDirectionState] = useState<"bid" | "offer" | null>(null);
+  const [direction, setDirectionState] = useState<"bid" | "offer" | null>(initialDirection ?? null);
   const setDirection = (v: "bid" | "offer" | null) => {
     setDirectionState(v);
     onDirectionChange?.(v);
   };
   const [form, setForm] = useState({ title: "", commodity: "", quantity: "", unit: "", price: "", currency: "USD" });
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (initialDirection) {
+      onPickingChange?.(true);
+      onDirectionChange?.(initialDirection);
+    }
+    // Only meant to sync the caller once, from the initial mount value.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();

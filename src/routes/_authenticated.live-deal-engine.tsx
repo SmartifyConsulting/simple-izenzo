@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { advance, fingerprintOf, recordEvent, type Transaction } from "@/lib/tx";
 import { searchCounterparties } from "@/lib/izenzo.functions";
-import { useViewMode } from "@/lib/viewMode";
+import { useViewMode, setViewMode } from "@/lib/viewMode";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/live-deal-engine")({
@@ -125,6 +125,9 @@ function FileField({
 function LiveDealEngine() {
   const [picking, setPicking] = useState(false);
   const [direction, setDirection] = useState<"bid" | "offer" | null>(null);
+  // Set when "Register Bid/Offer" is clicked from the Mahjong diagram — switches to Classic view
+  // with the form already open on that side, instead of leaving the user to pick again.
+  const [pendingDirection, setPendingDirection] = useState<"bid" | "offer" | null>(null);
   const [activity, setActivity] = useState<RecordedActivity | null>(null);
   const [dealTx, setDealTx] = useState<Transaction | null>(null);
   const [flowStep, setFlowStep] = useState<FlowStep>("documents");
@@ -262,7 +265,15 @@ function LiveDealEngine() {
         wide
         actions={activity && <p className="text-sm font-bold text-white">{activity.reference}</p>}
       >
-        <MahjongView tx={dealTx ?? FLOWCHART_PREVIEW_TX} reload={() => {}} readOnly={!dealTx} />
+        <MahjongView
+          tx={dealTx ?? FLOWCHART_PREVIEW_TX}
+          reload={() => {}}
+          readOnly={!dealTx}
+          onRegister={(dir) => {
+            setPendingDirection(dir);
+            setViewMode("classic");
+          }}
+        />
       </AppShell>
     );
   }
@@ -285,9 +296,11 @@ function LiveDealEngine() {
         >
           {!activity && (
             <CanvasStart
+              initialDirection={pendingDirection}
               onCreated={(tx, recorded) => {
                 setPicking(false);
                 setDirection(null);
+                setPendingDirection(null);
                 setActivity(recorded);
                 setDealTx(tx);
                 setFlowStep("documents");

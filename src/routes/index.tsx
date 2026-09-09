@@ -98,7 +98,7 @@ function Landing() {
               />
             </div>
 
-            <div className="mt-14">
+            <div className="mt-4">
               <JourneyBanner />
             </div>
 

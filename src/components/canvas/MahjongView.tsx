@@ -300,7 +300,8 @@ function MjNode({
       style={{ left: pctX(box.x), top: pctY(box.y), width: pctX(box.w), height: pctY(box.h) }}
       className={cn(
         "absolute flex flex-col items-center justify-center gap-0.5 rounded-lg border px-2 text-center text-[11px] font-semibold leading-tight tracking-tight transition-colors sm:text-xs",
-        tone === "header" && "bg-slate-700/40 text-foreground border-border",
+        tone === "header" && state !== "done" && "bg-slate-700/40 text-foreground border-border hover:border-primary/40",
+        tone === "header" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
         tone === "neutral" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
         tone === "neutral" && state === "active" && "border-primary bg-primary/20 text-primary animate-signal-pulse",
         tone === "neutral" && state === "open" && "border-border bg-muted/30 text-foreground hover:border-primary/40",
@@ -344,10 +345,14 @@ export function MahjongView({
   tx,
   reload,
   readOnly,
+  onRegister,
 }: {
   tx: Transaction;
   reload: () => void;
   readOnly?: boolean;
+  /** Fires when "Register Bid"/"Register Offer" is clicked, before any real deal exists — the
+   * caller switches to the form that actually records it (same one the Classic view uses). */
+  onRegister?: (direction: "bid" | "offer") => void;
 }) {
   const [panel, setPanel] = useState<{ stage: StageKey; step: string } | null>(null);
 
@@ -376,8 +381,20 @@ export function MahjongView({
           <GroupFrame key={g.label} {...g} />
         ))}
 
-        <MjNode box={BOXES.bid} label="Register Bid" tone="header" state="open" />
-        <MjNode box={BOXES.offer} label="Register Offer" tone="header" state="open" />
+        <MjNode
+          box={BOXES.bid}
+          label="Register Bid"
+          tone="header"
+          state={readOnly ? "open" : st("trading", "bid-offer")}
+          onClick={readOnly ? () => onRegister?.("bid") : () => open("trading", "bid-offer")}
+        />
+        <MjNode
+          box={BOXES.offer}
+          label="Register Offer"
+          tone="header"
+          state={readOnly ? "open" : st("trading", "bid-offer")}
+          onClick={readOnly ? () => onRegister?.("offer") : () => open("trading", "bid-offer")}
+        />
 
         <MjNode
           box={BOXES.loadDocs}
