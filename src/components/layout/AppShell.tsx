@@ -78,7 +78,7 @@ export function AppShell({
             onClick={() => setViewMode(viewMode === "mahjong" ? "classic" : "mahjong")}
             className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
-            <LayoutGrid className="h-3.5 w-3.5" />
+            <LayoutGrid className="h-4 w-4" strokeWidth={2.25} />
             {viewMode === "mahjong" ? "Classic View" : "Mahjong View"}
           </button>
           <div className="min-w-0 flex-1" />
@@ -87,33 +87,38 @@ export function AppShell({
               to="/credits"
               search={{ returnTo: undefined }}
 
-              title={`${org.credits} token${org.credits === 1 ? "" : "s"} — open Token Management`}
-              className="flex h-6 shrink-0 items-center gap-1 rounded-full border border-primary/40 bg-primary/12 px-2 text-[11px] font-semibold text-primary transition-opacity hover:opacity-90"
+              aria-label={`${org.credits} token${org.credits === 1 ? "" : "s"} — Token Management`}
+              className="flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-primary/40 bg-primary/12 px-2.5 text-xs font-semibold text-foreground"
             >
-              <Coins className="h-3 w-3" />
+              <Coins className="h-4 w-4 text-primary" strokeWidth={2.25} />
               {org.credits}
             </Link>
           )}
-          <nav className="flex shrink-0 items-center gap-2 text-sm font-medium text-muted-foreground sm:gap-4">
+          <nav className="flex shrink-0 items-center gap-3 text-sm font-medium text-foreground/80 sm:gap-5">
             <a
               href="/pricing"
-              className="flex items-center hover:text-foreground"
+              className="flex items-center transition-colors hover:text-primary"
               title="Pricing"
               aria-label="Pricing"
             >
-              <DollarSign className="h-4 w-4" />
+              <DollarSign className="h-5 w-5" strokeWidth={2.25} />
             </a>
-            <Link to="/docs" className="flex items-center hover:text-foreground" title="API's" aria-label="API's">
-              <Plug className="h-4 w-4" />
+            <Link
+              to="/docs"
+              className="flex items-center transition-colors hover:text-primary"
+              title="API's"
+              aria-label="API's"
+            >
+              <Plug className="h-5 w-5" strokeWidth={2.25} />
             </Link>
             <DropdownMenu>
               <DropdownMenuTrigger
-                className="flex items-center gap-1.5 outline-none hover:text-foreground"
+                className="flex items-center gap-1 outline-none transition-colors hover:text-primary"
                 title="Report"
+                aria-label="Report"
               >
-                <BarChart3 className="h-3.5 w-3.5" />
-                <span className="hidden lg:inline">Report</span>
-                <ChevronDown className="h-3.5 w-3.5" />
+                <BarChart3 className="h-5 w-5" strokeWidth={2.25} />
+                <ChevronDown className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
                 <DropdownMenuItem asChild>
@@ -130,9 +135,9 @@ export function AppShell({
           <Link
             to="/inbox"
             title="Inbox"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground hover:text-foreground"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-foreground/80 transition-colors hover:text-primary"
           >
-            <Mail className="h-4 w-4" />
+            <Mail className="h-5 w-5" strokeWidth={2.25} />
           </Link>
           <ProfileAvatarMenu />
         </div>
