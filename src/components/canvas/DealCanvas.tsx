@@ -51,7 +51,7 @@ export const FLOWCHART_PREVIEW_TX: Transaction = {
   id: "preview",
   org_id: "preview",
   counterparty_org_id: null,
-  title: "How a deal moves through Izenzo",
+  title: "Izenzo Deal Engine",
   commodity: "Copper cathode",
   quantity: 100,
   unit: "Metric tonnes",
@@ -735,13 +735,13 @@ export function CanvasStart({ onCreated }: { onCreated: (id: string) => void }) 
 
   if (!picking) {
     return (
-      <div className="ink-grid relative rounded-3xl border border-border p-8 sm:p-14">
+      <div className="ink-grid relative rounded-3xl border border-border p-6 sm:p-10">
         <p className="label-caps text-center">Live deal engine</p>
         <div className="mx-auto mt-6 max-w-md">
           <button
             type="button"
             onClick={() => setPicking(true)}
-            className="group block w-full animate-node-rise px-6 py-7 text-center"
+            className="group block w-full animate-node-rise px-6 py-5 text-center"
           >
             <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full border border-primary bg-primary/20 text-primary transition-transform group-hover:scale-105">
               <ArrowLeftRight className="h-4.5 w-4.5" />
@@ -857,7 +857,7 @@ export function CanvasStart({ onCreated }: { onCreated: (id: string) => void }) 
           ) : direction === "bid" ? (
             <div className="glass-node animate-node-rise p-5 sm:p-6">
               <div className="mb-4 flex items-start justify-between gap-4">
-                <p className="text-base font-semibold tracking-tight">New Bid to Buy</p>
+                <p className="text-base font-semibold tracking-tight">Submit a Bid</p>
                 <button
                   type="button"
                   onClick={() => setDirection(null)}
@@ -886,7 +886,7 @@ export function CanvasStart({ onCreated }: { onCreated: (id: string) => void }) 
           ) : direction === "offer" ? (
             <div className="glass-node animate-node-rise p-5 sm:p-6">
               <div className="mb-4 flex items-start justify-between gap-4">
-                <p className="text-base font-semibold tracking-tight">New Bid to Sell</p>
+                <p className="text-base font-semibold tracking-tight">Submit an Offer</p>
                 <button
                   type="button"
                   onClick={() => setDirection(null)}

@@ -113,7 +113,7 @@ export function GateBar({ label, cleared }: { label: string; cleared: boolean })
             : "border-border bg-muted text-muted-foreground",
         )}
       >
-        {cleared ? `${label} · cleared` : `${label} · sealed shut`}
+        {cleared ? `${label} · cleared` : `${label} to be cleared`}
       </span>
       <span className="h-px flex-1 bg-gradient-to-l from-transparent to-border" />
     </div>
