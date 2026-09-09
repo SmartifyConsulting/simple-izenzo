@@ -43,6 +43,33 @@ type NodeRef = { stage: StageKey; step: string; label?: string; icon?: typeof Ra
 // edge only.
 const LANE_INSET = 88;
 
+/** A non-real transaction used purely to render the full pipeline (Trading → Compliance →
+ * Execution → Finality → Memory) fully ticked, so landing on the canvas with no deal yet still
+ * shows the whole flowchart at a glance rather than just the "start here" button. Never inserted,
+ * never saved — passed straight into DealCanvas in read-only preview mode. */
+export const FLOWCHART_PREVIEW_TX: Transaction = {
+  id: "preview",
+  org_id: "preview",
+  counterparty_org_id: null,
+  title: "How a deal moves through Izenzo",
+  commodity: "Copper cathode",
+  quantity: 100,
+  unit: "Metric tonnes",
+  price: 9500,
+  currency: "USD",
+  incoterms: "CIF Rotterdam",
+  jurisdiction: "South Africa",
+  stage: "finality",
+  step: "record",
+  status: "open",
+  intent_confirmed_at: new Date(0).toISOString(),
+  poi_sealed_at: new Date(0).toISOString(),
+  poi_hash: "preview",
+  wad_completed_at: new Date(0).toISOString(),
+  finality_sealed_at: null,
+  created_at: new Date(0).toISOString(),
+};
+
 function useNodeState(tx: Transaction) {
   const currentIdx = stepIndex(tx.stage, tx.step);
   return (stage: StageKey, step: string): NodeState => {
@@ -59,11 +86,15 @@ export function DealCanvas({
   reload,
   deals,
   onSelectDeal,
+  readOnly,
 }: {
   tx: Transaction;
   reload: () => void;
   deals?: Transaction[];
   onSelectDeal?: (id: string) => void;
+  /** Renders the pipeline for display only — no node opens, nothing mutates. Used for the
+   * flowchart preview shown before any real deal exists. */
+  readOnly?: boolean;
 }) {
   const [panel, setPanel] = useState<{ stage: StageKey; step: string } | null>(null);
   const [direction, setDirection] = useState<"bid" | "offer" | null>(null);
@@ -73,6 +104,7 @@ export function DealCanvas({
   // state, which resets on reload) so the results panel mirrors correctly at every step.
   const { data: recordedDirection } = useQuery({
     queryKey: ["bid-direction", tx.id],
+    enabled: !readOnly,
     queryFn: async () => {
       const { data } = await supabase
         .from("bid_offers")
@@ -103,9 +135,9 @@ export function DealCanvas({
           note={opts?.note}
           compact={opts?.compact}
           delay={opts?.delay}
-          onClick={() => setPanel(isOpen ? null : { stage: n.stage, step: n.step })}
+          onClick={readOnly ? undefined : () => setPanel(isOpen ? null : { stage: n.stage, step: n.step })}
         />
-        {isOpen && (
+        {isOpen && !readOnly && (
           <InlineFrame tx={tx} stage={n.stage} step={n.step} reload={reload} onClose={() => setPanel(null)} />
         )}
       </div>
@@ -683,6 +715,9 @@ export function CanvasStart({ onCreated }: { onCreated: (id: string) => void }) 
             </span>
             <span className="mt-3 block text-[15px] font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary">
               Open a bid or an offer
+            </span>
+            <span className="mt-1 block text-[12.5px] font-medium text-muted-foreground">
+              Bids to the left, Offers to the right.
             </span>
           </button>
         </div>

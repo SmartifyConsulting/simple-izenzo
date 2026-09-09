@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/layout/AppShell";
-import { CanvasStart, DealCanvas } from "@/components/canvas/DealCanvas";
+import { CanvasStart, DealCanvas, FLOWCHART_PREVIEW_TX } from "@/components/canvas/DealCanvas";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -49,12 +49,17 @@ function Dashboard() {
       {isLoading && <p className="text-sm text-muted-foreground">Opening the canvas…</p>}
 
       {!isLoading && !activeTx && (
-        <CanvasStart
-          onCreated={(id) => {
-            setSelectedId(id);
-            void refetch();
-          }}
-        />
+        <>
+          <CanvasStart
+            onCreated={(id) => {
+              setSelectedId(id);
+              void refetch();
+            }}
+          />
+          <div className="mt-6">
+            <DealCanvas tx={FLOWCHART_PREVIEW_TX} reload={() => {}} readOnly />
+          </div>
+        </>
       )}
 
       {activeTx && (
