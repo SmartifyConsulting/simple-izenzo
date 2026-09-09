@@ -109,12 +109,11 @@ export function AppShell({
             <Logo onDark className="h-7 w-auto" />
           </Link>
           <ModuleLauncher />
-          <Link
-            to="/developer/keys"
-            className="flex shrink-0 items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground"
-          >
-            <TerminalSquare className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Developer Centre</span>
+          <Link to="/developer/keys">
+            <Button variant="ghost" size="sm" className="gap-2 rounded-full border border-border bg-muted px-3">
+              <TerminalSquare className="h-4 w-4" />
+              <span className="hidden sm:inline">Developer Centre</span>
+            </Button>
           </Link>
           <div className="min-w-0 flex-1" />
           {org && (
