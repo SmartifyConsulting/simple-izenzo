@@ -371,8 +371,11 @@ function LiveDealEngine() {
               focusSide={side}
               forceRevealAll
               hideMatchingRibbon
+              openProofOfIntent={flowStep === "searching" || flowStep === "results"}
+              throbStep={throbStep}
             />
           </div>
+
         </div>
 
         {side && (
@@ -438,9 +441,13 @@ function LiveDealEngine() {
                       txId={dealTx.id}
                       searching={flowStep === "searching"}
                       error={searchError}
+                      screening={screening}
+                      screeningResults={screeningResults}
+                      onContinue={startScreening}
                     />
                   </div>
                 )}
+
               </div>
             ) : (
               <p className="mt-4 text-xs text-muted-foreground">Nothing recorded yet.</p>
