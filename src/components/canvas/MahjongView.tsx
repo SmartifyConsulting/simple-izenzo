@@ -158,7 +158,8 @@ const ARROWS: { d: string; arrow?: boolean }[] = [
       { x: cx(BOXES.execution), y: STEP3_FRAME_TOP },
       { x: cx(BOXES.finality), y: STEP4_FRAME_TOP },
     ],
-    14,
+    44,
+
   ).map((d) => ({ d })),
 
   { d: elbow(bottom(BOXES.execution), top(BOXES.implementation), "x") },
