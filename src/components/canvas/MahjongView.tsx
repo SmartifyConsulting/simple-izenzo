@@ -29,63 +29,90 @@ function nodeState(stage: StageKey, step: string, tx: Transaction): NodeState {
 
 // Diagram coordinate system — everything below is placed on this fixed canvas and scaled to the
 // container with percentages, so boxes and their connecting arrows always stay aligned with each
-// other regardless of viewport width. Every step in the main flow (Search through KYC/KYB, plus
-// the branch headers and their sub-steps) shares one height and an equal vertical pitch between
-// rows; the center column shares Choice's width too.
+// other regardless of viewport width. The canvas is deliberately wide-and-short so the whole
+// workflow fits on screen without scrolling.
 const W = 1246;
-const H = 1010;
+const H = 720;
 const pctX = (v: number) => `${(v / W) * 100}%`;
 const pctY = (v: number) => `${(v / H) * 100}%`;
 
-const ROW = 48; // shared node height
-const PITCH = 100; // vertical distance from one row's top to the next
+const ROW = 42; // shared node height
+const PITCH = 72; // vertical distance from one row's top to the next
 const CENTER_W = 310; // shared width for the center-column nodes, matched to Choice
 const SIDE_W = 220;
-// Extra breathing room before the three parallel branches split off from KYC/KYB, so the branch
-// frames sit clearly lower and don't crowd the gate row above them.
-const BRANCH_Y = 110 + PITCH * 5 + 110;
+const TOP_Y = 20;
+// A little breathing room before the three parallel branches split off from KYC/KYB.
+const BRANCH_Y = TOP_Y + PITCH * 6 + 20;
+
+const GROUP_PAD = 18;
+// Used where two frames sit close together (Step 1 above Step 2), so their borders don't overlap.
+const GROUP_PAD_TIGHT = 10;
+
+
+// Steps 3, 4 and 5 are laid out as three frames with identical gaps between them (and the same
+// gap to each canvas edge), so the bottom band reads as evenly spaced columns.
+const S3_W = 556;
+const S4_W = 250;
+const S5_W = 220;
+const COL_GAP = (W - (S3_W + S4_W + S5_W)) / 4;
+const S3_X = COL_GAP;
+const S4_X = S3_X + S3_W + COL_GAP;
+const S5_X = S4_X + S4_W + COL_GAP;
+
+// Inner content bounds of each bottom frame.
+const S3_L = S3_X + GROUP_PAD;
+const S3_R = S3_X + S3_W - GROUP_PAD;
+const S4_L = S4_X + GROUP_PAD;
+const S5_L = S5_X + GROUP_PAD;
+
+const PREP_W = 300;
+const SUB_W = 145;
+const EXEC_W = 190;
+const FIN_W = S4_W - GROUP_PAD * 2;
+const MEM_W = S5_W - GROUP_PAD * 2;
 
 type Box = { x: number; y: number; w: number; h: number };
 const BOXES = {
-  bid: { x: 60, y: 20, w: SIDE_W, h: ROW },
-  offer: { x: 860, y: 20, w: SIDE_W, h: ROW },
+  bid: { x: 60, y: TOP_Y, w: SIDE_W, h: ROW },
+  offer: { x: 860, y: TOP_Y, w: SIDE_W, h: ROW },
 
-  loadDocs: { x: 60, y: 110, w: SIDE_W, h: ROW },
-  search: { x: 470, y: 110, w: CENTER_W, h: ROW },
-  counterparty: { x: 860, y: 110, w: SIDE_W, h: ROW },
+  loadDocs: { x: 60, y: TOP_Y + PITCH, w: SIDE_W, h: ROW },
+  search: { x: 470, y: TOP_Y + PITCH, w: CENTER_W, h: ROW },
+  counterparty: { x: 860, y: TOP_Y + PITCH, w: SIDE_W, h: ROW },
 
-  surfaceRoutes: { x: 860, y: 110 + PITCH, w: SIDE_W, h: ROW },
-  choice: { x: 470, y: 110 + PITCH, w: CENTER_W, h: ROW },
+  surfaceRoutes: { x: 860, y: TOP_Y + PITCH * 2, w: SIDE_W, h: ROW },
+  choice: { x: 470, y: TOP_Y + PITCH * 2, w: CENTER_W, h: ROW },
 
-  poi: { x: 470, y: 110 + PITCH * 2, w: CENTER_W, h: ROW },
-  wad: { x: 470, y: 110 + PITCH * 3, w: CENTER_W, h: ROW },
-  kyc: { x: 470, y: 110 + PITCH * 4, w: CENTER_W, h: ROW },
+  poi: { x: 470, y: TOP_Y + PITCH * 3, w: CENTER_W, h: ROW },
+  wad: { x: 470, y: TOP_Y + PITCH * 4, w: CENTER_W, h: ROW },
+  kyc: { x: 470, y: TOP_Y + PITCH * 5, w: CENTER_W, h: ROW },
 
-  projectPrep: { x: 50, y: BRANCH_Y, w: 330, h: ROW },
-  execution: { x: 525, y: BRANCH_Y, w: 200, h: ROW },
-  finality: { x: 800, y: BRANCH_Y, w: 200, h: ROW },
+  projectPrep: { x: S3_L, y: BRANCH_Y, w: PREP_W, h: ROW },
+  execution: { x: S3_R - EXEC_W, y: BRANCH_Y, w: EXEC_W, h: ROW },
+  finality: { x: S4_L, y: BRANCH_Y, w: FIN_W, h: ROW },
 
-  concept: { x: 5, y: BRANCH_Y + PITCH, w: 150, h: ROW },
-  prefeasibility: { x: 165, y: BRANCH_Y + PITCH, w: 150, h: ROW },
-  implementation: { x: 525, y: BRANCH_Y + PITCH, w: 200, h: ROW },
-  payment: { x: 800, y: BRANCH_Y + PITCH, w: 200, h: ROW },
+  // Sub-nodes align with the nearest edge of their parent: Concept/Feasibility flush with Project
+  // Preparation's left edge, Pre-feasibility/Bankability flush with its right edge.
+  concept: { x: S3_L, y: BRANCH_Y + PITCH, w: SUB_W, h: ROW },
+  prefeasibility: { x: S3_L + PREP_W - SUB_W, y: BRANCH_Y + PITCH, w: SUB_W, h: ROW },
+  implementation: { x: S3_R - EXEC_W, y: BRANCH_Y + PITCH, w: EXEC_W, h: ROW },
+  payment: { x: S4_L, y: BRANCH_Y + PITCH, w: FIN_W, h: ROW },
 
-  feasibility: { x: 5, y: BRANCH_Y + PITCH * 2, w: 150, h: ROW },
-  bankability: { x: 165, y: BRANCH_Y + PITCH * 2, w: 150, h: ROW },
-  completion: { x: 800, y: BRANCH_Y + PITCH * 2, w: 200, h: ROW },
+  feasibility: { x: S3_L, y: BRANCH_Y + PITCH * 2, w: SUB_W, h: ROW },
+  bankability: { x: S3_L + PREP_W - SUB_W, y: BRANCH_Y + PITCH * 2, w: SUB_W, h: ROW },
+  completion: { x: S4_L, y: BRANCH_Y + PITCH * 2, w: FIN_W, h: ROW },
 
-  memory: { x: 1050, y: BRANCH_Y + PITCH, w: 180, h: PITCH + ROW },
+  memory: { x: S5_L, y: BRANCH_Y + PITCH, w: MEM_W, h: PITCH + ROW },
 } as const satisfies Record<string, Box>;
 
-// Every connector point sits clear of its box's actual border, so lines (and their arrowheads)
-// stop short of the edge instead of visually running into or under the node.
-const EDGE_GAP = 12;
+// Connector points sit exactly on each box's border, so a line leaves touching the box it comes
+// from and its arrowhead tip lands on the border of the box it points at.
 const cx = (b: Box) => b.x + b.w / 2;
 const cy = (b: Box) => b.y + b.h / 2;
-const top = (b: Box) => ({ x: cx(b), y: b.y - EDGE_GAP });
-const bottom = (b: Box) => ({ x: cx(b), y: b.y + b.h + EDGE_GAP });
-const left = (b: Box) => ({ x: b.x - EDGE_GAP, y: cy(b) });
-const right = (b: Box) => ({ x: b.x + b.w + EDGE_GAP, y: cy(b) });
+const top = (b: Box) => ({ x: cx(b), y: b.y });
+const bottom = (b: Box) => ({ x: cx(b), y: b.y + b.h });
+const left = (b: Box) => ({ x: b.x, y: cy(b) });
+const right = (b: Box) => ({ x: b.x + b.w, y: cy(b) });
 
 type Point = { x: number; y: number };
 /** An elbow connector: straight from `a`, turning once, ending at `b`. `via: "x"` turns
@@ -97,23 +124,17 @@ function elbow(a: Point, b: Point, via: "x" | "y" = "y"): string {
   return `M ${a.x} ${a.y} L ${mid.x} ${mid.y} L ${b.x} ${b.y}`;
 }
 
-/** A tree connector: a vertical stub clears `a`'s box before the line fans out along a shared
- * trunk — so multiple branches leaving the same point (e.g. three arrows off KYC/KYB's bottom
- * edge) don't bunch up and cross right at the box border — then drops straight down into each
- * target's top so every arrowhead points down. */
-function branchDown(a: Point, targets: Point[], stub = 34): string[] {
+/** A tree connector: a short vertical stub leaves `a`'s border before the line fans out along a
+ * shared trunk — so multiple branches leaving the same point don't bunch up right at the box
+ * border — then drops straight down into each target so every arrowhead points down. */
+function branchDown(a: Point, targets: Point[], stub = 26): string[] {
   const trunkY = a.y + stub;
   return targets.map((t) => `M ${a.x} ${a.y} L ${a.x} ${trunkY} L ${t.x} ${trunkY} L ${t.x} ${t.y}`);
 }
 
-// Frame padding, defined here (ahead of GROUPS below) so the KYC → Step 3/4 branch arrows can
-// stop right at each frame's outer border instead of continuing past it into the frame's
-// interior to touch the node itself.
-const GROUP_PAD = 18;
-const GROUP_PAD_TIGHT = 8;
-const STEP3_INSET = 14;
-const STEP3_FRAME_TOP = BOXES.projectPrep.y - GROUP_PAD - EDGE_GAP;
-const STEP4_FRAME_TOP = BOXES.finality.y - GROUP_PAD - EDGE_GAP;
+// The KYC → Step 3/4 arrows stop on each frame's outer border rather than continuing inside it.
+const STEP3_FRAME_TOP = BOXES.projectPrep.y - GROUP_PAD;
+const STEP4_FRAME_TOP = BOXES.finality.y - GROUP_PAD;
 
 const ARROWS: { d: string; arrow?: boolean }[] = [
   { d: elbow(bottom(BOXES.bid), top(BOXES.loadDocs), "x") },
@@ -123,15 +144,20 @@ const ARROWS: { d: string; arrow?: boolean }[] = [
   { d: elbow(top(BOXES.surfaceRoutes), bottom(BOXES.counterparty), "x"), arrow: false },
   { d: elbow(bottom(BOXES.search), top(BOXES.choice), "x") },
   { d: elbow(bottom(BOXES.loadDocs), left(BOXES.choice), "y") },
-  { d: elbow(bottom(BOXES.surfaceRoutes), right(BOXES.choice), "y") },
+  { d: elbow(left(BOXES.surfaceRoutes), right(BOXES.choice), "y") },
   { d: elbow(bottom(BOXES.choice), top(BOXES.poi), "x") },
   { d: elbow(bottom(BOXES.poi), top(BOXES.wad), "x") },
   { d: elbow(bottom(BOXES.wad), top(BOXES.kyc), "x") },
-  ...branchDown(bottom(BOXES.kyc), [
-    { x: cx(BOXES.projectPrep), y: STEP3_FRAME_TOP },
-    { x: cx(BOXES.execution), y: STEP3_FRAME_TOP },
-    { x: cx(BOXES.finality), y: STEP4_FRAME_TOP },
-  ]).map((d) => ({ d })),
+  ...branchDown(
+    bottom(BOXES.kyc),
+    [
+      { x: cx(BOXES.projectPrep), y: STEP3_FRAME_TOP },
+      { x: cx(BOXES.execution), y: STEP3_FRAME_TOP },
+      { x: cx(BOXES.finality), y: STEP4_FRAME_TOP },
+    ],
+    14,
+  ).map((d) => ({ d })),
+
   { d: elbow(bottom(BOXES.execution), top(BOXES.implementation), "x") },
   { d: elbow(bottom(BOXES.finality), top(BOXES.payment), "x") },
   { d: elbow(bottom(BOXES.payment), top(BOXES.completion), "x") },
@@ -170,15 +196,16 @@ const GROUPS: { label: string; step: number; box: Box }[] = [
       y: BOXES.poi.y - GROUP_PAD_TIGHT,
       w: BOXES.poi.w + GROUP_PAD * 2,
       h: BOXES.kyc.y + ROW - BOXES.poi.y + GROUP_PAD_TIGHT + GROUP_PAD,
+
     },
   },
   {
     label: "Execution",
     step: 3,
     box: {
-      x: -GROUP_PAD + STEP3_INSET,
+      x: S3_X,
       y: BOXES.projectPrep.y - GROUP_PAD,
-      w: 730 + GROUP_PAD * 2 - STEP3_INSET * 2,
+      w: S3_W,
       h: BOXES.feasibility.y + ROW - BOXES.projectPrep.y + GROUP_PAD * 2,
     },
   },
@@ -186,9 +213,9 @@ const GROUPS: { label: string; step: number; box: Box }[] = [
     label: "Finality",
     step: 4,
     box: {
-      x: 792 - GROUP_PAD,
+      x: S4_X,
       y: BOXES.finality.y - GROUP_PAD,
-      w: 216 + GROUP_PAD + GROUP_PAD_TIGHT,
+      w: S4_W,
       h: BOXES.completion.y + ROW - BOXES.finality.y + GROUP_PAD * 2,
     },
   },
@@ -196,13 +223,14 @@ const GROUPS: { label: string; step: number; box: Box }[] = [
     label: "Memory",
     step: 5,
     box: {
-      x: 1042 - GROUP_PAD_TIGHT,
+      x: S5_X,
       y: BOXES.memory.y - GROUP_PAD,
-      w: 196 + GROUP_PAD_TIGHT + GROUP_PAD,
+      w: S5_W,
       h: BOXES.memory.h + GROUP_PAD * 2,
     },
   },
 ];
+
 
 function GroupFrame({ label, step, box }: { label: string; step: number; box: Box }) {
   return (
@@ -226,7 +254,7 @@ function ArrowLayer() {
       aria-hidden
     >
       <defs>
-        <marker id="mj-arrowhead" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+        <marker id="mj-arrowhead" markerWidth="8" markerHeight="8" refX="8" refY="4" orient="auto">
           <path d="M0,0 L8,4 L0,8 Z" className="fill-muted-foreground/50" />
         </marker>
       </defs>
@@ -332,9 +360,17 @@ export function MahjongView({
   const active = panel && !readOnly ? panel : null;
 
   return (
-    <div className="ink-grid relative rounded-3xl border border-border p-4 sm:p-6">
+    <div className="ink-grid relative rounded-3xl border border-border p-3 sm:p-4">
 
-      <div className="relative w-full" style={{ aspectRatio: `${W} / ${H}` }}>
+      <div
+        className="relative mx-auto"
+        style={{
+          aspectRatio: `${W} / ${H}`,
+          // Keeps the whole diagram inside the viewport, so it never needs scrolling.
+          width: `min(100%, calc((100vh - 230px) * ${W} / ${H}))`,
+        }}
+      >
+
         <ArrowLayer />
         {GROUPS.map((g) => (
           <GroupFrame key={g.label} {...g} />
