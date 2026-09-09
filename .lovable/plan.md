@@ -26,7 +26,14 @@ Carry the deal straight through: a full match tells you in the Inbox, choosing a
 - It appears with the deal's other attachments, with the same preview and download icons, so it travels with the bid as evidence.
 - The sealed panel keeps its own Download button as well.
 
+## 5. Once sealed, fold the stage away and move on
+
+- With the certificate filed, the Proof of Intent accordion collapses. The stage and its sub-steps then read the same way Deal Creation already does at the top: each line green with a tick.
+- The "Next steps" label moves to sit directly above Without a Doubt, that accordion opens, and its frame pulses until the WaD work is done.
+- Only one frame pulses at a time, so the earlier Choice and Background screening frames stop pulsing at that point.
+
 ## Technical notes
+
 
 - Notification write lives server-side in `src/lib/screening.functions.ts` (and the verification-refresh path) inserting into `public.notifications` with `org_id`; a marker in `transaction_events` prevents duplicates. No schema change beyond that, and no new table.
 - Inbox: extend `src/routes/_authenticated.inbox.tsx` with a notifications query and read toggle; unread badge in `AppShell`.
