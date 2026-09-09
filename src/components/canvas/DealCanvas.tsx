@@ -455,7 +455,7 @@ export function DealCanvas({
           ticked list, the way Deal Creation does, and attention moves on to Without a Doubt. */}
       {poiSealed && (
         <div className={cn("mt-3", stepsBoxClass)}>
-          <p className="label-caps mb-2 text-muted-foreground">Proof of Intent</p>
+          <GateBar label="Proof of Intent" cleared />
           <div className="space-y-1.5">
             {[
               "Counterparties surfaced",
@@ -525,7 +525,7 @@ export function DealCanvas({
                         <div
                           className={cn(
                             "h-full rounded-full transition-all duration-500",
-                            screeningProgress.failed ? "bg-destructive" : "bg-primary",
+                            screeningProgress.failed ? "bg-destructive" : "bg-info",
                           )}
                           style={{
                             width: `${Math.round((screeningProgress.done / screeningProgress.total) * 100)}%`,
@@ -537,8 +537,9 @@ export function DealCanvas({
                           ? "Screening could not finish"
                           : screeningProgress.done < screeningProgress.total
                             ? `${screeningProgress.done} of ${screeningProgress.total} checks opened`
-                            : `All ${screeningProgress.total} checks opened — waiting on results`}
+                            : `Screening complete — all ${screeningProgress.total} checks opened`}
                       </p>
+
 
                     </div>
                   )}
@@ -565,7 +566,7 @@ export function DealCanvas({
           screened, with attention moving on to Execution. */}
       {wad && (
         <div className={cn("mt-3", stepsBoxClass)}>
-          <p className="label-caps mb-2 text-muted-foreground">Without a Doubt</p>
+          <GateBar label="Without a Doubt" cleared />
           <div className="space-y-1.5">
             {[
               "KYC — individuals identified",
