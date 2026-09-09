@@ -47,4 +47,7 @@ it failed it reads the reason instead.
   `UPDATE counterparties SET score = 100` for Anker Innovations. No migration.
 - `src/components/canvas/DealCanvas.tsx`: wrap the `GateBar` in the `compliance/wad` `GateGroup` in
   the same `stepsBoxClass` container the case node uses, so the cleared bar matches the frame width
-  and centring.
+  and centring. In `CounterpartyRecord`, add the search progress bar and count line below the
+  Counterparties frame, driven by the existing searching / results / error state and the loaded
+  candidate list.
+
