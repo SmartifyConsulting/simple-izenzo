@@ -1,35 +1,53 @@
-# Deal ID, default view, and icon-only menu
+# Deal ID, default view, icon-only menu, and the stuck Choice step
 
-## 1. Show the Bid / Offer ID in the Live Workspace
+## 1. Stuck on "Choice recorded" — never reaches Proof of Intent
 
-The Live Workspace panel on the right currently opens with just the "Live workspace" label.
-Add the deal's reference (e.g. BID9089722 / OFR…) at the top right of that grid, on the same
-line as the label, styled as a small pill so it reads as the record's identity. When no deal is
-registered yet, the pill is simply absent.
+There are two different "choose the counterparty" actions in the app and they behave
+differently:
 
-## 2. Classic View becomes the default, and the logo returns to it
+- The one on the workflow screen records the choice and opens Intent sign-off on the right
+  ("Choice recorded — confirm the intent to continue").
+- The older Choice panel opened from the workflow node records the choice and moves the deal to
+  Background screening instead, with no next panel — that dead end matches "stuck on Choice
+  recorded".
 
-- On sign-in and on any new session the workflow opens in Classic View (the start node with the
-  full workflow beneath it), not the Mahjong map.
-- Clicking the Izenzo logo in the header goes to the workflow screen and puts it in the view the
-  user is currently set to — defaulting to Classic View, so the start node and workflow are what
-  you land on.
-- The header toggle still switches between Classic and Mahjong, and that choice sticks for the
-  browsing session.
+First step is to confirm which of the two the deal is sitting on by checking the deal's recorded
+stage/step. Then:
 
-## 3. Menu icons lose their text labels
+- Make the older Choice panel end the same way as the main flow: record the choice, move the deal
+  on, and open the Intent sign-off panel so the user can sign and continue to Proof of Intent.
+- Add a safety net so that any deal with a chosen counterparty always shows the next open panel
+  (Intent, then Proof of Intent) rather than nothing — including after a page refresh.
+- If the deal is already past the choice, show an explicit "Continue to Intent" action instead of
+  leaving the screen static.
 
-Across every screen the header nav becomes icon-only for consistency: the view toggle drops its
-"Classic View" / "Mahjong View" wording and shows only its icon. Pricing, API, Report, Inbox and
-tokens already show icons alone. Every icon keeps a hover tooltip and an accessible label so its
-meaning stays discoverable.
+## 2. Show the Bid / Offer ID in the Live Workspace
+
+Add the deal's reference (e.g. BID9089722) at the top right of the Live Workspace grid, on the
+same line as the "Live workspace" label, as a small pill. Absent when no deal is registered yet.
+
+## 3. Classic View becomes the default, and the logo returns to it
+
+- New sessions open in Classic View (start node plus the full workflow beneath it), not the
+  Mahjong map.
+- Clicking the Izenzo logo goes to the workflow screen in the user's current view, defaulting to
+  Classic.
+- The header toggle still switches between Classic and Mahjong and sticks for the session.
+
+## 4. Menu icons lose their text labels
+
+The header nav becomes icon-only everywhere: the view toggle drops its "Classic View" /
+"Mahjong View" wording. Every icon keeps a hover tooltip and accessible label.
 
 ## Technical notes
 
-- `src/lib/viewMode.ts`: flip the stored/default value from `mahjong` to `classic` (initial read,
-  fallback, and the `useSyncExternalStore` server snapshot).
-- `src/components/layout/AppShell.tsx`: logo `Link` calls `setViewMode("classic")` only when no
-  session preference is stored; toggle button renders the icon with `title`/`aria-label` and no
-  text child.
-- `src/routes/_authenticated.live-deal-engine.tsx`: in the Live Workspace panel header, wrap the
-  `label-caps` line in a flex row and render `dealTx?.reference` as a right-aligned pill.
+- Diagnose first: read the transaction's `stage`/`step` and the `counterparties.status = chosen`
+  row for the affected deal before changing behaviour.
+- `src/components/steps/StepScreen.tsx` — `ChoiceStep.choose()` currently calls
+  `advance(tx.id, "trading", "media")` and stops; align it with `finalizeChoice` in
+  `_authenticated.live-deal-engine.tsx` (advance to `trading/intent`, open the Intent panel).
+- `src/routes/_authenticated.live-deal-engine.tsx` — in `reloadDeal()`, also open `intent` when a
+  chosen counterparty exists and `intent_confirmed_at` is null, regardless of the stored step.
+- `src/lib/viewMode.ts` — default and fallback change from `mahjong` to `classic`.
+- `src/components/layout/AppShell.tsx` — toggle renders icon only with `title`/`aria-label`.
+- Live Workspace header: flex row with `dealTx?.reference` pill on the right.
