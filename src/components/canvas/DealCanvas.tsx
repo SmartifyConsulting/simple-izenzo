@@ -229,45 +229,37 @@ export function DealCanvas({
             )}
           </div>
         </div>
-      ) : readOnly ? (
-        // Preview: collapse the Bid/Offer + Deal documents pair into one summary node per side.
-        <div className="mt-3 grid grid-cols-2 gap-4 sm:gap-8">
-          <div className="space-y-3" style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
-            {node(
-              { stage: "trading", step: "bid-offer", label: "Submit a Bid", icon: ArrowLeftRight },
-              { side: "left", delay: 0 },
-            )}
-          </div>
-          <div className="ml-auto space-y-3" style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
-            {node(
-              { stage: "trading", step: "bid-offer", label: "Submit an Offer", icon: ArrowLeftRight },
-              { side: "right", delay: 45 },
-            )}
-          </div>
-        </div>
       ) : (
         <div className="mt-3 grid grid-cols-2 gap-4 sm:gap-8">
-          <div className="space-y-3" style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
-            {node(
-              { stage: "trading", step: "bid-offer", label: "Bid", icon: ArrowLeftRight },
-              { side: "left", delay: 0 },
-            )}
-            {visible("trading", "documents") &&
-              node(
-                { stage: "trading", step: "documents", label: "Deal documents", icon: FileUp },
-                { side: "left", delay: 90 },
-              )}
+          <div style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
+            <GateGroup title="Bid">
+              <div className="space-y-3">
+                {node(
+                  { stage: "trading", step: "bid-offer", label: "Bid", icon: ArrowLeftRight },
+                  { side: "left", delay: 0 },
+                )}
+                {visible("trading", "documents") &&
+                  node(
+                    { stage: "trading", step: "documents", label: "Deal documents", icon: FileUp },
+                    { side: "left", delay: 90 },
+                  )}
+              </div>
+            </GateGroup>
           </div>
-          <div className="ml-auto space-y-3" style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
-            {node(
-              { stage: "trading", step: "bid-offer", label: "Offer", icon: ArrowLeftRight },
-              { side: "right", delay: 45 },
-            )}
-            {visible("trading", "documents") &&
-              node(
-                { stage: "trading", step: "documents", label: "Deal documents", icon: FileUp },
-                { side: "right", delay: 135 },
-              )}
+          <div className="ml-auto" style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
+            <GateGroup title="Offer">
+              <div className="space-y-3">
+                {node(
+                  { stage: "trading", step: "bid-offer", label: "Offer", icon: ArrowLeftRight },
+                  { side: "right", delay: 45 },
+                )}
+                {visible("trading", "documents") &&
+                  node(
+                    { stage: "trading", step: "documents", label: "Deal documents", icon: FileUp },
+                    { side: "right", delay: 135 },
+                  )}
+              </div>
+            </GateGroup>
           </div>
         </div>
       )}

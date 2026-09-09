@@ -23,7 +23,6 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 function Dashboard() {
   const { org } = useAuth();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [picking, setPicking] = useState(false);
 
   const { data: txs = [], isLoading, refetch } = useQuery({
     queryKey: ["transactions", org?.id],
@@ -56,13 +55,10 @@ function Dashboard() {
               setSelectedId(id);
               void refetch();
             }}
-            onPickingChange={setPicking}
           />
-          {!picking && (
-            <div className="mt-6">
-              <DealCanvas tx={FLOWCHART_PREVIEW_TX} reload={() => {}} readOnly />
-            </div>
-          )}
+          <div className="mt-6">
+            <DealCanvas tx={FLOWCHART_PREVIEW_TX} reload={() => {}} readOnly />
+          </div>
         </>
       )}
 
