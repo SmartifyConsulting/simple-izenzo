@@ -48,6 +48,11 @@ export function AppShell({
   const viewMode = useViewMode();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const onEngine = pathname === "/live-deal-engine";
+  // Document-style screens (settings, admin, reporting, API docs) drop the canvas grid and give
+  // every frame the same green edge — the grid belongs to the deal canvas, not to tables and forms.
+  const flat = ["/account", "/admin", "/credits", "/trades", "/activity", "/developer", "/docs"].some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`),
+  );
 
   useEffect(() => {
     initTheme();
@@ -55,7 +60,11 @@ export function AppShell({
 
   return (
     <div
-      className={cn("ink-grid flex min-h-screen flex-col overflow-x-hidden", pureBlack ? "" : "bg-background")}
+      className={cn(
+        "flex min-h-screen flex-col overflow-x-hidden",
+        flat ? "flat-frames" : "ink-grid",
+        pureBlack ? "" : "bg-background",
+      )}
       style={pureBlack ? { backgroundColor: "#000" } : undefined}
     >
       <header className="sticky top-0 z-30 border-b border-border bg-background/70 backdrop-blur-xl">
