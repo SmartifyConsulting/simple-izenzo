@@ -170,7 +170,7 @@ function HeroFrame({
   next: string;
 }) {
   return (
-    <div className="glass-panel relative overflow-hidden rounded-2xl border border-border bg-card/60 p-6 backdrop-blur-xl transition-transform hover:-translate-y-0.5">
+    <div className="glass relative overflow-hidden rounded-2xl border border-border bg-card/60 p-6 backdrop-blur-xl transition-transform hover:-translate-y-0.5">
       <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-primary">{side}</span>
       <h2 className="mt-3 text-2xl font-semibold tracking-tight text-foreground">{title}</h2>
       <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{body}</p>
