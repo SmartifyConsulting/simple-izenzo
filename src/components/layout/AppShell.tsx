@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { ChevronDown, Coins, Mail } from "lucide-react";
+import { BarChart3, ChevronDown, Coins, Mail, Tag, TerminalSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
@@ -74,14 +74,17 @@ export function AppShell({
             </Link>
           )}
           <nav className="flex shrink-0 items-center gap-4 text-sm font-medium text-muted-foreground">
-            <a href="/pricing" className="hover:text-foreground">
+            <a href="/pricing" className="flex items-center gap-1.5 hover:text-foreground">
+              <Tag className="h-3.5 w-3.5" />
               Pricing
             </a>
-            <Link to="/docs" className="hover:text-foreground">
+            <Link to="/docs" className="flex items-center gap-1.5 hover:text-foreground">
+              <TerminalSquare className="h-3.5 w-3.5" />
               API's
             </Link>
             <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-1 outline-none hover:text-foreground">
+              <DropdownMenuTrigger className="flex items-center gap-1.5 outline-none hover:text-foreground">
+                <BarChart3 className="h-3.5 w-3.5" />
                 Report
                 <ChevronDown className="h-3.5 w-3.5" />
               </DropdownMenuTrigger>
@@ -96,9 +99,6 @@ export function AppShell({
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Link to="/support" className="hover:text-foreground">
-              Support
-            </Link>
           </nav>
           <Link
             to="/inbox"
@@ -111,7 +111,7 @@ export function AppShell({
         </div>
       </header>
 
-      <main className={cn("mx-auto w-full flex-1 px-4 pb-14 sm:px-6", width, wide ? "pt-3" : "pt-5")}>
+      <main className={cn("mx-auto w-full px-4 pb-8 sm:px-6", width, wide ? "pt-3" : "pt-5")}>
         <div
           className={cn(
             "grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4",

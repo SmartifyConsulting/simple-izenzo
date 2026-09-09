@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ChevronDown, Mail } from "lucide-react";
+import { BarChart3, ChevronDown, Mail, Tag, TerminalSquare } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { SearchButton } from "@/components/layout/SearchButton";
@@ -35,14 +35,17 @@ export function SiteHeader({
           <div className="ml-auto flex shrink-0 items-center gap-3">
             <SearchButton />
             <nav className="flex shrink-0 items-center gap-4 text-sm font-medium text-muted-foreground">
-              <a href="/pricing" className="hover:text-foreground">
+              <a href="/pricing" className="flex items-center gap-1.5 hover:text-foreground">
+                <Tag className="h-3.5 w-3.5" />
                 Pricing
               </a>
-              <Link to="/docs" className="hover:text-foreground">
+              <Link to="/docs" className="flex items-center gap-1.5 hover:text-foreground">
+                <TerminalSquare className="h-3.5 w-3.5" />
                 API's
               </Link>
               <DropdownMenu>
-                <DropdownMenuTrigger className="flex items-center gap-1 outline-none hover:text-foreground">
+                <DropdownMenuTrigger className="flex items-center gap-1.5 outline-none hover:text-foreground">
+                  <BarChart3 className="h-3.5 w-3.5" />
                   Report
                   <ChevronDown className="h-3.5 w-3.5" />
                 </DropdownMenuTrigger>
@@ -57,9 +60,6 @@ export function SiteHeader({
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Link to="/support" className="hover:text-foreground">
-                Support
-              </Link>
             </nav>
             <Link
               to="/inbox"

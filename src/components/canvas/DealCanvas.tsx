@@ -185,7 +185,7 @@ export function DealCanvas({
   );
 
   return (
-    <div className="ink-grid relative rounded-3xl border border-border p-3 sm:p-5">
+    <div className={cn("relative rounded-3xl p-3 sm:p-5", focusSide ? "" : "ink-grid border border-border")}>
       {!readOnly && (
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div className="min-w-0">
@@ -935,7 +935,12 @@ export function CanvasStart({
           <div className="mt-6">{startNode}</div>
         </div>
       )}
-      <div className={cn("ink-grid relative rounded-3xl border border-border p-3 sm:p-5", !direction && "mt-4")}>
+      <div
+        className={cn(
+          "relative rounded-3xl p-3 sm:p-5",
+          !direction && "ink-grid mt-4 border border-border",
+        )}
+      >
       <p className="label-caps mb-3">
         {direction === "bid" ? "Live deal engine for Bidder" : direction === "offer" ? "Live deal engine for Responder" : "Live deal engine"}
       </p>
