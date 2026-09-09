@@ -558,19 +558,36 @@ export function DealCanvas({
       )}
 
       {visible("compliance", "wad") && (
-        <GateGroup title="Without a Doubt" align={focusSide === "offer" ? "right" : "left"}>
-          <div className={stepsBoxClass}>
-            {node(
-              { stage: "compliance", step: "wad", icon: ShieldCheck },
-              { side: "center", note: "3 tokens · USD 30" },
-            )}
-          </div>
-          <div className={stepsBoxClass}>
-            <GateBar label="Without a Doubt" cleared={wad} />
-          </div>
-
-        </GateGroup>
+        <>
+          {poiSealed && (
+            <p
+              className={cn(
+                "mt-4 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-white",
+                focusSide === "offer" && "text-right",
+              )}
+            >
+              Next steps
+            </p>
+          )}
+          <GateGroup
+            title="Without a Doubt"
+            align={focusSide === "offer" ? "right" : "left"}
+            forceOpen={poiSealed}
+            pulse={poiSealed && !wad}
+          >
+            <div className={stepsBoxClass}>
+              {node(
+                { stage: "compliance", step: "wad", icon: ShieldCheck },
+                { side: "center", note: "3 tokens · USD 30" },
+              )}
+            </div>
+            <div className={stepsBoxClass}>
+              <GateBar label="Without a Doubt" cleared={wad} />
+            </div>
+          </GateGroup>
+        </>
       )}
+
 
       {executionItems.length > 0 && (
         <GateGroup title="Execution" align={focusSide === "offer" ? "right" : "left"}>
