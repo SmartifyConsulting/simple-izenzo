@@ -59,6 +59,12 @@ export function AppShell({
               {org.credits}
             </Link>
           )}
+          <a
+            href="/pricing"
+            className="text-sm font-medium text-muted-foreground hover:text-foreground"
+          >
+            Pricing
+          </a>
           <Link
             to="/inbox"
             title="Inbox"

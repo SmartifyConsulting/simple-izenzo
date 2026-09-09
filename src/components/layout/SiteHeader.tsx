@@ -2,13 +2,14 @@ import { Link } from "@tanstack/react-router";
 import { Mail } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
-import { SearchButton } from "@/components/layout/SearchButton";
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
 /** The site header, shared by the home page, every marketing/content page (Glossary, Contact
- * Us…) and, once signed in, the same nav carries Search/Inbox/Profile — same as the app shell. */
+ * Us…) and, once signed in, the same nav carries Pricing/Inbox/Profile — same as the app shell.
+ * Search lives only on the canvas (top-left of the main content), never in a header, so its
+ * placement stays consistent across every screen. */
 export function SiteHeader({
   logoClassName,
   containerClassName,
@@ -27,7 +28,9 @@ export function SiteHeader({
 
         {user ? (
           <div className="ml-auto flex shrink-0 items-center gap-3">
-            <SearchButton />
+            <a href="/pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground">
+              Pricing
+            </a>
             <Link
               to="/inbox"
               title="Inbox"
