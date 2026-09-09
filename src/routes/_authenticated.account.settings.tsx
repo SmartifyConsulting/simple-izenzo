@@ -25,11 +25,14 @@ export const Route = createFileRoute("/_authenticated/account/settings")({
 
 function SettingsPage() {
   const { profile, refresh } = useAuth();
-  const [fullName, setFullName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    setFullName(profile?.full_name ?? "");
+    const [first = "", ...rest] = (profile?.full_name ?? "").trim().split(/\s+/).filter(Boolean);
+    setFirstName(first);
+    setLastName(rest.join(" "));
   }, [profile]);
 
   async function save(e: React.FormEvent) {
@@ -39,7 +42,7 @@ function SettingsPage() {
     try {
       const { error } = await supabase
         .from("profiles")
-        .update({ full_name: fullName })
+        .update({ full_name: [firstName.trim(), lastName.trim()].filter(Boolean).join(" ") })
         .eq("id", profile.id);
       if (error) throw error;
       await refresh();
@@ -66,9 +69,10 @@ function SettingsPage() {
       <Tabs defaultValue="profile">
         <TabsList className="flex-wrap">
           <TabsTrigger value="profile">My Profile</TabsTrigger>
-          <TabsTrigger value="kyb">Company Identity (KYB)</TabsTrigger>
+          <TabsTrigger value="kyb">Organisations</TabsTrigger>
           <TabsTrigger value="notifications">Notification Rules</TabsTrigger>
-          <TabsTrigger value="credit">Credit Balance</TabsTrigger>
+          <TabsTrigger value="credit">Token Management</TabsTrigger>
+          <TabsTrigger value="support">Support</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
           <TabsTrigger value="data">My Data</TabsTrigger>
           <TabsTrigger value="residency">Data Residency</TabsTrigger>
@@ -94,9 +98,15 @@ function SettingsPage() {
               </div>
 
               <form onSubmit={save} className="space-y-4 rounded-md border border-border p-5">
-                <div className="space-y-1.5">
-                  <Label htmlFor="full_name">Full name</Label>
-                  <Input id="full_name" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="first_name">First name</Label>
+                    <Input id="first_name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="last_name">Last name</Label>
+                    <Input id="last_name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+                  </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="email">Email address</Label>
@@ -138,13 +148,26 @@ function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="credit" className="mt-6 max-w-lg rounded-md border border-border p-5">
-          <h2 className="text-sm font-semibold">Credit balance</h2>
+          <h2 className="text-sm font-semibold">Token management</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Manage tokens, view purchase history and top up from the Billing screen.
           </p>
           <a href="/credits">
             <Button size="sm" className="mt-4">
               Open Billing
+            </Button>
+          </a>
+        </TabsContent>
+
+        <TabsContent value="support" className="mt-6 max-w-lg rounded-md border border-border p-5">
+          <h2 className="text-sm font-semibold">Support</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Raise a ticket, check open requests, or reach the team directly from the Support
+            screen.
+          </p>
+          <a href="/support">
+            <Button size="sm" className="mt-4">
+              Open Support
             </Button>
           </a>
         </TabsContent>

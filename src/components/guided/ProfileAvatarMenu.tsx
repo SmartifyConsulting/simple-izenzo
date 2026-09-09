@@ -1,5 +1,5 @@
-import { useNavigate } from "@tanstack/react-router";
-import { LogOut } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { LogOut, Settings } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import {
   DropdownMenu,
@@ -10,8 +10,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-/** The app's one profile menu — just identity and sign out. Destinations live in Quick Access,
- * not duplicated here. */
+/** The app's one profile menu — identity, Settings (name, email, avatar, organisations, tokens
+ * and support all live there) and sign out. Other destinations live in Quick Access. */
 export function ProfileAvatarMenu() {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
@@ -33,6 +33,12 @@ export function ProfileAvatarMenu() {
         <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
           {profile?.email}
         </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link to="/account/settings" className="flex items-center">
+            <Settings className="mr-2 h-3.5 w-3.5" /> Settings
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={async () => {

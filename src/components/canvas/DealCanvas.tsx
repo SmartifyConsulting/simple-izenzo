@@ -392,16 +392,16 @@ function SelectionRecord({ txId }: { txId?: string | null }) {
   });
 
   return (
-    <div className="rounded-2xl border-2 border-primary bg-white p-4">
+    <div className="rounded-2xl border-2 border-primary bg-slate-100 p-4">
       <p className="label-caps text-primary">Record</p>
       {events.length === 0 ? (
-        <p className="mt-2 text-sm text-muted-foreground">Nothing recorded yet.</p>
+        <p className="mt-2 text-sm text-slate-500">Nothing recorded yet.</p>
       ) : (
         <ul className="mt-2 space-y-2.5">
           {events.map((e) => (
             <li key={e.id}>
-              <p className="text-sm font-medium text-foreground">{e.summary ?? e.action}</p>
-              <p className="text-[11px] text-muted-foreground">{when(e.created_at)}</p>
+              <p className="text-sm font-medium text-slate-900">{e.summary ?? e.action}</p>
+              <p className="text-[11px] text-slate-500">{when(e.created_at)}</p>
             </li>
           ))}
         </ul>
