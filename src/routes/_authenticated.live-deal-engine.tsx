@@ -368,7 +368,9 @@ function LiveDealEngine() {
       setDealTx((prev) =>
         prev ? { ...prev, stage: "trading", step: "media", intent_confirmed_at: null } : prev,
       );
+      setHasChosen(false);
       setStagePanel(null);
+
       setFlowStep("results");
       toast.success("Choice reopened — pick the party you want to trade with");
     } catch (err) {
