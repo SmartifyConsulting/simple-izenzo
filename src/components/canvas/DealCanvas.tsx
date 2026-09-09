@@ -3,7 +3,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
+  CheckCircle2,
   Download,
+
   FileUp,
   Radar,
   Users,
@@ -262,7 +264,9 @@ export function DealCanvas({
   };
 
   const poi = Boolean(tx.poi_sealed_at);
+  const poiSealed = poi;
   const wad = Boolean(tx.wad_completed_at);
+
   const matchingPhase =
     tx.stage === "trading" && ["search", "ai", "ai-plus"].includes(tx.step);
   const pickingDirection = tx.stage === "trading" && tx.step === "bid-offer";
