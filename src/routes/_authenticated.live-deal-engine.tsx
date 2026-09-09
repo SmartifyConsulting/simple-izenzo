@@ -282,10 +282,10 @@ function LiveDealEngine() {
   async function submitDocuments(e: React.FormEvent) {
     e.preventDefault();
     if (!dealTx) return;
-    const collected: Attachment[] = [
-      ...idFront.map((f) => ({ name: f.name, kind: "ID front" as const })),
-      ...idBack.map((f) => ({ name: f.name, kind: "ID back" as const })),
-      ...docFiles.map((f) => ({ name: f.name, kind: "Document" as const })),
+    const collected: { file: File; kind: Attachment["kind"] }[] = [
+      ...idFront.map((f) => ({ file: f, kind: "ID front" as const })),
+      ...idBack.map((f) => ({ file: f, kind: "ID back" as const })),
+      ...docFiles.map((f) => ({ file: f, kind: "Document" as const })),
     ];
 
     if (collected.length === 0) {
@@ -293,31 +293,52 @@ function LiveDealEngine() {
       return;
     }
 
+    const tooBig = collected.find(({ file }) => file.size > MAX_FILE_BYTES);
+    if (tooBig) {
+      toast.error(`${tooBig.file.name} is larger than 20 MB — please attach a smaller file`);
+      return;
+    }
+    const empty = collected.find(({ file }) => file.size === 0);
+    if (empty) {
+      toast.error(`${empty.file.name} is empty — please attach the actual file`);
+      return;
+    }
+
     setBusy(true);
     try {
       let version = 1;
-      for (const file of collected) {
-        const sha = await fingerprintOf({ name: file.name, kind: file.kind, at: Date.now() });
-        await supabase.from("documents").insert({
+      const saved: Attachment[] = [];
+      // Upload first, insert second: the row is only worth writing once the file itself is
+      // safely stored against this bid/offer.
+      for (const { file, kind } of collected) {
+        const path = `deals/${dealTx.id}/${Date.now()}-${file.name}`;
+        const { error: upErr } = await supabase.storage.from("documents").upload(path, file);
+        if (upErr) throw new Error(`Could not upload ${file.name}: ${upErr.message}`);
+
+        const sha = await fingerprintOf({ name: file.name, size: file.size, at: Date.now() });
+        const { error: insErr } = await supabase.from("documents").insert({
           transaction_id: dealTx.id,
           name: file.name,
-          doc_type: file.kind === "Document" ? "other" : "certificate",
-          notes: file.kind,
+          doc_type: kind === "Document" ? "other" : "certificate",
+          notes: kind,
           version: version++,
           sha256: sha,
+          storage_path: path,
         });
+        if (insErr) throw new Error(`Could not save ${file.name}: ${insErr.message}`);
+        saved.push({ name: file.name, kind, path });
       }
       await recordEvent({
         transactionId: dealTx.id,
         stage: "trading",
         step: "documents",
         action: "document_attached",
-        summary: `${collected.length} document${collected.length === 1 ? "" : "s"} attached`,
-        payload: { files: collected },
+        summary: `${saved.length} document${saved.length === 1 ? "" : "s"} attached`,
+        payload: { files: saved },
       });
       await advance(dealTx.id, "trading", "search");
       setDealTx((prev) => (prev ? { ...prev, stage: "trading", step: "search" } : prev));
-      setAttachments((prev) => [...prev, ...collected]);
+      setAttachments((prev) => [...prev, ...saved]);
       await runSearch(dealTx.id);
     } catch (err) {
       toast.error((err as Error).message);
