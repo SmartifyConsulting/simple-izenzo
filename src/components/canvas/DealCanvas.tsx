@@ -94,6 +94,9 @@ export function DealCanvas({
   onBackToWorkflow,
   forceRevealAll,
   hideMatchingRibbon,
+  throbStep,
+  openProofOfIntent,
+
 }: {
   tx: Transaction;
   reload: () => void;
@@ -120,6 +123,13 @@ export function DealCanvas({
   /** Hides the built-in "Running AI search and match…" ribbon and its counterparty results —
    * used when the caller renders its own search progress and results elsewhere on the page. */
   hideMatchingRibbon?: boolean;
+  /** Trading step whose node should pulse to draw the eye to the next action, e.g. "choice"
+   * once matches are in, or "media" while background screening runs. */
+  throbStep?: string | null;
+  /** Opens the Proof of Intent gate group without the user clicking it — used while the match
+   * search runs, so the next steps are already in view when results land. */
+  openProofOfIntent?: boolean;
+
 }) {
   const [panel, setPanel] = useState<{ stage: StageKey; step: string } | null>(null);
   const [direction, setDirection] = useState<"bid" | "offer" | null>(null);
