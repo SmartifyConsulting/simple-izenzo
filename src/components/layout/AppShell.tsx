@@ -86,13 +86,16 @@ export function AppShell({
             </Link>
           )}
           <nav className="flex shrink-0 items-center gap-2 text-sm font-medium text-muted-foreground sm:gap-4">
-            <a href="/pricing" className="flex items-center gap-1.5 hover:text-foreground" title="Pricing">
-              <Tag className="h-3.5 w-3.5" />
-              <span className="hidden lg:inline">Pricing</span>
+            <a
+              href="/pricing"
+              className="flex items-center hover:text-foreground"
+              title="Pricing"
+              aria-label="Pricing"
+            >
+              <DollarSign className="h-4 w-4" />
             </a>
-            <Link to="/docs" className="flex items-center gap-1.5 hover:text-foreground" title="API's">
-              <TerminalSquare className="h-3.5 w-3.5" />
-              <span className="hidden lg:inline">API's</span>
+            <Link to="/docs" className="flex items-center hover:text-foreground" title="API's" aria-label="API's">
+              <Plug className="h-4 w-4" />
             </Link>
             <DropdownMenu>
               <DropdownMenuTrigger
