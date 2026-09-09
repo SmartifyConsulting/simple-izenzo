@@ -511,7 +511,17 @@ function LiveDealEngine() {
                     {attachments.map((a, i) => (
                       <div key={i} className="flex items-center gap-2 text-sm">
                         <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        <span className="truncate">{a.name}</span>
+                        {a.path ? (
+                          <button
+                            type="button"
+                            onClick={() => openAttachment(a)}
+                            className="truncate text-left underline underline-offset-2 hover:text-primary"
+                          >
+                            {a.name}
+                          </button>
+                        ) : (
+                          <span className="truncate">{a.name}</span>
+                        )}
                         <span className="ml-auto shrink-0 text-xs text-muted-foreground">{a.kind}</span>
                       </div>
                     ))}
