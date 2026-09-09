@@ -376,13 +376,30 @@ export const checkCandidateProducts = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase } = context;
 
-    const { data: result, error } = await supabase.functions.invoke("counterparty-discovery", {
-      body: { mode: "scrape", url: data.url },
-    });
-    if (error) return { text: "", matchScore: 0, note: error.message };
+    let text = "";
+    let note = "";
 
-    const text: string = result?.text ?? "";
-    if (!text) return { text: "", matchScore: 0, note: result?.note ?? "No content found" };
+    // Preferred path: Bright Data's remote browser, which renders JavaScript-only sites.
+    const { brightDataConfigured, fetchPageText } = await import("@/lib/brightdata.server");
+    if (brightDataConfigured()) {
+      try {
+        text = await fetchPageText(data.url);
+      } catch (err) {
+        note = (err as Error).message;
+      }
+    }
+
+    if (!text) {
+      const { data: result, error } = await supabase.functions.invoke("counterparty-discovery", {
+        body: { mode: "scrape", url: data.url },
+      });
+      if (error) return { text: "", matchScore: 0, note: note || error.message };
+      text = result?.text ?? "";
+      note = note || result?.note || "";
+    }
+
+    if (!text) return { text: "", matchScore: 0, note: note || "No content found" };
+
 
     const pageWords = keywords(text);
     const queryWords = keywords(data.query);
