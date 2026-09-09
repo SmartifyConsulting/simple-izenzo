@@ -70,12 +70,7 @@ function SettingsPage() {
         <TabsList className="flex-wrap">
           <TabsTrigger value="profile">My Profile</TabsTrigger>
           <TabsTrigger value="kyb">Organisations</TabsTrigger>
-          <TabsTrigger value="notifications">Notification Rules</TabsTrigger>
-          <TabsTrigger value="credit">Token Management</TabsTrigger>
-          <TabsTrigger value="support">Support</TabsTrigger>
-          <TabsTrigger value="security">Security</TabsTrigger>
           <TabsTrigger value="data">My Data</TabsTrigger>
-          <TabsTrigger value="residency">Data Residency</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile" className="mt-6">
@@ -119,9 +114,42 @@ function SettingsPage() {
                   Save changes
                 </Button>
               </form>
+
+              <div className="space-y-3 rounded-md border border-border p-5">
+                <h2 className="text-sm font-semibold">Reset password</h2>
+                <p className="text-sm text-muted-foreground">
+                  Reset your password by email — you'll be signed out of this device once it's
+                  changed.
+                </p>
+                <a href="/forgot-password">
+                  <Button size="sm" variant="outline">
+                    Send password reset link
+                  </Button>
+                </a>
+              </div>
             </div>
 
-            <DangerZone />
+            <div className="space-y-6">
+              <div className="space-y-4 rounded-md border border-border p-5">
+                <h2 className="text-sm font-semibold">Notification rules</h2>
+                {[
+                  { label: "New bid or offer received", desc: "Someone opens a match on a trade you're party to" },
+                  { label: "Proof of Intent sealed", desc: "A counterparty seals intent on a shared trade" },
+                  { label: "WaD case needs attention", desc: "A compliance check on your trade is waiting" },
+                  { label: "Token balance running low", desc: "Fewer than 5 tokens remain" },
+                ].map((rule) => (
+                  <div key={rule.label} className="flex items-center justify-between gap-4 border-b border-border pb-3 last:border-0 last:pb-0">
+                    <div>
+                      <p className="text-sm font-medium">{rule.label}</p>
+                      <p className="text-xs text-muted-foreground">{rule.desc}</p>
+                    </div>
+                    <Switch defaultChecked />
+                  </div>
+                ))}
+              </div>
+
+              <DangerZone />
+            </div>
           </div>
         </TabsContent>
 
@@ -129,80 +157,28 @@ function SettingsPage() {
           <OrganisationsPanel />
         </TabsContent>
 
-        <TabsContent value="notifications" className="mt-6 max-w-lg space-y-4 rounded-md border border-border p-5">
-          <h2 className="text-sm font-semibold">Notification rules</h2>
-          {[
-            { label: "New bid or offer received", desc: "Someone opens a match on a trade you're party to" },
-            { label: "Proof of Intent sealed", desc: "A counterparty seals intent on a shared trade" },
-            { label: "WaD case needs attention", desc: "A compliance check on your trade is waiting" },
-            { label: "Token balance running low", desc: "Fewer than 5 tokens remain" },
-          ].map((rule) => (
-            <div key={rule.label} className="flex items-center justify-between gap-4 border-b border-border pb-3 last:border-0 last:pb-0">
-              <div>
-                <p className="text-sm font-medium">{rule.label}</p>
-                <p className="text-xs text-muted-foreground">{rule.desc}</p>
-              </div>
-              <Switch defaultChecked />
-            </div>
-          ))}
-        </TabsContent>
+        <TabsContent value="data" className="mt-6 max-w-lg space-y-6 rounded-md border border-border p-5">
+          <div>
+            <h2 className="text-sm font-semibold">My data</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Request an export of your account, trade and compliance records. We'll email a
+              download link once it's ready.
+            </p>
+            <a href="mailto:support@izenzo.co.za?subject=Data%20export%20request">
+              <Button size="sm" variant="outline" className="mt-4">
+                Request data export
+              </Button>
+            </a>
+          </div>
 
-        <TabsContent value="credit" className="mt-6 max-w-lg rounded-md border border-border p-5">
-          <h2 className="text-sm font-semibold">Token management</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Manage tokens, view purchase history and top up from the Billing screen.
-          </p>
-          <a href="/credits">
-            <Button size="sm" className="mt-4">
-              Open Billing
-            </Button>
-          </a>
-        </TabsContent>
-
-        <TabsContent value="support" className="mt-6 max-w-lg rounded-md border border-border p-5">
-          <h2 className="text-sm font-semibold">Support</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Raise a ticket, check open requests, or reach the team directly from the Support
-            screen.
-          </p>
-          <a href="/support">
-            <Button size="sm" className="mt-4">
-              Open Support
-            </Button>
-          </a>
-        </TabsContent>
-
-        <TabsContent value="security" className="mt-6 max-w-lg space-y-4 rounded-md border border-border p-5">
-          <h2 className="text-sm font-semibold">Security</h2>
-          <p className="text-sm text-muted-foreground">
-            Reset your password by email — you'll be signed out of this device once it's changed.
-          </p>
-          <a href="/forgot-password">
-            <Button size="sm" variant="outline">
-              Send password reset link
-            </Button>
-          </a>
-        </TabsContent>
-
-        <TabsContent value="data" className="mt-6 max-w-lg rounded-md border border-border p-5">
-          <h2 className="text-sm font-semibold">My data</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Request an export of your account, trade and compliance records. We'll email a download
-            link once it's ready.
-          </p>
-          <a href="mailto:support@izenzo.co.za?subject=Data%20export%20request">
-            <Button size="sm" variant="outline" className="mt-4">
-              Request data export
-            </Button>
-          </a>
-        </TabsContent>
-
-        <TabsContent value="residency" className="mt-6 max-w-lg rounded-md border border-border p-5">
-          <h2 className="text-sm font-semibold">Data residency</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Regional data residency is configured for a single approved policy. Per-organisation
-            residency commitments require separate approval — contact support to discuss.
-          </p>
+          <div className="border-t border-border pt-6">
+            <h2 className="text-sm font-semibold">Data residency</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Regional data residency is configured for a single approved policy.
+              Per-organisation residency commitments require separate approval — contact support
+              to discuss.
+            </p>
+          </div>
         </TabsContent>
       </Tabs>
     </AppShell>

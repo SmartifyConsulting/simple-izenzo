@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { LogOut, Settings } from "lucide-react";
+import { LifeBuoy, LogOut, Moon, Settings, Sun } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { useTheme } from "@/lib/theme";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,11 +11,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-/** The app's one profile menu — identity, Settings (name, email, avatar, organisations, tokens
- * and support all live there) and sign out. Other destinations live in Quick Access. */
+/** The app's one profile menu — light/dark up top, then identity destinations (Settings,
+ * Support), then sign out, then the legal footer links. */
 export function ProfileAvatarMenu() {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
+  const [theme, toggleTheme] = useTheme();
 
   return (
     <DropdownMenu>
@@ -34,10 +36,24 @@ export function ProfileAvatarMenu() {
           {profile?.email}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={toggleTheme}>
+          {theme === "dark" ? (
+            <Sun className="mr-2 h-3.5 w-3.5" />
+          ) : (
+            <Moon className="mr-2 h-3.5 w-3.5" />
+          )}
+          {theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link to="/account/settings" className="flex items-center">
             <Settings className="mr-2 h-3.5 w-3.5" /> Settings
           </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <a href="/support" className="flex items-center">
+            <LifeBuoy className="mr-2 h-3.5 w-3.5" /> Support
+          </a>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
@@ -48,6 +64,18 @@ export function ProfileAvatarMenu() {
         >
           <LogOut className="mr-2 h-3.5 w-3.5" /> Sign out
         </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <div className="flex flex-col gap-1 px-2 py-1.5">
+          <div className="flex items-center gap-3">
+            <a href="/privacy" className="text-[11px] text-muted-foreground hover:text-foreground">
+              Privacy Policy
+            </a>
+            <a href="/terms" className="text-[11px] text-muted-foreground hover:text-foreground">
+              Terms &amp; Conditions
+            </a>
+          </div>
+          <p className="text-[11px] text-muted-foreground">© Izenzo 2026</p>
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   );

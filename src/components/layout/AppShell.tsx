@@ -1,27 +1,13 @@
 import { useEffect, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { Coins, LayoutDashboard, Mail, Moon, Sun, TerminalSquare } from "lucide-react";
+import { Coins, LayoutDashboard, Mail, TerminalSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
 import { SearchButton } from "@/components/layout/SearchButton";
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
-import { initTheme, useTheme } from "@/lib/theme";
-
-function ThemeToggle() {
-  const [theme, toggle] = useTheme();
-  return (
-    <button
-      type="button"
-      onClick={toggle}
-      title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground hover:text-foreground"
-    >
-      {theme === "dark" ? <Sun className="h-4 w-4 text-white" /> : <Moon className="h-4 w-4" />}
-    </button>
-  );
-}
+import { initTheme } from "@/lib/theme";
 
 function greeting() {
   const hour = new Date().getHours();
@@ -76,13 +62,13 @@ export function AppShell({
           {org && (
             <Link
               to="/credits"
-              className="hidden shrink-0 items-center gap-1.5 rounded-full border border-primary/40 bg-primary/12 px-2.5 py-1 text-xs font-medium text-primary transition-opacity hover:opacity-90 sm:flex"
+              title={`${org.credits} token${org.credits === 1 ? "" : "s"} — open Token Management`}
+              className="flex h-6 shrink-0 items-center gap-1 rounded-full border border-primary/40 bg-primary/12 px-2 text-[11px] font-semibold text-primary transition-opacity hover:opacity-90"
             >
-              <Coins className="h-3.5 w-3.5" />
-              {org.credits} token{org.credits === 1 ? "" : "s"}
+              <Coins className="h-3 w-3" />
+              {org.credits}
             </Link>
           )}
-          <ThemeToggle />
           <Link
             to="/inbox"
             title="Inbox"
