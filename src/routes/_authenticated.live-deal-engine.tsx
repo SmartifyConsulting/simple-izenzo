@@ -9,9 +9,11 @@ import {
   CanvasStart,
   CounterpartyRecord,
   DealCanvas,
+  InlineFrame,
   FLOWCHART_PREVIEW_TX,
   type RecordedActivity,
 } from "@/components/canvas/DealCanvas";
+
 import { MahjongView } from "@/components/canvas/MahjongView";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -157,9 +159,12 @@ function LiveDealEngine() {
   const [screening, setScreening] = useState(false);
   const [screeningResults, setScreeningResults] = useState<ScreeningResult[] | null>(null);
   const [finalizing, setFinalizing] = useState(false);
+  /** Which gate step the right-hand panel is currently asking the user to complete. */
+  const [stagePanel, setStagePanel] = useState<"intent" | "poi" | null>(null);
   const [screeningProgress, setScreeningProgress] = useState<
     { done: number; total: number; failed?: boolean } | null
   >(null);
+
 
 
   const [idFront, setIdFront] = useState<File[]>([]);
