@@ -32,6 +32,12 @@ export const Route = createFileRoute("/_authenticated/live-deal-engine")({
       { property: "og:description", content: "Your live deal canvas on the Izenzo Trading Gateway." },
     ],
   }),
+  // Lets a Bid/Offer ID elsewhere (e.g. the Report list) link straight into this workflow for
+  // that specific deal, instead of only ever resuming whatever was last worked on here.
+  validateSearch: (search: Record<string, unknown>): { tx?: string } => {
+    const value = search["tx"];
+    return typeof value === "string" ? { tx: value } : {};
+  },
   component: LiveDealEngine,
 });
 
@@ -135,6 +141,7 @@ function FileField({
 /** The Live Deal Engine is the one screen users work from — the workflow canvas itself, never a
  * separate per-deal detail page. */
 function LiveDealEngine() {
+  const { tx: txParam } = Route.useSearch();
   const [picking, setPicking] = useState(false);
   const [direction, setDirection] = useState<"bid" | "offer" | null>(null);
   // Set when "Register Bid/Offer" is clicked from the Mahjong diagram — switches to Classic view
@@ -236,9 +243,72 @@ function LiveDealEngine() {
   // recorded for) even after the form resets — that's what the Live Workspace panel now shows.
   const side = direction ?? activity?.direction ?? null;
 
+  // Opened via a Bid/Offer ID elsewhere (e.g. the Report list) — load that specific deal instead
+  // of whatever was last worked on in this browser.
+  useEffect(() => {
+    if (!txParam) return;
+    (async () => {
+      try {
+        const { data: txRow } = await supabase
+          .from("transactions")
+          .select("*")
+          .eq("id", txParam)
+          .maybeSingle();
+        if (!txRow) return;
+        const tx = txRow as Transaction;
+        const { data: bidOffer } = await supabase
+          .from("bid_offers")
+          .select("direction, price, quantity, unit, currency")
+          .eq("transaction_id", txParam)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const loadedActivity: RecordedActivity = {
+          direction: (bidOffer?.direction as "bid" | "offer" | undefined) ?? "bid",
+          title: tx.title,
+          commodity: tx.commodity ?? null,
+          quantity: bidOffer?.quantity != null ? String(bidOffer.quantity) : null,
+          unit: bidOffer?.unit ?? null,
+          price: bidOffer?.price != null ? String(bidOffer.price) : null,
+          currency: bidOffer?.currency ?? tx.currency ?? "USD",
+          time: tx.created_at,
+          reference: tx.reference ?? "",
+        };
+        setActivity(loadedActivity);
+        setDealTx(tx);
+        setFlowStep(tx.step === "documents" ? "documents" : "results");
+        const { data: docs } = await supabase
+          .from("documents")
+          .select("name, notes, storage_path")
+          .eq("transaction_id", txParam)
+          .order("created_at", { ascending: true });
+        if (docs) {
+          setAttachments(
+            docs.map((d) => ({
+              name: d.name,
+              kind: (d.notes as Attachment["kind"] | null) ?? "Document",
+              path: d.storage_path,
+            })),
+          );
+        }
+        try {
+          localStorage.setItem(
+            ACTIVE_DEAL_KEY,
+            JSON.stringify({ txId: txParam, activity: loadedActivity }),
+          );
+        } catch {
+          // Best-effort — resuming later just won't work if storage is unavailable.
+        }
+      } catch {
+        // Deal not found or not visible to this user — leave the picker showing.
+      }
+    })();
+  }, [txParam]);
+
   // Resume whatever bid/offer this user last recorded, so a refresh or a later visit doesn't
   // lose their place.
   useEffect(() => {
+    if (txParam) return;
     let raw: string | null = null;
     try {
       raw = localStorage.getItem(ACTIVE_DEAL_KEY);

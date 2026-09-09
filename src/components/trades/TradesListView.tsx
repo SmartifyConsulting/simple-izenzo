@@ -231,7 +231,7 @@ export function TradesListView() {
                     {rows.map((t) => (
                       <tr key={t.id} className="hover:bg-muted/40">
                         <td className="px-4 py-3">
-                          <Link to="/deal/$id" params={{ id: t.id }}>
+                          <Link to="/live-deal-engine" search={{ tx: t.id }}>
                             <Badge
                               variant="outline"
                               className={cn(
@@ -244,14 +244,14 @@ export function TradesListView() {
                           </Link>
                         </td>
                         <td className="px-4 py-3">
-                          <Link to="/deal/$id" params={{ id: t.id }} className="font-medium hover:underline">
+                          <Link to="/live-deal-engine" search={{ tx: t.id }} className="font-medium hover:underline">
                             {t.title}
                           </Link>
                           <p className="text-xs text-muted-foreground">{t.commodity ?? "—"}</p>
                         </td>
                         <td className="hidden px-4 py-3 tabular-nums sm:table-cell">{money(t.price, t.currency)}</td>
                         <td className="px-4 py-3">
-                          <Link to="/deal/$id" params={{ id: t.id }}>
+                          <Link to="/live-deal-engine" search={{ tx: t.id }}>
                             <Badge
                               variant="outline"
                               className={cn("border-transparent font-normal", STAGE_BADGE_CLASS[t.stage])}
