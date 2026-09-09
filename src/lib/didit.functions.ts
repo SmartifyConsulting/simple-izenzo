@@ -198,5 +198,14 @@ export const refreshVerification = createServerFn({ method: "POST" })
       .select(SELECT)
       .single();
     if (upErr) throw new Error(upErr.message);
+
+    // A late-arriving pass can be the one that completes the set — raise the Inbox alert here too.
+    const counterpartyId = row?.subject_counterparty_id as string | null;
+    if (status === "passed" && counterpartyId) {
+      const { notifyIfFullyMatched } = await import("@/lib/matchNotify.server");
+      await notifyIfFullyMatched(counterpartyId);
+    }
+
     return updated as VerificationRow;
   });
+
