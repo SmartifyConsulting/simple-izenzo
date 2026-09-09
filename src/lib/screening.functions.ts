@@ -132,6 +132,34 @@ export const runBackgroundScreening = createServerFn({ method: "POST" })
           continue;
         }
 
+        // Reuse the newest finished result for this counterparty and check type — opening a fresh
+        // provider session on every run is what made already-cleared checks read as "waiting".
+        const { data: settled } = await supabaseAdmin
+          .from("identity_verifications")
+          .select("id, status, reason")
+          .eq("subject_counterparty_id", cp.id)
+          .eq("check_type", check.kind)
+          .in("status", ["passed", "failed", "review"])
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (settled) {
+          checks.push({
+            kind: check.kind,
+            label: check.label,
+            status: settled.status === "passed" ? "matched" : settled.status === "failed" ? "no_match" : "started",
+            detail:
+              (settled.reason as string | null) ??
+              (settled.status === "passed"
+                ? "Provider returned a clear result."
+                : settled.status === "failed"
+                  ? "Provider returned a negative result."
+                  : "A person needs to look at this result."),
+            verificationId: settled.id as string,
+          });
+          continue;
+        }
+
         const { data: row, error: insErr } = await supabaseAdmin
           .from("identity_verifications")
           .insert({
