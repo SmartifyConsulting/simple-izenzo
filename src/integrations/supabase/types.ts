@@ -1608,6 +1608,91 @@ export type Database = {
           },
         ]
       }
+      identity_verifications: {
+        Row: {
+          check_type: Database["public"]["Enums"]["identity_check_type"]
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          decision: string | null
+          id: string
+          provider: string
+          provider_session_id: string | null
+          provider_url: string | null
+          reason: string | null
+          result: Json
+          status: Database["public"]["Enums"]["identity_check_status"]
+          subject_counterparty_id: string | null
+          subject_label: string | null
+          subject_org_id: string | null
+          subject_user_id: string | null
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          check_type: Database["public"]["Enums"]["identity_check_type"]
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          decision?: string | null
+          id?: string
+          provider?: string
+          provider_session_id?: string | null
+          provider_url?: string | null
+          reason?: string | null
+          result?: Json
+          status?: Database["public"]["Enums"]["identity_check_status"]
+          subject_counterparty_id?: string | null
+          subject_label?: string | null
+          subject_org_id?: string | null
+          subject_user_id?: string | null
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          check_type?: Database["public"]["Enums"]["identity_check_type"]
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          decision?: string | null
+          id?: string
+          provider?: string
+          provider_session_id?: string | null
+          provider_url?: string | null
+          reason?: string | null
+          result?: Json
+          status?: Database["public"]["Enums"]["identity_check_status"]
+          subject_counterparty_id?: string | null
+          subject_label?: string | null
+          subject_org_id?: string | null
+          subject_user_id?: string | null
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "identity_verifications_subject_counterparty_id_fkey"
+            columns: ["subject_counterparty_id"]
+            isOneToOne: false
+            referencedRelation: "counterparties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "identity_verifications_subject_org_id_fkey"
+            columns: ["subject_org_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "identity_verifications_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       integration_credentials: {
         Row: {
           config: Json
@@ -3101,6 +3186,14 @@ export type Database = {
         | "ready_for_poi"
         | "closed"
       funder_decision_type: "recommend_fund" | "decline" | "request_more_info"
+      identity_check_status:
+        | "pending"
+        | "in_progress"
+        | "passed"
+        | "review"
+        | "failed"
+        | "expired"
+      identity_check_type: "id_document" | "kyb" | "aml"
       refund_status:
         | "requested"
         | "approved_for_processing"
@@ -3348,6 +3441,15 @@ export const Constants = {
         "closed",
       ],
       funder_decision_type: ["recommend_fund", "decline", "request_more_info"],
+      identity_check_status: [
+        "pending",
+        "in_progress",
+        "passed",
+        "review",
+        "failed",
+        "expired",
+      ],
+      identity_check_type: ["id_document", "kyb", "aml"],
       refund_status: [
         "requested",
         "approved_for_processing",
