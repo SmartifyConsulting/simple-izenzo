@@ -28,6 +28,15 @@ In the WaD group, the "Without a Doubt" cleared bar currently sits full width wh
 above it is narrower, so they look off-centre. The bar is set to the same width and centred under the
 case frame, on both the bidder and responder sides.
 
+## 4. Search progress bar under the Counterparties frame
+
+Under the Counterparties frame, a progress bar shows the match search: it fills while the search is
+running and sits at full, in green, once it finishes, with a line reading e.g. "Search complete —
+11 matches found". If the search found nothing it reads "Search complete — no matches found", and if
+it failed it reads the reason instead.
+
+
+
 ## Technical notes
 
 - `src/routes/_authenticated.live-deal-engine.tsx`: add an `Eye` icon button next to the existing
@@ -38,4 +47,7 @@ case frame, on both the bidder and responder sides.
   `UPDATE counterparties SET score = 100` for Anker Innovations. No migration.
 - `src/components/canvas/DealCanvas.tsx`: wrap the `GateBar` in the `compliance/wad` `GateGroup` in
   the same `stepsBoxClass` container the case node uses, so the cleared bar matches the frame width
-  and centring.
+  and centring. In `CounterpartyRecord`, add the search progress bar and count line below the
+  Counterparties frame, driven by the existing searching / results / error state and the loaded
+  candidate list.
+
