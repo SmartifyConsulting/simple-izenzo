@@ -684,15 +684,21 @@ export function InlineFrame({
   step,
   reload,
   onClose,
+  onChangeParty,
 }: {
   tx: Transaction;
   stage: StageKey;
   step: string;
   reload: () => void;
   onClose: () => void;
+  /** Offered on Intent and Proof of Intent (before the seal is paid for) so a user who changes
+   * their mind can reopen the counterparty choice instead of being stuck with their first pick. */
+  onChangeParty?: (() => void) | undefined;
 }) {
   const def = stepDef(stage, step);
   const locked = lockReason(stage, step, tx);
+  const canChangeParty =
+    Boolean(onChangeParty) && !tx.poi_sealed_at && (step === "intent" || step === "poi");
   return (
     <div className="glass-node animate-node-rise mt-2 p-5 sm:p-6">
       <div className="mb-4 flex items-start justify-between gap-4">
@@ -713,9 +719,23 @@ export function InlineFrame({
       ) : (
         <StepScreen tx={tx} stage={stage} step={step} reload={reload} />
       )}
+      {canChangeParty && (
+        <button
+          type="button"
+          onClick={() => {
+            if (window.confirm("Release the party you chose and reopen the counterparty list?")) {
+              onChangeParty?.();
+            }
+          }}
+          className="mt-4 text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+        >
+          Choose a different party
+        </button>
+      )}
     </div>
   );
 }
+
 
 /** The static record panel that stands in for whichever side (Bid or Offer) wasn't picked —
  * a running log of everything recorded on the transaction so far. */
