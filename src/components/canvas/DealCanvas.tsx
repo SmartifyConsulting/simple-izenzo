@@ -812,6 +812,34 @@ type CounterpartyCandidate = {
 /** Same "Record" panel as `SelectionRecord`, but for the AI/AI+ search results phase: each
  * candidate gets a checkbox so a bidder (or responder) can mark who they're interested in, without
  * yet making the single final pick (that stays ChoiceStep's job). */
+function mediaTone(status: MediaFinding["status"]) {
+  switch (status) {
+    case "adverse":
+      return "bg-red-100 text-red-700";
+    case "found":
+      return "bg-emerald-100 text-emerald-800";
+    case "failed":
+      return "bg-amber-100 text-amber-800";
+    default:
+      return "bg-slate-200 text-slate-600";
+  }
+}
+
+function mediaLabel(status: MediaFinding["status"]) {
+  switch (status) {
+    case "adverse":
+      return "Review";
+    case "found":
+      return "Clear";
+    case "not_found":
+      return "Nothing found";
+    case "unavailable":
+      return "Not connected";
+    default:
+      return "Could not scan";
+  }
+}
+
 export function CounterpartyRecord({
   txId,
   searching = false,
