@@ -34,17 +34,33 @@ export const summarizeBidDocuments = createServerFn({ method: "POST" })
 
     // Short-lived signed links so the AI gateway can read the private files directly, rather than
     // this server reading and re-encoding every page itself.
-    const attachments: { kind: string; name: string; url: string }[] = [];
+    const IMAGE_EXT = /\.(jpe?g|png|webp|gif|heic|heif)$/i;
+    const readable: { kind: string; name: string; url: string }[] = [];
+    const unreadable: { kind: string; name: string }[] = [];
     for (const d of docs) {
       if (!d.storage_path) continue;
+      const kind = (d.notes as string | null) ?? "Document";
+      // The vision model can only actually open image files through an image_url part — a PDF or
+      // Word doc sent the same way isn't decodable as an image and makes the *whole* request
+      // fail, which is why no summary ever came back even though ID images were attached fine.
+      if (!IMAGE_EXT.test(d.name)) {
+        unreadable.push({ kind, name: d.name });
+        continue;
+      }
       const { data: signed } = await supabase.storage
         .from("documents")
         .createSignedUrl(d.storage_path, 300);
       if (signed?.signedUrl) {
-        attachments.push({ kind: (d.notes as string | null) ?? "Document", name: d.name, url: signed.signedUrl });
+        readable.push({ kind, name: d.name, url: signed.signedUrl });
       }
     }
-    if (attachments.length === 0) throw new Error("Could not open the uploaded documents.");
+    if (readable.length === 0) {
+      throw new Error(
+        unreadable.length > 0
+          ? "None of the attached documents are images the AI can read yet (PDF/Word documents aren't supported) — attach a photo or scan instead."
+          : "Could not open the uploaded documents.",
+      );
+    }
 
     const content: Array<
       | { type: "text"; text: string }
@@ -61,9 +77,12 @@ export const summarizeBidDocuments = createServerFn({ method: "POST" })
           "- the bidder's identity as shown on the ID document(s)\n" +
           "Then write a detailed plain-prose summary (4-8 sentences) covering all of the above. " +
           "Only state what the documents actually show — never invent figures or terms that aren't there; " +
-          "say plainly when something isn't stated.",
+          "say plainly when something isn't stated." +
+          (unreadable.length > 0
+            ? ` Note: ${unreadable.map((u) => u.name).join(", ")} ${unreadable.length === 1 ? "was" : "were"} also attached but isn't an image, so you can't read it — mention it wasn't reviewed rather than guessing its contents.`
+            : ""),
       },
-      ...attachments.map((a) => ({ type: "image_url" as const, image_url: { url: a.url } })),
+      ...readable.map((a) => ({ type: "image_url" as const, image_url: { url: a.url } })),
     ];
 
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -84,7 +103,10 @@ export const summarizeBidDocuments = createServerFn({ method: "POST" })
     });
     if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
     if (res.status === 402) throw new Error("AI credits are exhausted for this workspace.");
-    if (!res.ok) throw new Error("The documents could not be read just now.");
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(`The documents could not be read just now (${res.status}). ${body.slice(0, 300)}`.trim());
+    }
     const json = (await res.json()) as { choices: { message: { content: string } }[] };
     const summary = (json.choices?.[0]?.message?.content ?? "").trim();
     if (!summary) throw new Error("The document summary came back empty.");
