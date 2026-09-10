@@ -50,6 +50,7 @@ import { FLAT_STEPS, lockReason, stepDef, stepIndex, type StageKey } from "@/lib
 import { advance, money, recordEvent, when, type Transaction, type TxEvent } from "@/lib/tx";
 import { setCounterpartyShortlist } from "@/lib/izenzo.functions";
 import type { ScreeningCheck, ScreeningResult } from "@/lib/screening.functions";
+import type { MediaCheckResult, MediaFinding } from "@/lib/onlineMedia.functions";
 import {
   listVerificationsForTx,
   refreshVerification,
@@ -897,7 +898,7 @@ export function CounterpartyRecord({
   // Once Continue has been clicked (screening running or already back), only the counterparties
   // that were actually ticked stay on screen — that's the only list still relevant, and it frees
   // up room for the screening findings below it.
-  const continued = screening || screeningResults !== null;
+  const continued = mediaRunning || mediaResults !== null || screening || screeningResults !== null;
   const visibleCandidates = continued ? candidates.filter((c) => c.shortlisted) : candidates;
 
   function downloadFindingsPdf() {
