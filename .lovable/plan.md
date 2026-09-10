@@ -39,3 +39,12 @@ How it behaves, matching the existing formula exactly:
 - `src/components/canvas/DealCanvas.tsx`: new node + progress bar + results block reusing the screening result markup; `onMediaContinue` prop; replace `window.confirm` at line 726 with `AlertDialog`.
 - `src/routes/_authenticated.live-deal-engine.tsx`: extend `flowStep`/`throbStep` with a `media-checks` phase, advance to `trading/online-media` on Counterparties Continue, then to `trading/media` on Online Media Continue; store `mediaResults` alongside `screeningResults`.
 - `src/components/canvas/MahjongView.tsx`: add an Online Media node in the centre column; `WaD` tone `danger` -> `light`; `poi` and `kyc` tone -> `light`; node `onClick` sets view mode to classic and navigates to the deal at that step rather than opening `InlineFrame`.
+
+## 5. Register Bid / Register Offer from the map
+
+- Clicking "Register Bid" or "Register Offer" on the map opens the split screen: the workflow sequence on one side and the Live Workspace on the other.
+- Register Bid keeps today's layout: workflow on the left, Live Workspace on the right.
+- Register Offer runs the identical process, but the two panes are swapped: Live Workspace on the left, workflow on the right.
+- The chosen side sticks for the rest of that deal, so an offer always reads the mirrored way round.
+
+Technical note: `MahjongView`'s `onRegister("bid" | "offer")` switches to the classic split view and records the direction; `_authenticated.live-deal-engine.tsx` reads the deal direction and reverses the two grid columns for offers.
