@@ -1176,21 +1176,31 @@ export function CounterpartyRecord({
               ? "Continue"
               : "Tick who you want to trade with"}
         </Button>
+      ) : mediaResults && !screening && !screeningResults && onMediaContinue ? (
+        <Button
+          type="button"
+          className="mt-3 w-full"
+          disabled={ticked.length === 0}
+          onClick={() => onMediaContinue(ticked)}
+        >
+          {ticked.length === 0
+            ? "Tick who to take through screening"
+            : `Continue to background screening with ${ticked.length} counterpart${ticked.length === 1 ? "y" : "ies"}`}
+        </Button>
       ) : (
         onContinue &&
         candidates.length > 0 &&
-        !searching && (
+        !searching &&
+        !continued && (
           <Button
             type="button"
             className="mt-3 w-full"
-            disabled={screening || ticked.length === 0}
+            disabled={ticked.length === 0}
             onClick={() => onContinue(ticked)}
           >
-            {screening
-              ? "Running background screening…"
-              : ticked.length === 0
-                ? "Tick a counterparty to continue"
-                : `Continue with ${ticked.length} counterpart${ticked.length === 1 ? "y" : "ies"}`}
+            {ticked.length === 0
+              ? "Tick a counterparty to continue"
+              : `Run online media checks on ${ticked.length} counterpart${ticked.length === 1 ? "y" : "ies"}`}
           </Button>
         )
       )}
