@@ -211,7 +211,7 @@ export function DealCanvas({
   openProofOfIntent?: boolean;
   /** Live progress of the background screening run, drawn as a bar under that node. */
   screeningProgress?: { done: number; total: number; failed?: boolean } | null;
-  /** Live progress of the online media scan, drawn as a bar under the Online Media Checks node. */
+  /** Live progress of the online media scan, drawn as a bar under the Online Media Screening node. */
   mediaProgress?: { done: number; total: number; failed?: boolean } | null;
   /** Live progress of the counterparty match search, drawn as a bar under the Counterparties
    * node — the match count is read from the already-cached candidate list. */
@@ -549,10 +549,10 @@ export function DealCanvas({
                       </div>
                       <p className="text-[11px] text-muted-foreground">
                         {mediaProgress.failed
-                          ? "Online media checks could not finish"
+                          ? "Online media screening could not finish"
                           : mediaProgress.done < mediaProgress.total
                             ? `${mediaProgress.done} of ${mediaProgress.total} sources scanned`
-                            : `Online media checks complete — ${mediaProgress.total} sources scanned`}
+                            : `Online media screening complete — ${mediaProgress.total} sources scanned`}
                       </p>
                     </div>
                   )}
@@ -885,6 +885,17 @@ export function CounterpartyRecord({
     if (movedToScreening) setMediaExpanded(false);
   }, [movedToScreening]);
 
+  // Each company's own findings start collapsed too — expand one at a time by clicking its name,
+  // rather than every company's full check list stacking up at once.
+  const [expandedMediaCos, setExpandedMediaCos] = useState<Set<string>>(new Set());
+  const [expandedScreeningCos, setExpandedScreeningCos] = useState<Set<string>>(new Set());
+  function toggleCo(set: Set<string>, setSet: (s: Set<string>) => void, id: string) {
+    const next = new Set(set);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSet(next);
+  }
+
   const { data: candidates = [] } = useQuery({
     queryKey: ["counterparties", txId],
     enabled: !!txId,
@@ -1079,7 +1090,7 @@ export function CounterpartyRecord({
             onClick={() => setMediaExpanded((v) => !v)}
             className="flex w-full items-center justify-between gap-2"
           >
-            <span className="label-caps text-slate-600">Online media checks</span>
+            <span className="label-caps text-slate-600">Online media screening</span>
             <ChevronDown
               className={cn(
                 "h-3.5 w-3.5 shrink-0 text-slate-500 transition-transform",
@@ -1087,9 +1098,24 @@ export function CounterpartyRecord({
               )}
             />
           </button>
-          {mediaExpanded && mediaResults.map((m) => (
+          {mediaExpanded && mediaResults.map((m) => {
+            const coOpen = expandedMediaCos.has(m.counterpartyId);
+            return (
             <div key={m.counterpartyId} className="rounded-xl border border-slate-300 bg-white p-3">
-              <p className="text-sm font-semibold text-slate-900">{m.name}</p>
+              <button
+                type="button"
+                onClick={() => toggleCo(expandedMediaCos, setExpandedMediaCos, m.counterpartyId)}
+                className="flex w-full items-center justify-between gap-2 text-left"
+              >
+                <span className="text-sm font-semibold text-slate-900">{m.name}</span>
+                <ChevronDown
+                  className={cn(
+                    "h-3.5 w-3.5 shrink-0 text-slate-500 transition-transform",
+                    coOpen && "rotate-180",
+                  )}
+                />
+              </button>
+              {coOpen && (
               <ul className="mt-2 divide-y divide-slate-200">
                 {m.findings.map((f) => (
                   <li key={f.source} className="py-1.5 first:pt-0 last:pb-0">
@@ -1120,8 +1146,10 @@ export function CounterpartyRecord({
                   </li>
                 ))}
               </ul>
+              )}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -1140,16 +1168,30 @@ export function CounterpartyRecord({
           </div>
           {screeningResults.map((r) => {
             const cand = candidates.find((c) => c.id === r.counterpartyId);
+            const coOpen = expandedScreeningCos.has(r.counterpartyId);
             return (
               <div key={r.counterpartyId} className="rounded-xl border border-slate-300 bg-white p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold text-slate-900">{r.name}</p>
-                  {cand?.score != null && (
-                    <Badge variant="secondary" className="font-normal">
-                      {cand.score}/100
-                    </Badge>
-                  )}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => toggleCo(expandedScreeningCos, setExpandedScreeningCos, r.counterpartyId)}
+                  className="flex w-full items-center justify-between gap-2 text-left"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-slate-900">{r.name}</span>
+                    {cand?.score != null && (
+                      <Badge variant="secondary" className="font-normal">
+                        {cand.score}/100
+                      </Badge>
+                    )}
+                  </span>
+                  <ChevronDown
+                    className={cn(
+                      "h-3.5 w-3.5 shrink-0 text-slate-500 transition-transform",
+                      coOpen && "rotate-180",
+                    )}
+                  />
+                </button>
+                {coOpen && (
                 <ul className="mt-2 divide-y divide-slate-200">
                   {r.checks.map((chk) => {
                     const live = chk.verificationId ? verificationById.get(chk.verificationId) : undefined;
@@ -1204,6 +1246,7 @@ export function CounterpartyRecord({
                     );
                   })}
                 </ul>
+                )}
               </div>
             );
           })}
@@ -1248,7 +1291,7 @@ export function CounterpartyRecord({
           >
             {ticked.length === 0
               ? "Tick a counterparty to continue"
-              : `Run online media checks on ${ticked.length} counterpart${ticked.length === 1 ? "y" : "ies"}`}
+              : `Run online media screening on ${ticked.length} counterpart${ticked.length === 1 ? "y" : "ies"}`}
           </Button>
         )
       )}

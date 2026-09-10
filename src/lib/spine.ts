@@ -25,7 +25,7 @@ export const SPINE: StageDef[] = [
       { key: "counterparties", label: "Counterparties", blurb: "Counterparties surfaced by search and AI." },
       {
         key: "online-media",
-        label: "Online Media Checks",
+        label: "Online Media Screening",
         blurb: "Scan LinkedIn, Facebook, TikTok, marketplaces and news for each shortlisted party.",
       },
       { key: "choice", label: "Choice", blurb: "A person chooses the counterparty. Recorded as an event." },

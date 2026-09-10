@@ -267,7 +267,7 @@ function LiveDealEngine() {
         action: "online_media_checked",
         summary: `Online media checked for ${collected.length} counterpart${collected.length === 1 ? "y" : "ies"}`,
       });
-      toast.success("Online media checks complete");
+      toast.success("Online media screening complete");
     } catch (err) {
       toast.error((err as Error).message);
       setMediaProgress((p) => (p ? { ...p, failed: true } : p));

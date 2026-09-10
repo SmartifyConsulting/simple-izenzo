@@ -430,7 +430,7 @@ export function MahjongView({
         />
         <MjNode
           box={BOXES.surfaceRoutes}
-          label="Online Media Checks"
+          label="Online Media Screening"
           sub="Surface Routes/Paths"
           icon={Globe}
           state={st("trading", "online-media")}
