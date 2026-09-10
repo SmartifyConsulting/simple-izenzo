@@ -19,6 +19,22 @@ export async function ensureOrg(userId: string, displayName: string): Promise<{ 
       .eq("id", membership.org_id)
       .single();
     if (error) throw error;
+
+    // The database decides which company you belong to from your profile record, not from the
+    // membership list — so a member whose profile has no company still gets every save rejected.
+    // Write it onto the profile (creating the row if it is missing) before returning.
+    const { data: p } = await supabase
+      .from("profiles")
+      .select("org_id")
+      .eq("id", userId)
+      .maybeSingle();
+    if (!p?.org_id) {
+      const { error: pErr } = await supabase
+        .from("profiles")
+        .upsert({ id: userId, org_id: org.id, full_name: displayName }, { onConflict: "id" });
+      if (pErr) throw pErr;
+    }
+
     return org;
   }
 
