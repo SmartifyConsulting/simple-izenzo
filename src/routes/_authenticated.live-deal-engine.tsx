@@ -159,6 +159,7 @@ function OpenDealsStrip({ currentId }: { currentId: string | null }) {
       const { data, error } = await supabase
         .from("transactions")
         .select("id, reference, stage, created_at, bid_offers(direction, created_at)")
+        .eq("org_id", org!.id)
         .neq("stage", "memory")
         .order("created_at", { ascending: true })
         .limit(20);
