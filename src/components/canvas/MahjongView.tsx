@@ -623,6 +623,7 @@ export function MahjongView({
           labelClassName="text-primary"
           icon={FileText}
           tone="light"
+          frameClassName="border-primary bg-primary/15 text-primary hover:border-primary"
           state={st("trading", "poi")}
           onClick={() => open("trading", "poi")}
         />
@@ -634,6 +635,7 @@ export function MahjongView({
           subClassName="text-[#C1653D]"
           icon={ShieldCheck}
           tone="light"
+          frameClassName="border-primary bg-primary/15 text-primary hover:border-primary"
           state={st("compliance", "wad")}
           onClick={() => open("compliance", "wad")}
         />
@@ -643,6 +645,7 @@ export function MahjongView({
           labelClassName="text-primary"
           icon={Users}
           tone="light"
+          frameClassName="border-primary bg-primary/15 text-primary hover:border-primary"
           state={st("compliance", "wad")}
           onClick={() => open("compliance", "wad")}
         />

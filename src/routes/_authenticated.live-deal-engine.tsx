@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CheckCircle2, Download, Eye, LayoutGrid, Paperclip, UploadCloud, X } from "lucide-react";
+import { CheckCircle2, Download, Eye, Paperclip, UploadCloud, X } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import {
   CanvasStart,
@@ -743,15 +743,6 @@ function LiveDealEngine() {
 
   return (
     <AppShell wide>
-
-      <button
-        type="button"
-        onClick={() => setViewMode("mahjong")}
-        className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-primary"
-      >
-        <LayoutGrid className="h-3.5 w-3.5" />
-        Izenzo Engine Map
-      </button>
 
       <div className={cn(side && "grid grid-cols-1 gap-4 sm:grid-cols-2 sm:items-stretch")}>
         <div

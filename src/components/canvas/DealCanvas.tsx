@@ -1045,6 +1045,19 @@ export function CounterpartyRecord({
     );
     try {
       await setShortlist({ data: { counterpartyId: c.id, shortlisted: next } });
+      // Every filtering choice — not just the final pick — is recorded, so Memory carries the
+      // whole trail of who this bidder/responder considered and ruled in or out, not just the end
+      // result. That's what lets the ledger teach behaviour and decision instinct later.
+      if (txId) {
+        void recordEvent({
+          transactionId: txId,
+          stage: "trading",
+          step: "counterparties",
+          action: next ? "counterparty_shortlisted" : "counterparty_unshortlisted",
+          summary: `${next ? "Shortlisted" : "Removed"} ${c.name}`,
+          payload: { counterpartyId: c.id, name: c.name, score: c.score },
+        });
+      }
     } catch (err) {
       toast.error((err as Error).message);
       qc.invalidateQueries({ queryKey: ["counterparties", txId] });

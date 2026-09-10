@@ -52,11 +52,14 @@ export function IntegrationsTab() {
   });
 
   const [guided, setGuided] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   const byProvider = useMemo(
     () => Object.fromEntries(rows.map((r) => [r.provider, r])) as Record<string, IntegrationRow>,
     [rows],
   );
+  const isArchived = (id: string) => (byProvider[id]?.config as Record<string, string> | undefined)?.["archived"] === "true";
+  const archivedCount = INTEGRATION_PROVIDERS.filter((p) => isArchived(p.id)).length;
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["integrations"] });
 
@@ -90,6 +93,16 @@ export function IntegrationsTab() {
         <span className="text-xs text-muted-foreground">
           Guided setup takes you through the services one at a time, in the order that matters most.
         </span>
+        {!guided && archivedCount > 0 && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="ml-auto text-muted-foreground"
+            onClick={() => setShowArchived((v) => !v)}
+          >
+            {showArchived ? "Hide" : "Show"} archived ({archivedCount})
+          </Button>
+        )}
       </div>
 
       {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
@@ -99,7 +112,9 @@ export function IntegrationsTab() {
       ) : (
         <Accordion type="multiple">
           {INTEGRATION_GROUPS.map((group) => {
-            const providers = INTEGRATION_PROVIDERS.filter((p) => p.group === group);
+            const providers = INTEGRATION_PROVIDERS.filter(
+              (p) => p.group === group && (showArchived || !isArchived(p.id)),
+            );
             if (providers.length === 0) return null;
             const configuredCount = providers.filter((p) => byProvider[p.id]).length;
             return (
@@ -251,6 +266,7 @@ function ProviderCard({
   const [vaultPassword, setVaultPassword] = useState("");
 
   const configured = Boolean(row);
+  const archived = config["archived"] === "true";
 
   async function onSave() {
     setBusy("save");
@@ -260,6 +276,23 @@ function ProviderCard({
       onChanged();
       toast.success(`${provider.name} credentials saved`);
       setExpanded(false);
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  /** Archived services aren't currently in use, but keep whatever credentials are already saved —
+   * this just hides them from the main list so it isn't cluttered with services nobody's using. */
+  async function onToggleArchive() {
+    const nextConfig = { ...config, archived: archived ? "false" : "true" };
+    setBusy("save");
+    try {
+      await save({ data: { provider: provider.id, environment, enabled, config: nextConfig, secrets: {} } });
+      setConfig(nextConfig);
+      onChanged();
+      toast.success(archived ? `${provider.name} restored` : `${provider.name} archived`);
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -329,6 +362,9 @@ function ProviderCard({
             ) : (
               <Badge variant="outline" className="text-[10px]">Not set up</Badge>
             )}
+            {archived && (
+              <Badge variant="outline" className="text-[10px] text-muted-foreground">Archived</Badge>
+            )}
           </div>
           {!expanded && <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{provider.summary}</p>}
         </div>
@@ -340,6 +376,9 @@ function ProviderCard({
       {expanded && (
       <div className="mt-3 space-y-3">
         <p className="text-xs text-muted-foreground">{provider.summary}</p>
+        <p className="text-[11px] text-muted-foreground">
+          <span className="font-semibold text-foreground">Used at:</span> {provider.usedAt}
+        </p>
         {provider.environments && provider.environments.length > 1 && (
           <div className="space-y-1.5">
             <Label htmlFor={`${provider.id}-env`}>Environment</Label>
@@ -437,6 +476,9 @@ function ProviderCard({
             Test connection
           </Button>
         )}
+        <Button size="sm" variant="outline" onClick={onToggleArchive} disabled={busy !== null}>
+          {archived ? "Restore" : "Archive"}
+        </Button>
         {configured && (
           <Button size="sm" variant="ghost" onClick={onRemove} disabled={busy !== null}>
             Remove
