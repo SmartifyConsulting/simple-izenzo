@@ -456,14 +456,17 @@ function MjNode({
       style={{ left: pctX(box.x), top: pctY(box.y), width: pctX(box.w), height: pctY(box.h) }}
       className={cn(
         "absolute flex flex-col items-center justify-center gap-0.5 rounded-lg border px-2 text-center text-[11px] font-semibold leading-tight tracking-tight transition-colors sm:text-xs",
-        tone === "header" && state !== "done" && "bg-slate-700/40 text-foreground border-border hover:border-primary/40",
+        // Register Bid/Offer pulse as an open invitation to click the moment nothing has started
+        // yet — same idea as the active-step pulse elsewhere, just for the two starting moves.
+        tone === "header" && state === "open" && "bg-white/90 text-slate-600 border-white/50 hover:border-white animate-signal-pulse",
+        tone === "header" && state !== "done" && state !== "open" && "bg-slate-700/40 text-foreground border-border hover:border-primary/40",
         tone === "header" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
         tone === "neutral" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
         tone === "neutral" && state === "active" && "border-primary bg-primary/20 text-primary animate-signal-pulse",
-        tone === "neutral" && state === "open" && "border-border bg-muted/30 text-foreground hover:border-primary/40",
+        tone === "neutral" && state === "open" && "border-white/40 bg-white/90 text-slate-600 hover:border-white",
         tone === "neutral" &&
           state === "locked" &&
-          "cursor-not-allowed border-border/60 bg-muted/10 text-muted-foreground/75",
+          "cursor-not-allowed border-white/20 bg-white/40 text-slate-400",
         tone === "danger" && state !== "done" && "border-[#F97316]/60 bg-[#F97316]/10 text-[#F97316]",
         tone === "danger" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
         tone === "light" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
@@ -471,8 +474,8 @@ function MjNode({
         tone === "light" &&
           (state === "open" || state === "locked") &&
           cn(
-            "border-white/35 bg-muted/20 text-foreground hover:border-white/60",
-            state === "locked" && "cursor-not-allowed text-muted-foreground/85",
+            "border-white/40 bg-white/90 text-slate-600 hover:border-white",
+            state === "locked" && "cursor-not-allowed text-slate-400",
           ),
       )}
     >
@@ -601,7 +604,7 @@ export function MahjongView({
         <MjNode
           box={BOXES.choice}
           label="Choice"
-          labelClassName="text-info"
+          labelClassName="text-red-600"
           icon={ListChecks}
           tone="light"
           state={st("trading", "choice")}
