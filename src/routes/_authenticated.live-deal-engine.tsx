@@ -434,7 +434,7 @@ function LiveDealEngine() {
 
   // Once something has been recorded, keep the split workspace open (and on the side it was
   // recorded for) even after the form resets — that's what the Live Workspace panel now shows.
-  const side = direction ?? activity?.direction ?? null;
+  const side = direction ?? activity?.direction ?? pendingDirection ?? null;
 
   // Opened via a Bid/Offer ID elsewhere (e.g. the Report list) — load that specific deal instead
   // of whatever was last worked on in this browser.
@@ -789,6 +789,7 @@ function LiveDealEngine() {
 
               throbStep={throbStep}
               screeningProgress={screeningProgress}
+              mediaProgress={mediaProgress}
               matchProgress={
                 flowStep === "searching" || flowStep === "results"
                   ? { searching: flowStep === "searching", error: searchError }
@@ -916,7 +917,10 @@ function LiveDealEngine() {
                       error={searchError}
                       screening={screening}
                       screeningResults={screeningResults}
-                      onContinue={startScreening}
+                      onContinue={startMediaChecks}
+                      mediaRunning={mediaRunning}
+                      mediaResults={mediaResults}
+                      onMediaContinue={startScreening}
                       onFinalize={finalizeChoice}
                       finalizing={finalizing}
                     />
