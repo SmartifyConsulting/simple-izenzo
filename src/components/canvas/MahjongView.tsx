@@ -59,7 +59,7 @@ const SIDE_W = 220;
 const TOP_Y = 20;
 // Extra vertical room between the Step 1 and Step 2 frames — without it the two frames' borders
 // (and Step 2's "Step 2 · Compliance & Governance" label, which sits above its own frame) overlap.
-const STEP2_GAP_EXTRA = 34;
+const STEP2_GAP_EXTRA = 61;
 // A little breathing room before the three parallel branches split off from KYC/KYB.
 const BRANCH_Y = TOP_Y + PITCH * 6 + 58 + STEP2_GAP_EXTRA;
 
@@ -433,6 +433,7 @@ function MjNode({
   state,
   onClick,
   tone = "neutral",
+  frameClassName,
 }: {
   box: Box;
   label: string;
@@ -447,6 +448,9 @@ function MjNode({
   state: NodeState;
   onClick?: () => void;
   tone?: "neutral" | "danger" | "header" | "light";
+  /** Overrides the whole frame's border/fill/text, whatever the state — used to pick a single
+   * node out permanently (e.g. Search AI + AI+'s terracotta fill), not just while it's active. */
+  frameClassName?: string;
 }) {
   return (
     <button
@@ -477,6 +481,7 @@ function MjNode({
             "border-white bg-black text-white hover:border-white",
             state === "locked" && "cursor-not-allowed text-white/50",
           ),
+        frameClassName,
       )}
     >
       <span className="flex items-center gap-1.5">
@@ -580,6 +585,7 @@ export function MahjongView({
           label="Search AI + AI+"
           icon={Search}
           tone="light"
+          frameClassName="border-white bg-[#C1653D] text-white hover:border-white"
           state={st("trading", "search")}
           onClick={() => open("trading", "search")}
         />
