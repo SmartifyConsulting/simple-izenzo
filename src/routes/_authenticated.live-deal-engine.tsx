@@ -216,6 +216,7 @@ function LiveDealEngine() {
   const [docFiles, setDocFiles] = useState<File[]>([]);
   const search = useServerFn(searchCounterparties);
   const runScreening = useServerFn(runBackgroundScreening);
+  const runMediaChecks = useServerFn(runOnlineMediaChecks);
   const queryClient = useQueryClient();
 
   // Which canvas step should pulse, on top of whichever step the canvas already highlights as
@@ -226,9 +227,54 @@ function LiveDealEngine() {
   // what made an already-ticked frame keep pulsing after Continue was clicked.
   const throbStep = screening
     ? "media"
-    : flowStep === "results" && !screeningResults
-      ? "choice"
-      : null;
+    : mediaRunning
+      ? "online-media"
+      : mediaResults && !screeningResults
+        ? "choice"
+        : flowStep === "results" && !mediaResults && !screeningResults
+          ? "counterparties"
+          : null;
+
+  /** Scans the open web (LinkedIn, Facebook, TikTok, marketplaces, news) for the counterparties
+   * that were ticked, before any paid provider screening is opened. */
+  async function startMediaChecks(counterpartyIds: string[]) {
+    if (!dealTx || counterpartyIds.length === 0) return;
+    const SOURCES_PER_COUNTERPARTY = 6;
+    setMediaRunning(true);
+    setMediaResults(null);
+    setMediaProgress({ done: 0, total: counterpartyIds.length * SOURCES_PER_COUNTERPARTY });
+    await advance(dealTx.id, "trading", "online-media");
+    setDealTx((prev) => (prev ? { ...prev, stage: "trading", step: "online-media" } : prev));
+    const collected: MediaCheckResult[] = [];
+    let scanned = 0;
+    try {
+      for (const counterpartyId of counterpartyIds) {
+        const results = await runMediaChecks({
+          data: { transactionId: dealTx.id, counterpartyIds: [counterpartyId] },
+        });
+        collected.push(...results);
+        scanned += results.reduce((n, r) => n + r.findings.length, 0);
+        setMediaResults([...collected]);
+        setMediaProgress({
+          done: scanned,
+          total: Math.max(scanned, counterpartyIds.length * SOURCES_PER_COUNTERPARTY),
+        });
+      }
+      await recordEvent({
+        transactionId: dealTx.id,
+        stage: "trading",
+        step: "online-media",
+        action: "online_media_checked",
+        summary: `Online media checked for ${collected.length} counterpart${collected.length === 1 ? "y" : "ies"}`,
+      });
+      toast.success("Online media checks complete");
+    } catch (err) {
+      toast.error((err as Error).message);
+      setMediaProgress((p) => (p ? { ...p, failed: true } : p));
+    } finally {
+      setMediaRunning(false);
+    }
+  }
 
   /** Runs the background screening (registry lookup + Didit ID/KYB/AML) for whichever
    * counterparties were ticked in the Record panel. */
