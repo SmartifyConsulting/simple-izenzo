@@ -1105,6 +1105,7 @@ function LiveDealEngine() {
                       onMediaContinue={startScreening}
                       onFinalize={finalizeChoice}
                       finalizing={finalizing}
+                      dealLabel={dealTx.commodity ?? dealTx.title}
                     />
                   </div>
                 )}

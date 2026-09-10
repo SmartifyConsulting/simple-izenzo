@@ -24,10 +24,21 @@ import {
   RefreshCw,
   Mail,
   MailCheck,
+  ShieldAlert,
+  ScrollText,
   X,
 } from "lucide-react";
 import { CanvasNode, Connector, GateBar, type NodeState } from "./CanvasNode";
 import { StepScreen } from "@/components/steps/StepScreen";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { raiseChallenge, listChallenges, type MatchChallenge } from "@/lib/challenges.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -880,6 +891,7 @@ export function CounterpartyRecord({
   onMediaContinue,
   onFinalize,
   finalizing = false,
+  dealLabel,
 }: {
   txId?: string | null;
   /** True while the AI/AI+ search is still running, so the panel polls for freshly saved rows. */
@@ -900,13 +912,49 @@ export function CounterpartyRecord({
   onFinalize?: (counterpartyId: string) => void;
   /** True while that final pick is being recorded and the step is advancing to Intent. */
   finalizing?: boolean;
+  /** What to call these matches in the draft-matches confirmation — the deal's commodity/title. */
+  dealLabel?: string;
 }) {
   const qc = useQueryClient();
   const setShortlist = useServerFn(setCounterpartyShortlist);
   const findContact = useServerFn(findCounterpartyContact);
   const sendInvite = useServerFn(inviteCounterparty);
+  const raiseChallengeFn = useServerFn(raiseChallenge);
+  const listChallengesFn = useServerFn(listChallenges);
   const [invitingId, setInvitingId] = useState<string | null>(null);
   const [pickedId, setPickedId] = useState<string | null>(null);
+  const [draftConfirmOpen, setDraftConfirmOpen] = useState(false);
+  const [challengeOpen, setChallengeOpen] = useState(false);
+  const [governanceOpen, setGovernanceOpen] = useState(false);
+  const [challengeSubject, setChallengeSubject] = useState("");
+  const [challengeSummary, setChallengeSummary] = useState("");
+  const [challengeBusy, setChallengeBusy] = useState(false);
+
+  const { data: challenges = [] } = useQuery({
+    queryKey: ["challenges", txId],
+    enabled: !!txId,
+    queryFn: () => listChallengesFn({ data: { transactionId: txId as string } }),
+  });
+  const openChallenge = challenges.find((c) => c.status === "open");
+
+  async function submitChallenge() {
+    if (!txId || challengeSubject.trim().length === 0 || challengeSummary.trim().length < 60) return;
+    setChallengeBusy(true);
+    try {
+      await raiseChallengeFn({
+        data: { transactionId: txId, subject: challengeSubject.trim(), summary: challengeSummary.trim() },
+      });
+      toast.success("Challenge raised — progression on this match is paused.");
+      setChallengeOpen(false);
+      setChallengeSubject("");
+      setChallengeSummary("");
+      qc.invalidateQueries({ queryKey: ["challenges", txId] });
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setChallengeBusy(false);
+    }
+  }
   // Collapsed automatically the moment background screening takes over, so the panel doesn't keep
   // showing both sets of findings at once — still reachable by hand via the header toggle.
   const [mediaExpanded, setMediaExpanded] = useState(true);
@@ -1104,13 +1152,47 @@ export function CounterpartyRecord({
     <div
       className="rounded-2xl border-2 border-primary bg-slate-100 p-4"
     >
-      <p className="label-caps text-black">
-        {screeningDone
-          ? "Tick who you want to trade with"
-          : continued
-            ? "Selected counterparties"
-            : "Tick counterparties of interest to continue"}
-      </p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="label-caps text-black">
+          {screeningDone
+            ? "Tick who you want to trade with"
+            : continued
+              ? "Selected counterparties"
+              : "Tick counterparties of interest to continue"}
+        </p>
+        {txId && (
+          <div className="flex shrink-0 items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setGovernanceOpen(true)}
+              title="View governance record"
+              className="flex items-center gap-1 rounded p-1 text-[11px] font-medium text-slate-500 hover:bg-slate-200 hover:text-slate-800"
+            >
+              <ScrollText className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Governance record</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setChallengeOpen(true)}
+              title="Raise a challenge"
+              className="flex items-center gap-1 rounded p-1 text-[11px] font-medium text-slate-500 hover:bg-slate-200 hover:text-destructive"
+            >
+              <ShieldAlert className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Raise a challenge</span>
+            </button>
+          </div>
+        )}
+      </div>
+
+      {openChallenge && (
+        <div className="mt-2 rounded-md border border-destructive/40 bg-destructive/10 p-2.5">
+          <p className="text-xs font-semibold text-destructive">
+            Progression paused — challenge open: {openChallenge.subject}
+          </p>
+          <p className="mt-0.5 text-[11px] text-destructive/80">{openChallenge.summary}</p>
+        </div>
+      )}
+
       {candidates.length === 0 ? (
         <p className="mt-2 text-sm text-slate-500">
           {searching
@@ -1388,7 +1470,7 @@ export function CounterpartyRecord({
             type="button"
             className="mt-3 w-full"
             disabled={ticked.length === 0}
-            onClick={() => onContinue(ticked)}
+            onClick={() => setDraftConfirmOpen(true)}
           >
             {ticked.length === 0
               ? "Tick a counterparty to continue"
@@ -1396,6 +1478,114 @@ export function CounterpartyRecord({
           </Button>
         )
       )}
+
+      <Dialog open={draftConfirmOpen} onOpenChange={setDraftConfirmOpen}>
+        <DialogContent className="glass max-w-md">
+          <DialogTitle>Create Draft Matches</DialogTitle>
+          <DialogDescription>
+            You are about to create {ticked.length} match{ticked.length === 1 ? "" : "es"}
+            {dealLabel ? (
+              <>
+                {" "}
+                for <strong>{dealLabel}</strong>
+              </>
+            ) : null}
+            .
+          </DialogDescription>
+          <p className="text-sm font-medium text-foreground">
+            This is a draft. No commercial terms (quantity, price, currency) will be recorded. You
+            will need to add real commercial terms on the match detail page before confirming intent.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Creating a match does not create any financial obligation or deduct credits.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDraftConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                setDraftConfirmOpen(false);
+                onContinue?.(ticked);
+              }}
+            >
+              Create Drafts
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={challengeOpen} onOpenChange={setChallengeOpen}>
+        <DialogContent className="glass max-w-md">
+          <DialogTitle>Raise a challenge on this match</DialogTitle>
+          <DialogDescription>
+            Pause progression on this match while the parties resolve a concern. The other side and
+            platform administrators will be able to see this challenge.
+          </DialogDescription>
+          <div className="space-y-1.5">
+            <Label htmlFor="challenge-subject">Subject</Label>
+            <Select value={challengeSubject} onValueChange={setChallengeSubject}>
+              <SelectTrigger id="challenge-subject">
+                <SelectValue placeholder="Select a subject" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Counterparty details incorrect">Counterparty details incorrect</SelectItem>
+                <SelectItem value="Score or rationale disputed">Score or rationale disputed</SelectItem>
+                <SelectItem value="Screening result disputed">Screening result disputed</SelectItem>
+                <SelectItem value="Suspected duplicate match">Suspected duplicate match</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="challenge-summary">Summary (60–2000 characters)</Label>
+            <Textarea
+              id="challenge-summary"
+              rows={5}
+              placeholder="Describe the concern in clear, factual terms. Include what is incorrect, what you expected, and what you would like to happen next."
+              value={challengeSummary}
+              onChange={(e) => setChallengeSummary(e.target.value)}
+            />
+            <p className="text-right text-xs text-muted-foreground">{challengeSummary.length} / 2000</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setChallengeOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={challengeBusy || !challengeSubject || challengeSummary.trim().length < 60}
+              onClick={submitChallenge}
+            >
+              {challengeBusy ? "Raising…" : "Raise challenge"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={governanceOpen} onOpenChange={setGovernanceOpen}>
+        <DialogContent className="glass max-w-md">
+          <DialogTitle>Governance record</DialogTitle>
+          <DialogDescription>Every challenge raised on this match, in order.</DialogDescription>
+          {challenges.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No challenges have been raised on this match.</p>
+          ) : (
+            <ul className="max-h-80 space-y-3 overflow-y-auto">
+              {challenges.map((c: MatchChallenge) => (
+                <li key={c.id} className="rounded-lg border border-border p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold">{c.subject}</p>
+                    <Badge variant={c.status === "open" ? "outline" : "secondary"} className="text-[10px]">
+                      {c.status === "open" ? "Open" : "Resolved"}
+                    </Badge>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">{c.summary}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">{new Date(c.raised_at).toLocaleString()}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
