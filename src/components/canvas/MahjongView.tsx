@@ -458,15 +458,15 @@ function MjNode({
         "absolute flex flex-col items-center justify-center gap-0.5 rounded-lg border px-2 text-center text-[11px] font-semibold leading-tight tracking-tight transition-colors sm:text-xs",
         // Register Bid/Offer pulse as an open invitation to click the moment nothing has started
         // yet — same idea as the active-step pulse elsewhere, just for the two starting moves.
-        tone === "header" && state === "open" && "bg-white/90 text-slate-600 border-white/50 hover:border-white animate-signal-pulse",
+        tone === "header" && state === "open" && "bg-black text-white border-white hover:border-white animate-signal-pulse",
         tone === "header" && state !== "done" && state !== "open" && "bg-slate-700/40 text-foreground border-border hover:border-primary/40",
         tone === "header" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
         tone === "neutral" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
         tone === "neutral" && state === "active" && "border-primary bg-primary/20 text-primary animate-signal-pulse",
-        tone === "neutral" && state === "open" && "border-white/40 bg-white/90 text-slate-600 hover:border-white",
+        tone === "neutral" && state === "open" && "border-white bg-black text-white hover:border-white",
         tone === "neutral" &&
           state === "locked" &&
-          "cursor-not-allowed border-white/20 bg-white/40 text-slate-400",
+          "cursor-not-allowed border-white/40 bg-black text-white/50",
         tone === "danger" && state !== "done" && "border-[#F97316]/60 bg-[#F97316]/10 text-[#F97316]",
         tone === "danger" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
         tone === "light" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
@@ -474,8 +474,8 @@ function MjNode({
         tone === "light" &&
           (state === "open" || state === "locked") &&
           cn(
-            "border-white/40 bg-white/90 text-slate-600 hover:border-white",
-            state === "locked" && "cursor-not-allowed text-slate-400",
+            "border-white bg-black text-white hover:border-white",
+            state === "locked" && "cursor-not-allowed text-white/50",
           ),
       )}
     >
