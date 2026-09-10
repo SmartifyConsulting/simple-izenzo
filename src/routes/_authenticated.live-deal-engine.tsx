@@ -479,6 +479,9 @@ function LiveDealEngine() {
   // of whatever was last worked on in this browser.
   useEffect(() => {
     if (!txParam) return;
+    // Land on the Engine Map, not whatever view this session was last on — an ID badge clicked
+    // elsewhere is asking "where is this deal right now", which the map answers at a glance.
+    setViewMode("mahjong");
     (async () => {
       try {
         const { data: txRow } = await supabase
@@ -756,9 +759,14 @@ function LiveDealEngine() {
       <AppShell wide>
         {dealTx && (
           <div className="mb-3 flex items-center gap-2">
-            <span className="rounded-full border border-primary/40 bg-primary/12 px-2.5 py-1 text-[11px] font-bold tracking-wide text-primary">
+            <button
+              type="button"
+              onClick={() => setViewMode("classic")}
+              title="Open in Izenzo Workspace"
+              className="rounded-full border border-primary/40 bg-primary/12 px-2.5 py-1 text-[11px] font-bold tracking-wide text-primary transition-colors hover:border-primary hover:bg-primary/20"
+            >
               {dealTx.reference ?? activity?.reference ?? dealTx.id.slice(0, 8)}
-            </span>
+            </button>
             <span className="truncate text-sm font-medium text-muted-foreground">{dealTx.title}</span>
           </div>
         )}
@@ -1022,7 +1030,7 @@ function LiveDealEngine() {
                 {(flowStep === "searching" || flowStep === "results") && dealTx && !stagePanel && (
                   <div className="space-y-2">
                     {searchError && (
-                      <p className="text-xs text-[#F97316]">Search failed: {searchError}</p>
+                      <p className="text-xs text-[#F59E0B]">Search failed: {searchError}</p>
                     )}
                     <CounterpartyRecord
                       txId={dealTx.id}

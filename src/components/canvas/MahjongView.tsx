@@ -71,6 +71,8 @@ const STEP1_EXTRA_H = 10;
 // Gap between the Step 2 frame's top border and the Proof of Intent box it contains, so the
 // "Step 2 · Compliance & Governance" label (which sits above that border) doesn't crowd it.
 const STEP2_TOP_PAD = GROUP_PAD_TIGHT + 12;
+// ~0.5cm of extra frame height, added only to the bottom — the top stays exactly where it is.
+const STEP2_EXTRA_H = 18;
 
 
 // Steps 3, 4 and 5 are laid out as three frames with identical gaps between them (and the same
@@ -218,7 +220,7 @@ const GROUPS: { label: string; step: number; box: Box; emphasis?: boolean }[] = 
       x: BOXES.poi.x - GROUP_PAD,
       y: BOXES.poi.y - STEP2_TOP_PAD,
       w: BOXES.poi.w + GROUP_PAD * 2,
-      h: BOXES.kyc.y + ROW - BOXES.poi.y + STEP2_TOP_PAD + GROUP_PAD,
+      h: BOXES.kyc.y + ROW - BOXES.poi.y + STEP2_TOP_PAD + GROUP_PAD + STEP2_EXTRA_H,
     },
   },
   {
@@ -462,19 +464,19 @@ function MjNode({
         "absolute flex flex-col items-center justify-center gap-0.5 rounded-lg border px-2 text-center text-[11px] font-semibold leading-tight tracking-tight transition-colors sm:text-xs",
         // Register Bid/Offer pulse as an open invitation to click the moment nothing has started
         // yet — same idea as the active-step pulse elsewhere, just for the two starting moves.
-        tone === "header" && state === "open" && "bg-black text-white border-white hover:border-white animate-throb",
+        tone === "header" && state === "open" && "bg-black text-[#00e5ff] border-[#00e5ff] hover:border-[#00e5ff] animate-throb-aqua",
         tone === "header" && state !== "done" && state !== "open" && "bg-slate-700/40 text-foreground border-border hover:border-primary/40",
         tone === "header" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
         tone === "neutral" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
-        tone === "neutral" && state === "active" && "border-primary bg-primary/20 text-primary animate-throb",
+        tone === "neutral" && state === "active" && "border-[#00e5ff] bg-[#00e5ff]/15 text-[#00e5ff] animate-throb-aqua",
         tone === "neutral" && state === "open" && "border-white bg-black text-white hover:border-white",
         tone === "neutral" &&
           state === "locked" &&
           "cursor-not-allowed border-white/40 bg-black text-white/50",
-        tone === "danger" && state !== "done" && "border-[#F97316]/60 bg-[#F97316]/10 text-[#F97316]",
+        tone === "danger" && state !== "done" && "border-[#F59E0B]/60 bg-[#F59E0B]/10 text-[#F59E0B]",
         tone === "danger" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
         tone === "light" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
-        tone === "light" && state === "active" && "border-primary bg-primary/20 text-primary animate-throb",
+        tone === "light" && state === "active" && "border-[#00e5ff] bg-[#00e5ff]/15 text-[#00e5ff] animate-throb-aqua",
         tone === "light" &&
           (state === "open" || state === "locked") &&
           cn(
@@ -492,7 +494,7 @@ function MjNode({
         <span
           className={cn(
             "truncate text-[9px] font-semibold uppercase tracking-wide",
-            subClassName ?? (tone === "danger" ? "text-[#F97316]" : "text-current opacity-95"),
+            subClassName ?? (tone === "danger" ? "text-[#F59E0B]" : "text-current opacity-95"),
           )}
         >
           {sub}
@@ -577,6 +579,7 @@ export function MahjongView({
           label="Load deal docs"
           icon={FileText}
           tone="light"
+          frameClassName="border-white bg-black text-white hover:border-white"
           state={st("trading", "documents")}
           onClick={() => open("trading", "documents")}
         />
@@ -613,7 +616,7 @@ export function MahjongView({
           labelClassName="text-white"
           icon={ListChecks}
           tone="light"
-          frameClassName="border-white bg-[#32A8C7] text-white hover:border-white"
+          frameClassName="border-white bg-[#00e5ff] text-white hover:border-white"
           state={st("trading", "choice")}
           onClick={() => open("trading", "choice")}
         />

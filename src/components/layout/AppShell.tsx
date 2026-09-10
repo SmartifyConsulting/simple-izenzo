@@ -94,13 +94,13 @@ export function AppShell({
           <button
             type="button"
             onClick={() => setViewMode(viewMode === "mahjong" ? "classic" : "mahjong")}
-            title={viewMode === "mahjong" ? "Classic View" : "Izenzo Engine Map"}
-            aria-label={viewMode === "mahjong" ? "Classic View" : "Izenzo Engine Map"}
+            title={viewMode === "mahjong" ? "Izenzo Workspace" : "Izenzo Engine Map"}
+            aria-label={viewMode === "mahjong" ? "Izenzo Workspace" : "Izenzo Engine Map"}
             className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
           >
             <LayoutGrid className="h-4 w-4" strokeWidth={2.25} />
             <span className="hidden sm:inline">
-              {viewMode === "mahjong" ? "Classic View" : "Izenzo Engine Map"}
+              {viewMode === "mahjong" ? "Izenzo Workspace" : "Izenzo Engine Map"}
             </span>
           </button>
 
