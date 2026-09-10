@@ -33,6 +33,16 @@ function nodeState(stage: StageKey, step: string, tx: Transaction): NodeState {
   return "open";
 }
 
+/** Which of the diagram's five numbered step groups the deal is actually in right now — matches
+ * GROUPS' own numbering (Trading, Compliance & Governance, Execution, Finality, Memory). */
+function currentStepNumber(tx: Transaction): number {
+  if (tx.stage === "execution") return 3;
+  if (tx.stage === "finality") return 4;
+  if (tx.stage === "memory") return 5;
+  if (tx.stage === "compliance") return 2;
+  return tx.step === "poi" ? 2 : 1;
+}
+
 // Diagram coordinate system — everything below is placed on this fixed canvas and scaled to the
 // container with percentages, so boxes and their connecting arrows always stay aligned with each
 // other regardless of viewport width. The canvas is deliberately wide-and-short so the whole
@@ -355,6 +365,7 @@ function GroupFrame({
   step,
   box,
   emphasis,
+  active,
 }: {
   label: string;
   step: number;
@@ -362,12 +373,16 @@ function GroupFrame({
   /** A bolder, brighter border — used for Step 1, which otherwise reads too faint against the
    * busier top row of the diagram. */
   emphasis?: boolean;
+  /** Whichever step the deal is actually in right now gets a soft green wash behind its frame —
+   * shifts from step to step as the deal moves on, so it's always obvious where things stand. */
+  active?: boolean;
 }) {
   return (
     <div
       className={cn(
-        "pointer-events-none absolute rounded-xl border",
+        "pointer-events-none absolute rounded-xl border transition-colors duration-500",
         emphasis ? "border-primary/55" : "border-primary/40",
+        active && "bg-gradient-to-br from-primary/14 via-primary/5 to-transparent",
       )}
       style={{ left: pctX(box.x), top: pctY(box.y), width: pctX(box.w), height: pctY(box.h) }}
     >
@@ -410,6 +425,7 @@ function ArrowLayer() {
 function MjNode({
   box,
   label,
+  labelClassName,
   sub,
   subClassName,
   icon: Icon,
@@ -419,6 +435,9 @@ function MjNode({
 }: {
   box: Box;
   label: string;
+  /** Overrides the label's default color — used to pick Choice out in sky blue while keeping the
+   * same frame styling as its neighbors. */
+  labelClassName?: string;
   /** A small second line inside the node, under the label — used for WaD's "hard gate" note. */
   sub?: string;
   /** Overrides the sub line's default color — used for WaD's terracotta "non-waivable" note. */
@@ -426,7 +445,7 @@ function MjNode({
   icon?: typeof Search;
   state: NodeState;
   onClick?: () => void;
-  tone?: "neutral" | "danger" | "header" | "light" | "blue";
+  tone?: "neutral" | "danger" | "header" | "light";
 }) {
   return (
     <button
@@ -446,10 +465,6 @@ function MjNode({
           "cursor-not-allowed border-border/60 bg-muted/10 text-muted-foreground/60",
         tone === "danger" && state !== "done" && "border-[#F97316]/60 bg-[#F97316]/10 text-[#F97316]",
         tone === "danger" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
-        // Same sky blue as the Trading Gate badge in the Reports list.
-        tone === "blue" && state !== "locked" && "border-info/60 bg-info/15 text-info",
-        tone === "blue" && state === "active" && "animate-signal-pulse",
-        tone === "blue" && state === "locked" && "cursor-not-allowed border-border/60 bg-muted/10 text-muted-foreground/60",
         tone === "light" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
         tone === "light" && state === "active" && "border-primary bg-primary/20 text-primary animate-signal-pulse",
         tone === "light" &&
@@ -461,8 +476,8 @@ function MjNode({
       )}
     >
       <span className="flex items-center gap-1.5">
-        {Icon && <Icon className="h-3.5 w-3.5 shrink-0" />}
-        <span className="truncate">{label}</span>
+        {Icon && <Icon className={cn("h-3.5 w-3.5 shrink-0", labelClassName)} />}
+        <span className={cn("truncate", labelClassName)}>{label}</span>
       </span>
       {sub && (
         <span
@@ -511,6 +526,7 @@ export function MahjongView({
 
   const st = (stage: StageKey, step: string) => nodeState(stage, step, tx);
   const active = panel && !readOnly ? panel : null;
+  const activeStep = currentStepNumber(tx);
 
   return (
     <div className="ink-grid relative rounded-3xl border border-border p-3 sm:p-4">
@@ -526,7 +542,7 @@ export function MahjongView({
 
         <ArrowLayer />
         {GROUPS.map((g) => (
-          <GroupFrame key={g.label} {...g} />
+          <GroupFrame key={g.label} {...g} active={g.step === activeStep} />
         ))}
 
         <MjNode
@@ -584,8 +600,9 @@ export function MahjongView({
         <MjNode
           box={BOXES.choice}
           label="Choice"
+          labelClassName="text-info"
           icon={ListChecks}
-          tone="blue"
+          tone="light"
           state={st("trading", "choice")}
           onClick={() => open("trading", "choice")}
         />
