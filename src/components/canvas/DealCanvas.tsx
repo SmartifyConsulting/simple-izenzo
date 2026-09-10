@@ -124,6 +124,10 @@ function describeCheck(
 
 import { cn } from "@/lib/utils";
 
+// Raise a challenge / Governance record are built but hidden while they're still being worked
+// out — flip this back on when they're ready to ship.
+const CHALLENGES_FEATURE_ENABLED = false;
+
 type NodeRef = { stage: StageKey; step: string; label?: string; icon?: typeof Radar };
 
 /** Three dots that flash in sequence — a still-working signal for a progress line that can sit at
@@ -1160,7 +1164,7 @@ export function CounterpartyRecord({
               ? "Selected counterparties"
               : "Tick counterparties of interest to continue"}
         </p>
-        {txId && (
+        {CHALLENGES_FEATURE_ENABLED && txId && (
           <div className="flex shrink-0 items-center gap-1">
             <button
               type="button"
@@ -1184,7 +1188,7 @@ export function CounterpartyRecord({
         )}
       </div>
 
-      {openChallenge && (
+      {CHALLENGES_FEATURE_ENABLED && openChallenge && (
         <div className="mt-2 rounded-md border border-destructive/40 bg-destructive/10 p-2.5">
           <p className="text-xs font-semibold text-destructive">
             Progression paused — challenge open: {openChallenge.subject}

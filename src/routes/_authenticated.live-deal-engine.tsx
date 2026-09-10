@@ -158,7 +158,7 @@ function OpenDealsStrip({ currentId }: { currentId: string | null }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("transactions")
-        .select("id, reference, stage, created_at, bid_offers(direction, created_at)")
+        .select("id, reference, title, commodity, stage, created_at, bid_offers(direction, created_at)")
         .eq("org_id", org!.id)
         .neq("stage", "memory")
         .order("created_at", { ascending: true })
@@ -168,6 +168,8 @@ function OpenDealsStrip({ currentId }: { currentId: string | null }) {
         (data ?? []) as unknown as {
           id: string;
           reference: string | null;
+          title: string;
+          commodity: string | null;
           created_at: string;
           bid_offers: { direction: string; created_at: string }[];
         }[]
@@ -176,7 +178,11 @@ function OpenDealsStrip({ currentId }: { currentId: string | null }) {
           (a, b) => +new Date(a.created_at) - +new Date(b.created_at),
         )[0];
         const direction: "bid" | "offer" = earliest?.direction === "offer" ? "offer" : "bid";
-        return { id: t.id, reference: t.reference ?? fallbackReference(t.id, direction) };
+        return {
+          id: t.id,
+          reference: t.reference ?? fallbackReference(t.id, direction),
+          name: t.commodity ?? t.title,
+        };
       });
     },
   });
@@ -190,8 +196,9 @@ function OpenDealsStrip({ currentId }: { currentId: string | null }) {
           key={d.id}
           to="/live-deal-engine"
           search={{ tx: d.id }}
+          title={d.name}
           className={cn(
-            "rounded-full border px-2 py-0.5 font-mono text-[10px] font-medium transition-colors",
+            "rounded-full border px-2.5 py-1 font-mono text-[13px] font-semibold transition-colors",
             d.id === currentId
               ? "border-primary bg-primary/15 text-primary"
               : "border-border bg-muted/40 text-muted-foreground hover:border-primary/40 hover:text-foreground",
