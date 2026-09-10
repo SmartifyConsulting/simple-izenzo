@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -19,7 +19,8 @@ import { MahjongView } from "@/components/canvas/MahjongView";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import { advance, fingerprintOf, recordEvent, type Transaction } from "@/lib/tx";
+import { advance, fallbackReference, fingerprintOf, recordEvent, type Transaction } from "@/lib/tx";
+import { useAuth } from "@/lib/auth";
 import { searchCounterparties } from "@/lib/izenzo.functions";
 import { runBackgroundScreening, type ScreeningResult } from "@/lib/screening.functions";
 import { runOnlineMediaChecks, type MediaCheckResult } from "@/lib/onlineMedia.functions";
@@ -141,6 +142,63 @@ function FileField({
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+/** A row of reference badges for every deal still in progress — newest added on the right, so the
+ * strip reads left (oldest open deal) to right (most recently touched). A deal drops off the
+ * strip the moment it reaches Memory (fully sealed and complete); from then on it's only findable
+ * through the All Trades report, not here. */
+function OpenDealsStrip({ currentId }: { currentId: string | null }) {
+  const { org } = useAuth();
+  const { data: open = [] } = useQuery({
+    queryKey: ["open-deals", org?.id],
+    enabled: Boolean(org?.id),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("id, reference, stage, created_at, bid_offers(direction, created_at)")
+        .neq("stage", "memory")
+        .order("created_at", { ascending: true })
+        .limit(20);
+      if (error) throw error;
+      return (
+        (data ?? []) as unknown as {
+          id: string;
+          reference: string | null;
+          created_at: string;
+          bid_offers: { direction: string; created_at: string }[];
+        }[]
+      ).map((t) => {
+        const earliest = [...t.bid_offers].sort(
+          (a, b) => +new Date(a.created_at) - +new Date(b.created_at),
+        )[0];
+        const direction: "bid" | "offer" = earliest?.direction === "offer" ? "offer" : "bid";
+        return { id: t.id, reference: t.reference ?? fallbackReference(t.id, direction) };
+      });
+    },
+  });
+
+  if (open.length === 0) return <span />;
+
+  return (
+    <div className="flex flex-wrap items-center justify-end gap-1.5">
+      {open.map((d) => (
+        <Link
+          key={d.id}
+          to="/live-deal-engine"
+          search={{ tx: d.id }}
+          className={cn(
+            "rounded-full border px-2 py-0.5 font-mono text-[10px] font-medium transition-colors",
+            d.id === currentId
+              ? "border-primary bg-primary/15 text-primary"
+              : "border-border bg-muted/40 text-muted-foreground hover:border-primary/40 hover:text-foreground",
+          )}
+        >
+          {d.reference}
+        </Link>
+      ))}
     </div>
   );
 }
@@ -757,8 +815,8 @@ function LiveDealEngine() {
   if (viewMode === "mahjong") {
     return (
       <AppShell wide>
-        {dealTx && (
-          <div className="mb-3 flex items-center gap-2">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          {dealTx ? (
             <button
               type="button"
               onClick={() => setViewMode("classic")}
@@ -767,9 +825,11 @@ function LiveDealEngine() {
             >
               {dealTx.reference ?? activity?.reference ?? dealTx.id.slice(0, 8)}
             </button>
-            <span className="truncate text-sm font-medium text-muted-foreground">{dealTx.title}</span>
-          </div>
-        )}
+          ) : (
+            <span />
+          )}
+          <OpenDealsStrip currentId={dealTx?.id ?? null} />
+        </div>
         <MahjongView
           tx={dealTx ?? FLOWCHART_PREVIEW_TX}
           reload={() => {}}
