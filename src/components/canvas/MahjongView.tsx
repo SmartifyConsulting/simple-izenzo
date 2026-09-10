@@ -186,14 +186,17 @@ const ARROWS: { d: string; arrow?: boolean }[] = [
 // everything through Choice), Step 2 (Compliance & Governance: POI, WaD, KYC/KYB), Step 3
 // (Execution, spanning Project Preparation through Implementation), Step 4 (Finality) and Step 5
 // (Memory).
-const GROUPS: { label: string; step: number; box: Box }[] = [
+const GROUPS: { label: string; step: number; box: Box; emphasis?: boolean }[] = [
   {
     label: "Trading",
     step: 1,
+    emphasis: true,
     box: {
       x: BOXES.bid.x - GROUP_PAD,
       y: BOXES.bid.y - GROUP_PAD,
-      w: BOXES.offer.x + BOXES.offer.w - BOXES.bid.x + GROUP_PAD * 2,
+      // Extends all the way to Step 5's right edge, matching the full width the bottom band
+      // (Steps 3-5 together) already spans, instead of stopping at the Offer box.
+      w: S5_X + S5_W - (BOXES.bid.x - GROUP_PAD),
       h: BOXES.choice.y + ROW - BOXES.bid.y + GROUP_PAD + GROUP_PAD_TIGHT + STEP1_EXTRA_H,
     },
   },
@@ -348,10 +351,25 @@ function BidOfferSearch() {
   );
 }
 
-function GroupFrame({ label, step, box }: { label: string; step: number; box: Box }) {
+function GroupFrame({
+  label,
+  step,
+  box,
+  emphasis,
+}: {
+  label: string;
+  step: number;
+  box: Box;
+  /** A bolder, brighter border — used for Step 1, which otherwise reads too faint against the
+   * busier top row of the diagram. */
+  emphasis?: boolean;
+}) {
   return (
     <div
-      className="pointer-events-none absolute rounded-xl border-2 border-primary/40"
+      className={cn(
+        "pointer-events-none absolute rounded-xl border-2",
+        emphasis ? "border-primary/70" : "border-primary/40",
+      )}
       style={{ left: pctX(box.x), top: pctY(box.y), width: pctX(box.w), height: pctY(box.h) }}
     >
       <span className="absolute -top-3 left-2.5 rounded-full border border-primary/50 bg-background px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
