@@ -17,6 +17,7 @@ import {
   BookLock,
   ArrowLeftRight,
   Newspaper,
+  Globe,
   Loader2,
   ExternalLink,
   RefreshCw,
@@ -514,6 +515,36 @@ export function DealCanvas({
                   </div>
                 )}
               </div>
+              {visible("trading", "online-media") && (
+                <div>
+                  {node(
+                    { stage: "trading", step: "online-media", icon: Globe },
+                    { side: "center", compact: true },
+                  )}
+                  {mediaProgress && mediaProgress.total > 0 && (
+                    <div className="mt-1.5 space-y-1">
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-all duration-500",
+                            mediaProgress.failed ? "bg-destructive" : "bg-info",
+                          )}
+                          style={{
+                            width: `${Math.round((mediaProgress.done / mediaProgress.total) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        {mediaProgress.failed
+                          ? "Online media checks could not finish"
+                          : mediaProgress.done < mediaProgress.total
+                            ? `${mediaProgress.done} of ${mediaProgress.total} sources scanned`
+                            : `Online media checks complete — ${mediaProgress.total} sources scanned`}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
               {visible("trading", "choice") &&
                 node({ stage: "trading", step: "choice", icon: MousePointerClick }, { side: "center" })}
               {visible("trading", "media") && (
