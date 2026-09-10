@@ -23,6 +23,7 @@ import { advance, fingerprintOf, recordEvent, type Transaction } from "@/lib/tx"
 import { searchCounterparties } from "@/lib/izenzo.functions";
 import { runBackgroundScreening, type ScreeningResult } from "@/lib/screening.functions";
 import { runOnlineMediaChecks, type MediaCheckResult } from "@/lib/onlineMedia.functions";
+import { summarizeBidDocuments } from "@/lib/docSummary.functions";
 import { pushRecentDeal } from "@/lib/recentDeals";
 
 import { useViewMode, setViewMode } from "@/lib/viewMode";
@@ -214,8 +215,11 @@ function LiveDealEngine() {
   const [idFront, setIdFront] = useState<File[]>([]);
   const [idBack, setIdBack] = useState<File[]>([]);
   const [docFiles, setDocFiles] = useState<File[]>([]);
+  const [documentSummary, setDocumentSummary] = useState<string | null>(null);
+  const [documentSummaryBusy, setDocumentSummaryBusy] = useState(false);
   const search = useServerFn(searchCounterparties);
   const runScreening = useServerFn(runBackgroundScreening);
+  const summarizeDocs = useServerFn(summarizeBidDocuments);
   const runMediaChecks = useServerFn(runOnlineMediaChecks);
   const queryClient = useQueryClient();
 
@@ -490,6 +494,7 @@ function LiveDealEngine() {
         };
         setActivity(loadedActivity);
         setDealTx(tx);
+        setDocumentSummary((tx as unknown as { document_summary: string | null }).document_summary ?? null);
         setFlowStep(tx.step === "documents" ? "documents" : "results");
         const { data: docs } = await supabase
           .from("documents")
@@ -541,6 +546,7 @@ function LiveDealEngine() {
         if (!tx) return;
         setActivity(saved.activity);
         setDealTx(tx as Transaction);
+        setDocumentSummary((tx as unknown as { document_summary: string | null }).document_summary ?? null);
         setFlowStep(tx.step === "documents" ? "documents" : "results");
         const { data: docs } = await supabase
           .from("documents")
@@ -694,6 +700,13 @@ function LiveDealEngine() {
       await advance(dealTx.id, "trading", "search");
       setDealTx((prev) => (prev ? { ...prev, stage: "trading", step: "search" } : prev));
       setAttachments((prev) => [...prev, ...saved]);
+      // Runs alongside the counterparty search rather than blocking it — a slow or failed AI read
+      // shouldn't hold up matching, which doesn't depend on it.
+      setDocumentSummaryBusy(true);
+      summarizeDocs({ data: { transactionId: dealTx.id } })
+        .then((r) => setDocumentSummary(r.summary))
+        .catch((err) => toast.error(`Could not summarize the documents: ${(err as Error).message}`))
+        .finally(() => setDocumentSummaryBusy(false));
       await runSearch(dealTx.id);
     } catch (err) {
       toast.error((err as Error).message);
@@ -754,7 +767,7 @@ function LiveDealEngine() {
           )}
 
           {activity && (
-            <p className="label-caps">
+            <p className="label-caps text-white">
               Live deal engine for {activity.direction === "bid" ? "The Bid" : "Responder"}
             </p>
           )}
@@ -835,7 +848,7 @@ function LiveDealEngine() {
             )}
           >
             <div className="flex items-start justify-between gap-3">
-              <p className="label-caps">Live workspace</p>
+              <p className="label-caps text-white">Live workspace</p>
               {(dealTx?.reference ?? activity?.reference) && (
                 <span className="shrink-0 rounded-full border border-white/30 bg-white/10 px-2.5 py-1 text-[11px] font-bold tracking-wide text-white">
                   {dealTx?.reference ?? activity?.reference}
@@ -928,6 +941,19 @@ function LiveDealEngine() {
 
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {(documentSummaryBusy || documentSummary) && (
+                  <div className="glass-node space-y-2 p-4">
+                    <p className="label-caps text-muted-foreground">AI document summary</p>
+                    {documentSummaryBusy && !documentSummary ? (
+                      <p className="text-sm text-muted-foreground">
+                        Reading the uploaded documents…
+                      </p>
+                    ) : (
+                      <p className="text-sm leading-relaxed text-foreground">{documentSummary}</p>
+                    )}
                   </div>
                 )}
 

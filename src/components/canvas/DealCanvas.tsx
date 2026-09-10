@@ -43,7 +43,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CommoditySearch } from "@/components/CommoditySearch";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { ensureOrg } from "@/lib/org";
@@ -109,8 +108,6 @@ function describeCheck(
 }
 
 
-import { CURRENCIES } from "@/lib/currencies";
-import { UNITS } from "@/lib/units";
 import { cn } from "@/lib/utils";
 
 type NodeRef = { stage: StageKey; step: string; label?: string; icon?: typeof Radar };
@@ -1528,7 +1525,9 @@ export function CanvasStart({
     setDirectionState(v);
     onDirectionChange?.(v);
   };
-  const [form, setForm] = useState({ title: "", commodity: "", quantity: "", unit: "", price: "", currency: "USD" });
+  // Title/commodity/quantity/price used to be captured here — they're now read off the uploaded
+  // documents by AI instead, so the only thing this first screen still asks for is the ID Number.
+  const [form, setForm] = useState({ idNumber: "" });
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -1567,49 +1566,74 @@ export function CanvasStart({
         org_id: activeOrg.id,
         stage: "trading",
         step: "bid-offer",
-        title: form.title || form.commodity || (direction === "bid" ? "New buy bid" : "New sell offer"),
-        commodity: form.commodity || null,
-        quantity: form.quantity ? Number(form.quantity) : null,
-        unit: form.unit || null,
-        price: form.price ? Number(form.price) : null,
-        currency: form.currency || "USD",
+        // A placeholder until the AI summary of the uploaded documents fills in the real title —
+        // there's nothing else to name it from at this point.
+        title: direction === "bid" ? "New buy bid" : "New sell offer",
+        commodity: null,
+        quantity: null,
+        unit: null,
+        price: null,
+        currency: "USD",
       };
 
-      const { data: newTx, error } = await supabase
+      let { data: newTx, error } = await supabase
         .from("transactions")
         .insert({ ...baseRow, reference } as never)
         .select()
         .single();
-
+      // The `reference` column's migration hasn't reached every environment yet — fall back to
+      // inserting without it rather than losing the whole bid/offer (the display already falls
+      // back to a deterministic computed reference for this case).
+      const referenceColumnMissing =
+        error?.code === "42703" || error?.code === "PGRST204" || Boolean(error?.message?.includes("schema cache"));
+      if (referenceColumnMissing) {
+        ({ data: newTx, error } = await supabase.from("transactions").insert(baseRow as never).select().single());
+      }
       if (error) throw error;
       if (!newTx) throw new Error("Could not record the bid/offer.");
 
-      await supabase.from("bid_offers").insert({
+      const bidOfferRow = {
         transaction_id: newTx.id,
         direction,
-        price: form.price ? Number(form.price) : 0,
-        quantity: form.quantity ? Number(form.quantity) : 0,
-        unit: form.unit || "",
-        currency: form.currency || "USD",
+        price: 0,
+        quantity: 0,
+        unit: "",
+        currency: "USD",
         terms: "",
-      });
+        id_number: form.idNumber || null,
+      };
+      const { error: boError } = await supabase.from("bid_offers").insert(bidOfferRow as never);
+      // `id_number` is a brand new column — fall back to inserting without it rather than losing
+      // the whole bid/offer on an environment where the migration hasn't landed yet. PostgREST
+      // reports a missing column two different ways depending on where it's caught: "42703" from
+      // Postgres itself, or "PGRST204"/a "schema cache" message from PostgREST's own pre-check.
+      const missingColumn =
+        boError?.code === "42703" ||
+        boError?.code === "PGRST204" ||
+        Boolean(boError?.message?.includes("schema cache"));
+      if (missingColumn) {
+        const { id_number: _drop, ...withoutIdNumber } = bidOfferRow;
+        await supabase.from("bid_offers").insert(withoutIdNumber);
+      } else if (boError) {
+        throw boError;
+      }
       await recordEvent({
         transactionId: newTx.id,
         stage: "trading",
         step: "bid-offer",
         action: direction === "bid" ? "bid_placed" : "offer_placed",
-        summary: `${direction === "bid" ? "Bid" : "Offer"} placed: ${form.title || form.commodity || newTx.title}`,
-        payload: { ...form },
+        summary: `${direction === "bid" ? "Bid" : "Offer"} placed`,
+        payload: { idNumber: form.idNumber },
       });
       await advance(newTx.id, "trading", "documents");
       const activity: RecordedActivity = {
         direction,
-        title: form.title || form.commodity || newTx.title,
-        commodity: form.commodity || null,
-        quantity: form.quantity || null,
-        unit: form.unit || null,
-        price: form.price || null,
-        currency: form.currency || "USD",
+        title: newTx.title,
+        commodity: null,
+        quantity: null,
+        unit: null,
+        price: null,
+        currency: "USD",
         time: new Date().toISOString(),
         reference,
       };
@@ -1693,80 +1717,20 @@ export function CanvasStart({
         </div>
       )}
       <div className="space-y-1.5">
-        <Label htmlFor="cs-title">Transaction title</Label>
+        <Label htmlFor="cs-id-number">ID Number</Label>
         <Input
-          id="cs-title"
+          id="cs-id-number"
           autoFocus
-          placeholder="e.g. Copper cathode, Q3 delivery"
-          value={form.title}
-          onChange={(e) => setForm({ ...form, title: e.target.value })}
+          placeholder="National ID, passport, or company registration number"
+          value={form.idNumber}
+          onChange={(e) => setForm({ ...form, idNumber: e.target.value })}
         />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="cs-commodity">Commodity or asset</Label>
-        <CommoditySearch
-          id="cs-commodity"
-          value={form.commodity}
-          onChange={(v) => setForm({ ...form, commodity: v })}
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label htmlFor="cs-qty">Quantity</Label>
-          <Input
-            id="cs-qty"
-            type="number"
-            step="any"
-            className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-            value={form.quantity}
-            onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="cs-unit">Unit</Label>
-          <Select value={form.unit} onValueChange={(v) => setForm({ ...form, unit: v })}>
-            <SelectTrigger id="cs-unit">
-              <SelectValue placeholder="Select a unit" />
-            </SelectTrigger>
-            <SelectContent>
-              {UNITS.map((u) => (
-                <SelectItem key={u} value={u}>
-                  {u}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label htmlFor="cs-price">Price</Label>
-          <Input
-            id="cs-price"
-            type="number"
-            step="any"
-            value={form.price}
-            onChange={(e) => setForm({ ...form, price: e.target.value })}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="cs-currency">Currency</Label>
-          <Select value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })}>
-            <SelectTrigger id="cs-currency">
-              <SelectValue placeholder="Currency" />
-            </SelectTrigger>
-            <SelectContent>
-              {CURRENCIES.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <p className="text-xs text-muted-foreground">
+          Next, you'll upload supporting documents — AI reads them and fills in the deal details.
+        </p>
       </div>
       <Button type="submit" disabled={busy} className="w-full">
-        {busy ? "Recording…" : "Record and continue"}
+        {busy ? "Recording…" : "Continue to documents"}
       </Button>
     </form>
   );

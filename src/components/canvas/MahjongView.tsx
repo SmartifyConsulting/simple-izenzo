@@ -620,6 +620,7 @@ export function MahjongView({
         <MjNode
           box={BOXES.poi}
           label="Proof of Intent"
+          labelClassName="text-primary"
           icon={FileText}
           tone="light"
           state={st("trading", "poi")}
@@ -628,6 +629,7 @@ export function MahjongView({
         <MjNode
           box={BOXES.wad}
           label="Without a Doubt"
+          labelClassName="text-primary"
           sub="Hard gate · non-waivable"
           subClassName="text-[#C1653D]"
           icon={ShieldCheck}
@@ -638,6 +640,7 @@ export function MahjongView({
         <MjNode
           box={BOXES.kyc}
           label="KYC / KYB"
+          labelClassName="text-primary"
           icon={Users}
           tone="light"
           state={st("compliance", "wad")}
