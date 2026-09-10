@@ -406,6 +406,23 @@
   animation: beam-sweep 2.6s ease-in-out infinite;
 }
 
+@keyframes ellipsis-dot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.2;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+/** One dot of a three-dot "still working" indicator — stagger each dot's animation-delay so they
+ * flash in sequence, for a progress line that's been sitting at the same percentage a while. */
+@utility animate-ellipsis-dot {
+  animation: ellipsis-dot 1.4s ease-in-out infinite;
+}
+
 @keyframes ribbon-sweep {
   0% {
     background-position: 0% 50%;

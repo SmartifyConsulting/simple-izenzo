@@ -112,6 +112,22 @@ import { cn } from "@/lib/utils";
 
 type NodeRef = { stage: StageKey; step: string; label?: string; icon?: typeof Radar };
 
+/** Three dots that flash in sequence — a still-working signal for a progress line that can sit at
+ * the same percentage for a while (online media screening in particular). */
+function WorkingEllipsis() {
+  return (
+    <span className="inline-flex gap-0.5" aria-hidden>
+      {[0, 0.2, 0.4].map((delay) => (
+        <span
+          key={delay}
+          className="h-1 w-1 animate-ellipsis-dot rounded-full bg-current"
+          style={{ animationDelay: `${delay}s` }}
+        />
+      ))}
+    </span>
+  );
+}
+
 // Reduce the Bid/Offer (and Documents) lanes by two grid squares (the ink-grid repeats every
 // 44px) while keeping their outer edges flush with the canvas — the lane shrinks from its inner
 // edge only.
@@ -545,12 +561,15 @@ export function DealCanvas({
                           }}
                         />
                       </div>
-                      <p className="text-[11px] text-muted-foreground">
-                        {mediaProgress.failed
-                          ? "Online media screening could not finish"
-                          : mediaProgress.done < mediaProgress.total
-                            ? `${mediaProgress.done} of ${mediaProgress.total} sources scanned`
-                            : `Online media screening complete — ${mediaProgress.total} sources scanned`}
+                      <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        <span>
+                          {mediaProgress.failed
+                            ? "Online media screening could not finish"
+                            : mediaProgress.done < mediaProgress.total
+                              ? `${Math.round((mediaProgress.done / mediaProgress.total) * 100)}% — ${mediaProgress.done} of ${mediaProgress.total} sources scanned`
+                              : `Online media screening complete — ${mediaProgress.total} sources scanned`}
+                        </span>
+                        {!mediaProgress.failed && mediaProgress.done < mediaProgress.total && <WorkingEllipsis />}
                       </p>
                     </div>
                   )}
@@ -577,12 +596,17 @@ export function DealCanvas({
                           }}
                         />
                       </div>
-                      <p className="text-[11px] text-muted-foreground">
-                        {screeningProgress.failed
-                          ? "Screening could not finish"
-                          : screeningProgress.done < screeningProgress.total
-                            ? `${screeningProgress.done} of ${screeningProgress.total} checks opened`
-                            : `Screening complete — all ${screeningProgress.total} checks opened`}
+                      <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        <span>
+                          {screeningProgress.failed
+                            ? "Screening could not finish"
+                            : screeningProgress.done < screeningProgress.total
+                              ? `${Math.round((screeningProgress.done / screeningProgress.total) * 100)}% — ${screeningProgress.done} of ${screeningProgress.total} checks opened`
+                              : `Screening complete — all ${screeningProgress.total} checks opened`}
+                        </span>
+                        {!screeningProgress.failed && screeningProgress.done < screeningProgress.total && (
+                          <WorkingEllipsis />
+                        )}
                       </p>
 
 
@@ -903,6 +927,7 @@ export function CounterpartyRecord({
         .from("counterparties")
         .select("*")
         .eq("transaction_id", txId as string)
+        .order("score", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false });
       if (qErr) throw qErr;
       return (data ?? []) as unknown as CounterpartyCandidate[];
