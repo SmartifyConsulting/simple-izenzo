@@ -859,6 +859,19 @@ function LiveDealEngine() {
 
             {activity ? (
               <div className="mt-4 space-y-3">
+                {(documentSummaryBusy || documentSummary) && (
+                  <div className="glass-node space-y-2 p-4">
+                    <p className="label-caps text-muted-foreground">AI document summary</p>
+                    {documentSummaryBusy && !documentSummary ? (
+                      <p className="text-sm text-muted-foreground">
+                        Reading the uploaded documents…
+                      </p>
+                    ) : (
+                      <p className="text-sm leading-relaxed text-foreground">{documentSummary}</p>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex flex-wrap gap-1.5">
                   {activity.commodity && (
                     <span className="rounded-full border border-primary/40 bg-primary/12 px-2.5 py-1 text-[11px] font-semibold text-primary">
@@ -892,6 +905,7 @@ function LiveDealEngine() {
                 {attachments.length > 0 && (
                   <div className="glass-node space-y-2 p-4">
                     <p className="label-caps text-muted-foreground">Attachments</p>
+                    <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
                     {attachments.map((a, i) => (
                       <div key={i} className="flex items-center gap-2 text-sm">
                         <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
@@ -941,19 +955,7 @@ function LiveDealEngine() {
 
                       </div>
                     ))}
-                  </div>
-                )}
-
-                {(documentSummaryBusy || documentSummary) && (
-                  <div className="glass-node space-y-2 p-4">
-                    <p className="label-caps text-muted-foreground">AI document summary</p>
-                    {documentSummaryBusy && !documentSummary ? (
-                      <p className="text-sm text-muted-foreground">
-                        Reading the uploaded documents…
-                      </p>
-                    ) : (
-                      <p className="text-sm leading-relaxed text-foreground">{documentSummary}</p>
-                    )}
+                    </div>
                   </div>
                 )}
 
