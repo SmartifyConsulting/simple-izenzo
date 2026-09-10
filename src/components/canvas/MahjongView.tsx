@@ -240,8 +240,11 @@ const GROUPS: { label: string; step: number; box: Box }[] = [
 ];
 
 
-// Sits in the gap between the Register Bid and Register Offer boxes, at the same row and height.
-const SEARCH_BOX: Box = { x: BOXES.bid.x + BOXES.bid.w + 40, y: TOP_Y, w: 460, h: ROW };
+// Centred in the gap between the Register Bid and Register Offer boxes, at the same row and
+// height — half as wide as the full gap so it reads as a discreet search, not a third register box.
+const SEARCH_GAP_MID = (BOXES.bid.x + BOXES.bid.w + BOXES.offer.x) / 2;
+const SEARCH_BOX_W = (BOXES.offer.x - (BOXES.bid.x + BOXES.bid.w)) / 2;
+const SEARCH_BOX: Box = { x: SEARCH_GAP_MID - SEARCH_BOX_W / 2, y: TOP_Y, w: SEARCH_BOX_W, h: ROW };
 
 type DealSuggestion = {
   id: string;

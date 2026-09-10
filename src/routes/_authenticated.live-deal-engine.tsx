@@ -795,29 +795,35 @@ function LiveDealEngine() {
             </div>
           )}
 
-          <div className={side ? "mt-3" : "mt-4"}>
-            <DealCanvas
-              tx={dealTx ?? FLOWCHART_PREVIEW_TX}
-              reload={() => {}}
-              readOnly
-              hideBidOfferGroups={picking || Boolean(activity)}
-              focusSide={side}
-              forceRevealAll
-              hideMatchingRibbon
-              openProofOfIntent={
-                !dealTx?.poi_sealed_at && (flowStep === "searching" || flowStep === "results")
-              }
+          {/* The fully-ticked flowchart demo (FLOWCHART_PREVIEW_TX) is only meaningful on the
+              genuinely empty landing state — once a registration form is open (picking, with no
+              real deal recorded yet), showing that demo behind it looks like the new bid/offer
+              already has counterparties, screening and Proof of Intent done, which is wrong. */}
+          {(dealTx || !picking) && (
+            <div className={side ? "mt-3" : "mt-4"}>
+              <DealCanvas
+                tx={dealTx ?? FLOWCHART_PREVIEW_TX}
+                reload={() => {}}
+                readOnly
+                hideBidOfferGroups={picking || Boolean(activity)}
+                focusSide={side}
+                forceRevealAll
+                hideMatchingRibbon
+                openProofOfIntent={
+                  !dealTx?.poi_sealed_at && (flowStep === "searching" || flowStep === "results")
+                }
 
-              throbStep={throbStep}
-              screeningProgress={screeningProgress}
-              mediaProgress={mediaProgress}
-              matchProgress={
-                flowStep === "searching" || flowStep === "results"
-                  ? { searching: flowStep === "searching", error: searchError }
-                  : null
-              }
-            />
-          </div>
+                throbStep={throbStep}
+                screeningProgress={screeningProgress}
+                mediaProgress={mediaProgress}
+                matchProgress={
+                  flowStep === "searching" || flowStep === "results"
+                    ? { searching: flowStep === "searching", error: searchError }
+                    : null
+                }
+              />
+            </div>
+          )}
 
         </div>
 

@@ -136,16 +136,17 @@ export const FLOWCHART_PREVIEW_TX: Transaction = {
   currency: "USD",
   incoterms: "CIF Rotterdam",
   jurisdiction: "South Africa",
-  stage: "memory",
-  step: "ledger",
+  // Sits at the very first step — nothing is done yet, since this preview isn't tied to any real
+  // deal. It used to fake a fully-completed run instead, which read as real status for whichever
+  // bid/offer the user was about to record.
+  stage: "trading",
+  step: "bid-offer",
   status: "open",
-  intent_confirmed_at: new Date(0).toISOString(),
-  poi_sealed_at: new Date(0).toISOString(),
-  poi_hash: "preview",
-  // Left uncleared on purpose — with everything else cleared, this is the one place the preview
-  // demonstrates the "<gate> to be cleared" wording rather than only ever showing "cleared".
+  intent_confirmed_at: null,
+  poi_sealed_at: null,
+  poi_hash: null,
   wad_completed_at: null,
-  finality_sealed_at: new Date(0).toISOString(),
+  finality_sealed_at: null,
   created_at: new Date(0).toISOString(),
 };
 
