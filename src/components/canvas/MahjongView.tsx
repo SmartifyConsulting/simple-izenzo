@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import {
   Banknote,
   Briefcase,
@@ -15,6 +17,9 @@ import {
 import { InlineFrame } from "./DealCanvas";
 import { lockReason, stepIndex, type StageKey } from "@/lib/spine";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
+import { fallbackReference } from "@/lib/tx";
 import type { Transaction } from "@/lib/tx";
 
 type NodeState = "locked" | "open" | "active" | "done";
@@ -235,6 +240,111 @@ const GROUPS: { label: string; step: number; box: Box }[] = [
 ];
 
 
+// Sits in the gap between the Register Bid and Register Offer boxes, at the same row and height.
+const SEARCH_BOX: Box = { x: BOXES.bid.x + BOXES.bid.w + 40, y: TOP_Y, w: 460, h: ROW };
+
+type DealSuggestion = {
+  id: string;
+  reference: string;
+  title: string;
+  direction: "bid" | "offer";
+};
+
+/** A search bar for jumping straight to an existing bid/offer by name, sitting right between the
+ * two "Register" boxes it's an alternative to. Shows the most recently active deals by default,
+ * narrows to whatever's typed, and opens the picked one in the Live Deal Engine. */
+function BidOfferSearch() {
+  const { org } = useAuth();
+  const [query, setQuery] = useState("");
+  const [focused, setFocused] = useState(false);
+
+  const { data: deals = [] } = useQuery({
+    queryKey: ["my-trades", org?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("*, bid_offers(direction, created_at)")
+        .order("updated_at", { ascending: false })
+        .limit(40);
+      if (error) throw error;
+      return (
+        (data ?? []) as unknown as (Transaction & {
+          bid_offers: { direction: string; created_at: string }[];
+        })[]
+      ).map((t): DealSuggestion => {
+        const earliest = [...t.bid_offers].sort(
+          (a, b) => +new Date(a.created_at) - +new Date(b.created_at),
+        )[0];
+        const direction: "bid" | "offer" = earliest?.direction === "offer" ? "offer" : "bid";
+        return { id: t.id, reference: t.reference ?? fallbackReference(t.id, direction), title: t.title, direction };
+      });
+    },
+    staleTime: 30_000,
+  });
+
+  const results = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const list = q
+      ? deals.filter((d) => d.title.toLowerCase().includes(q) || d.reference.toLowerCase().includes(q))
+      : deals;
+    return list.slice(0, 8);
+  }, [deals, query]);
+
+  return (
+    <div
+      className="absolute"
+      style={{ left: pctX(SEARCH_BOX.x), top: pctY(SEARCH_BOX.y), width: pctX(SEARCH_BOX.w), height: pctY(SEARCH_BOX.h) }}
+    >
+      <div className="relative h-full">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setTimeout(() => setFocused(false), 150)}
+          placeholder="Search a bid or offer…"
+          className="h-full w-full rounded-full border border-slate-200 bg-white pl-9 pr-3 text-[13px] text-slate-900 placeholder:text-slate-400 shadow-sm outline-none focus:border-primary/50"
+        />
+        {focused && (
+          <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-20 max-h-72 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg">
+            {results.length === 0 ? (
+              <p className="px-2.5 py-2 text-xs text-slate-400">
+                {query.trim() ? "No matching bids or offers." : "Nothing recorded yet."}
+              </p>
+            ) : (
+              <>
+                {!query.trim() && (
+                  <p className="px-2.5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                    Recently active
+                  </p>
+                )}
+                {results.map((d) => (
+                  <Link
+                    key={d.id}
+                    to="/live-deal-engine"
+                    search={{ tx: d.id }}
+                    className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-slate-100"
+                  >
+                    <span
+                      className={cn(
+                        "shrink-0 rounded-full px-1.5 py-0.5 font-mono text-[10px] font-medium",
+                        d.direction === "bid" ? "bg-primary/12 text-primary" : "bg-slate-200 text-slate-700",
+                      )}
+                    >
+                      {d.reference}
+                    </span>
+                    <span className="min-w-0 truncate text-[13px] text-slate-800">{d.title}</span>
+                  </Link>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function GroupFrame({ label, step, box }: { label: string; step: number; box: Box }) {
   return (
     <div
@@ -401,6 +511,7 @@ export function MahjongView({
           // new registration, not a way back into whatever's currently open.
           onClick={() => onRegister?.("bid")}
         />
+        <BidOfferSearch />
         <MjNode
           box={BOXES.offer}
           label="Register Offer"

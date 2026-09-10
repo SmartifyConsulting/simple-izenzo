@@ -1257,7 +1257,10 @@ export function CounterpartyRecord({
       {screeningDone && onFinalize ? (
         <Button
           type="button"
-          className="mt-3 w-full"
+          className={cn(
+            "mt-3 w-full",
+            !pickedId && !finalizing && "bg-slate-300 text-slate-700 hover:bg-slate-300 disabled:opacity-100",
+          )}
           disabled={finalizing || !pickedId}
           onClick={() => pickedId && onFinalize(pickedId)}
         >
@@ -1270,7 +1273,10 @@ export function CounterpartyRecord({
       ) : mediaResults && !screening && !screeningResults && onMediaContinue ? (
         <Button
           type="button"
-          className="mt-3 w-full"
+          className={cn(
+            "mt-3 w-full",
+            ticked.length === 0 && "bg-slate-300 text-slate-700 hover:bg-slate-300 disabled:opacity-100",
+          )}
           disabled={ticked.length === 0}
           onClick={() => onMediaContinue(ticked)}
         >
