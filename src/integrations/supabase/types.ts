@@ -1744,6 +1744,66 @@ export type Database = {
         }
         Relationships: []
       }
+      match_challenges: {
+        Row: {
+          counterparty_id: string | null
+          created_at: string
+          id: string
+          raised_at: string
+          raised_by: string
+          resolution_note: string | null
+          resolved_at: string | null
+          status: string
+          subject: string
+          summary: string
+          transaction_id: string
+          updated_at: string
+        }
+        Insert: {
+          counterparty_id?: string | null
+          created_at?: string
+          id?: string
+          raised_at?: string
+          raised_by: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          status?: string
+          subject: string
+          summary: string
+          transaction_id: string
+          updated_at?: string
+        }
+        Update: {
+          counterparty_id?: string | null
+          created_at?: string
+          id?: string
+          raised_at?: string
+          raised_by?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          status?: string
+          subject?: string
+          summary?: string
+          transaction_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_challenges_counterparty_id_fkey"
+            columns: ["counterparty_id"]
+            isOneToOne: false
+            referencedRelation: "counterparties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_challenges_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_skip_events: {
         Row: {
           channel: string
