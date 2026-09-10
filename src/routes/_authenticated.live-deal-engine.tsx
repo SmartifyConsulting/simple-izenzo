@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CheckCircle2, Download, Eye, Paperclip, UploadCloud, X } from "lucide-react";
+import { CheckCircle2, Download, Eye, LayoutGrid, Paperclip, UploadCloud, X } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import {
   CanvasStart,
@@ -720,6 +720,14 @@ function LiveDealEngine() {
   if (viewMode === "mahjong") {
     return (
       <AppShell wide>
+        {dealTx && (
+          <div className="mb-3 flex items-center gap-2">
+            <span className="rounded-full border border-primary/40 bg-primary/12 px-2.5 py-1 text-[11px] font-bold tracking-wide text-primary">
+              {dealTx.reference ?? activity?.reference ?? dealTx.id.slice(0, 8)}
+            </span>
+            <span className="truncate text-sm font-medium text-muted-foreground">{dealTx.title}</span>
+          </div>
+        )}
         <MahjongView
           tx={dealTx ?? FLOWCHART_PREVIEW_TX}
           reload={() => {}}
@@ -735,6 +743,15 @@ function LiveDealEngine() {
 
   return (
     <AppShell wide>
+
+      <button
+        type="button"
+        onClick={() => setViewMode("mahjong")}
+        className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-primary"
+      >
+        <LayoutGrid className="h-3.5 w-3.5" />
+        Izenzo Engine Map
+      </button>
 
       <div className={cn(side && "grid grid-cols-1 gap-4 sm:grid-cols-2 sm:items-stretch")}>
         <div
