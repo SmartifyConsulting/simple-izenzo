@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { advance, fingerprintOf, recordEvent, type Transaction } from "@/lib/tx";
 import { searchCounterparties } from "@/lib/izenzo.functions";
 import { runBackgroundScreening, type ScreeningResult } from "@/lib/screening.functions";
+import { runOnlineMediaChecks, type MediaCheckResult } from "@/lib/onlineMedia.functions";
 import { pushRecentDeal } from "@/lib/recentDeals";
 
 import { useViewMode, setViewMode } from "@/lib/viewMode";
@@ -159,6 +160,11 @@ function LiveDealEngine() {
   const [busy, setBusy] = useState(false);
   const [screening, setScreening] = useState(false);
   const [screeningResults, setScreeningResults] = useState<ScreeningResult[] | null>(null);
+  const [mediaRunning, setMediaRunning] = useState(false);
+  const [mediaResults, setMediaResults] = useState<MediaCheckResult[] | null>(null);
+  const [mediaProgress, setMediaProgress] = useState<
+    { done: number; total: number; failed?: boolean } | null
+  >(null);
   const [finalizing, setFinalizing] = useState(false);
   /** Which gate step the right-hand panel is currently asking the user to complete. */
   const [stagePanel, setStagePanel] = useState<"intent" | "poi" | "wad" | null>(null);
@@ -210,6 +216,7 @@ function LiveDealEngine() {
   const [docFiles, setDocFiles] = useState<File[]>([]);
   const search = useServerFn(searchCounterparties);
   const runScreening = useServerFn(runBackgroundScreening);
+  const runMediaChecks = useServerFn(runOnlineMediaChecks);
   const queryClient = useQueryClient();
 
   // Which canvas step should pulse, on top of whichever step the canvas already highlights as
@@ -220,9 +227,54 @@ function LiveDealEngine() {
   // what made an already-ticked frame keep pulsing after Continue was clicked.
   const throbStep = screening
     ? "media"
-    : flowStep === "results" && !screeningResults
-      ? "choice"
-      : null;
+    : mediaRunning
+      ? "online-media"
+      : mediaResults && !screeningResults
+        ? "choice"
+        : flowStep === "results" && !mediaResults && !screeningResults
+          ? "counterparties"
+          : null;
+
+  /** Scans the open web (LinkedIn, Facebook, TikTok, marketplaces, news) for the counterparties
+   * that were ticked, before any paid provider screening is opened. */
+  async function startMediaChecks(counterpartyIds: string[]) {
+    if (!dealTx || counterpartyIds.length === 0) return;
+    const SOURCES_PER_COUNTERPARTY = 6;
+    setMediaRunning(true);
+    setMediaResults(null);
+    setMediaProgress({ done: 0, total: counterpartyIds.length * SOURCES_PER_COUNTERPARTY });
+    await advance(dealTx.id, "trading", "online-media");
+    setDealTx((prev) => (prev ? { ...prev, stage: "trading", step: "online-media" } : prev));
+    const collected: MediaCheckResult[] = [];
+    let scanned = 0;
+    try {
+      for (const counterpartyId of counterpartyIds) {
+        const results = await runMediaChecks({
+          data: { transactionId: dealTx.id, counterpartyIds: [counterpartyId] },
+        });
+        collected.push(...results);
+        scanned += results.reduce((n, r) => n + r.findings.length, 0);
+        setMediaResults([...collected]);
+        setMediaProgress({
+          done: scanned,
+          total: Math.max(scanned, counterpartyIds.length * SOURCES_PER_COUNTERPARTY),
+        });
+      }
+      await recordEvent({
+        transactionId: dealTx.id,
+        stage: "trading",
+        step: "online-media",
+        action: "online_media_checked",
+        summary: `Online media checked for ${collected.length} counterpart${collected.length === 1 ? "y" : "ies"}`,
+      });
+      toast.success("Online media checks complete");
+    } catch (err) {
+      toast.error((err as Error).message);
+      setMediaProgress((p) => (p ? { ...p, failed: true } : p));
+    } finally {
+      setMediaRunning(false);
+    }
+  }
 
   /** Runs the background screening (registry lookup + Didit ID/KYB/AML) for whichever
    * counterparties were ticked in the Record panel. */
@@ -382,7 +434,7 @@ function LiveDealEngine() {
 
   // Once something has been recorded, keep the split workspace open (and on the side it was
   // recorded for) even after the form resets — that's what the Live Workspace panel now shows.
-  const side = direction ?? activity?.direction ?? null;
+  const side = direction ?? activity?.direction ?? pendingDirection ?? null;
 
   // Opened via a Bid/Offer ID elsewhere (e.g. the Report list) — load that specific deal instead
   // of whatever was last worked on in this browser.
@@ -642,6 +694,9 @@ function LiveDealEngine() {
             setPendingDirection(dir);
             setViewMode("classic");
           }}
+          // Clicking anything on the map hands over to the Classic detailed sequence, which is
+          // where the work actually happens.
+          onOpenClassic={() => setViewMode("classic")}
         />
       </AppShell>
     );
@@ -737,6 +792,7 @@ function LiveDealEngine() {
 
               throbStep={throbStep}
               screeningProgress={screeningProgress}
+              mediaProgress={mediaProgress}
               matchProgress={
                 flowStep === "searching" || flowStep === "results"
                   ? { searching: flowStep === "searching", error: searchError }
@@ -864,7 +920,10 @@ function LiveDealEngine() {
                       error={searchError}
                       screening={screening}
                       screeningResults={screeningResults}
-                      onContinue={startScreening}
+                      onContinue={startMediaChecks}
+                      mediaRunning={mediaRunning}
+                      mediaResults={mediaResults}
+                      onMediaContinue={startScreening}
                       onFinalize={finalizeChoice}
                       finalizing={finalizing}
                     />

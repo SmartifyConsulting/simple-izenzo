@@ -23,6 +23,11 @@ export const SPINE: StageDef[] = [
       { key: "ai", label: "AI", blurb: "AI reads the record and proposes. It never decides." },
       { key: "ai-plus", label: "AI+", blurb: "Deeper analysis: risk, pricing sanity, jurisdiction notes." },
       { key: "counterparties", label: "Counterparties", blurb: "Counterparties surfaced by search and AI." },
+      {
+        key: "online-media",
+        label: "Online Media Checks",
+        blurb: "Scan LinkedIn, Facebook, TikTok, marketplaces and news for each shortlisted party.",
+      },
       { key: "choice", label: "Choice", blurb: "A person chooses the counterparty. Recorded as an event." },
       { key: "media", label: "Social / News Media", blurb: "Scan open media for signals on the deal and parties." },
       { key: "intent", label: "Intent", blurb: "Confirm the intent to transact on the stated terms." },

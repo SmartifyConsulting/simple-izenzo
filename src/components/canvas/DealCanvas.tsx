@@ -17,6 +17,7 @@ import {
   BookLock,
   ArrowLeftRight,
   Newspaper,
+  Globe,
   Loader2,
   ExternalLink,
   RefreshCw,
@@ -29,6 +30,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CommoditySearch } from "@/components/CommoditySearch";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,6 +50,7 @@ import { FLAT_STEPS, lockReason, stepDef, stepIndex, type StageKey } from "@/lib
 import { advance, money, recordEvent, when, type Transaction, type TxEvent } from "@/lib/tx";
 import { setCounterpartyShortlist } from "@/lib/izenzo.functions";
 import type { ScreeningCheck, ScreeningResult } from "@/lib/screening.functions";
+import type { MediaCheckResult, MediaFinding } from "@/lib/onlineMedia.functions";
 import {
   listVerificationsForTx,
   refreshVerification,
@@ -160,6 +173,7 @@ export function DealCanvas({
   throbStep,
   openProofOfIntent,
   screeningProgress,
+  mediaProgress,
   matchProgress,
 
 }: {
@@ -196,6 +210,8 @@ export function DealCanvas({
   openProofOfIntent?: boolean;
   /** Live progress of the background screening run, drawn as a bar under that node. */
   screeningProgress?: { done: number; total: number; failed?: boolean } | null;
+  /** Live progress of the online media scan, drawn as a bar under the Online Media Checks node. */
+  mediaProgress?: { done: number; total: number; failed?: boolean } | null;
   /** Live progress of the counterparty match search, drawn as a bar under the Counterparties
    * node — the match count is read from the already-cached candidate list. */
   matchProgress?: { searching: boolean; error?: string | null } | null;
@@ -511,6 +527,36 @@ export function DealCanvas({
                   </div>
                 )}
               </div>
+              {visible("trading", "online-media") && (
+                <div>
+                  {node(
+                    { stage: "trading", step: "online-media", icon: Globe },
+                    { side: "center", compact: true },
+                  )}
+                  {mediaProgress && mediaProgress.total > 0 && (
+                    <div className="mt-1.5 space-y-1">
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-all duration-500",
+                            mediaProgress.failed ? "bg-destructive" : "bg-info",
+                          )}
+                          style={{
+                            width: `${Math.round((mediaProgress.done / mediaProgress.total) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        {mediaProgress.failed
+                          ? "Online media checks could not finish"
+                          : mediaProgress.done < mediaProgress.total
+                            ? `${mediaProgress.done} of ${mediaProgress.total} sources scanned`
+                            : `Online media checks complete — ${mediaProgress.total} sources scanned`}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
               {visible("trading", "choice") &&
                 node({ stage: "trading", step: "choice", icon: MousePointerClick }, { side: "center" })}
               {visible("trading", "media") && (
@@ -720,17 +766,31 @@ export function InlineFrame({
         <StepScreen tx={tx} stage={stage} step={step} reload={reload} />
       )}
       {canChangeParty && (
-        <button
-          type="button"
-          onClick={() => {
-            if (window.confirm("Release the party you chose and reopen the counterparty list?")) {
-              onChangeParty?.();
-            }
-          }}
-          className="mt-4 text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
-        >
-          Choose a different party
-        </button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <button
+              type="button"
+              className="mt-4 text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+            >
+              Choose a different party
+            </button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Choose a different party?</AlertDialogTitle>
+              <AlertDialogDescription>
+                The party you picked is released and the counterparty list opens again. Nothing that
+                has already been screened is lost.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Keep this party</AlertDialogCancel>
+              <AlertDialogAction onClick={() => onChangeParty?.()}>
+                Reopen the list
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
     </div>
   );
@@ -752,6 +812,34 @@ type CounterpartyCandidate = {
 /** Same "Record" panel as `SelectionRecord`, but for the AI/AI+ search results phase: each
  * candidate gets a checkbox so a bidder (or responder) can mark who they're interested in, without
  * yet making the single final pick (that stays ChoiceStep's job). */
+function mediaTone(status: MediaFinding["status"]) {
+  switch (status) {
+    case "adverse":
+      return "bg-red-100 text-red-700";
+    case "found":
+      return "bg-emerald-100 text-emerald-800";
+    case "failed":
+      return "bg-amber-100 text-amber-800";
+    default:
+      return "bg-slate-200 text-slate-600";
+  }
+}
+
+function mediaLabel(status: MediaFinding["status"]) {
+  switch (status) {
+    case "adverse":
+      return "Review";
+    case "found":
+      return "Clear";
+    case "not_found":
+      return "Nothing found";
+    case "unavailable":
+      return "Not connected";
+    default:
+      return "Could not scan";
+  }
+}
+
 export function CounterpartyRecord({
   txId,
   searching = false,
@@ -759,6 +847,9 @@ export function CounterpartyRecord({
   onContinue,
   screening = false,
   screeningResults = null,
+  mediaRunning = false,
+  mediaResults = null,
+  onMediaContinue,
   onFinalize,
   finalizing = false,
 }: {
@@ -771,6 +862,11 @@ export function CounterpartyRecord({
   /** True while those screening checks are being opened with the providers. */
   screening?: boolean;
   screeningResults?: ScreeningResult[] | null;
+  /** True while the open-web / social media scan is running. */
+  mediaRunning?: boolean;
+  mediaResults?: MediaCheckResult[] | null;
+  /** Fires the background screening once the media findings have been read. */
+  onMediaContinue?: (counterpartyIds: string[]) => void;
   /** Fires once the user has picked the single counterparty to actually trade with,
    * once screening has come back. */
   onFinalize?: (counterpartyId: string) => void;
@@ -830,7 +926,7 @@ export function CounterpartyRecord({
   // Once Continue has been clicked (screening running or already back), only the counterparties
   // that were actually ticked stay on screen — that's the only list still relevant, and it frees
   // up room for the screening findings below it.
-  const continued = screening || screeningResults !== null;
+  const continued = mediaRunning || mediaResults !== null || screening || screeningResults !== null;
   const visibleCandidates = continued ? candidates.filter((c) => c.shortlisted) : candidates;
 
   function downloadFindingsPdf() {
@@ -962,6 +1058,53 @@ export function CounterpartyRecord({
 
 
 
+      {mediaRunning && !mediaResults && (
+        <p className="mt-3 border-t border-slate-300 pt-3 text-xs text-slate-600">
+          Scanning LinkedIn, Facebook, TikTok, marketplaces and news…
+        </p>
+      )}
+
+      {mediaResults && mediaResults.length > 0 && (
+        <div className="mt-3 space-y-2.5 border-t border-slate-300 pt-3">
+          <p className="label-caps text-slate-600">Online media checks</p>
+          {mediaResults.map((m) => (
+            <div key={m.counterpartyId} className="rounded-xl border border-slate-300 bg-white p-3">
+              <p className="text-sm font-semibold text-slate-900">{m.name}</p>
+              <ul className="mt-2 divide-y divide-slate-200">
+                {m.findings.map((f) => (
+                  <li key={f.source} className="py-1.5 first:pt-0 last:pb-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-medium text-slate-800">{f.label}</span>
+                      <span
+                        className={cn(
+                          "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                          mediaTone(f.status),
+                        )}
+                      >
+                        {mediaLabel(f.status)}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 break-words text-[11px] leading-snug text-slate-500">
+                      {f.detail}
+                    </p>
+                    {f.url && (
+                      <a
+                        href={f.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+                      >
+                        <ExternalLink className="h-3 w-3" /> Open source
+                      </a>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+
       {screeningResults && screeningResults.length > 0 && (
         <div className="mt-3 space-y-2.5 border-t border-slate-300 pt-3">
           <div className="flex items-center justify-between gap-2">
@@ -1061,21 +1204,31 @@ export function CounterpartyRecord({
               ? "Continue"
               : "Tick who you want to trade with"}
         </Button>
+      ) : mediaResults && !screening && !screeningResults && onMediaContinue ? (
+        <Button
+          type="button"
+          className="mt-3 w-full"
+          disabled={ticked.length === 0}
+          onClick={() => onMediaContinue(ticked)}
+        >
+          {ticked.length === 0
+            ? "Tick who to take through screening"
+            : `Continue to background screening with ${ticked.length} counterpart${ticked.length === 1 ? "y" : "ies"}`}
+        </Button>
       ) : (
         onContinue &&
         candidates.length > 0 &&
-        !searching && (
+        !searching &&
+        !continued && (
           <Button
             type="button"
             className="mt-3 w-full"
-            disabled={screening || ticked.length === 0}
+            disabled={ticked.length === 0}
             onClick={() => onContinue(ticked)}
           >
-            {screening
-              ? "Running background screening…"
-              : ticked.length === 0
-                ? "Tick a counterparty to continue"
-                : `Continue with ${ticked.length} counterpart${ticked.length === 1 ? "y" : "ies"}`}
+            {ticked.length === 0
+              ? "Tick a counterparty to continue"
+              : `Run online media checks on ${ticked.length} counterpart${ticked.length === 1 ? "y" : "ies"}`}
           </Button>
         )
       )}

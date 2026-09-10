@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Database,
   FileText,
+  Globe,
   Hammer,
   ListChecks,
   Search,
@@ -348,6 +349,7 @@ export function MahjongView({
   reload,
   readOnly,
   onRegister,
+  onOpenClassic,
 }: {
   tx: Transaction;
   reload: () => void;
@@ -355,11 +357,18 @@ export function MahjongView({
   /** Fires when "Register Bid"/"Register Offer" is clicked, before any real deal exists — the
    * caller switches to the form that actually records it (same one the Classic view uses). */
   onRegister?: (direction: "bid" | "offer") => void;
+  /** When given, clicking a node hands over to the Classic view's detailed sequence instead of
+   * opening the step inline on the map. */
+  onOpenClassic?: (stage: StageKey, step: string) => void;
 }) {
   const [panel, setPanel] = useState<{ stage: StageKey; step: string } | null>(null);
 
   const open = (stage: StageKey, step: string) => {
     if (readOnly) return;
+    if (onOpenClassic) {
+      onOpenClassic(stage, step);
+      return;
+    }
     setPanel((p) => (p?.stage === stage && p?.step === step ? null : { stage, step }));
   };
 
@@ -421,10 +430,10 @@ export function MahjongView({
         />
         <MjNode
           box={BOXES.surfaceRoutes}
-          label="Surface routes / paths"
-          icon={Search}
-          state={st("trading", "media")}
-          onClick={() => open("trading", "media")}
+          label="Online Media Checks"
+          icon={Globe}
+          state={st("trading", "online-media")}
+          onClick={() => open("trading", "online-media")}
         />
 
         <MjNode
@@ -438,6 +447,7 @@ export function MahjongView({
           box={BOXES.poi}
           label="Proof of Intent"
           icon={FileText}
+          tone="light"
           state={st("trading", "poi")}
           onClick={() => open("trading", "poi")}
         />
@@ -446,7 +456,7 @@ export function MahjongView({
           label="Without a Doubt"
           sub="Hard gate · non-waivable"
           icon={ShieldCheck}
-          tone="danger"
+          tone="light"
           state={st("compliance", "wad")}
           onClick={() => open("compliance", "wad")}
         />
@@ -454,6 +464,7 @@ export function MahjongView({
           box={BOXES.kyc}
           label="KYC / KYB"
           icon={Users}
+          tone="light"
           state={st("compliance", "wad")}
           onClick={() => open("compliance", "wad")}
         />
