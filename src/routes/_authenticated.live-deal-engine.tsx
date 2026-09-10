@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { advance, fingerprintOf, recordEvent, type Transaction } from "@/lib/tx";
 import { searchCounterparties } from "@/lib/izenzo.functions";
 import { runBackgroundScreening, type ScreeningResult } from "@/lib/screening.functions";
+import { runOnlineMediaChecks, type MediaCheckResult } from "@/lib/onlineMedia.functions";
 import { pushRecentDeal } from "@/lib/recentDeals";
 
 import { useViewMode, setViewMode } from "@/lib/viewMode";
@@ -159,6 +160,11 @@ function LiveDealEngine() {
   const [busy, setBusy] = useState(false);
   const [screening, setScreening] = useState(false);
   const [screeningResults, setScreeningResults] = useState<ScreeningResult[] | null>(null);
+  const [mediaRunning, setMediaRunning] = useState(false);
+  const [mediaResults, setMediaResults] = useState<MediaCheckResult[] | null>(null);
+  const [mediaProgress, setMediaProgress] = useState<
+    { done: number; total: number; failed?: boolean } | null
+  >(null);
   const [finalizing, setFinalizing] = useState(false);
   /** Which gate step the right-hand panel is currently asking the user to complete. */
   const [stagePanel, setStagePanel] = useState<"intent" | "poi" | "wad" | null>(null);
