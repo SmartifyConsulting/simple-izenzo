@@ -1030,6 +1030,53 @@ export function CounterpartyRecord({
 
 
 
+      {mediaRunning && !mediaResults && (
+        <p className="mt-3 border-t border-slate-300 pt-3 text-xs text-slate-600">
+          Scanning LinkedIn, Facebook, TikTok, marketplaces and news…
+        </p>
+      )}
+
+      {mediaResults && mediaResults.length > 0 && (
+        <div className="mt-3 space-y-2.5 border-t border-slate-300 pt-3">
+          <p className="label-caps text-slate-600">Online media checks</p>
+          {mediaResults.map((m) => (
+            <div key={m.counterpartyId} className="rounded-xl border border-slate-300 bg-white p-3">
+              <p className="text-sm font-semibold text-slate-900">{m.name}</p>
+              <ul className="mt-2 divide-y divide-slate-200">
+                {m.findings.map((f) => (
+                  <li key={f.source} className="py-1.5 first:pt-0 last:pb-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-medium text-slate-800">{f.label}</span>
+                      <span
+                        className={cn(
+                          "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                          mediaTone(f.status),
+                        )}
+                      >
+                        {mediaLabel(f.status)}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 break-words text-[11px] leading-snug text-slate-500">
+                      {f.detail}
+                    </p>
+                    {f.url && (
+                      <a
+                        href={f.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+                      >
+                        <ExternalLink className="h-3 w-3" /> Open source
+                      </a>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+
       {screeningResults && screeningResults.length > 0 && (
         <div className="mt-3 space-y-2.5 border-t border-slate-300 pt-3">
           <div className="flex items-center justify-between gap-2">
