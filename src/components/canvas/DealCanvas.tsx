@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
   CheckCircle2,
+  ChevronDown,
   Download,
 
   FileUp,
@@ -876,6 +877,13 @@ export function CounterpartyRecord({
   const qc = useQueryClient();
   const setShortlist = useServerFn(setCounterpartyShortlist);
   const [pickedId, setPickedId] = useState<string | null>(null);
+  // Collapsed automatically the moment background screening takes over, so the panel doesn't keep
+  // showing both sets of findings at once — still reachable by hand via the header toggle.
+  const [mediaExpanded, setMediaExpanded] = useState(true);
+  const movedToScreening = screening || screeningResults !== null;
+  useEffect(() => {
+    if (movedToScreening) setMediaExpanded(false);
+  }, [movedToScreening]);
 
   const { data: candidates = [] } = useQuery({
     queryKey: ["counterparties", txId],
@@ -1066,8 +1074,20 @@ export function CounterpartyRecord({
 
       {mediaResults && mediaResults.length > 0 && (
         <div className="mt-3 space-y-2.5 border-t border-slate-300 pt-3">
-          <p className="label-caps text-slate-600">Online media checks</p>
-          {mediaResults.map((m) => (
+          <button
+            type="button"
+            onClick={() => setMediaExpanded((v) => !v)}
+            className="flex w-full items-center justify-between gap-2"
+          >
+            <span className="label-caps text-slate-600">Online media checks</span>
+            <ChevronDown
+              className={cn(
+                "h-3.5 w-3.5 shrink-0 text-slate-500 transition-transform",
+                mediaExpanded && "rotate-180",
+              )}
+            />
+          </button>
+          {mediaExpanded && mediaResults.map((m) => (
             <div key={m.counterpartyId} className="rounded-xl border border-slate-300 bg-white p-3">
               <p className="text-sm font-semibold text-slate-900">{m.name}</p>
               <ul className="mt-2 divide-y divide-slate-200">
