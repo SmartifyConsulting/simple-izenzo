@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Database,
   FileText,
+  Globe,
   Hammer,
   ListChecks,
   Search,
@@ -446,6 +447,7 @@ export function MahjongView({
           box={BOXES.poi}
           label="Proof of Intent"
           icon={FileText}
+          tone="light"
           state={st("trading", "poi")}
           onClick={() => open("trading", "poi")}
         />
@@ -454,7 +456,7 @@ export function MahjongView({
           label="Without a Doubt"
           sub="Hard gate · non-waivable"
           icon={ShieldCheck}
-          tone="danger"
+          tone="light"
           state={st("compliance", "wad")}
           onClick={() => open("compliance", "wad")}
         />
@@ -462,6 +464,7 @@ export function MahjongView({
           box={BOXES.kyc}
           label="KYC / KYB"
           icon={Users}
+          tone="light"
           state={st("compliance", "wad")}
           onClick={() => open("compliance", "wad")}
         />
