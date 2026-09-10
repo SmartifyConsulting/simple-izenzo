@@ -397,14 +397,16 @@ export function MahjongView({
           label="Register Bid"
           tone="header"
           state={readOnly ? "open" : st("trading", "bid-offer")}
-          onClick={readOnly ? () => onRegister?.("bid") : () => open("trading", "bid-offer")}
+          // Always starts a fresh bid, even when a deal is already loaded on this canvas — it's a
+          // new registration, not a way back into whatever's currently open.
+          onClick={() => onRegister?.("bid")}
         />
         <MjNode
           box={BOXES.offer}
           label="Register Offer"
           tone="header"
           state={readOnly ? "open" : st("trading", "bid-offer")}
-          onClick={readOnly ? () => onRegister?.("offer") : () => open("trading", "bid-offer")}
+          onClick={() => onRegister?.("offer")}
         />
 
         <MjNode

@@ -432,6 +432,27 @@ function LiveDealEngine() {
 
 
 
+  /** "Register Bid"/"Register Offer" from the Mahjong map — always starts a fresh registration,
+   * even when a deal is already loaded here, instead of just switching view onto whatever that
+   * deal already is. */
+  function startNewDeal(dir: "bid" | "offer") {
+    setActivity(null);
+    setDealTx(null);
+    setDirection(null);
+    setFlowStep("documents");
+    setAttachments([]);
+    setSearchError(null);
+    setScreening(false);
+    setScreeningResults(null);
+    setMediaRunning(false);
+    setMediaResults(null);
+    setMediaProgress(null);
+    setStagePanel(null);
+    setHasChosen(false);
+    setPendingDirection(dir);
+    setViewMode("classic");
+  }
+
   // Once something has been recorded, keep the split workspace open (and on the side it was
   // recorded for) even after the form resets — that's what the Live Workspace panel now shows.
   const side = direction ?? activity?.direction ?? pendingDirection ?? null;
@@ -690,10 +711,7 @@ function LiveDealEngine() {
           tx={dealTx ?? FLOWCHART_PREVIEW_TX}
           reload={() => {}}
           readOnly={!dealTx}
-          onRegister={(dir) => {
-            setPendingDirection(dir);
-            setViewMode("classic");
-          }}
+          onRegister={startNewDeal}
           // Clicking anything on the map hands over to the Classic detailed sequence, which is
           // where the work actually happens.
           onOpenClassic={() => setViewMode("classic")}
