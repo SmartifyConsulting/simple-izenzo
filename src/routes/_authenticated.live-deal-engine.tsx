@@ -694,6 +694,9 @@ function LiveDealEngine() {
             setPendingDirection(dir);
             setViewMode("classic");
           }}
+          // Clicking anything on the map hands over to the Classic detailed sequence, which is
+          // where the work actually happens.
+          onOpenClassic={() => setViewMode("classic")}
         />
       </AppShell>
     );
