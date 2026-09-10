@@ -88,13 +88,14 @@ const MEM_W = S5_W - GROUP_PAD * 2;
 type Box = { x: number; y: number; w: number; h: number };
 const BOXES = {
   bid: { x: 60, y: TOP_Y, w: SIDE_W, h: ROW },
-  offer: { x: 860, y: TOP_Y, w: SIDE_W, h: ROW },
+  // Left-aligned with the Memory box in Step 5, now that Step 1's frame extends that far right.
+  offer: { x: S5_L, y: TOP_Y, w: SIDE_W, h: ROW },
 
   loadDocs: { x: 60, y: TOP_Y + PITCH, w: SIDE_W, h: ROW },
   search: { x: 470, y: TOP_Y + PITCH, w: CENTER_W, h: ROW },
-  counterparty: { x: 860, y: TOP_Y + PITCH, w: SIDE_W, h: ROW },
+  counterparty: { x: S5_L, y: TOP_Y + PITCH, w: SIDE_W, h: ROW },
 
-  surfaceRoutes: { x: 860, y: TOP_Y + PITCH * 2, w: SIDE_W, h: ROW },
+  surfaceRoutes: { x: S5_L, y: TOP_Y + PITCH * 2, w: SIDE_W, h: ROW },
   choice: { x: 470, y: TOP_Y + PITCH * 2, w: CENTER_W, h: ROW },
 
   poi: { x: 470, y: TOP_Y + PITCH * 3 + STEP2_GAP_EXTRA, w: CENTER_W, h: ROW },
@@ -194,9 +195,9 @@ const GROUPS: { label: string; step: number; box: Box; emphasis?: boolean }[] = 
     box: {
       x: BOXES.bid.x - GROUP_PAD,
       y: BOXES.bid.y - GROUP_PAD,
-      // Extends all the way to Step 5's right edge, matching the full width the bottom band
-      // (Steps 3-5 together) already spans, instead of stopping at the Offer box.
-      w: S5_X + S5_W - (BOXES.bid.x - GROUP_PAD),
+      // Register Offer/Counterparty/Online Media Screening are left-aligned with Memory (Step 5),
+      // so the frame's right edge follows from their own position rather than a separate constant.
+      w: BOXES.offer.x + BOXES.offer.w - BOXES.bid.x + GROUP_PAD * 2,
       h: BOXES.choice.y + ROW - BOXES.bid.y + GROUP_PAD + GROUP_PAD_TIGHT + STEP1_EXTRA_H,
     },
   },
@@ -243,11 +244,9 @@ const GROUPS: { label: string; step: number; box: Box; emphasis?: boolean }[] = 
 ];
 
 
-// Centred in the gap between the Register Bid and Register Offer boxes, at the same row and
-// height — half as wide as the full gap so it reads as a discreet search, not a third register box.
-const SEARCH_GAP_MID = (BOXES.bid.x + BOXES.bid.w + BOXES.offer.x) / 2;
-const SEARCH_BOX_W = (BOXES.offer.x - (BOXES.bid.x + BOXES.bid.w)) / 2;
-const SEARCH_BOX: Box = { x: SEARCH_GAP_MID - SEARCH_BOX_W / 2, y: TOP_Y, w: SEARCH_BOX_W, h: ROW };
+// Same x and width as the shared center column (Search · AI + AI+, Choice, Proof of Intent, …),
+// so it lines up with that column and reads as part of the same diagram, not a stray element.
+const SEARCH_BOX: Box = { x: BOXES.search.x, y: TOP_Y, w: CENTER_W, h: ROW };
 
 type DealSuggestion = {
   id: string;
@@ -367,8 +366,8 @@ function GroupFrame({
   return (
     <div
       className={cn(
-        "pointer-events-none absolute rounded-xl border-2",
-        emphasis ? "border-primary/70" : "border-primary/40",
+        "pointer-events-none absolute rounded-xl border",
+        emphasis ? "border-primary/55" : "border-primary/40",
       )}
       style={{ left: pctX(box.x), top: pctY(box.y), width: pctX(box.w), height: pctY(box.h) }}
     >
@@ -412,6 +411,7 @@ function MjNode({
   box,
   label,
   sub,
+  subClassName,
   icon: Icon,
   state,
   onClick,
@@ -421,10 +421,12 @@ function MjNode({
   label: string;
   /** A small second line inside the node, under the label — used for WaD's "hard gate" note. */
   sub?: string;
+  /** Overrides the sub line's default color — used for WaD's terracotta "non-waivable" note. */
+  subClassName?: string;
   icon?: typeof Search;
   state: NodeState;
   onClick?: () => void;
-  tone?: "neutral" | "danger" | "header" | "light";
+  tone?: "neutral" | "danger" | "header" | "light" | "blue";
 }) {
   return (
     <button
@@ -444,12 +446,16 @@ function MjNode({
           "cursor-not-allowed border-border/60 bg-muted/10 text-muted-foreground/60",
         tone === "danger" && state !== "done" && "border-[#F97316]/60 bg-[#F97316]/10 text-[#F97316]",
         tone === "danger" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
+        // Same sky blue as the Trading Gate badge in the Reports list.
+        tone === "blue" && state !== "locked" && "border-info/60 bg-info/15 text-info",
+        tone === "blue" && state === "active" && "animate-signal-pulse",
+        tone === "blue" && state === "locked" && "cursor-not-allowed border-border/60 bg-muted/10 text-muted-foreground/60",
         tone === "light" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
         tone === "light" && state === "active" && "border-primary bg-primary/20 text-primary animate-signal-pulse",
         tone === "light" &&
           (state === "open" || state === "locked") &&
           cn(
-            "border-white/80 bg-muted/20 text-foreground hover:border-white",
+            "border-white/35 bg-muted/20 text-foreground hover:border-white/60",
             state === "locked" && "cursor-not-allowed text-muted-foreground/70",
           ),
       )}
@@ -462,7 +468,7 @@ function MjNode({
         <span
           className={cn(
             "truncate text-[9px] font-semibold uppercase tracking-wide",
-            tone === "danger" ? "text-[#F97316]" : "text-current opacity-80",
+            subClassName ?? (tone === "danger" ? "text-[#F97316]" : "text-current opacity-80"),
           )}
         >
           {sub}
@@ -545,13 +551,15 @@ export function MahjongView({
           box={BOXES.loadDocs}
           label="Load deal docs"
           icon={FileText}
+          tone="light"
           state={st("trading", "documents")}
           onClick={() => open("trading", "documents")}
         />
         <MjNode
           box={BOXES.search}
-          label="Search · AI + AI+"
+          label="Search AI + AI+"
           icon={Search}
+          tone="light"
           state={st("trading", "search")}
           onClick={() => open("trading", "search")}
         />
@@ -559,6 +567,7 @@ export function MahjongView({
           box={BOXES.counterparty}
           label="Counterparty"
           icon={Users}
+          tone="light"
           state={st("trading", "counterparties")}
           onClick={() => open("trading", "counterparties")}
         />
@@ -567,6 +576,7 @@ export function MahjongView({
           label="Online Media Screening"
           sub="Surface Routes/Paths"
           icon={Globe}
+          tone="light"
           state={st("trading", "online-media")}
           onClick={() => open("trading", "online-media")}
         />
@@ -575,6 +585,7 @@ export function MahjongView({
           box={BOXES.choice}
           label="Choice"
           icon={ListChecks}
+          tone="blue"
           state={st("trading", "choice")}
           onClick={() => open("trading", "choice")}
         />
@@ -590,6 +601,7 @@ export function MahjongView({
           box={BOXES.wad}
           label="Without a Doubt"
           sub="Hard gate · non-waivable"
+          subClassName="text-[#C1653D]"
           icon={ShieldCheck}
           tone="light"
           state={st("compliance", "wad")}
