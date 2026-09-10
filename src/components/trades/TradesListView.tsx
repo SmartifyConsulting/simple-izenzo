@@ -238,7 +238,7 @@ export function TradesListView() {
                       <th className="hidden px-4 py-2 font-medium md:table-cell">Counterparty</th>
                       <th className="hidden px-4 py-2 font-medium sm:table-cell">Value</th>
                       <th className="px-4 py-2 font-medium">Gate</th>
-                      <th className="hidden px-4 py-2 font-medium md:table-cell">Updated</th>
+                      <th className="hidden px-4 py-2 font-medium md:table-cell">Created</th>
                       <th className="w-10" />
                     </tr>
                   </thead>
