@@ -160,6 +160,7 @@ export function DealCanvas({
   throbStep,
   openProofOfIntent,
   screeningProgress,
+  mediaProgress,
   matchProgress,
 
 }: {
@@ -196,6 +197,8 @@ export function DealCanvas({
   openProofOfIntent?: boolean;
   /** Live progress of the background screening run, drawn as a bar under that node. */
   screeningProgress?: { done: number; total: number; failed?: boolean } | null;
+  /** Live progress of the online media scan, drawn as a bar under the Online Media Checks node. */
+  mediaProgress?: { done: number; total: number; failed?: boolean } | null;
   /** Live progress of the counterparty match search, drawn as a bar under the Counterparties
    * node — the match count is read from the already-cached candidate list. */
   matchProgress?: { searching: boolean; error?: string | null } | null;
