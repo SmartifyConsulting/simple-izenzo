@@ -610,9 +610,10 @@ export function MahjongView({
         <MjNode
           box={BOXES.choice}
           label="Choice"
-          labelClassName="text-red-600"
+          labelClassName="text-white"
           icon={ListChecks}
           tone="light"
+          frameClassName="border-white bg-[#32A8C7] text-white hover:border-white"
           state={st("trading", "choice")}
           onClick={() => open("trading", "choice")}
         />
