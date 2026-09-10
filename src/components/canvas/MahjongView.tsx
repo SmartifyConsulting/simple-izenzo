@@ -381,7 +381,8 @@ function GroupFrame({
     <div
       className={cn(
         "pointer-events-none absolute rounded-xl border transition-colors duration-500",
-        emphasis ? "border-primary/55" : "border-primary/40",
+        // Same alpha as before (not bolder) — just a paler, whiter tint of the same hue.
+        emphasis ? "border-[oklch(0.88_0.05_178)]/55" : "border-[oklch(0.88_0.05_178)]/40",
         active && "bg-gradient-to-br from-primary/14 via-primary/5 to-transparent",
       )}
       style={{ left: pctX(box.x), top: pctY(box.y), width: pctX(box.w), height: pctY(box.h) }}
