@@ -382,7 +382,7 @@ function GroupFrame({
       className={cn(
         "pointer-events-none absolute rounded-xl border transition-colors duration-500",
         // Same alpha as before (not bolder) — just a paler, whiter tint of the same hue.
-        emphasis ? "border-[oklch(0.88_0.05_178)]/55" : "border-[oklch(0.88_0.05_178)]/40",
+        emphasis ? "border-[oklch(0.95_0.03_178)]/55" : "border-[oklch(0.95_0.03_178)]/40",
         active && "bg-gradient-to-br from-primary/14 via-primary/5 to-transparent",
       )}
       style={{ left: pctX(box.x), top: pctY(box.y), width: pctX(box.w), height: pctY(box.h) }}
@@ -463,7 +463,7 @@ function MjNode({
         tone === "neutral" && state === "open" && "border-border bg-muted/30 text-foreground hover:border-primary/40",
         tone === "neutral" &&
           state === "locked" &&
-          "cursor-not-allowed border-border/60 bg-muted/10 text-muted-foreground/60",
+          "cursor-not-allowed border-border/60 bg-muted/10 text-muted-foreground/75",
         tone === "danger" && state !== "done" && "border-[#F97316]/60 bg-[#F97316]/10 text-[#F97316]",
         tone === "danger" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
         tone === "light" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
@@ -472,7 +472,7 @@ function MjNode({
           (state === "open" || state === "locked") &&
           cn(
             "border-white/35 bg-muted/20 text-foreground hover:border-white/60",
-            state === "locked" && "cursor-not-allowed text-muted-foreground/70",
+            state === "locked" && "cursor-not-allowed text-muted-foreground/85",
           ),
       )}
     >
@@ -484,7 +484,7 @@ function MjNode({
         <span
           className={cn(
             "truncate text-[9px] font-semibold uppercase tracking-wide",
-            subClassName ?? (tone === "danger" ? "text-[#F97316]" : "text-current opacity-80"),
+            subClassName ?? (tone === "danger" ? "text-[#F97316]" : "text-current opacity-95"),
           )}
         >
           {sub}
