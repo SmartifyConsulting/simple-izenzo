@@ -531,7 +531,7 @@ export function DealCanvas({
                 <div>
                   {node(
                     { stage: "trading", step: "online-media", icon: Globe },
-                    { side: "center", compact: true },
+                    { side: "center", compact: true, note: "Surface Routes/Paths" },
                   )}
                   {mediaProgress && mediaProgress.total > 0 && (
                     <div className="mt-1.5 space-y-1">
