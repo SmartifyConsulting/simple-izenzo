@@ -818,6 +818,9 @@ export function CounterpartyRecord({
   onContinue,
   screening = false,
   screeningResults = null,
+  mediaRunning = false,
+  mediaResults = null,
+  onMediaContinue,
   onFinalize,
   finalizing = false,
 }: {
@@ -830,6 +833,11 @@ export function CounterpartyRecord({
   /** True while those screening checks are being opened with the providers. */
   screening?: boolean;
   screeningResults?: ScreeningResult[] | null;
+  /** True while the open-web / social media scan is running. */
+  mediaRunning?: boolean;
+  mediaResults?: MediaCheckResult[] | null;
+  /** Fires the background screening once the media findings have been read. */
+  onMediaContinue?: (counterpartyIds: string[]) => void;
   /** Fires once the user has picked the single counterparty to actually trade with,
    * once screening has come back. */
   onFinalize?: (counterpartyId: string) => void;
