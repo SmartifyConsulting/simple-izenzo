@@ -30,6 +30,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CommoditySearch } from "@/components/CommoditySearch";
 import { supabase } from "@/integrations/supabase/client";
@@ -754,17 +765,31 @@ export function InlineFrame({
         <StepScreen tx={tx} stage={stage} step={step} reload={reload} />
       )}
       {canChangeParty && (
-        <button
-          type="button"
-          onClick={() => {
-            if (window.confirm("Release the party you chose and reopen the counterparty list?")) {
-              onChangeParty?.();
-            }
-          }}
-          className="mt-4 text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
-        >
-          Choose a different party
-        </button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <button
+              type="button"
+              className="mt-4 text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+            >
+              Choose a different party
+            </button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Choose a different party?</AlertDialogTitle>
+              <AlertDialogDescription>
+                The party you picked is released and the counterparty list opens again. Nothing that
+                has already been screened is lost.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Keep this party</AlertDialogCancel>
+              <AlertDialogAction onClick={() => onChangeParty?.()}>
+                Reopen the list
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
     </div>
   );
