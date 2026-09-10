@@ -616,7 +616,7 @@ export function MahjongView({
           labelClassName="text-white"
           icon={ListChecks}
           tone="light"
-          frameClassName="border-white bg-[#00e5ff] text-white hover:border-white"
+          frameClassName="border-info bg-info text-white hover:border-info"
           state={st("trading", "choice")}
           onClick={() => open("trading", "choice")}
         />
