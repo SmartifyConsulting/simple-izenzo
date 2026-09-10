@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CheckCircle2, Download, Eye, Paperclip, UploadCloud, X } from "lucide-react";
+import { BadgeCheck, CheckCircle2, Download, Eye, Paperclip, UploadCloud, X } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import {
   CanvasStart,
@@ -24,6 +24,7 @@ import { searchCounterparties } from "@/lib/izenzo.functions";
 import { runBackgroundScreening, type ScreeningResult } from "@/lib/screening.functions";
 import { runOnlineMediaChecks, type MediaCheckResult } from "@/lib/onlineMedia.functions";
 import { summarizeBidDocuments } from "@/lib/docSummary.functions";
+import { startVerification, listVerificationsForTx } from "@/lib/didit.functions";
 import { pushRecentDeal } from "@/lib/recentDeals";
 
 import { useViewMode, setViewMode } from "@/lib/viewMode";
@@ -221,7 +222,20 @@ function LiveDealEngine() {
   const runScreening = useServerFn(runBackgroundScreening);
   const summarizeDocs = useServerFn(summarizeBidDocuments);
   const runMediaChecks = useServerFn(runOnlineMediaChecks);
+  const startIdCheck = useServerFn(startVerification);
+  const listIdChecks = useServerFn(listVerificationsForTx);
   const queryClient = useQueryClient();
+
+  // The bidder/responder's own ID front/back, run through Didit the moment they're uploaded —
+  // shown as a small "ID Verified" badge once it comes back passed, without making them visit
+  // Settings separately to check.
+  const { data: idVerifications = [] } = useQuery({
+    queryKey: ["id-verification", dealTx?.id],
+    enabled: Boolean(dealTx?.id),
+    refetchInterval: 8000,
+    queryFn: () => listIdChecks({ data: { transactionId: dealTx!.id } }),
+  });
+  const idCheck = idVerifications.find((v) => v.check_type === "id_document") ?? null;
 
   // Which canvas step should pulse, on top of whichever step the canvas already highlights as
   // "active": Choice, until results have come back at least once; Background screening, while the
@@ -707,6 +721,26 @@ function LiveDealEngine() {
         .then((r) => setDocumentSummary(r.summary))
         .catch((err) => toast.error(`Could not summarize the documents: ${(err as Error).message}`))
         .finally(() => setDocumentSummaryBusy(false));
+
+      // ID front/back just uploaded — open the Didit ID check on them straight away instead of
+      // leaving the bidder to go find this under Settings. The badge on the workspace panel picks
+      // up the result on its own once Didit reports back.
+      if (idFront.length > 0 || idBack.length > 0) {
+        startIdCheck({
+          data: {
+            checkType: "id_document",
+            transactionId: dealTx.id,
+            ...(typeof window !== "undefined" ? { origin: window.location.origin } : {}),
+          },
+        })
+          .then((res) => {
+            window.open(res.url, "_blank", "noopener");
+            toast.success("ID verification opened in a new tab — the badge here updates once it's back.");
+            void queryClient.invalidateQueries({ queryKey: ["id-verification", dealTx.id] });
+          })
+          .catch((err) => toast.error(`Could not start ID verification: ${(err as Error).message}`));
+      }
+
       await runSearch(dealTx.id);
     } catch (err) {
       toast.error((err as Error).message);
@@ -912,7 +946,23 @@ function LiveDealEngine() {
 
                 {attachments.length > 0 && (
                   <div className="glass-node space-y-2 p-4">
-                    <p className="label-caps text-muted-foreground">Attachments</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="label-caps text-muted-foreground">Attachments</p>
+                      {idCheck?.status === "passed" && (
+                        <span
+                          title={`Verified via Didit${idCheck.completed_at ? ` — ${new Date(idCheck.completed_at).toLocaleString()}` : ""}`}
+                          className="flex shrink-0 items-center gap-1 rounded-full border border-success/40 bg-success/10 px-2 py-0.5 text-[10px] font-semibold text-success"
+                        >
+                          <BadgeCheck className="h-3 w-3" />
+                          ID Verified
+                        </span>
+                      )}
+                      {idCheck?.status === "in_progress" && (
+                        <span className="flex shrink-0 items-center gap-1 rounded-full border border-warning/40 bg-warning/10 px-2 py-0.5 text-[10px] font-semibold text-warning-foreground">
+                          ID check pending
+                        </span>
+                      )}
+                    </div>
                     <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
                     {attachments.map((a, i) => (
                       <div key={i} className="flex items-center gap-2 text-sm">
