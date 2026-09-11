@@ -731,12 +731,15 @@ function LiveDealEngine() {
         <OpenDealsPicker currentId={dealTx?.id ?? null} />
       </div>
 
-      <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[3fr_2fr]">
+      <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
         {/* Engine Map — always visible on the left. Clicking a node opens that step inline in
-            the Live Workspace beside it, instead of navigating away from this screen. */}
-        <div className="ink-grid flex min-h-[860px] w-full flex-col rounded-3xl border border-border p-3 sm:p-5">
-          <p className="label-caps text-white">Izenzo Engine Map</p>
-          <div className="mt-3 flex-1">
+            the Live Workspace beside it, instead of navigating away from this screen. Both
+            panels share the same fixed viewport-relative height so the pair fits on screen
+            without the page itself needing to scroll — the Map scales its diagram to fit, the
+            Workspace scrolls its own content internally if it runs long. */}
+        <div className="ink-grid flex h-[calc(100vh-190px)] w-full flex-col overflow-hidden rounded-3xl border border-border p-3 sm:p-5">
+          <p className="label-caps shrink-0 text-white">Izenzo Engine Map</p>
+          <div className="mt-3 min-h-0 flex-1">
             <MahjongView
               tx={dealTx ?? FLOWCHART_PREVIEW_TX}
               reload={() => void reloadDeal()}
@@ -748,15 +751,8 @@ function LiveDealEngine() {
         </div>
 
         {/* Live Workspace — always visible on the right. */}
-        <div className="ink-grid min-h-[860px] w-full rounded-3xl border border-border p-3 sm:p-5">
-          <div className="flex items-start justify-between gap-3">
-            <p className="label-caps text-white">Live workspace</p>
-            {(dealTx?.reference ?? activity?.reference) && (
-              <span className="shrink-0 rounded-full border border-white/30 bg-white/10 px-2.5 py-1 text-[11px] font-bold tracking-wide text-white">
-                {dealTx?.reference ?? activity?.reference}
-              </span>
-            )}
-          </div>
+        <div className="ink-grid h-[calc(100vh-190px)] w-full overflow-y-auto rounded-3xl border border-border p-3 sm:p-5">
+          <p className="label-caps text-white">Live workspace</p>
 
           {!activity && (
             <div className="mt-4">

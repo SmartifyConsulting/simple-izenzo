@@ -72,9 +72,12 @@ type Box = { x: number; y: number; w: number; h: number };
 // Left edge shared by the Trading, Compliance & Governance and Execution frames, so Steps 1, 2
 // and 3 all line up on the same left margin.
 const STEP_X = S3_L;
+// Create a Bid / Make an Offer sit side by side, sharing Search's width, one on each half.
+const BID_OFFER_GAP = 14;
+const BID_OFFER_W = (CENTER_W - BID_OFFER_GAP) / 2;
 
 // Each step's content height when fully expanded (excludes GROUP_PAD framing).
-const STEP1_H = PITCH * 4 + ROW; // bid, offer, search, surfaceRoutes, choice — full width, stacked
+const STEP1_H = PITCH * 3 + ROW; // bid+offer (shared row), search, surfaceRoutes, choice
 const STEP2_H = PITCH + ROW; // poi, wad
 const STEP3_H = PITCH * 2 + ROW; // projectPrep/execution, concept/prefeasibility/implementation, feasibility/bankability
 const STEP4_H = PITCH * 2 + ROW; // finality, payment, completion
@@ -109,11 +112,11 @@ function layout(collapsed: Collapsed) {
   const y5 = frameTop[5]! + GROUP_PAD;
 
   const boxes = {
-    bid: { x: STEP_X, y: y1, w: CENTER_W, h: ROW },
-    offer: { x: STEP_X, y: y1 + PITCH, w: CENTER_W, h: ROW },
-    search: { x: STEP_X, y: y1 + PITCH * 2, w: CENTER_W, h: ROW },
-    surfaceRoutes: { x: STEP_X, y: y1 + PITCH * 3, w: CENTER_W, h: ROW },
-    choice: { x: STEP_X, y: y1 + PITCH * 4, w: CENTER_W, h: ROW },
+    bid: { x: STEP_X, y: y1, w: BID_OFFER_W, h: ROW },
+    offer: { x: STEP_X + BID_OFFER_W + BID_OFFER_GAP, y: y1, w: BID_OFFER_W, h: ROW },
+    search: { x: STEP_X, y: y1 + PITCH, w: CENTER_W, h: ROW },
+    surfaceRoutes: { x: STEP_X, y: y1 + PITCH * 2, w: CENTER_W, h: ROW },
+    choice: { x: STEP_X, y: y1 + PITCH * 3, w: CENTER_W, h: ROW },
 
     poi: { x: STEP_X, y: y2, w: CENTER_W, h: ROW },
     wad: { x: STEP_X, y: y2 + PITCH, w: CENTER_W, h: ROW },
@@ -173,7 +176,9 @@ const cx = (b: Box) => b.x + b.w / 2;
 const cy = (b: Box) => b.y + b.h / 2;
 const top = (b: Box) => ({ x: cx(b), y: b.y });
 const bottom = (b: Box) => ({ x: cx(b), y: b.y + b.h });
-const right = (b: Box) => ({ x: b.x + b.w, y: cy(b) });
+// A point partway along a box's top edge — used to give Bid and Offer their own distinct landing
+// spot on Search's top edge instead of both arrows converging on the exact same center point.
+const topAt = (b: Box, frac: number) => ({ x: b.x + b.w * frac, y: b.y });
 
 type Point = { x: number; y: number };
 /** An elbow connector: straight from `a`, turning once, ending at `b`. `via: "x"` turns
@@ -183,12 +188,6 @@ type Point = { x: number; y: number };
 function elbow(a: Point, b: Point, via: "x" | "y" = "y"): string {
   const mid: Point = via === "y" ? { x: a.x, y: b.y } : { x: b.x, y: a.y };
   return `M ${a.x} ${a.y} L ${mid.x} ${mid.y} L ${b.x} ${b.y}`;
-}
-
-/** Routes Bid's arrow around Offer (which sits directly beneath it) via a detour out to the
- * right, down alongside, then into Search's right edge — so it never crosses through Offer's box. */
-function detourRight(a: Point, b: Point, out = 24): string {
-  return `M ${a.x} ${a.y} L ${a.x + out} ${a.y} L ${a.x + out} ${b.y} L ${b.x} ${b.y}`;
 }
 
 /** A tree connector: a short vertical stub leaves `a`'s border before the line fans out along a
@@ -203,8 +202,8 @@ function branchDown(a: Point, targets: Point[], stub = 26): string[] {
  * step is currently collapsed, since the boxes at each end aren't shown. */
 function buildArrows(boxes: ReturnType<typeof layout>["boxes"]): { d: string; steps: [number, number] }[] {
   return [
-    { d: detourRight(right(boxes.bid), right(boxes.search)), steps: [1, 1] },
-    { d: elbow(bottom(boxes.offer), top(boxes.search), "x"), steps: [1, 1] },
+    { d: elbow(bottom(boxes.bid), topAt(boxes.search, 0.28), "x"), steps: [1, 1] },
+    { d: elbow(bottom(boxes.offer), topAt(boxes.search, 0.72), "x"), steps: [1, 1] },
     { d: elbow(bottom(boxes.search), top(boxes.surfaceRoutes), "x"), steps: [1, 1] },
     { d: elbow(bottom(boxes.surfaceRoutes), top(boxes.choice), "x"), steps: [1, 1] },
     { d: elbow(bottom(boxes.choice), top(boxes.poi), "x"), steps: [1, 2] },
@@ -245,20 +244,23 @@ function GroupFrame({
   h: (v: number) => string;
 }) {
   return (
-    <div
-      className="pointer-events-none absolute rounded-xl"
-      style={{ left: pctX(box.x), top: h(box.y), width: pctX(box.w), height: h(box.h) }}
-    >
+    <>
+      <div
+        className="pointer-events-none absolute rounded-xl"
+        style={{ left: pctX(box.x), top: h(box.y), width: pctX(box.w), height: h(box.h) }}
+      />
+      {/* Positioned in the canvas's own left margin (before STEP_X) rather than overflowing the
+       * frame box, so it's never clipped by the diagram's own bounding box. */}
       <button
         type="button"
         onClick={onToggle}
-        style={{ transform: "translate(-100%, -50%)" }}
-        className="pointer-events-auto absolute left-[-10px] top-6 whitespace-nowrap text-left text-[10px] font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-primary"
+        style={{ left: pctX(0), top: h(box.y + 24), width: pctX(STEP_X - 16) }}
+        className="pointer-events-auto absolute -translate-y-1/2 text-right text-[10px] font-semibold uppercase leading-tight tracking-wide text-white transition-colors hover:text-primary"
         aria-expanded={!collapsed}
       >
         {collapsed ? "+ " : "− "}Step {step} · {label}
       </button>
-    </div>
+    </>
   );
 }
 
@@ -351,10 +353,10 @@ function MjNode({
         tone === "header" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
         tone === "neutral" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
         tone === "neutral" && state === "active" && "border-[#00e5ff] bg-[#00e5ff]/15 text-[#00e5ff] animate-throb-aqua",
-        tone === "neutral" && state === "open" && "border-white bg-black text-white hover:border-white",
+        tone === "neutral" && state === "open" && "border-white/50 bg-black font-normal text-white hover:border-white/70",
         tone === "neutral" &&
           state === "locked" &&
-          "cursor-not-allowed border-white/40 bg-black text-white/50",
+          "cursor-not-allowed border-white/40 bg-black font-normal text-white/50",
         tone === "danger" && state !== "done" && "border-[#F59E0B]/60 bg-[#F59E0B]/10 text-[#F59E0B]",
         tone === "danger" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
         tone === "light" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
@@ -362,7 +364,7 @@ function MjNode({
         tone === "light" &&
           (state === "open" || state === "locked") &&
           cn(
-            "border-white bg-black text-white hover:border-white",
+            "border-white/50 bg-black font-normal text-white hover:border-white/70",
             state === "locked" && "cursor-not-allowed text-white/50",
           ),
         frameClassName,
@@ -430,11 +432,12 @@ export function MahjongView({
   const pctYFn = (v: number) => `${(v / H) * 100}%`;
 
   return (
-    <div className="relative">
-      <div
-        className="relative mx-auto w-full"
-        style={{ aspectRatio: `${W} / ${H}` }}
-      >
+    <div className="relative h-full">
+      <div className="flex h-full items-start justify-center overflow-hidden">
+        <div
+          className="relative"
+          style={{ height: "100%", aspectRatio: `${W} / ${H}`, maxWidth: "100%" }}
+        >
 
         <ArrowLayer arrows={ARROWS} collapsed={collapsed} totalW={W} totalH={H} w={W} h={H} />
         {GROUPS.map((g) => (
@@ -452,7 +455,7 @@ export function MahjongView({
           <>
             <MjNode
               box={BOXES.bid}
-              label="Submit a Bid"
+              label="Create a Bid"
               tone="header"
               state={readOnly ? "open" : st("trading", "bid-offer")}
               // Always starts a fresh bid, even when a deal is already loaded on this canvas —
@@ -462,7 +465,7 @@ export function MahjongView({
             />
             <MjNode
               box={BOXES.offer}
-              label="Submit a Response"
+              label="Make an Offer"
               tone="header"
               state={readOnly ? "open" : st("trading", "bid-offer")}
               onClick={() => onRegister?.("offer")}
@@ -473,7 +476,7 @@ export function MahjongView({
               label="Search AI + AI+"
               icon={Search}
               tone="light"
-              frameClassName="border-white bg-[#C1653D] text-white hover:border-white"
+              frameClassName="border-white/50 bg-[#C1653D] text-white hover:border-white/70"
               state={st("trading", "search")}
               onClick={() => open("trading", "search")}
               pctY={pctYFn}
@@ -635,6 +638,7 @@ export function MahjongView({
             pctY={pctYFn}
           />
         )}
+        </div>
       </div>
 
       {active && (
