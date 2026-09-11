@@ -35,24 +35,6 @@ const STAGE_COPY: Record<(typeof SPINE)[number]["key"], { title: string; body: s
   },
 };
 
-const PRINCIPLES = [
-  {
-    n: "01",
-    title: "Hash-sealed by design",
-    body: "Every match is independently verifiable — tamper-evident from the first handshake to final settlement.",
-  },
-  {
-    n: "02",
-    title: "A gate that can't be waived",
-    body: "Compliance isn't a checkbox someone can skip under pressure. It clears, or the match doesn't proceed.",
-  },
-  {
-    n: "03",
-    title: "Counterparties who can prove it",
-    body: "KYC/KYB isn't a formality — it's the difference between an introduction and a liability.",
-  },
-];
-
 const THESIS = [
   {
     n: "01",
@@ -84,40 +66,24 @@ function HowItWorks() {
         Every match runs through the same five stages — no shortcuts, no skipped checks.
       </p>
 
-      <div className="mt-12 grid gap-12 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <ol className="space-y-10">
-          {SPINE.map((stage, i) => {
-            const copy = STAGE_COPY[stage.key];
-            return (
-              <li key={stage.key} className="flex gap-5">
-                <span className="text-sm font-semibold text-primary">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <div>
-                  <h2 className="text-lg font-medium tracking-tight text-foreground">
-                    {copy.title}
-                  </h2>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                    {copy.body}
-                  </p>
-                </div>
-              </li>
-            );
-          })}
-        </ol>
-
-        <div className="space-y-8 lg:border-l lg:border-border lg:pl-8">
-          {PRINCIPLES.map((p) => (
-            <div key={p.n}>
-              <p className="text-sm font-semibold text-primary">{p.n}</p>
-              <h3 className="mt-2 text-base font-medium tracking-tight text-foreground">
-                {p.title}
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{p.body}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+      <ol className="mt-12 max-w-2xl space-y-10">
+        {SPINE.map((stage, i) => {
+          const copy = STAGE_COPY[stage.key];
+          return (
+            <li key={stage.key} className="flex gap-5">
+              <span className="text-sm font-semibold text-primary">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <div>
+                <h2 className="text-lg font-medium tracking-tight text-foreground">
+                  {copy.title}
+                </h2>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{copy.body}</p>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
 
       <p className="mt-14 max-w-2xl text-sm leading-relaxed text-muted-foreground">
         Every step is recorded and independently verifiable. Verification can't be skipped or
