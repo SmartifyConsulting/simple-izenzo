@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
 import { INSIGHT_ARTICLES } from "@/lib/alphaBravoInsights";
 
 export const Route = createFileRoute("/alpha-bravo/about/")({
@@ -84,6 +85,14 @@ function About() {
             </article>
           </Link>
         ))}
+      </div>
+
+      <div className="mt-10 flex justify-end">
+        <Link to="/auth" search={{ mode: "signup", next: undefined }}>
+          <Button size="lg" className="rounded-full">
+            Submit a Bid
+          </Button>
+        </Link>
       </div>
     </section>
   );

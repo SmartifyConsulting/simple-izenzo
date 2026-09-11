@@ -1,5 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Search, Sparkles, Radio, Gauge } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/alpha-bravo/intelligence-fabric")({
   head: () => ({
@@ -52,9 +53,16 @@ const PRINCIPLES = [
 function IntelligenceFabric() {
   return (
     <section className="mx-auto max-w-5xl px-5 py-20 sm:py-24">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-        The Intelligence Fabric
-      </p>
+      <div className="flex items-start justify-between gap-4">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+          The Intelligence Fabric
+        </p>
+        <Link to="/auth" search={{ mode: "signup", next: undefined }} className="shrink-0">
+          <Button size="sm" className="rounded-full">
+            Submit a Bid
+          </Button>
+        </Link>
+      </div>
       <h1 className="mt-4 max-w-2xl text-4xl tracking-tight text-foreground sm:text-5xl">
         The layers that find your match, before you ever see a name.
       </h1>
