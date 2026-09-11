@@ -1115,7 +1115,7 @@ function LiveDealEngine() {
                         </span>
                       )}
                       {idCheck?.status === "in_progress" && (
-                        <span className="flex shrink-0 items-center gap-1 rounded-full border border-warning/40 bg-warning/10 px-2 py-0.5 text-[10px] font-semibold text-warning-foreground">
+                        <span className="flex shrink-0 items-center gap-1 rounded-full bg-info px-2 py-0.5 text-[10px] font-semibold text-white">
                           ID check pending
                         </span>
                       )}
@@ -1193,7 +1193,6 @@ function LiveDealEngine() {
                       onMediaContinue={startScreening}
                       onFinalize={finalizeChoice}
                       finalizing={finalizing}
-                      dealLabel={dealTx.commodity ?? dealTx.title}
                     />
                   </div>
                 )}

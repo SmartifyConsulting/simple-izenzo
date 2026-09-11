@@ -304,6 +304,17 @@ export function DealCanvas({
     );
   };
 
+  // Same one-line green tick used once Proof of Intent/WaD are sealed and by Bid Creation/
+  // Submission of documents on the Live Workspace panel — used here per-step (Counterparties,
+  // Choice) so each collapses to a single line as soon as it's done, instead of staying a full
+  // card, so everything after it moves up.
+  const tickedLine = (label: string) => (
+    <div key={label} className="flex items-center gap-2 text-sm text-emerald-500">
+      <CheckCircle2 className="h-4 w-4 shrink-0" />
+      {label}
+    </div>
+  );
+
   const poi = Boolean(tx.poi_sealed_at);
   const poiSealed = poi;
   const wad = Boolean(tx.wad_completed_at);
@@ -514,33 +525,39 @@ export function DealCanvas({
             forceOpen={Boolean(openProofOfIntent)}
           >
             <div className={cn(stepsBoxClass, "space-y-3")}>
-              <div>
-                {node({ stage: "trading", step: "counterparties", icon: Users }, { side: "center" })}
-                {/* Once the search finishes cleanly, the node's own "done" tick already says
-                    everything the progress bar was saying — same treatment as the Bid/Offer node
-                    once it's registered — so the bar clears rather than lingering under it. */}
-                {matchProgress && (matchProgress.searching || matchProgress.error) && (
-                  <div className="mt-1.5 space-y-1">
-                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                      <div
-                        className={cn(
-                          "h-full rounded-full transition-all duration-500",
-                          matchProgress.searching
-                            ? "w-1/2 animate-ribbon-sweep bg-primary"
-                            : "w-full bg-destructive",
-                        )}
-                      />
+              {stateOf("trading", "counterparties") === "done" ? (
+                tickedLine("Counterparties")
+              ) : (
+                <div>
+                  {node({ stage: "trading", step: "counterparties", icon: Users }, { side: "center" })}
+                  {/* Once the search finishes cleanly, the node's own "done" tick already says
+                      everything the progress bar was saying — same treatment as the Bid/Offer node
+                      once it's registered — so the bar clears rather than lingering under it. */}
+                  {matchProgress && (matchProgress.searching || matchProgress.error) && (
+                    <div className="mt-1.5 space-y-1">
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-all duration-500",
+                            matchProgress.searching
+                              ? "w-1/2 animate-ribbon-sweep bg-primary"
+                              : "w-full bg-destructive",
+                          )}
+                        />
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        {matchProgress.searching
+                          ? "Searching for counterparties…"
+                          : `Search could not finish: ${matchProgress.error}`}
+                      </p>
                     </div>
-                    <p className="text-[11px] text-muted-foreground">
-                      {matchProgress.searching
-                        ? "Searching for counterparties…"
-                        : `Search could not finish: ${matchProgress.error}`}
-                    </p>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
               {visible("trading", "choice") &&
-                node({ stage: "trading", step: "choice", icon: MousePointerClick }, { side: "center" })}
+                (stateOf("trading", "choice") === "done"
+                  ? tickedLine("Choice")
+                  : node({ stage: "trading", step: "choice", icon: MousePointerClick }, { side: "center" }))}
               {visible("trading", "online-media") && (
                 <div>
                   {node(
@@ -874,7 +891,6 @@ export function CounterpartyRecord({
   onMediaContinue,
   onFinalize,
   finalizing = false,
-  dealLabel,
 }: {
   txId?: string | null;
   /** True while the AI/AI+ search is still running, so the panel polls for freshly saved rows. */
@@ -895,8 +911,6 @@ export function CounterpartyRecord({
   onFinalize?: (counterpartyId: string) => void;
   /** True while that final pick is being recorded and the step is advancing to Intent. */
   finalizing?: boolean;
-  /** What to call these matches in the draft-matches confirmation — the deal's commodity/title. */
-  dealLabel?: string;
 }) {
   const qc = useQueryClient();
   const setShortlist = useServerFn(setCounterpartyShortlist);
@@ -906,7 +920,6 @@ export function CounterpartyRecord({
   const listChallengesFn = useServerFn(listChallenges);
   const [invitingId, setInvitingId] = useState<string | null>(null);
   const [pickedId, setPickedId] = useState<string | null>(null);
-  const [draftConfirmOpen, setDraftConfirmOpen] = useState(false);
   const [challengeOpen, setChallengeOpen] = useState(false);
   const [governanceOpen, setGovernanceOpen] = useState(false);
   const [challengeSubject, setChallengeSubject] = useState("");
@@ -1418,7 +1431,7 @@ export function CounterpartyRecord({
         <Button
           type="button"
           className={cn(
-            "mt-3 w-full",
+            "mt-3 w-full bg-info text-white hover:bg-info/90",
             !pickedId && !finalizing && "bg-slate-300 text-slate-700 hover:bg-slate-300 disabled:opacity-100",
           )}
           disabled={finalizing || !pickedId}
@@ -1434,7 +1447,7 @@ export function CounterpartyRecord({
         <Button
           type="button"
           className={cn(
-            "mt-3 w-full",
+            "mt-3 w-full bg-info text-white hover:bg-info/90",
             ticked.length === 0 && "bg-slate-300 text-slate-700 hover:bg-slate-300 disabled:opacity-100",
           )}
           disabled={ticked.length === 0}
@@ -1451,9 +1464,12 @@ export function CounterpartyRecord({
         !continued && (
           <Button
             type="button"
-            className="mt-3 w-full"
+            className={cn(
+              "mt-3 w-full bg-info text-white hover:bg-info/90",
+              ticked.length === 0 && "bg-slate-300 text-slate-700 hover:bg-slate-300 disabled:opacity-100",
+            )}
             disabled={ticked.length === 0}
-            onClick={() => setDraftConfirmOpen(true)}
+            onClick={() => onContinue(ticked)}
           >
             {ticked.length === 0
               ? "Tick a counterparty to continue"
@@ -1461,42 +1477,6 @@ export function CounterpartyRecord({
           </Button>
         )
       )}
-
-      <Dialog open={draftConfirmOpen} onOpenChange={setDraftConfirmOpen}>
-        <DialogContent className="glass max-w-md">
-          <DialogTitle>Create Draft Matches</DialogTitle>
-          <DialogDescription>
-            You are about to create {ticked.length} match{ticked.length === 1 ? "" : "es"}
-            {dealLabel ? (
-              <>
-                {" "}
-                for <strong>{dealLabel}</strong>
-              </>
-            ) : null}
-            .
-          </DialogDescription>
-          <p className="text-sm font-medium text-foreground">
-            This is a draft. No commercial terms (quantity, price, currency) will be recorded. You
-            will need to add real commercial terms on the match detail page before confirming intent.
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Creating a match does not create any financial obligation or deduct credits.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDraftConfirmOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                setDraftConfirmOpen(false);
-                onContinue?.(ticked);
-              }}
-            >
-              Create Drafts
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={challengeOpen} onOpenChange={setChallengeOpen}>
         <DialogContent className="glass max-w-md">
