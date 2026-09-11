@@ -179,11 +179,12 @@ const ARROWS: { d: string; arrow?: boolean }[] = [
   { d: elbow(bottom(BOXES.poi), top(BOXES.wad), "x") },
   ...branchDown(
     bottom(BOXES.wad),
-    [top(BOXES.projectPrep), top(BOXES.execution), top(BOXES.finality)],
+    [top(BOXES.projectPrep), top(BOXES.execution)],
     44,
   ).map((d) => ({ d })),
 
   { d: elbow(bottom(BOXES.execution), top(BOXES.implementation), "x") },
+  { d: elbow(bottom(BOXES.execution), top(BOXES.finality), "x") },
   { d: elbow(bottom(BOXES.finality), top(BOXES.payment), "x") },
   { d: elbow(bottom(BOXES.payment), top(BOXES.completion), "x") },
   { d: elbow(bottom(BOXES.completion), top(BOXES.memory), "x") },
@@ -277,9 +278,7 @@ function GroupFrame({
   return (
     <div
       className={cn(
-        "pointer-events-none absolute rounded-xl border transition-colors duration-500",
-        // Same alpha as before (not bolder) — just a paler, whiter tint of the same hue.
-        emphasis ? "border-[oklch(0.95_0.03_178)]/55" : "border-[oklch(0.95_0.03_178)]/40",
+        "pointer-events-none absolute rounded-xl transition-colors duration-500",
         active && "bg-gradient-to-br from-primary/14 via-primary/5 to-transparent",
       )}
       style={{ left: pctX(box.x), top: pctY(box.y), width: pctX(box.w), height: pctY(box.h) }}
@@ -435,8 +434,7 @@ export function MahjongView({
   const activeStep = currentStepNumber(tx);
 
   return (
-    <div className="ink-grid relative rounded-3xl border border-border p-3 sm:p-4">
-
+    <div className="relative">
       <div
         className="relative mx-auto"
         style={{

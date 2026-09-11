@@ -8,7 +8,6 @@ import { AppShell } from "@/components/layout/AppShell";
 import {
   CanvasStart,
   CounterpartyRecord,
-  DealCanvas,
   InlineFrame,
   FLOWCHART_PREVIEW_TX,
   type RecordedActivity,
@@ -22,6 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { supabase } from "@/integrations/supabase/client";
 import { advance, fallbackReference, fingerprintOf, recordEvent, type Transaction } from "@/lib/tx";
+import type { StageKey } from "@/lib/spine";
 import { useAuth } from "@/lib/auth";
 import { searchCounterparties } from "@/lib/izenzo.functions";
 import { runBackgroundScreening, type ScreeningResult } from "@/lib/screening.functions";
@@ -30,7 +30,6 @@ import { summarizeBidDocuments } from "@/lib/docSummary.functions";
 import { startVerification, listVerificationsForTx } from "@/lib/didit.functions";
 import { pushRecentDeal } from "@/lib/recentDeals";
 
-import { useViewMode, setViewMode } from "@/lib/viewMode";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/live-deal-engine")({
@@ -298,6 +297,9 @@ function LiveDealEngine() {
   const [finalizing, setFinalizing] = useState(false);
   /** Which gate step the right-hand panel is currently asking the user to complete. */
   const [stagePanel, setStagePanel] = useState<"intent" | "poi" | "wad" | null>(null);
+  /** Set when a Map node outside the Workspace's own step-specific UI is clicked — shows a
+   * generic inline detail panel for that (stage, step) in the Workspace instead. */
+  const [mapPanel, setMapPanel] = useState<{ stage: StageKey; step: string } | null>(null);
   // Coming back to a deal that is already mid-gate reopens the step it stopped on. A deal that
   // already has a chosen counterparty but no signed intent always reopens Intent, whatever step
   // happens to be stored on the row — that is what left users stranded on "Choice recorded".
@@ -605,28 +607,43 @@ function LiveDealEngine() {
     setMediaProgress(null);
     setStagePanel(null);
     setHasChosen(false);
+    setMapPanel(null);
     setPendingDirection(dir);
-    setViewMode("classic");
   }
 
-  // Once something has been recorded, keep the split workspace open (and on the side it was
-  // recorded for) even after the form resets — that's what the Live Workspace panel now shows.
-  const side = direction ?? activity?.direction ?? pendingDirection ?? null;
-
-  // The bare "Open a bid or an offer" picker (Classic view with nothing recorded and no side
-  // picked yet) is retired — the Engine Map is where every session should land instead.
-  const viewMode = useViewMode();
-  useEffect(() => {
-    if (viewMode === "classic" && !activity && !side) setViewMode("mahjong");
-  }, [viewMode, activity, side]);
+  /** Clicking a node on the Engine Map that isn't already covered by the Workspace's own
+   * step-specific UI (documents, search, choice, POI, WaD) — opens a generic inline detail panel
+   * in the Workspace instead, so the Map never navigates away from this screen. */
+  function openMapStep(stage: StageKey, step: string) {
+    if (stage === "trading" && step === "documents") {
+      setStagePanel(null);
+      setMapPanel(null);
+      setFlowStep("documents");
+      return;
+    }
+    if (stage === "trading" && (step === "search" || step === "counterparties" || step === "online-media" || step === "choice")) {
+      setStagePanel(null);
+      setMapPanel(null);
+      return;
+    }
+    if (stage === "trading" && step === "poi") {
+      setMapPanel(null);
+      setStagePanel("poi");
+      return;
+    }
+    if (stage === "compliance" && step === "wad") {
+      setMapPanel(null);
+      setStagePanel("wad");
+      return;
+    }
+    setStagePanel(null);
+    setMapPanel({ stage, step });
+  }
 
   // Opened via a Bid/Offer ID elsewhere (e.g. the Report list) — load that specific deal instead
   // of whatever was last worked on in this browser.
   useEffect(() => {
     if (!txParam) return;
-    // Land on the Engine Map, not whatever view this session was last on — an ID badge clicked
-    // elsewhere is asking "where is this deal right now", which the map answers at a glance.
-    setViewMode("mahjong");
     (async () => {
       try {
         const { data: txRow } = await supabase
@@ -896,72 +913,71 @@ function LiveDealEngine() {
     }
   }
 
-  if (viewMode === "mahjong") {
-    return (
-      <AppShell wide>
-        <div className="mb-3 flex items-center justify-between gap-3">
-          {dealTx ? (
-            <button
-              type="button"
-              onClick={() => setViewMode("classic")}
-              title="Open in Izenzo Workspace"
-              className="rounded-full border border-primary/40 bg-primary/12 px-2.5 py-1 text-[11px] font-bold tracking-wide text-primary transition-colors hover:border-primary hover:bg-primary/20"
-            >
-              {dealTx.reference ?? activity?.reference ?? dealTx.id.slice(0, 8)}
-            </button>
-          ) : (
-            <span />
-          )}
-          <OpenDealsPicker currentId={dealTx?.id ?? null} />
-        </div>
-        <MahjongView
-          tx={dealTx ?? FLOWCHART_PREVIEW_TX}
-          reload={() => {}}
-          readOnly={!dealTx}
-          onRegister={startNewDeal}
-          // Clicking anything on the map hands over to the Classic detailed sequence, which is
-          // where the work actually happens.
-          onOpenClassic={() => setViewMode("classic")}
-        />
-      </AppShell>
-    );
-  }
-
   return (
     <AppShell wide>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        {dealTx ? (
+          <span className="rounded-full border border-primary/40 bg-primary/12 px-2.5 py-1 text-[11px] font-bold tracking-wide text-primary">
+            {dealTx.reference ?? activity?.reference ?? dealTx.id.slice(0, 8)}
+          </span>
+        ) : (
+          <span />
+        )}
+        <OpenDealsPicker currentId={dealTx?.id ?? null} />
+      </div>
 
-      <div className={cn(side && "grid grid-cols-1 gap-4 sm:grid-cols-2 sm:items-stretch")}>
-        <div
-          className={cn(
-            // Once a direction is picked, the form and its next steps merge into one bordered,
-            // gridded frame — matched in width and height by the Live Workspace frame beside it.
-            side && "ink-grid w-full rounded-3xl border border-border p-3 sm:p-5",
-            side === "offer" && "sm:order-2",
-          )}
-        >
-          {!activity && (
-            <CanvasStart
-              initialDirection={pendingDirection}
-              onCreated={(tx, recorded) => {
-                setPicking(false);
-                setDirection(null);
-                setPendingDirection(null);
-                setActivity(recorded);
-                setDealTx(tx);
-                setFlowStep("documents");
-                try {
-                  localStorage.setItem(ACTIVE_DEAL_KEY, JSON.stringify({ txId: tx.id, activity: recorded }));
-                } catch {
-                  // Best-effort — resuming later just won't work if storage is unavailable.
-                }
-              }}
-              onPickingChange={setPicking}
-              onDirectionChange={setDirection}
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+        {/* Engine Map — always visible on the left. Clicking a node opens that step inline in
+            the Live Workspace beside it, instead of navigating away from this screen. */}
+        <div className="ink-grid w-full rounded-3xl border border-border p-3 sm:p-5">
+          <p className="label-caps text-white">Izenzo Engine Map</p>
+          <div className="mt-3">
+            <MahjongView
+              tx={dealTx ?? FLOWCHART_PREVIEW_TX}
+              reload={() => void reloadDeal()}
+              readOnly={!dealTx}
+              onRegister={startNewDeal}
+              onOpenClassic={openMapStep}
             />
+          </div>
+        </div>
+
+        {/* Live Workspace — always visible on the right. */}
+        <div className="ink-grid w-full rounded-3xl border border-border p-3 sm:p-5">
+          <div className="flex items-start justify-between gap-3">
+            <p className="label-caps text-white">Live workspace</p>
+            {(dealTx?.reference ?? activity?.reference) && (
+              <span className="shrink-0 rounded-full border border-white/30 bg-white/10 px-2.5 py-1 text-[11px] font-bold tracking-wide text-white">
+                {dealTx?.reference ?? activity?.reference}
+              </span>
+            )}
+          </div>
+
+          {!activity && (
+            <div className="mt-4">
+              <CanvasStart
+                initialDirection={pendingDirection}
+                onCreated={(tx, recorded) => {
+                  setPicking(false);
+                  setDirection(null);
+                  setPendingDirection(null);
+                  setActivity(recorded);
+                  setDealTx(tx);
+                  setFlowStep("documents");
+                  try {
+                    localStorage.setItem(ACTIVE_DEAL_KEY, JSON.stringify({ txId: tx.id, activity: recorded }));
+                  } catch {
+                    // Best-effort — resuming later just won't work if storage is unavailable.
+                  }
+                }}
+                onPickingChange={setPicking}
+                onDirectionChange={setDirection}
+              />
+            </div>
           )}
 
           {activity && (
-            <p className="label-caps text-white">
+            <p className="mt-4 label-caps text-white">
               Live deal engine for {activity.direction === "bid" ? "The Bid" : "Responder"}
             </p>
           )}
@@ -1014,58 +1030,21 @@ function LiveDealEngine() {
             </div>
           )}
 
-          {/* The fully-ticked flowchart demo (FLOWCHART_PREVIEW_TX) is only meaningful on the
-              genuinely empty landing state — once a registration form is open (picking, with no
-              real deal recorded yet), showing that demo behind it looks like the new bid/offer
-              already has counterparties, screening and Proof of Intent done, which is wrong. */}
-          {(dealTx || !picking) && (
-            <div className={side ? "mt-3" : "mt-4"}>
-              <DealCanvas
-                tx={dealTx ?? FLOWCHART_PREVIEW_TX}
-                reload={() => {}}
-                readOnly
-                hideBidOfferGroups={picking || Boolean(activity)}
-                focusSide={side}
-                forceRevealAll
-                hideMatchingRibbon
-                openProofOfIntent={
-                  !dealTx?.poi_sealed_at && (flowStep === "searching" || flowStep === "results")
-                }
-
-                throbStep={throbStep}
-                screeningProgress={screeningProgress}
-                mediaProgress={mediaProgress}
-                matchProgress={
-                  flowStep === "searching" || flowStep === "results"
-                    ? { searching: flowStep === "searching", error: searchError }
-                    : null
-                }
+          {mapPanel && dealTx && (
+            <div className="mt-3">
+              <InlineFrame
+                tx={dealTx}
+                stage={mapPanel.stage}
+                step={mapPanel.step}
+                reload={() => void reloadDeal()}
+                onClose={() => setMapPanel(null)}
               />
             </div>
           )}
 
-        </div>
-
-        {side && (
-          <div
-            className={cn(
-              "ink-grid w-full rounded-3xl border border-border p-3 sm:p-5",
-              side === "offer" && "sm:order-1",
-            )}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <p className="label-caps text-white">Live workspace</p>
-              {(dealTx?.reference ?? activity?.reference) && (
-                <span className="shrink-0 rounded-full border border-white/30 bg-white/10 px-2.5 py-1 text-[11px] font-bold tracking-wide text-white">
-                  {dealTx?.reference ?? activity?.reference}
-                </span>
-              )}
-            </div>
-
-
-            {activity ? (
-              <div className="mt-4 space-y-3">
-                {(documentSummaryBusy || documentSummary) && (
+          {activity ? (
+            <div className="mt-4 space-y-3">
+              {(documentSummaryBusy || documentSummary) && (
                   <div className="glass-node space-y-2 p-4">
                     <p className="label-caps text-muted-foreground">AI document summary</p>
                     {documentSummaryBusy && !documentSummary ? (
@@ -1221,16 +1200,9 @@ function LiveDealEngine() {
                 )}
 
                 {dealTx?.wad_completed_at && <TradeSummary tx={dealTx} />}
-
-
-
-
               </div>
-            ) : (
-              <p className="mt-4 text-xs text-muted-foreground">Nothing recorded yet.</p>
-            )}
-          </div>
-        )}
+            ) : null}
+        </div>
       </div>
     </AppShell>
   );
