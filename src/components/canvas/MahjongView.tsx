@@ -10,7 +10,6 @@ import {
   ListChecks,
   Search,
   ShieldCheck,
-  Users,
 } from "lucide-react";
 import { InlineFrame } from "./DealCanvas";
 import { lockReason, stepIndex, type StageKey } from "@/lib/spine";
@@ -43,9 +42,7 @@ function currentStepNumber(tx: Transaction): number {
 // other regardless of viewport width. The canvas is deliberately wide-and-short so the whole
 // workflow fits on screen without scrolling.
 const W = 1246;
-const H = 760;
 const pctX = (v: number) => `${(v / W) * 100}%`;
-const pctY = (v: number) => `${(v / H) * 100}%`;
 
 const ROW = 42; // shared node height
 const PITCH = 72; // vertical distance from one row's top to the next
@@ -55,7 +52,7 @@ const TOP_Y = 20;
 // Extra vertical room between the Step 1 and Step 2 frames — without it the two frames' borders
 // (and Step 2's "Step 2 · Compliance & Governance" label, which sits above its own frame) overlap.
 const STEP2_GAP_EXTRA = 61;
-// A little breathing room before the three parallel branches split off from KYC/KYB.
+// A little breathing room before the three parallel branches split off from Without a Doubt.
 const BRANCH_Y = TOP_Y + PITCH * 6 + 58 + STEP2_GAP_EXTRA;
 
 const GROUP_PAD = 18;
@@ -68,63 +65,78 @@ const STEP1_EXTRA_H = 10;
 const STEP2_TOP_PAD = GROUP_PAD_TIGHT + 12;
 
 
-// Steps 3, 4 and 5 are laid out as three frames with identical gaps between them (and the same
-// gap to each canvas edge), so the bottom band reads as evenly spaced columns.
+// Steps 3, 4 and 5 stack vertically, one frame under the next, all sharing the same left edge
+// and width as the Execution frame.
 const S3_W = 556;
-const S4_W = 250;
-const S5_W = 220;
-const COL_GAP = (W - (S3_W + S4_W + S5_W)) / 4;
+const COL_GAP = (W - S3_W) / 2;
 const S3_X = COL_GAP;
-const S4_X = S3_X + S3_W + COL_GAP;
-const S5_X = S4_X + S4_W + COL_GAP;
 
-// Inner content bounds of each bottom frame.
+// Inner content bounds of the Execution frame.
 const S3_L = S3_X + GROUP_PAD;
 const S3_R = S3_X + S3_W - GROUP_PAD;
-const S4_L = S4_X + GROUP_PAD;
-const S5_L = S5_X + GROUP_PAD;
 
 const PREP_W = 300;
 const SUB_W = 145;
 const EXEC_W = 190;
-const FIN_W = S4_W - GROUP_PAD * 2;
-const MEM_W = S5_W - GROUP_PAD * 2;
+const FIN_W = S3_W - GROUP_PAD * 2;
+const MEM_W = S3_W - GROUP_PAD * 2;
+// Vertical gap between the stacked Step 3 → Step 4 → Step 5 frames.
+const STACK_GAP = 46;
+// Bottom edge of the Execution frame (Project Preparation/Concept/Pre-feasibility/Feasibility/
+// Bankability, 3 rows tall) — Step 4's frame starts STACK_GAP below this.
+const STEP3_BOTTOM = BRANCH_Y + PITCH * 2 + ROW + GROUP_PAD;
+const FIN_Y = STEP3_BOTTOM + STACK_GAP + GROUP_PAD;
+// Bottom edge of the Finality frame (Finality/Payment/Completion, 3 rows tall) — Step 5's frame
+// starts STACK_GAP below this.
+const STEP4_BOTTOM = FIN_Y + PITCH * 2 + ROW + GROUP_PAD;
+const MEM_Y = STEP4_BOTTOM + STACK_GAP + GROUP_PAD;
+
+// Canvas height follows from the content — Step 3, 4 and 5 now stack instead of sitting
+// side by side, so the diagram is taller than it is wide.
+const H = MEM_Y + ROW + GROUP_PAD + 20;
+const pctY = (v: number) => `${(v / H) * 100}%`;
 
 type Box = { x: number; y: number; w: number; h: number };
+// Left edge shared by the Trading, Compliance & Governance and Execution frames, so Steps 1, 2
+// and 3 all line up on the same left margin.
+const STEP_X = S3_L;
+// Bid/Offer sit directly above Search, one on each half of its width, so both feed straight down
+// into it — the two starting moves converging on the one search step, instead of routing through
+// separate Load Docs / Counterparty boxes first.
+const BID_OFFER_GAP = 10;
+const BID_OFFER_W = (CENTER_W - BID_OFFER_GAP) / 2;
 const BOXES = {
-  bid: { x: 60, y: TOP_Y, w: SIDE_W, h: ROW },
-  // Left-aligned with the Memory box in Step 5, now that Step 1's frame extends that far right.
-  offer: { x: S5_L, y: TOP_Y, w: SIDE_W, h: ROW },
+  bid: { x: STEP_X, y: TOP_Y, w: BID_OFFER_W, h: ROW },
+  offer: { x: STEP_X + BID_OFFER_W + BID_OFFER_GAP, y: TOP_Y, w: BID_OFFER_W, h: ROW },
 
-  loadDocs: { x: 60, y: TOP_Y + PITCH, w: SIDE_W, h: ROW },
-  search: { x: 470, y: TOP_Y + PITCH, w: CENTER_W, h: ROW },
-  counterparty: { x: S5_L, y: TOP_Y + PITCH, w: SIDE_W, h: ROW },
+  search: { x: STEP_X, y: TOP_Y + PITCH, w: CENTER_W, h: ROW },
 
-  surfaceRoutes: { x: S5_L, y: TOP_Y + PITCH * 2, w: SIDE_W, h: ROW },
-  choice: { x: 470, y: TOP_Y + PITCH * 2, w: CENTER_W, h: ROW },
+  // In the main sequence between Search and Choice, not off to the side.
+  surfaceRoutes: { x: STEP_X, y: TOP_Y + PITCH * 2, w: CENTER_W, h: ROW },
+  choice: { x: STEP_X, y: TOP_Y + PITCH * 3, w: CENTER_W, h: ROW },
 
-  poi: { x: 470, y: TOP_Y + PITCH * 3 + STEP2_GAP_EXTRA, w: CENTER_W, h: ROW },
-  wad: { x: 470, y: TOP_Y + PITCH * 4 + STEP2_GAP_EXTRA, w: CENTER_W, h: ROW },
-  kyc: { x: 470, y: TOP_Y + PITCH * 5 + STEP2_GAP_EXTRA, w: CENTER_W, h: ROW },
+  poi: { x: STEP_X, y: TOP_Y + PITCH * 4 + STEP2_GAP_EXTRA, w: CENTER_W, h: ROW },
+  wad: { x: STEP_X, y: TOP_Y + PITCH * 5 + STEP2_GAP_EXTRA, w: CENTER_W, h: ROW },
 
   projectPrep: { x: S3_L, y: BRANCH_Y, w: PREP_W, h: ROW },
   execution: { x: S3_R - EXEC_W, y: BRANCH_Y, w: EXEC_W, h: ROW },
-  finality: { x: S4_L, y: BRANCH_Y, w: FIN_W, h: ROW },
 
   // Sub-nodes align with the nearest edge of their parent: Concept/Feasibility flush with Project
   // Preparation's left edge, Pre-feasibility/Bankability flush with its right edge.
   concept: { x: S3_L, y: BRANCH_Y + PITCH, w: SUB_W, h: ROW },
   prefeasibility: { x: S3_L + PREP_W - SUB_W, y: BRANCH_Y + PITCH, w: SUB_W, h: ROW },
   implementation: { x: S3_R - EXEC_W, y: BRANCH_Y + PITCH, w: EXEC_W, h: ROW },
-  payment: { x: S4_L, y: BRANCH_Y + PITCH, w: FIN_W, h: ROW },
 
   feasibility: { x: S3_L, y: BRANCH_Y + PITCH * 2, w: SUB_W, h: ROW },
   bankability: { x: S3_L + PREP_W - SUB_W, y: BRANCH_Y + PITCH * 2, w: SUB_W, h: ROW },
-  completion: { x: S4_L, y: BRANCH_Y + PITCH * 2, w: FIN_W, h: ROW },
 
-  // Memory matches Completion's size and sits on the same line, so the arrow between them is a
-  // straight horizontal run.
-  memory: { x: S5_L, y: BRANCH_Y + PITCH * 2, w: MEM_W, h: ROW },
+  // Step 4 (Finality) stacks directly under Step 3, same left edge and width.
+  finality: { x: S3_L, y: FIN_Y, w: FIN_W, h: ROW },
+  payment: { x: S3_L, y: FIN_Y + PITCH, w: FIN_W, h: ROW },
+  completion: { x: S3_L, y: FIN_Y + PITCH * 2, w: FIN_W, h: ROW },
+
+  // Step 5 (Memory) stacks directly under Step 4, same left edge and width.
+  memory: { x: S3_L, y: MEM_Y, w: MEM_W, h: ROW },
 
 } as const satisfies Record<string, Box>;
 
@@ -136,6 +148,9 @@ const top = (b: Box) => ({ x: cx(b), y: b.y });
 const bottom = (b: Box) => ({ x: cx(b), y: b.y + b.h });
 const left = (b: Box) => ({ x: b.x, y: cy(b) });
 const right = (b: Box) => ({ x: b.x + b.w, y: cy(b) });
+// A point partway along a box's top edge — used to give Bid and Offer their own distinct landing
+// spot on Search's top edge instead of both arrows converging on the exact same center point.
+const topAt = (b: Box, frac: number) => ({ x: b.x + b.w * frac, y: b.y });
 
 type Point = { x: number; y: number };
 /** An elbow connector: straight from `a`, turning once, ending at `b`. `via: "x"` turns
@@ -156,19 +171,14 @@ function branchDown(a: Point, targets: Point[], stub = 26): string[] {
 }
 
 const ARROWS: { d: string; arrow?: boolean }[] = [
-  { d: elbow(bottom(BOXES.bid), top(BOXES.loadDocs), "x") },
-  { d: elbow(bottom(BOXES.offer), top(BOXES.counterparty), "x") },
-  { d: elbow(right(BOXES.loadDocs), left(BOXES.search), "y") },
-  { d: elbow(left(BOXES.counterparty), right(BOXES.search), "y") },
-  { d: elbow(bottom(BOXES.counterparty), top(BOXES.surfaceRoutes), "x") },
-  { d: elbow(bottom(BOXES.search), top(BOXES.choice), "x") },
-  { d: elbow(bottom(BOXES.loadDocs), left(BOXES.choice), "y") },
-  { d: elbow(left(BOXES.surfaceRoutes), right(BOXES.choice), "y") },
+  { d: elbow(bottom(BOXES.bid), topAt(BOXES.search, 0.28), "x") },
+  { d: elbow(bottom(BOXES.offer), topAt(BOXES.search, 0.72), "x") },
+  { d: elbow(bottom(BOXES.search), top(BOXES.surfaceRoutes), "x") },
+  { d: elbow(bottom(BOXES.surfaceRoutes), top(BOXES.choice), "x") },
   { d: elbow(bottom(BOXES.choice), top(BOXES.poi), "x") },
   { d: elbow(bottom(BOXES.poi), top(BOXES.wad), "x") },
-  { d: elbow(bottom(BOXES.wad), top(BOXES.kyc), "x") },
   ...branchDown(
-    bottom(BOXES.kyc),
+    bottom(BOXES.wad),
     [top(BOXES.projectPrep), top(BOXES.execution), top(BOXES.finality)],
     44,
   ).map((d) => ({ d })),
@@ -176,7 +186,7 @@ const ARROWS: { d: string; arrow?: boolean }[] = [
   { d: elbow(bottom(BOXES.execution), top(BOXES.implementation), "x") },
   { d: elbow(bottom(BOXES.finality), top(BOXES.payment), "x") },
   { d: elbow(bottom(BOXES.payment), top(BOXES.completion), "x") },
-  { d: elbow(right(BOXES.completion), left(BOXES.memory), "y") },
+  { d: elbow(bottom(BOXES.completion), top(BOXES.memory), "x") },
   ...branchDown(
     bottom(BOXES.projectPrep),
     [top(BOXES.concept), top(BOXES.prefeasibility)],
@@ -189,7 +199,7 @@ const ARROWS: { d: string; arrow?: boolean }[] = [
 
 
 // Frames the diagram into the same 5 stages as the Journey banner above it — Step 1 (Trading,
-// everything through Choice), Step 2 (Compliance & Governance: POI, WaD, KYC/KYB), Step 3
+// everything through Choice), Step 2 (Compliance & Governance: POI, WaD), Step 3
 // (Execution, spanning Project Preparation through Implementation), Step 4 (Finality) and Step 5
 // (Memory).
 const GROUPS: { label: string; step: number; box: Box; emphasis?: boolean }[] = [
@@ -200,9 +210,7 @@ const GROUPS: { label: string; step: number; box: Box; emphasis?: boolean }[] = 
     box: {
       x: BOXES.bid.x - GROUP_PAD,
       y: BOXES.bid.y - GROUP_PAD,
-      // Register Offer/Counterparty/Online Media Screening are left-aligned with Memory (Step 5),
-      // so the frame's right edge follows from their own position rather than a separate constant.
-      w: BOXES.offer.x + BOXES.offer.w - BOXES.bid.x + GROUP_PAD * 2,
+      w: CENTER_W + GROUP_PAD * 2,
       h: BOXES.choice.y + ROW - BOXES.bid.y + GROUP_PAD + GROUP_PAD_TIGHT + STEP1_EXTRA_H,
     },
   },
@@ -213,7 +221,7 @@ const GROUPS: { label: string; step: number; box: Box; emphasis?: boolean }[] = 
       x: BOXES.poi.x - GROUP_PAD,
       y: BOXES.poi.y - STEP2_TOP_PAD,
       w: BOXES.poi.w + GROUP_PAD * 2,
-      h: BOXES.kyc.y + ROW - BOXES.poi.y + STEP2_TOP_PAD + GROUP_PAD,
+      h: BOXES.wad.y + ROW - BOXES.poi.y + STEP2_TOP_PAD + GROUP_PAD,
     },
   },
   {
@@ -230,9 +238,9 @@ const GROUPS: { label: string; step: number; box: Box; emphasis?: boolean }[] = 
     label: "Finality",
     step: 4,
     box: {
-      x: S4_X,
+      x: S3_X,
       y: BOXES.finality.y - GROUP_PAD,
-      w: S4_W,
+      w: S3_W,
       h: BOXES.completion.y + ROW - BOXES.finality.y + GROUP_PAD * 2,
     },
   },
@@ -240,9 +248,9 @@ const GROUPS: { label: string; step: number; box: Box; emphasis?: boolean }[] = 
     label: "Memory",
     step: 5,
     box: {
-      x: S5_X,
+      x: S3_X,
       y: BOXES.memory.y - GROUP_PAD,
-      w: S5_W,
+      w: S3_W,
       h: BOXES.memory.h + GROUP_PAD * 2,
     },
   },
@@ -445,7 +453,7 @@ export function MahjongView({
 
         <MjNode
           box={BOXES.bid}
-          label="Register Bid"
+          label="Submit a Bid"
           tone="header"
           state={readOnly ? "open" : st("trading", "bid-offer")}
           // Always starts a fresh bid, even when a deal is already loaded on this canvas — it's a
@@ -454,21 +462,12 @@ export function MahjongView({
         />
         <MjNode
           box={BOXES.offer}
-          label="Register Offer"
+          label="Submit a Response"
           tone="header"
           state={readOnly ? "open" : st("trading", "bid-offer")}
           onClick={() => onRegister?.("offer")}
         />
 
-        <MjNode
-          box={BOXES.loadDocs}
-          label="Load deal docs"
-          icon={FileText}
-          tone="light"
-          frameClassName="border-white bg-black text-white hover:border-white"
-          state={st("trading", "documents")}
-          onClick={() => open("trading", "documents")}
-        />
         <MjNode
           box={BOXES.search}
           label="Search AI + AI+"
@@ -477,14 +476,6 @@ export function MahjongView({
           frameClassName="border-white bg-[#C1653D] text-white hover:border-white"
           state={st("trading", "search")}
           onClick={() => open("trading", "search")}
-        />
-        <MjNode
-          box={BOXES.counterparty}
-          label="Counterparty"
-          icon={Users}
-          tone="light"
-          state={st("trading", "counterparties")}
-          onClick={() => open("trading", "counterparties")}
         />
         <MjNode
           box={BOXES.surfaceRoutes}
@@ -527,17 +518,6 @@ export function MahjongView({
           state={st("compliance", "wad")}
           onClick={() => open("compliance", "wad")}
         />
-        <MjNode
-          box={BOXES.kyc}
-          label="KYC / KYB"
-          labelClassName="text-primary"
-          icon={Users}
-          tone="light"
-          frameClassName="border-primary bg-primary/15 text-primary hover:border-primary"
-          state={st("compliance", "wad")}
-          onClick={() => open("compliance", "wad")}
-        />
-
         <MjNode
           box={BOXES.projectPrep}
           tone="light"
