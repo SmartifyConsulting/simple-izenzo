@@ -1779,8 +1779,7 @@ export function CanvasStart({
   /** Fires whenever the bid/offer side is picked or cleared. */
   onDirectionChange?: (direction: "bid" | "offer" | null) => void;
   /** Opens straight into the Bid or Offer form on mount instead of the picker — used when a
-   * caller elsewhere on the page (e.g. the Mahjong diagram's "Register Bid/Offer" nodes) already
-   * decided which side the user wants. */
+   * caller elsewhere on the page already decided which side the user wants. */
   initialDirection?: "bid" | "offer" | null;
 }) {
   const { org, orgs, user, profile, refresh } = useAuth();

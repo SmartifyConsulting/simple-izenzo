@@ -487,7 +487,7 @@
 }
 
 /** Same attention pulse as animate-throb, in a bright aqua and a touch slower — used on the
- * Mahjong view's active-step nodes, which needed to stand out more clearly than the default. */
+ * Classic view's active-step nodes, which needed to stand out more clearly than the default. */
 @utility animate-throb-aqua {
   animation: throb-aqua 2.1s ease-in-out infinite;
   border-color: color-mix(in oklab, #00e5ff 80%, transparent);

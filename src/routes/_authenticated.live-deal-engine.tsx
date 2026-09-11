@@ -14,7 +14,7 @@ import {
 } from "@/components/canvas/DealCanvas";
 import { TradeSummary } from "@/components/canvas/TradeSummary";
 
-import { MahjongView } from "@/components/canvas/MahjongView";
+import { ClassicView } from "@/components/canvas/ClassicView";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -190,8 +190,9 @@ function LiveDealEngine() {
   const { tx: txParam } = Route.useSearch();
   const [picking, setPicking] = useState(false);
   const [direction, setDirection] = useState<"bid" | "offer" | null>(null);
-  // Set when "Register Bid/Offer" is clicked from the Mahjong diagram — switches to Classic view
-  // with the form already open on that side, instead of leaving the user to pick again.
+  // Reserved for pre-selecting a bid/offer direction before the Workspace form opens; the
+  // Engine Map's single "Create a bid or an offer" entry point always leaves this null and lets
+  // the form's own picker ask.
   const [pendingDirection, setPendingDirection] = useState<"bid" | "offer" | null>(null);
   const [activity, setActivity] = useState<RecordedActivity | null>(null);
   const [dealTx, setDealTx] = useState<Transaction | null>(null);
@@ -496,10 +497,10 @@ function LiveDealEngine() {
 
 
 
-  /** "Register Bid"/"Register Offer" from the Mahjong map — always starts a fresh registration,
-   * even when a deal is already loaded here, instead of just switching view onto whatever that
-   * deal already is. */
-  function startNewDeal(dir: "bid" | "offer") {
+  /** "Create a bid or an offer" from the Engine Map — always starts a fresh registration, even
+   * when a deal is already loaded here, instead of just switching view onto whatever that deal
+   * already is. The Workspace's own form is where bid vs offer actually gets picked. */
+  function startNewDeal() {
     setActivity(null);
     setDealTx(null);
     setDirection(null);
@@ -514,7 +515,7 @@ function LiveDealEngine() {
     setStagePanel(null);
     setHasChosen(false);
     setMapPanel(null);
-    setPendingDirection(dir);
+    setPendingDirection(null);
   }
 
   /** Clicking a node on the Engine Map that isn't already covered by the Workspace's own
@@ -740,12 +741,12 @@ function LiveDealEngine() {
         <div className="ink-grid flex h-[calc(100vh-190px)] w-full flex-col overflow-hidden rounded-3xl border border-border p-3 sm:p-5">
           <p className="label-caps shrink-0 text-white">Izenzo Engine Map</p>
           <div className="mt-3 min-h-0 flex-1">
-            <MahjongView
+            <ClassicView
               tx={dealTx ?? FLOWCHART_PREVIEW_TX}
               reload={() => void reloadDeal()}
               readOnly={!dealTx}
               onRegister={startNewDeal}
-              onOpenClassic={openMapStep}
+              onOpenStep={openMapStep}
             />
           </div>
         </div>

@@ -1,11 +1,10 @@
 import { useEffect, type ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ArrowLeftRight, BarChart3, ChevronDown, Coins, DollarSign, LayoutGrid, Mail, Plug } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, BarChart3, ChevronDown, Coins, DollarSign, Mail, Plug } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { useViewMode, setViewMode } from "@/lib/viewMode";
 
 import { Logo } from "@/components/Logo";
 import { SearchButton } from "@/components/layout/SearchButton";
@@ -67,7 +66,6 @@ export function AppShell({
     };
   }, [profile?.id]);
   const width = wide ? "max-w-[1680px]" : "max-w-7xl";
-  const viewMode = useViewMode();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const onEngine = pathname === "/live-deal-engine";
 
@@ -111,18 +109,6 @@ export function AppShell({
             <Logo onDark className="h-7 w-auto" />
           </Link>
           <SearchButton />
-          <button
-            type="button"
-            onClick={() => setViewMode(viewMode === "mahjong" ? "classic" : "mahjong")}
-            title={viewMode === "mahjong" ? "Izenzo Workspace" : "Izenzo Engine Map"}
-            aria-label={viewMode === "mahjong" ? "Izenzo Workspace" : "Izenzo Engine Map"}
-            className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <LayoutGrid className="h-4 w-4" strokeWidth={2.25} />
-            <span className="hidden sm:inline">
-              {viewMode === "mahjong" ? "Izenzo Workspace" : "Izenzo Engine Map"}
-            </span>
-          </button>
           <a
             href="/alpha-bravo"
             title="Switch App — demo the Alpha-Bravo look and feel"

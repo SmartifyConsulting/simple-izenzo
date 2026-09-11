@@ -72,12 +72,9 @@ type Box = { x: number; y: number; w: number; h: number };
 // Left edge shared by the Trading, Compliance & Governance and Execution frames, so Steps 1, 2
 // and 3 all line up on the same left margin.
 const STEP_X = S3_L;
-// Create a Bid / Make an Offer sit side by side, sharing Search's width, one on each half.
-const BID_OFFER_GAP = 14;
-const BID_OFFER_W = (CENTER_W - BID_OFFER_GAP) / 2;
 
 // Each step's content height when fully expanded (excludes GROUP_PAD framing).
-const STEP1_H = PITCH * 3 + ROW; // bid+offer (shared row), search, surfaceRoutes, choice
+const STEP1_H = PITCH * 3 + ROW; // bidOffer (one shared entry point), search, surfaceRoutes, choice
 const STEP2_H = PITCH + ROW; // poi, wad
 const STEP3_H = PITCH * 2 + ROW; // projectPrep/execution, concept/prefeasibility/implementation, feasibility/bankability
 const STEP4_H = PITCH * 2 + ROW; // finality, payment, completion
@@ -112,8 +109,7 @@ function layout(collapsed: Collapsed) {
   const y5 = frameTop[5]! + GROUP_PAD;
 
   const boxes = {
-    bid: { x: STEP_X, y: y1, w: BID_OFFER_W, h: ROW },
-    offer: { x: STEP_X + BID_OFFER_W + BID_OFFER_GAP, y: y1, w: BID_OFFER_W, h: ROW },
+    bidOffer: { x: STEP_X, y: y1, w: CENTER_W, h: ROW },
     search: { x: STEP_X, y: y1 + PITCH, w: CENTER_W, h: ROW },
     surfaceRoutes: { x: STEP_X, y: y1 + PITCH * 2, w: CENTER_W, h: ROW },
     choice: { x: STEP_X, y: y1 + PITCH * 3, w: CENTER_W, h: ROW },
@@ -176,9 +172,6 @@ const cx = (b: Box) => b.x + b.w / 2;
 const cy = (b: Box) => b.y + b.h / 2;
 const top = (b: Box) => ({ x: cx(b), y: b.y });
 const bottom = (b: Box) => ({ x: cx(b), y: b.y + b.h });
-// A point partway along a box's top edge — used to give Bid and Offer their own distinct landing
-// spot on Search's top edge instead of both arrows converging on the exact same center point.
-const topAt = (b: Box, frac: number) => ({ x: b.x + b.w * frac, y: b.y });
 
 type Point = { x: number; y: number };
 /** An elbow connector: straight from `a`, turning once, ending at `b`. `via: "x"` turns
@@ -202,8 +195,7 @@ function branchDown(a: Point, targets: Point[], stub = 26): string[] {
  * step is currently collapsed, since the boxes at each end aren't shown. */
 function buildArrows(boxes: ReturnType<typeof layout>["boxes"]): { d: string; steps: [number, number] }[] {
   return [
-    { d: elbow(bottom(boxes.bid), topAt(boxes.search, 0.28), "x"), steps: [1, 1] },
-    { d: elbow(bottom(boxes.offer), topAt(boxes.search, 0.72), "x"), steps: [1, 1] },
+    { d: elbow(bottom(boxes.bidOffer), top(boxes.search), "x"), steps: [1, 1] },
     { d: elbow(bottom(boxes.search), top(boxes.surfaceRoutes), "x"), steps: [1, 1] },
     { d: elbow(bottom(boxes.surfaceRoutes), top(boxes.choice), "x"), steps: [1, 1] },
     { d: elbow(bottom(boxes.choice), top(boxes.poi), "x"), steps: [1, 2] },
@@ -305,9 +297,8 @@ function ArrowLayer({
   );
 }
 
-/** One workflow-diagram button, absolutely positioned on the shared coordinate system. Reuses
- * the same tick/lock coloring language as the Classic view's nodes. */
-function MjNode({
+/** One workflow-diagram button, absolutely positioned on the shared coordinate system. */
+function StepNode({
   box,
   label,
   labelClassName,
@@ -388,34 +379,33 @@ function MjNode({
   );
 }
 
-/** The Mahjong view: the whole deal pipeline laid out as the product's workflow diagram — boxes
- * and arrows in the same relative positions as the source flowchart — instead of the Classic
- * view's vertical gate list. Each node opens the same step form as its Classic-view counterpart.
- * Each of the 5 numbered steps collapses independently, like an accordion. */
-export function MahjongView({
+/** The Classic view: the whole deal pipeline laid out as the product's workflow diagram — boxes
+ * and arrows in the same relative positions as the source flowchart. Each node opens that step's
+ * form. Each of the 5 numbered steps collapses independently, like an accordion. */
+export function ClassicView({
   tx,
   reload,
   readOnly,
   onRegister,
-  onOpenClassic,
+  onOpenStep,
 }: {
   tx: Transaction;
   reload: () => void;
   readOnly?: boolean;
-  /** Fires when "Register Bid"/"Register Offer" is clicked, before any real deal exists — the
-   * caller switches to the form that actually records it (same one the Classic view uses). */
-  onRegister?: (direction: "bid" | "offer") => void;
-  /** When given, clicking a node hands over to the Classic view's detailed sequence instead of
-   * opening the step inline on the map. */
-  onOpenClassic?: (stage: StageKey, step: string) => void;
+  /** Fires when "Create a bid or an offer" is clicked, before any real deal exists — the caller
+   * opens the form that actually records it, where the direction itself is picked. */
+  onRegister?: () => void;
+  /** When given, clicking a node hands the (stage, step) to the caller instead of opening an
+   * inline panel here — used to show the step in a Workspace panel alongside the map. */
+  onOpenStep?: (stage: StageKey, step: string) => void;
 }) {
   const [panel, setPanel] = useState<{ stage: StageKey; step: string } | null>(null);
   const [collapsed, setCollapsed] = useState<Collapsed>({});
 
   const open = (stage: StageKey, step: string) => {
     if (readOnly) return;
-    if (onOpenClassic) {
-      onOpenClassic(stage, step);
+    if (onOpenStep) {
+      onOpenStep(stage, step);
       return;
     }
     setPanel((p) => (p?.stage === stage && p?.step === step ? null : { stage, step }));
@@ -453,25 +443,18 @@ export function MahjongView({
 
         {!collapsed[1] && (
           <>
-            <MjNode
-              box={BOXES.bid}
-              label="Create a Bid"
+            <StepNode
+              box={BOXES.bidOffer}
+              label="Create a bid or an offer"
               tone="header"
               state={readOnly ? "open" : st("trading", "bid-offer")}
-              // Always starts a fresh bid, even when a deal is already loaded on this canvas —
-              // it's a new registration, not a way back into whatever's currently open.
-              onClick={() => onRegister?.("bid")}
+              // Always starts fresh, even when a deal is already loaded on this canvas — it's a
+              // new registration, not a way back into whatever's currently open. Direction (bid
+              // vs offer) is picked in the form itself.
+              onClick={() => onRegister?.()}
               pctY={pctYFn}
             />
-            <MjNode
-              box={BOXES.offer}
-              label="Make an Offer"
-              tone="header"
-              state={readOnly ? "open" : st("trading", "bid-offer")}
-              onClick={() => onRegister?.("offer")}
-              pctY={pctYFn}
-            />
-            <MjNode
+            <StepNode
               box={BOXES.search}
               label="Search AI + AI+"
               icon={Search}
@@ -481,7 +464,7 @@ export function MahjongView({
               onClick={() => open("trading", "search")}
               pctY={pctYFn}
             />
-            <MjNode
+            <StepNode
               box={BOXES.surfaceRoutes}
               label="Online Media Screening"
               icon={Globe}
@@ -490,7 +473,7 @@ export function MahjongView({
               onClick={() => open("trading", "online-media")}
               pctY={pctYFn}
             />
-            <MjNode
+            <StepNode
               box={BOXES.choice}
               label="Choice"
               labelClassName="text-white"
@@ -506,7 +489,7 @@ export function MahjongView({
 
         {!collapsed[2] && (
           <>
-            <MjNode
+            <StepNode
               box={BOXES.poi}
               label="Proof of Intent"
               labelClassName="text-primary"
@@ -517,7 +500,7 @@ export function MahjongView({
               onClick={() => open("trading", "poi")}
               pctY={pctYFn}
             />
-            <MjNode
+            <StepNode
               box={BOXES.wad}
               label="Without a Doubt"
               labelClassName="text-primary"
@@ -535,7 +518,7 @@ export function MahjongView({
 
         {!collapsed[3] && (
           <>
-            <MjNode
+            <StepNode
               box={BOXES.projectPrep}
               tone="light"
               label="Project Preparation"
@@ -544,7 +527,7 @@ export function MahjongView({
               onClick={() => open("execution", "preparation")}
               pctY={pctYFn}
             />
-            <MjNode
+            <StepNode
               box={BOXES.execution}
               tone="light"
               label="Execution"
@@ -553,7 +536,7 @@ export function MahjongView({
               onClick={() => open("execution", "entry")}
               pctY={pctYFn}
             />
-            <MjNode
+            <StepNode
               box={BOXES.concept}
               tone="light"
               label="Concept"
@@ -561,7 +544,7 @@ export function MahjongView({
               onClick={() => open("execution", "preparation")}
               pctY={pctYFn}
             />
-            <MjNode
+            <StepNode
               box={BOXES.prefeasibility}
               tone="light"
               label="Pre-feasibility"
@@ -569,7 +552,7 @@ export function MahjongView({
               onClick={() => open("execution", "preparation")}
               pctY={pctYFn}
             />
-            <MjNode
+            <StepNode
               box={BOXES.feasibility}
               tone="light"
               label="Feasibility"
@@ -577,7 +560,7 @@ export function MahjongView({
               onClick={() => open("execution", "preparation")}
               pctY={pctYFn}
             />
-            <MjNode
+            <StepNode
               box={BOXES.bankability}
               tone="light"
               label="Bankability"
@@ -585,7 +568,7 @@ export function MahjongView({
               onClick={() => open("execution", "bankability")}
               pctY={pctYFn}
             />
-            <MjNode
+            <StepNode
               box={BOXES.implementation}
               tone="light"
               label="Implementation"
@@ -598,7 +581,7 @@ export function MahjongView({
 
         {!collapsed[4] && (
           <>
-            <MjNode
+            <StepNode
               box={BOXES.finality}
               tone="light"
               label="Finality"
@@ -607,7 +590,7 @@ export function MahjongView({
               onClick={() => open("finality", "entry")}
               pctY={pctYFn}
             />
-            <MjNode
+            <StepNode
               box={BOXES.payment}
               tone="light"
               label="Payment"
@@ -616,7 +599,7 @@ export function MahjongView({
               onClick={() => open("finality", "type")}
               pctY={pctYFn}
             />
-            <MjNode
+            <StepNode
               box={BOXES.completion}
               tone="light"
               label="Completion"
@@ -628,7 +611,7 @@ export function MahjongView({
         )}
 
         {!collapsed[5] && (
-          <MjNode
+          <StepNode
             box={BOXES.memory}
             tone="light"
             label="Memory"

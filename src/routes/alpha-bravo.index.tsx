@@ -1,9 +1,7 @@
-import { useEffect } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AuthTabs } from "@/components/auth/AuthTabs";
-import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/alpha-bravo/")({
   head: () => ({
@@ -71,13 +69,6 @@ const STAGES = [
 ];
 
 function AlphaBravoHome() {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (user) navigate({ to: "/live-deal-engine", replace: true });
-  }, [user, navigate]);
-
   return (
     <>
       <section className="mx-auto max-w-6xl px-5 py-24 sm:py-28">
