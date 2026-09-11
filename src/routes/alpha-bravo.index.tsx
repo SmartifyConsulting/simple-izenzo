@@ -1,6 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AuthTabs } from "@/components/auth/AuthTabs";
+import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/alpha-bravo/")({
   head: () => ({
@@ -68,32 +71,40 @@ const STAGES = [
 ];
 
 function AlphaBravoHome() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) navigate({ to: "/live-deal-engine", replace: true });
+  }, [user, navigate]);
+
   return (
     <>
       <section className="mx-auto max-w-6xl px-5 py-24 sm:py-28">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-          Pre-vetted · Governed marketplace
-        </p>
-        <h1 className="mt-6 max-w-3xl text-5xl leading-[1.05] tracking-tight text-foreground sm:text-6xl">
-          Your partner
-          <br />
-          for matched execution.
-        </h1>
-        <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground">
-          Izenzo is a governance-first marketplace matching Bidders with the right Responders —
-          verified, risk-assessed, and executed under one cryptographic record.
-        </p>
-        <div className="mt-8 flex flex-wrap items-center gap-3">
-          <Link to="/auth" search={{ mode: "signup", next: undefined }}>
-            <Button size="lg" className="gap-1.5 rounded-full">
-              Post an Opportunity <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
-          <Link to="/alpha-bravo/marketplace">
-            <Button size="lg" variant="outline" className="rounded-full">
-              See how matching works
-            </Button>
-          </Link>
+        <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+              Pre-vetted · Governed marketplace
+            </p>
+            <h1 className="mt-6 max-w-3xl text-5xl leading-[1.05] tracking-tight text-foreground sm:text-6xl">
+              Your partner
+              <br />
+              for matched execution.
+            </h1>
+            <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground">
+              Izenzo is a governance-first marketplace matching Bidders with the right Responders —
+              verified, risk-assessed, and executed under one cryptographic record.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <Link to="/alpha-bravo/marketplace">
+                <Button size="lg" variant="outline" className="gap-1.5 rounded-full">
+                  See how matching works <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          <AuthTabs className="w-full rounded-2xl border border-border bg-card p-6 shadow-sm" />
         </div>
       </section>
 
