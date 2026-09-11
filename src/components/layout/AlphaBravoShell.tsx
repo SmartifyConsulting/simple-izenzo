@@ -80,24 +80,29 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
                 <ProfileAvatarMenu />
               </>
             ) : (
-              <>
-                <Link
-                  to="/auth"
-                  search={{ mode: "signin", next: undefined }}
-                  className="hidden text-sm font-medium text-muted-foreground hover:text-foreground sm:inline"
-                >
-                  Sign In
-                </Link>
-                <Link to="/auth" search={{ mode: "signup", next: undefined }}>
-                  <Button size="sm" className="rounded-full">
-                    Submit a Bid
-                  </Button>
-                </Link>
-              </>
+              <Link
+                to="/auth"
+                search={{ mode: "signin", next: undefined }}
+                className="text-sm font-medium text-muted-foreground hover:text-foreground"
+              >
+                Sign In
+              </Link>
             )}
           </div>
         </div>
       </header>
+
+      {!user && (
+        <Link
+          to="/auth"
+          search={{ mode: "signup", next: undefined }}
+          className="fixed right-5 top-[76px] z-50"
+        >
+          <Button size="sm" className="rounded-full shadow-lg">
+            Submit a Bid
+          </Button>
+        </Link>
+      )}
 
       <main>{children}</main>
 
