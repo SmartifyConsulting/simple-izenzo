@@ -3,14 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Lock, ShieldCheck, UploadCloud, FileCheck2, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-
-const DEAL_SIZES = ["Under $100k", "$100k – $500k", "$500k – $2M", "$2M+"];
-const SECTORS = ["Agriculture", "Logistics", "Metals", "Energy", "Manufacturing"];
 
 function useIllustrativeMatches(enabled: boolean) {
   return useQuery({
@@ -42,9 +36,6 @@ const RATING_LABEL: Record<string, string> = {
 export function HeroMatchCard({ className }: { className?: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState<string | null>(null);
-  const [email, setEmail] = useState("");
-  const [dealSize, setDealSize] = useState("");
-  const [sector, setSector] = useState("");
   const [searched, setSearched] = useState(false);
   const [searching, setSearching] = useState(false);
 
@@ -59,14 +50,14 @@ export function HeroMatchCard({ className }: { className?: string }) {
     }, 900);
   }
 
-  const canSearch = Boolean(fileName && email && dealSize && sector);
+  const canSearch = Boolean(fileName);
 
   return (
     <div className={cn("w-full rounded-2xl border border-border bg-card p-6 shadow-sm", className)}>
       {!searched && !searching && (
         <>
           <h2 className="text-base font-medium tracking-tight text-foreground">
-            Upload Bid Proposal Document
+            Upload Bid Proposal
           </h2>
 
           <div
@@ -82,10 +73,8 @@ export function HeroMatchCard({ className }: { className?: string }) {
             ) : (
               <>
                 <UploadCloud className="h-5 w-5 text-muted-foreground" />
-                <p className="text-sm font-medium text-foreground">Drop your document here</p>
-                <p className="text-xs text-muted-foreground">
-                  Pitch deck, proposal, or any text document
-                </p>
+                <p className="text-sm font-medium text-foreground">Drop files here</p>
+                <p className="text-xs text-muted-foreground">Pitch deck, proposal, or any file</p>
               </>
             )}
             <input
@@ -94,49 +83,6 @@ export function HeroMatchCard({ className }: { className?: string }) {
               className="hidden"
               onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
             />
-          </div>
-
-          <div className="mt-4 space-y-1.5">
-            <Label htmlFor="hero-email">Your Email</Label>
-            <Input
-              id="hero-email"
-              type="email"
-              placeholder="you@company.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-
-          <div className="mt-4 space-y-1.5">
-            <Label>Deal Size</Label>
-            <Select value={dealSize} onValueChange={setDealSize}>
-              <SelectTrigger>
-                <SelectValue placeholder="How much is the opportunity?" />
-              </SelectTrigger>
-              <SelectContent>
-                {DEAL_SIZES.map((d) => (
-                  <SelectItem key={d} value={d}>
-                    {d}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="mt-4 space-y-1.5">
-            <Label>Sector</Label>
-            <Select value={sector} onValueChange={setSector}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select your sector" />
-              </SelectTrigger>
-              <SelectContent>
-                {SECTORS.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           <Button className="mt-5 w-full rounded-full" disabled={!canSearch} onClick={onFindMatches}>
@@ -152,7 +98,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
         <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
           <p className="text-sm font-medium text-foreground">Searching for matches…</p>
-          <p className="text-xs text-muted-foreground">Sector, deal size, and jurisdiction fit</p>
+          <p className="text-xs text-muted-foreground">Cross-referencing verified Responders</p>
         </div>
       )}
 
