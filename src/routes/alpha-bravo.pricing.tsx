@@ -51,68 +51,70 @@ function Pricing() {
           match forward — no subscriptions, no hidden fees.
         </p>
 
-        <div className="mt-12 grid gap-6 lg:grid-cols-2">
-          <div className="rounded-2xl border border-border bg-card p-7">
+        <div className="mt-8 grid gap-4 lg:grid-cols-2">
+          <div className="rounded-2xl border border-border bg-card p-5">
             <p className="text-xs font-semibold uppercase tracking-wide text-primary">
               Pay-as-you-go
             </p>
-            <h2 className="mt-1 text-lg font-medium tracking-tight text-foreground">
+            <h2 className="mt-1 text-base font-medium tracking-tight text-foreground">
               Bidders &amp; Responders
             </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-xs text-muted-foreground">
               For anyone posting or responding to a trade opportunity.
             </p>
-            <p className="mt-5 text-3xl font-semibold text-foreground">
+            <p className="mt-3 text-2xl font-semibold text-foreground">
               ${TOKEN_PRICE_USD.toFixed(2)}{" "}
               <span className="text-sm font-normal text-muted-foreground">USD</span>
             </p>
             <p className="text-xs text-muted-foreground">per token · 1 token = 1 Proof of Intent</p>
 
-            <div className="mt-5 grid grid-cols-2 gap-2 text-sm">
+            <div className="mt-3 grid grid-cols-2 gap-1.5 text-xs">
               {PACKS.map((p) => (
-                <div key={p.tokens} className="rounded-lg bg-muted px-3 py-2 text-foreground">
+                <div key={p.tokens} className="rounded-lg bg-muted px-2.5 py-1.5 text-foreground">
                   {p.tokens} token{p.tokens === 1 ? "" : "s"} — ${p.price}
                 </div>
               ))}
             </div>
 
             <Link to="/auth" search={{ mode: "signup", next: undefined }}>
-              <Button className="mt-6 w-full rounded-full">Submit a Bid</Button>
+              <Button size="sm" className="mt-4 w-full rounded-full">
+                Submit a Bid
+              </Button>
             </Link>
 
-            <ul className="mt-6 space-y-2 text-sm">
+            <ul className="mt-4 space-y-1.5 text-xs">
               {PAY_AS_YOU_GO_FEATURES.map((f) => (
                 <li key={f} className="flex items-start gap-2 text-muted-foreground">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
                   {f}
                 </li>
               ))}
             </ul>
           </div>
 
-          <div className="rounded-2xl border border-border bg-card p-7">
+          <div className="rounded-2xl border border-border bg-card p-5">
             <p className="text-xs font-semibold uppercase tracking-wide text-primary">
               Institutional
             </p>
-            <h2 className="mt-1 text-lg font-medium tracking-tight text-foreground">
+            <h2 className="mt-1 text-base font-medium tracking-tight text-foreground">
               Banks, DFIs &amp; Sovereigns
             </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-xs text-muted-foreground">
               For institutions requiring dedicated infrastructure and oversight.
             </p>
-            <p className="mt-5 text-3xl font-semibold text-foreground">Custom</p>
+            <p className="mt-3 text-2xl font-semibold text-foreground">Custom</p>
             <p className="text-xs text-muted-foreground">tailored to your volume</p>
 
             <a href="mailto:support@izenzo.co.za?subject=Institutional%20pricing">
-              <Button variant="outline" className="mt-6 w-full rounded-full">
+              <Button size="sm" variant="outline" className="mt-4 w-full rounded-full">
                 Contact Sales
               </Button>
             </a>
 
-            <ul className="mt-6 space-y-2 text-sm">
+            <ul className="mt-4 space-y-1.5 text-xs">
               {INSTITUTIONAL_FEATURES.map((f) => (
                 <li key={f} className="flex items-start gap-2 text-muted-foreground">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
                   {f}
                 </li>
               ))}
@@ -120,12 +122,15 @@ function Pricing() {
           </div>
         </div>
 
-        <p className="mt-6 text-xs text-muted-foreground">
+        <p className="mt-4 text-xs text-muted-foreground">
           All prices in USD. Institutional contracts include volume commitments and dedicated
           SLAs.
         </p>
 
-        <div className="mt-8 divide-y divide-border border-t border-border">
+        <p className="mt-10 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+          Feature Costs
+        </p>
+        <div className="mt-4 divide-y divide-border border-t border-border">
           {TOKEN_COSTS.map((t) => (
             <div key={t.label} className="flex items-center justify-between gap-4 py-4">
               <div>
