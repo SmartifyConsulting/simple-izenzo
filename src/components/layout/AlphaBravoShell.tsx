@@ -14,6 +14,7 @@ import { applyAppSkin } from "@/lib/appSkin";
 const NAV = [
   { to: "/alpha-bravo/how-it-works", label: "How It Works" },
   { to: "/alpha-bravo/marketplace", label: "Marketplace" },
+  { to: "/alpha-bravo/bidders", label: "Bidders" },
   { to: "/alpha-bravo/responders", label: "Responders" },
   { to: "/alpha-bravo/pricing", label: "Pricing" },
 ] as const;
@@ -21,11 +22,6 @@ const NAV = [
 const COMPANY_MENU = [
   { to: "/alpha-bravo/about", label: "About" },
   { to: "/alpha-bravo/insights", label: "Insights" },
-] as const;
-
-const GET_STARTED_MENU = [
-  { to: "/alpha-bravo/for-bidders", label: "For Bidders" },
-  { to: "/alpha-bravo/for-responders", label: "For Responders" },
 ] as const;
 
 /** Alpha-Bravo's own header/nav/footer — a demo re-skin of the Izenzo marketing site,
@@ -63,19 +59,6 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
                 {COMPANY_MENU.map((item) => (
-                  <DropdownMenuItem key={item.to} asChild>
-                    <Link to={item.to}>{item.label}</Link>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-1 outline-none hover:text-foreground">
-                Get Started <ChevronDown className="h-3.5 w-3.5" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                {GET_STARTED_MENU.map((item) => (
                   <DropdownMenuItem key={item.to} asChild>
                     <Link to={item.to}>{item.label}</Link>
                   </DropdownMenuItem>

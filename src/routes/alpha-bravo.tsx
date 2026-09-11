@@ -2,8 +2,8 @@ import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { AlphaBravoShell } from "@/components/layout/AlphaBravoShell";
 
 /** Layout for every /alpha-bravo/* route — renders the Alpha-Bravo header/nav/footer once and
- * lets each child route (index, about, marketplace, insights, for-bidders) fill in the page
- * body via Outlet. */
+ * lets each child route (index, about, marketplace, insights, bidders, responders) fill in the
+ * page body via Outlet. */
 export const Route = createFileRoute("/alpha-bravo")({
   head: () => ({
     meta: [

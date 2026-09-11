@@ -1,11 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 
-export const Route = createFileRoute("/alpha-bravo/for-bidders")({
+export const Route = createFileRoute("/alpha-bravo/bidders")({
   head: () => ({
-    meta: [{ title: "For Bidders — Izenzo Alpha-Bravo" }],
+    meta: [{ title: "Bidders — Izenzo Alpha-Bravo" }],
   }),
-  component: ForBidders,
+  component: Bidders,
 });
 
 const TOOLS = [
@@ -34,12 +34,12 @@ const FAQS = [
   "Where does Izenzo operate?",
 ];
 
-function ForBidders() {
+function Bidders() {
   return (
     <>
       <section className="mx-auto max-w-3xl px-5 py-20 sm:py-24">
         <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-          For Bidders
+          Bidders
         </p>
         <h1 className="mt-4 text-4xl tracking-tight text-foreground sm:text-5xl">
           Post an opportunity, get matched with verified Responders.
