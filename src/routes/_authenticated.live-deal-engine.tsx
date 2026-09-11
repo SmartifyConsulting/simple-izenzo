@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -18,6 +18,13 @@ import { TradeSummary } from "@/components/canvas/TradeSummary";
 import { MahjongView } from "@/components/canvas/MahjongView";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { advance, fallbackReference, fingerprintOf, recordEvent, type Transaction } from "@/lib/tx";
 import { useAuth } from "@/lib/auth";
@@ -51,7 +58,7 @@ export const Route = createFileRoute("/_authenticated/live-deal-engine")({
 
 type Attachment = {
   name: string;
-  kind: "ID front" | "ID back" | "Document";
+  kind: "ID" | "ID front" | "ID back" | "Document";
   /** Location of the stored file in the private `documents` bucket, so it can be opened later. */
   path?: string | null;
 };
@@ -74,12 +81,14 @@ function FileField({
   files,
   onChange,
   multiple,
+  accept,
 }: {
   id: string;
   label: string;
   files: File[];
   onChange: (files: File[]) => void;
   multiple?: boolean;
+  accept?: string;
 }) {
   const [dragOver, setDragOver] = useState(false);
 
@@ -121,6 +130,7 @@ function FileField({
           id={id}
           type="file"
           multiple={multiple}
+          {...(accept ? { accept } : {})}
           className="hidden"
           onChange={(e) => addFiles(e.target.files)}
         />
