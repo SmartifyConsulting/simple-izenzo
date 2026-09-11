@@ -3,6 +3,7 @@ import {
   Banknote,
   Briefcase,
   CheckCircle2,
+  Cog,
   Database,
   FileText,
   Globe,
@@ -27,8 +28,8 @@ function nodeState(stage: StageKey, step: string, tx: Transaction): NodeState {
   return "open";
 }
 
-/** Which of the diagram's five numbered step groups the deal is actually in right now — matches
- * GROUPS' own numbering (Trading, Compliance & Governance, Execution, Finality, Memory). */
+/** Which of the stepper's five numbered steps the deal is actually in right now — matches
+ * STEPS' own numbering (Trading, Compliance & Governance, Execution, Finality, Memory). */
 function currentStepNumber(tx: Transaction): number {
   if (tx.stage === "execution") return 3;
   if (tx.stage === "finality") return 4;
@@ -37,351 +38,161 @@ function currentStepNumber(tx: Transaction): number {
   return tx.step === "poi" ? 2 : 1;
 }
 
-// Diagram coordinate system — everything below is placed on this fixed canvas and scaled to the
-// container with percentages, so boxes and their connecting arrows always stay aligned with each
-// other regardless of viewport width.
-const W = 1246;
-const pctX = (v: number) => `${(v / W) * 100}%`;
+type SubItem = {
+  key: string;
+  label: string;
+  stage: StageKey;
+  step: string;
+  icon?: typeof Search;
+  sub?: string;
+  /** The one item per step that always reads as open/active rather than locked/done — used for
+   * "Create a bid or an offer", which starts a fresh registration rather than tracking state. */
+  isEntry?: boolean;
+};
 
-const ROW = 46; // shared node height
-const PITCH = 86; // vertical distance from one row's top to the next
-const CENTER_W = 360; // shared width for the center-column nodes, matched to Choice
-const TOP_Y = 24;
+type StepDef = {
+  step: number;
+  label: string;
+  items: SubItem[];
+};
 
-const GROUP_PAD = 20;
-// Vertical gap between one step's frame and the next, whether expanded or collapsed.
-const STEP_GAP = 52;
-// Height of a collapsed step — just enough room for its label bar.
-const COLLAPSED_H = 34;
-
-const S3_W = 620;
-const COL_GAP = (W - S3_W) / 2;
-const S3_X = COL_GAP;
-
-// Inner content bounds of the Execution frame.
-const S3_L = S3_X + GROUP_PAD;
-const S3_R = S3_X + S3_W - GROUP_PAD;
-
-const PREP_W = 330;
-const SUB_W = 165;
-const EXEC_W = 210;
-const FIN_W = S3_W - GROUP_PAD * 2;
-const MEM_W = S3_W - GROUP_PAD * 2;
-
-type Box = { x: number; y: number; w: number; h: number };
-// Left edge shared by the Trading, Compliance & Governance and Execution frames, so Steps 1, 2
-// and 3 all line up on the same left margin.
-const STEP_X = S3_L;
-
-// Each step's content height when fully expanded (excludes GROUP_PAD framing).
-const STEP1_H = PITCH * 3 + ROW; // bidOffer (one shared entry point), search, surfaceRoutes, choice
-const STEP2_H = PITCH + ROW; // poi, wad
-const STEP3_H = PITCH * 2 + ROW; // projectPrep/execution, concept/prefeasibility/implementation, feasibility/bankability
-const STEP4_H = PITCH * 2 + ROW; // finality, payment, completion
-const STEP5_H = ROW; // memory
-
-const STEP_FULL_H: Record<number, number> = { 1: STEP1_H, 2: STEP2_H, 3: STEP3_H, 4: STEP4_H, 5: STEP5_H };
+const STEPS: StepDef[] = [
+  {
+    step: 1,
+    label: "Trading",
+    items: [
+      { key: "bidOffer", label: "Create a bid or an offer", stage: "trading", step: "bid-offer", isEntry: true },
+      { key: "search", label: "Search AI + AI+", stage: "trading", step: "search", icon: Search },
+      { key: "onlineMedia", label: "Online Media Screening", stage: "trading", step: "online-media", icon: Globe },
+      { key: "choice", label: "Choice", stage: "trading", step: "choice", icon: ListChecks },
+    ],
+  },
+  {
+    step: 2,
+    label: "Compliance & Governance",
+    items: [
+      { key: "poi", label: "Proof of Intent", stage: "trading", step: "poi", icon: FileText },
+      {
+        key: "wad",
+        label: "Without a Doubt",
+        stage: "compliance",
+        step: "wad",
+        icon: ShieldCheck,
+        sub: "Hard gate · non-waivable",
+      },
+    ],
+  },
+  {
+    step: 3,
+    label: "Execution",
+    items: [
+      { key: "preparation", label: "Project Preparation", stage: "execution", step: "preparation", icon: Briefcase },
+      { key: "entry", label: "Execution", stage: "execution", step: "entry", icon: Hammer },
+      { key: "concept", label: "Concept", stage: "execution", step: "preparation" },
+      { key: "prefeasibility", label: "Pre-feasibility", stage: "execution", step: "preparation" },
+      { key: "feasibility", label: "Feasibility", stage: "execution", step: "preparation" },
+      { key: "bankability", label: "Bankability", stage: "execution", step: "bankability" },
+      { key: "implementation", label: "Implementation", stage: "execution", step: "implementation" },
+    ],
+  },
+  {
+    step: 4,
+    label: "Finality",
+    items: [
+      { key: "finality", label: "Finality", stage: "finality", step: "entry", icon: CheckCircle2 },
+      { key: "payment", label: "Payment", stage: "finality", step: "type", icon: Banknote },
+      { key: "completion", label: "Completion", stage: "finality", step: "record" },
+    ],
+  },
+  {
+    step: 5,
+    label: "Memory",
+    items: [{ key: "memory", label: "Memory", stage: "memory", step: "ledger", icon: Database }],
+  },
+];
 
 type Collapsed = Record<number, boolean>;
 
-/** Frame top (outer, including GROUP_PAD) for each step, given which steps are collapsed —
- * steps stack top to bottom, each one's height shrinking to COLLAPSED_H when collapsed, so
- * collapsing a step reclaims the space every step below it. */
-function stepFrameTops(collapsed: Collapsed): Record<number, number> {
-  const tops: Record<number, number> = {};
-  let y = TOP_Y - GROUP_PAD;
-  for (const step of [1, 2, 3, 4, 5]) {
-    tops[step] = y;
-    const contentH = collapsed[step] ? COLLAPSED_H - GROUP_PAD * 2 : STEP_FULL_H[step]!;
-    y += contentH + GROUP_PAD * 2 + STEP_GAP;
+function itemClasses(state: NodeState, isEntry?: boolean) {
+  if (isEntry) {
+    return state === "open"
+      ? "border-[#00e5ff]/60 bg-[#00e5ff]/10 text-[#00e5ff] hover:border-[#00e5ff]"
+      : "border-primary/50 bg-primary/12 text-primary";
   }
-  return tops;
-}
-
-/** Builds every node box and frame box for the current collapse state. Boxes belonging to a
- * collapsed step are still returned (so arrows/lookups don't break) but are simply not rendered. */
-function layout(collapsed: Collapsed) {
-  const frameTop = stepFrameTops(collapsed);
-  const y1 = frameTop[1]! + GROUP_PAD;
-  const y2 = frameTop[2]! + GROUP_PAD;
-  const y3 = frameTop[3]! + GROUP_PAD;
-  const y4 = frameTop[4]! + GROUP_PAD;
-  const y5 = frameTop[5]! + GROUP_PAD;
-
-  const boxes = {
-    bidOffer: { x: STEP_X, y: y1, w: CENTER_W, h: ROW },
-    search: { x: STEP_X, y: y1 + PITCH, w: CENTER_W, h: ROW },
-    surfaceRoutes: { x: STEP_X, y: y1 + PITCH * 2, w: CENTER_W, h: ROW },
-    choice: { x: STEP_X, y: y1 + PITCH * 3, w: CENTER_W, h: ROW },
-
-    poi: { x: STEP_X, y: y2, w: CENTER_W, h: ROW },
-    wad: { x: STEP_X, y: y2 + PITCH, w: CENTER_W, h: ROW },
-
-    projectPrep: { x: S3_L, y: y3, w: PREP_W, h: ROW },
-    execution: { x: S3_R - EXEC_W, y: y3, w: EXEC_W, h: ROW },
-    concept: { x: S3_L, y: y3 + PITCH, w: SUB_W, h: ROW },
-    prefeasibility: { x: S3_L + PREP_W - SUB_W, y: y3 + PITCH, w: SUB_W, h: ROW },
-    implementation: { x: S3_R - EXEC_W, y: y3 + PITCH, w: EXEC_W, h: ROW },
-    feasibility: { x: S3_L, y: y3 + PITCH * 2, w: SUB_W, h: ROW },
-    bankability: { x: S3_L + PREP_W - SUB_W, y: y3 + PITCH * 2, w: SUB_W, h: ROW },
-
-    finality: { x: S3_L, y: y4, w: FIN_W, h: ROW },
-    payment: { x: S3_L, y: y4 + PITCH, w: FIN_W, h: ROW },
-    completion: { x: S3_L, y: y4 + PITCH * 2, w: FIN_W, h: ROW },
-
-    memory: { x: S3_L, y: y5, w: MEM_W, h: ROW },
-  } as const satisfies Record<string, Box>;
-
-  const groups: { label: string; step: number; box: Box; emphasis?: boolean }[] = [
-    {
-      label: "Trading",
-      step: 1,
-      emphasis: true,
-      box: { x: S3_X, y: frameTop[1]!, w: S3_W, h: collapsed[1] ? COLLAPSED_H : STEP1_H + GROUP_PAD * 2 },
-    },
-    {
-      label: "Compliance & Governance",
-      step: 2,
-      box: { x: S3_X, y: frameTop[2]!, w: S3_W, h: collapsed[2] ? COLLAPSED_H : STEP2_H + GROUP_PAD * 2 },
-    },
-    {
-      label: "Execution",
-      step: 3,
-      box: { x: S3_X, y: frameTop[3]!, w: S3_W, h: collapsed[3] ? COLLAPSED_H : STEP3_H + GROUP_PAD * 2 },
-    },
-    {
-      label: "Finality",
-      step: 4,
-      box: { x: S3_X, y: frameTop[4]!, w: S3_W, h: collapsed[4] ? COLLAPSED_H : STEP4_H + GROUP_PAD * 2 },
-    },
-    {
-      label: "Memory",
-      step: 5,
-      box: { x: S3_X, y: frameTop[5]!, w: S3_W, h: collapsed[5] ? COLLAPSED_H : STEP5_H + GROUP_PAD * 2 },
-    },
-  ];
-
-  const totalH = frameTop[5]! + (collapsed[5] ? COLLAPSED_H : STEP5_H + GROUP_PAD * 2) + 20;
-
-  return { boxes, groups, totalH };
-}
-
-// Connector points sit exactly on each box's border, so a line leaves touching the box it comes
-// from and its arrowhead tip lands on the border of the box it points at.
-const cx = (b: Box) => b.x + b.w / 2;
-const cy = (b: Box) => b.y + b.h / 2;
-const top = (b: Box) => ({ x: cx(b), y: b.y });
-const bottom = (b: Box) => ({ x: cx(b), y: b.y + b.h });
-
-type Point = { x: number; y: number };
-/** An elbow connector: straight from `a`, turning once, ending at `b`. `via: "x"` turns
- * horizontally first then vertically (so the final leg is vertical, and the arrowhead points
- * down — use this when `b` is a box's top/bottom); `"y"` turns vertically first then
- * horizontally (final leg horizontal — use when `b` is a box's left/right). */
-function elbow(a: Point, b: Point, via: "x" | "y" = "y"): string {
-  const mid: Point = via === "y" ? { x: a.x, y: b.y } : { x: b.x, y: a.y };
-  return `M ${a.x} ${a.y} L ${mid.x} ${mid.y} L ${b.x} ${b.y}`;
-}
-
-/** A tree connector: a short vertical stub leaves `a`'s border before the line fans out along a
- * shared trunk — so multiple branches leaving the same point don't bunch up right at the box
- * border — then drops straight down into each target so every arrowhead points down. */
-function branchDown(a: Point, targets: Point[], stub = 26): string[] {
-  const trunkY = a.y + stub;
-  return targets.map((t) => `M ${a.x} ${a.y} L ${a.x} ${trunkY} L ${t.x} ${trunkY} L ${t.x} ${t.y}`);
-}
-
-/** Every connector, keyed by the pair of steps it runs between — hidden if either endpoint's
- * step is currently collapsed, since the boxes at each end aren't shown. */
-function buildArrows(boxes: ReturnType<typeof layout>["boxes"]): { d: string; steps: [number, number] }[] {
-  return [
-    { d: elbow(bottom(boxes.bidOffer), top(boxes.search), "x"), steps: [1, 1] },
-    { d: elbow(bottom(boxes.search), top(boxes.surfaceRoutes), "x"), steps: [1, 1] },
-    { d: elbow(bottom(boxes.surfaceRoutes), top(boxes.choice), "x"), steps: [1, 1] },
-    { d: elbow(bottom(boxes.choice), top(boxes.poi), "x"), steps: [1, 2] },
-    { d: elbow(bottom(boxes.poi), top(boxes.wad), "x"), steps: [2, 2] },
-    ...branchDown(bottom(boxes.wad), [top(boxes.projectPrep), top(boxes.execution)], 44).map(
-      (d): { d: string; steps: [number, number] } => ({ d, steps: [2, 3] }),
-    ),
-    { d: elbow(bottom(boxes.execution), top(boxes.implementation), "x"), steps: [3, 3] },
-    { d: elbow(bottom(boxes.execution), top(boxes.finality), "x"), steps: [3, 4] },
-    { d: elbow(bottom(boxes.finality), top(boxes.payment), "x"), steps: [4, 4] },
-    { d: elbow(bottom(boxes.payment), top(boxes.completion), "x"), steps: [4, 4] },
-    { d: elbow(bottom(boxes.completion), top(boxes.memory), "x"), steps: [4, 5] },
-    ...branchDown(bottom(boxes.projectPrep), [top(boxes.concept), top(boxes.prefeasibility)], 14).map(
-      (d): { d: string; steps: [number, number] } => ({ d, steps: [3, 3] }),
-    ),
-    { d: elbow(bottom(boxes.concept), top(boxes.feasibility), "x"), steps: [3, 3] },
-    { d: elbow(bottom(boxes.prefeasibility), top(boxes.bankability), "x"), steps: [3, 3] },
-  ];
-}
-
-function GroupFrame({
-  label,
-  step,
-  box,
-  active,
-  collapsed,
-  onToggle,
-  h,
-}: {
-  label: string;
-  step: number;
-  box: Box;
-  /** Whichever step the deal is actually in right now gets a soft green wash behind its frame —
-   * shifts from step to step as the deal moves on, so it's always obvious where things stand. */
-  active?: boolean;
-  collapsed: boolean;
-  onToggle: () => void;
-  h: (v: number) => string;
-}) {
-  return (
-    <>
-      <div
-        className="pointer-events-none absolute rounded-xl"
-        style={{ left: pctX(box.x), top: h(box.y), width: pctX(box.w), height: h(box.h) }}
-      />
-      {/* Positioned in the canvas's own left margin (before STEP_X) rather than overflowing the
-       * frame box, so it's never clipped by the diagram's own bounding box. */}
-      <button
-        type="button"
-        onClick={onToggle}
-        style={{ left: pctX(0), top: h(box.y + 24), width: pctX(STEP_X - 16) }}
-        className="pointer-events-auto absolute -translate-y-1/2 text-right text-[10px] font-semibold uppercase leading-tight tracking-wide text-white transition-colors hover:text-primary"
-        aria-expanded={!collapsed}
-      >
-        {collapsed ? "+ " : "− "}Step {step} · {label}
-      </button>
-    </>
+  return cn(
+    state === "done" && "border-primary/50 bg-primary/12 text-primary",
+    state === "active" && "border-[#00e5ff] bg-[#00e5ff]/15 text-[#00e5ff] animate-throb-aqua",
+    state === "open" && "border-border bg-card text-foreground hover:border-primary/40",
+    state === "locked" && "cursor-not-allowed border-border/60 bg-card/50 text-muted-foreground",
   );
 }
 
-function ArrowLayer({
-  arrows,
-  collapsed,
-  w,
-  h,
-}: {
-  arrows: { d: string; steps: [number, number] }[];
-  collapsed: Collapsed;
-  totalW: number;
-  totalH: number;
-  w: number;
-  h: number;
-}) {
-  return (
-    <svg
-      viewBox={`0 0 ${w} ${h}`}
-      preserveAspectRatio="none"
-      className="pointer-events-none absolute inset-0 h-full w-full"
-      aria-hidden
-    >
-      <defs>
-        <marker id="mj-arrowhead" markerWidth="8" markerHeight="8" refX="8" refY="4" orient="auto">
-          <path d="M0,0 L8,4 L0,8 Z" className="fill-muted-foreground/50" />
-        </marker>
-      </defs>
-      {arrows
-        .filter((a) => !collapsed[a.steps[0]] && !collapsed[a.steps[1]])
-        .map((a, i) => (
-          <path
-            key={i}
-            d={a.d}
-            fill="none"
-            className="stroke-muted-foreground/40"
-            strokeWidth={1.5}
-            markerEnd="url(#mj-arrowhead)"
-          />
-        ))}
-    </svg>
-  );
-}
-
-/** One workflow-diagram button, absolutely positioned on the shared coordinate system. */
-function StepNode({
-  box,
-  label,
-  labelClassName,
-  sub,
-  subClassName,
-  icon: Icon,
+/** One item in a step's sub-list — a small row, not a diagram node, since the whole view is now
+ * a plain vertical list rather than an absolutely-positioned canvas. */
+function SubRow({
+  item,
   state,
   onClick,
-  tone = "neutral",
-  frameClassName,
-  pctY,
 }: {
-  box: Box;
-  label: string;
-  /** Overrides the label's default color — used to pick Choice out in sky blue while keeping the
-   * same frame styling as its neighbors. */
-  labelClassName?: string;
-  /** A small second line inside the node, under the label — used for WaD's "hard gate" note. */
-  sub?: string;
-  /** Overrides the sub line's default color — used for WaD's terracotta "non-waivable" note. */
-  subClassName?: string;
-  icon?: typeof Search;
+  item: SubItem;
   state: NodeState;
   onClick?: () => void;
-  tone?: "neutral" | "danger" | "header" | "light";
-  /** Overrides the whole frame's border/fill/text, whatever the state — used to pick a single
-   * node out permanently (e.g. Search AI + AI+'s terracotta fill), not just while it's active. */
-  frameClassName?: string;
-  pctY: (v: number) => string;
 }) {
+  const Icon = item.icon;
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={!onClick}
-      style={{ left: pctX(box.x), top: pctY(box.y), width: pctX(box.w), height: pctY(box.h) }}
       className={cn(
-        "absolute flex flex-col items-center justify-center gap-0.5 overflow-hidden rounded-lg border px-2 text-center text-[12px] font-semibold leading-tight tracking-tight transition-colors sm:text-sm",
-        // Register Bid/Offer pulse as an open invitation to click the moment nothing has started
-        // yet — same idea as the active-step pulse elsewhere, just for the two starting moves.
-        tone === "header" && state === "open" && "bg-black text-[#00e5ff] border-[#00e5ff] hover:border-[#00e5ff] animate-throb-aqua",
-        tone === "header" && state !== "done" && state !== "open" && "bg-slate-700/40 text-foreground border-border hover:border-primary/40",
-        tone === "header" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
-        tone === "neutral" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
-        tone === "neutral" && state === "active" && "border-[#00e5ff] bg-[#00e5ff]/15 text-[#00e5ff] animate-throb-aqua",
-        tone === "neutral" && state === "open" && "border-white/50 bg-black font-normal text-white hover:border-white/70",
-        tone === "neutral" &&
-          state === "locked" &&
-          "cursor-not-allowed border-white/40 bg-black font-normal text-white/50",
-        tone === "danger" && state !== "done" && "border-[#F59E0B]/60 bg-[#F59E0B]/10 text-[#F59E0B]",
-        tone === "danger" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
-        tone === "light" && state === "done" && "border-primary/50 bg-primary/12 text-primary",
-        tone === "light" && state === "active" && "border-[#00e5ff] bg-[#00e5ff]/15 text-[#00e5ff] animate-throb-aqua",
-        tone === "light" &&
-          (state === "open" || state === "locked") &&
-          cn(
-            "border-white/50 bg-black font-normal text-white hover:border-white/70",
-            state === "locked" && "cursor-not-allowed text-white/50",
-          ),
-        frameClassName,
+        "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-[13px] font-medium leading-tight transition-colors disabled:cursor-not-allowed",
+        itemClasses(state, item.isEntry),
       )}
     >
-      <span className="flex items-center gap-1.5">
-        {Icon && <Icon className={cn("h-3.5 w-3.5 shrink-0", labelClassName)} />}
-        <span className={cn("truncate", labelClassName)}>{label}</span>
-      </span>
-      {sub && (
-        <span
-          className={cn(
-            "truncate text-[9px] font-semibold uppercase tracking-wide",
-            subClassName ?? (tone === "danger" ? "text-[#F59E0B]" : "text-current opacity-95"),
-          )}
-        >
-          {sub}
+      {Icon && <Icon className="h-3.5 w-3.5 shrink-0" />}
+      <span className="min-w-0 flex-1 truncate">{item.label}</span>
+      {item.sub && (
+        <span className="shrink-0 truncate text-[9px] font-semibold uppercase tracking-wide text-[#C1653D]">
+          {item.sub}
         </span>
       )}
     </button>
   );
 }
 
-/** The Classic view: the whole deal pipeline laid out as the product's workflow diagram — boxes
- * and arrows in the same relative positions as the source flowchart. Each node opens that step's
- * form. Each of the 5 numbered steps collapses independently, like an accordion. */
+/** The cog marker for one step on the vertical stepper — filled/spinning-still for the step
+ * the deal is actually in right now, muted otherwise. Doubles as the expand/collapse toggle. */
+function StepCog({
+  active,
+  done,
+  collapsed,
+  onToggle,
+}: {
+  active: boolean;
+  done: boolean;
+  collapsed: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={!collapsed}
+      className={cn(
+        "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+        active && "border-[#00e5ff] bg-[#00e5ff]/15 text-[#00e5ff] animate-throb-aqua",
+        done && !active && "border-primary/60 bg-primary/12 text-primary",
+        !active && !done && "border-border bg-card text-muted-foreground hover:border-primary/40",
+      )}
+    >
+      <Cog className="h-5 w-5" />
+    </button>
+  );
+}
+
+/** The Classic view: the whole deal pipeline as a vertical stepper — a column of cog markers,
+ * one per numbered step, each expanding to its own list of sub-items. Each item opens that
+ * step's form. */
 export function ClassicView({
   tx,
   reload,
@@ -395,12 +206,17 @@ export function ClassicView({
   /** Fires when "Create a bid or an offer" is clicked, before any real deal exists — the caller
    * opens the form that actually records it, where the direction itself is picked. */
   onRegister?: () => void;
-  /** When given, clicking a node hands the (stage, step) to the caller instead of opening an
-   * inline panel here — used to show the step in a Workspace panel alongside the map. */
+  /** When given, clicking an item hands the (stage, step) to the caller instead of opening an
+   * inline panel here — used to show the step in a Workspace panel alongside the stepper. */
   onOpenStep?: (stage: StageKey, step: string) => void;
 }) {
   const [panel, setPanel] = useState<{ stage: StageKey; step: string } | null>(null);
-  const [collapsed, setCollapsed] = useState<Collapsed>({});
+  const activeStep = currentStepNumber(tx);
+  const [collapsed, setCollapsed] = useState<Collapsed>(() => {
+    const initial: Collapsed = {};
+    for (const s of STEPS) initial[s.step] = s.step !== activeStep;
+    return initial;
+  });
 
   const open = (stage: StageKey, step: string) => {
     if (readOnly) return;
@@ -415,213 +231,61 @@ export function ClassicView({
 
   const st = (stage: StageKey, step: string) => nodeState(stage, step, tx);
   const active = panel && !readOnly ? panel : null;
-  const activeStep = currentStepNumber(tx);
-
-  const { boxes: BOXES, groups: GROUPS, totalH: H } = layout(collapsed);
-  const ARROWS = buildArrows(BOXES);
-  const pctYFn = (v: number) => `${(v / H) * 100}%`;
 
   return (
-    <div className="relative h-full">
-      <div className="flex h-full items-start justify-center overflow-hidden">
-        <div
-          className="relative"
-          style={{ height: "100%", aspectRatio: `${W} / ${H}`, maxWidth: "100%" }}
-        >
+    <div className="relative h-full overflow-y-auto pr-1">
+      <div className="flex flex-col">
+        {STEPS.map((s, i) => {
+          const stepCollapsed = Boolean(collapsed[s.step]);
+          const stepIsActive = s.step === activeStep;
+          const stepIsDone = s.step < activeStep;
+          return (
+            <div key={s.step} className="flex gap-4">
+              <div className="flex flex-col items-center">
+                <StepCog
+                  active={stepIsActive}
+                  done={stepIsDone}
+                  collapsed={stepCollapsed}
+                  onToggle={() => toggleStep(s.step)}
+                />
+                {i < STEPS.length - 1 && <div className="w-px flex-1 bg-border" />}
+              </div>
 
-        <ArrowLayer arrows={ARROWS} collapsed={collapsed} totalW={W} totalH={H} w={W} h={H} />
-        {GROUPS.map((g) => (
-          <GroupFrame
-            key={g.label}
-            {...g}
-            active={g.step === activeStep}
-            collapsed={Boolean(collapsed[g.step])}
-            onToggle={() => toggleStep(g.step)}
-            h={pctYFn}
-          />
-        ))}
+              <div className={cn("min-w-0 flex-1", i < STEPS.length - 1 ? "pb-6" : "pb-1")}>
+                <button
+                  type="button"
+                  onClick={() => toggleStep(s.step)}
+                  className="flex h-11 items-center gap-1.5 text-left text-[11px] font-semibold uppercase tracking-wide text-white transition-colors hover:text-primary"
+                  aria-expanded={!stepCollapsed}
+                >
+                  {stepCollapsed ? "+ " : "− "}Step {s.step} · {s.label}
+                </button>
 
-        {!collapsed[1] && (
-          <>
-            <StepNode
-              box={BOXES.bidOffer}
-              label="Create a bid or an offer"
-              tone="header"
-              state={readOnly ? "open" : st("trading", "bid-offer")}
-              // Always starts fresh, even when a deal is already loaded on this canvas — it's a
-              // new registration, not a way back into whatever's currently open. Direction (bid
-              // vs offer) is picked in the form itself.
-              onClick={() => onRegister?.()}
-              pctY={pctYFn}
-            />
-            <StepNode
-              box={BOXES.search}
-              label="Search AI + AI+"
-              icon={Search}
-              tone="light"
-              frameClassName="border-white/50 bg-[#C1653D] text-white hover:border-white/70"
-              state={st("trading", "search")}
-              onClick={() => open("trading", "search")}
-              pctY={pctYFn}
-            />
-            <StepNode
-              box={BOXES.surfaceRoutes}
-              label="Online Media Screening"
-              icon={Globe}
-              tone="light"
-              state={st("trading", "online-media")}
-              onClick={() => open("trading", "online-media")}
-              pctY={pctYFn}
-            />
-            <StepNode
-              box={BOXES.choice}
-              label="Choice"
-              labelClassName="text-white"
-              icon={ListChecks}
-              tone="light"
-              frameClassName="border-info bg-info text-white hover:border-info"
-              state={st("trading", "choice")}
-              onClick={() => open("trading", "choice")}
-              pctY={pctYFn}
-            />
-          </>
-        )}
-
-        {!collapsed[2] && (
-          <>
-            <StepNode
-              box={BOXES.poi}
-              label="Proof of Intent"
-              labelClassName="text-primary"
-              icon={FileText}
-              tone="light"
-              frameClassName="border-primary bg-primary/15 text-primary hover:border-primary"
-              state={st("trading", "poi")}
-              onClick={() => open("trading", "poi")}
-              pctY={pctYFn}
-            />
-            <StepNode
-              box={BOXES.wad}
-              label="Without a Doubt"
-              labelClassName="text-primary"
-              sub="Hard gate · non-waivable"
-              subClassName="text-[#C1653D]"
-              icon={ShieldCheck}
-              tone="light"
-              frameClassName="border-primary bg-primary/15 text-primary hover:border-primary"
-              state={st("compliance", "wad")}
-              onClick={() => open("compliance", "wad")}
-              pctY={pctYFn}
-            />
-          </>
-        )}
-
-        {!collapsed[3] && (
-          <>
-            <StepNode
-              box={BOXES.projectPrep}
-              tone="light"
-              label="Project Preparation"
-              icon={Briefcase}
-              state={st("execution", "preparation")}
-              onClick={() => open("execution", "preparation")}
-              pctY={pctYFn}
-            />
-            <StepNode
-              box={BOXES.execution}
-              tone="light"
-              label="Execution"
-              icon={Hammer}
-              state={st("execution", "entry")}
-              onClick={() => open("execution", "entry")}
-              pctY={pctYFn}
-            />
-            <StepNode
-              box={BOXES.concept}
-              tone="light"
-              label="Concept"
-              state={st("execution", "preparation")}
-              onClick={() => open("execution", "preparation")}
-              pctY={pctYFn}
-            />
-            <StepNode
-              box={BOXES.prefeasibility}
-              tone="light"
-              label="Pre-feasibility"
-              state={st("execution", "preparation")}
-              onClick={() => open("execution", "preparation")}
-              pctY={pctYFn}
-            />
-            <StepNode
-              box={BOXES.feasibility}
-              tone="light"
-              label="Feasibility"
-              state={st("execution", "preparation")}
-              onClick={() => open("execution", "preparation")}
-              pctY={pctYFn}
-            />
-            <StepNode
-              box={BOXES.bankability}
-              tone="light"
-              label="Bankability"
-              state={st("execution", "bankability")}
-              onClick={() => open("execution", "bankability")}
-              pctY={pctYFn}
-            />
-            <StepNode
-              box={BOXES.implementation}
-              tone="light"
-              label="Implementation"
-              state={st("execution", "implementation")}
-              onClick={() => open("execution", "implementation")}
-              pctY={pctYFn}
-            />
-          </>
-        )}
-
-        {!collapsed[4] && (
-          <>
-            <StepNode
-              box={BOXES.finality}
-              tone="light"
-              label="Finality"
-              icon={CheckCircle2}
-              state={st("finality", "entry")}
-              onClick={() => open("finality", "entry")}
-              pctY={pctYFn}
-            />
-            <StepNode
-              box={BOXES.payment}
-              tone="light"
-              label="Payment"
-              icon={Banknote}
-              state={st("finality", "type")}
-              onClick={() => open("finality", "type")}
-              pctY={pctYFn}
-            />
-            <StepNode
-              box={BOXES.completion}
-              tone="light"
-              label="Completion"
-              state={st("finality", "record")}
-              onClick={() => open("finality", "record")}
-              pctY={pctYFn}
-            />
-          </>
-        )}
-
-        {!collapsed[5] && (
-          <StepNode
-            box={BOXES.memory}
-            tone="light"
-            label="Memory"
-            icon={Database}
-            state={st("memory", "ledger")}
-            onClick={() => open("memory", "ledger")}
-            pctY={pctYFn}
-          />
-        )}
-        </div>
+                {!stepCollapsed && (
+                  <div className="mt-2 space-y-1.5">
+                    {s.items.map((item) => {
+                      const state = item.isEntry
+                        ? readOnly
+                          ? "open"
+                          : st(item.stage, item.step)
+                        : st(item.stage, item.step);
+                      return (
+                        <SubRow
+                          key={item.key}
+                          item={item}
+                          state={state}
+                          onClick={
+                            item.isEntry ? () => onRegister?.() : () => open(item.stage, item.step)
+                          }
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {active && (
