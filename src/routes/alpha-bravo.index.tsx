@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Lock, ShieldCheck, MailX, DatabaseZap } from "lucide-react";
+import { ArrowRight, Lock, ShieldCheck, MailX, DatabaseZap, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AuthTabs } from "@/components/auth/AuthTabs";
 
@@ -78,13 +78,16 @@ function AlphaBravoHome() {
     <section className="mx-auto max-w-6xl px-5 py-24 sm:py-28">
       <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+            <Sparkles className="h-3.5 w-3.5" /> AI-Powered Trade Matching
+          </span>
+          <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
             Pre-vetted · Governed marketplace
           </p>
           <h1 className="mt-6 max-w-3xl text-5xl leading-[1.05] tracking-tight text-foreground sm:text-6xl">
             Find the right Responders
             <br />
-            in minutes, not months.
+            in less than 5 minutes.
           </h1>
           <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground">
             Post your opportunity brief and get matched with verified Responders — fit scores,

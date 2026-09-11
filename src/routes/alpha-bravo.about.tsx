@@ -7,24 +7,6 @@ export const Route = createFileRoute("/alpha-bravo/about")({
   component: About,
 });
 
-const PRINCIPLES = [
-  {
-    n: "01",
-    title: "Hash-sealed by design",
-    body: "Every match is independently verifiable — tamper-evident from the first handshake to final settlement.",
-  },
-  {
-    n: "02",
-    title: "A gate that can't be waived",
-    body: "Compliance isn't a checkbox someone can skip under pressure. It clears, or the match doesn't proceed.",
-  },
-  {
-    n: "03",
-    title: "Counterparties who can prove it",
-    body: "KYC/KYB isn't a formality — it's the difference between an introduction and a liability.",
-  },
-];
-
 function About() {
   return (
     <section className="mx-auto max-w-5xl px-5 py-20 sm:py-24">
@@ -42,16 +24,6 @@ function About() {
         gap — one governed flow from Trading through Compliance &amp; Governance, Execution,
         Finality, and Memory.
       </p>
-
-      <div className="mt-16 grid gap-10 sm:grid-cols-3">
-        {PRINCIPLES.map((p) => (
-          <div key={p.n}>
-            <p className="text-sm font-semibold text-primary">{p.n}</p>
-            <h3 className="mt-3 text-lg font-medium tracking-tight text-foreground">{p.title}</h3>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{p.body}</p>
-          </div>
-        ))}
-      </div>
     </section>
   );
 }
