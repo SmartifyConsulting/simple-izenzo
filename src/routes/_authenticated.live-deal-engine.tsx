@@ -292,7 +292,6 @@ function LiveDealEngine() {
 
 
   const [idFront, setIdFront] = useState<File[]>([]);
-  const [idBack, setIdBack] = useState<File[]>([]);
   const [docFiles, setDocFiles] = useState<File[]>([]);
   const [documentSummary, setDocumentSummary] = useState<string | null>(null);
   const [documentSummaryBusy, setDocumentSummaryBusy] = useState(false);
@@ -739,8 +738,7 @@ function LiveDealEngine() {
     e.preventDefault();
     if (!dealTx) return;
     const collected: { file: File; kind: Attachment["kind"] }[] = [
-      ...idFront.map((f) => ({ file: f, kind: "ID front" as const })),
-      ...idBack.map((f) => ({ file: f, kind: "ID back" as const })),
+      ...idFront.map((f) => ({ file: f, kind: "ID" as const })),
       ...docFiles.map((f) => ({ file: f, kind: "Document" as const })),
     ];
 
@@ -806,7 +804,7 @@ function LiveDealEngine() {
       // ID front/back just uploaded — open the Didit ID check on them straight away instead of
       // leaving the bidder to go find this under Settings. The badge on the workspace panel picks
       // up the result on its own once Didit reports back.
-      if (idFront.length > 0 || idBack.length > 0) {
+      if (idFront.length > 0) {
         startIdCheck({
           data: {
             checkType: "id_document",
@@ -848,7 +846,7 @@ function LiveDealEngine() {
           ) : (
             <span />
           )}
-          <OpenDealsStrip currentId={dealTx?.id ?? null} />
+          <OpenDealsPicker currentId={dealTx?.id ?? null} />
         </div>
         <MahjongView
           tx={dealTx ?? FLOWCHART_PREVIEW_TX}
@@ -905,9 +903,14 @@ function LiveDealEngine() {
           {activity && dealTx && flowStep === "documents" && (
             <form onSubmit={submitDocuments} className="glass-node animate-node-rise mt-3 space-y-4 p-5 sm:p-6">
               <p className="text-base font-semibold tracking-tight">Upload ID and documents</p>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FileField id="id-front" label="ID upload — front" files={idFront} onChange={setIdFront} />
-                <FileField id="id-back" label="ID upload — back" files={idBack} onChange={setIdBack} />
+              <div className="grid gap-4">
+                <FileField
+                  id="id-front"
+                  label="ID upload — photo or scan"
+                  files={idFront}
+                  onChange={setIdFront}
+                  accept="image/*"
+                />
               </div>
               <FileField id="docs" label="Documents" files={docFiles} onChange={setDocFiles} multiple />
               <Button type="submit" disabled={busy} className="w-full">
