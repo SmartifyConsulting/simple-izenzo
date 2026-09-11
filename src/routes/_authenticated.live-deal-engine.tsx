@@ -602,6 +602,13 @@ function LiveDealEngine() {
   // recorded for) even after the form resets — that's what the Live Workspace panel now shows.
   const side = direction ?? activity?.direction ?? pendingDirection ?? null;
 
+  // The bare "Open a bid or an offer" picker (Classic view with nothing recorded and no side
+  // picked yet) is retired — the Engine Map is where every session should land instead.
+  const viewMode = useViewMode();
+  useEffect(() => {
+    if (viewMode === "classic" && !activity && !side) setViewMode("mahjong");
+  }, [viewMode, activity, side]);
+
   // Opened via a Bid/Offer ID elsewhere (e.g. the Report list) — load that specific deal instead
   // of whatever was last worked on in this browser.
   useEffect(() => {
@@ -877,8 +884,6 @@ function LiveDealEngine() {
       setBusy(false);
     }
   }
-
-  const viewMode = useViewMode();
 
   if (viewMode === "mahjong") {
     return (
