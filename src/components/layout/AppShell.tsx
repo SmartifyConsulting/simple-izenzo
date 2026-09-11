@@ -1,7 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, BarChart3, ChevronDown, Coins, DollarSign, LayoutGrid, Mail, Plug } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, BarChart3, ChevronDown, Coins, DollarSign, LayoutGrid, Mail, Plug } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { initTheme } from "@/lib/theme";
+import { applyAppSkin } from "@/lib/appSkin";
 
 function greeting() {
   const hour = new Date().getHours();
@@ -92,6 +93,7 @@ export function AppShell({
 
   useEffect(() => {
     initTheme();
+    applyAppSkin("izenzo");
   }, []);
 
   return (
@@ -121,6 +123,15 @@ export function AppShell({
               {viewMode === "mahjong" ? "Izenzo Workspace" : "Izenzo Engine Map"}
             </span>
           </button>
+          <a
+            href="/alpha-bravo"
+            title="Switch App — demo the Alpha-Bravo look and feel"
+            aria-label="Switch App — demo the Alpha-Bravo look and feel"
+            className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeftRight className="h-4 w-4" strokeWidth={2.25} />
+            <span className="hidden sm:inline">Switch App</span>
+          </a>
 
           <div className="min-w-0 flex-1" />
           {org && (

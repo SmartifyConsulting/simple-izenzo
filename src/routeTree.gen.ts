@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
+import { Route as AlphaBravoRouteImport } from './routes/alpha-bravo'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DocsRouteImport } from './routes/docs'
@@ -37,6 +38,11 @@ import { Route as AuthenticatedLiveDealEngineRouteImport } from './routes/_authe
 import { Route as AuthenticatedRegistryRouteImport } from './routes/_authenticated.registry'
 import { Route as AuthenticatedSupportRouteImport } from './routes/_authenticated.support'
 import { Route as AuthenticatedTradesRouteImport } from './routes/_authenticated.trades'
+import { Route as AlphaBravoIndexRouteImport } from './routes/alpha-bravo.index'
+import { Route as AlphaBravoAboutRouteImport } from './routes/alpha-bravo.about'
+import { Route as AlphaBravoForBiddersRouteImport } from './routes/alpha-bravo.for-bidders'
+import { Route as AlphaBravoInsightsRouteImport } from './routes/alpha-bravo.insights'
+import { Route as AlphaBravoMarketplaceRouteImport } from './routes/alpha-bravo.marketplace'
 import { Route as DocsApiRouteImport } from './routes/docs.api'
 import { Route as DocsWebhooksRouteImport } from './routes/docs.webhooks'
 import { Route as ProductsAuditLedgerRouteImport } from './routes/products.audit-ledger'
@@ -71,6 +77,11 @@ const IndexRoute = IndexRouteImport.update({
 } as any)
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AlphaBravoRoute = AlphaBravoRouteImport.update({
+  id: '/alpha-bravo',
+  path: '/alpha-bravo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -204,6 +215,31 @@ const AuthenticatedTradesRoute = AuthenticatedTradesRouteImport.update({
   id: '/trades',
   path: '/trades',
   getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AlphaBravoIndexRoute = AlphaBravoIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AlphaBravoRoute,
+} as any)
+const AlphaBravoAboutRoute = AlphaBravoAboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => AlphaBravoRoute,
+} as any)
+const AlphaBravoForBiddersRoute = AlphaBravoForBiddersRouteImport.update({
+  id: '/for-bidders',
+  path: '/for-bidders',
+  getParentRoute: () => AlphaBravoRoute,
+} as any)
+const AlphaBravoInsightsRoute = AlphaBravoInsightsRouteImport.update({
+  id: '/insights',
+  path: '/insights',
+  getParentRoute: () => AlphaBravoRoute,
+} as any)
+const AlphaBravoMarketplaceRoute = AlphaBravoMarketplaceRouteImport.update({
+  id: '/marketplace',
+  path: '/marketplace',
+  getParentRoute: () => AlphaBravoRoute,
 } as any)
 const DocsApiRoute = DocsApiRouteImport.update({
   id: '/api',
@@ -355,6 +391,7 @@ const AuthenticatedTxIdStageStepRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/alpha-bravo': typeof AlphaBravoRouteWithChildren
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
   '/docs': typeof DocsRouteWithChildren
@@ -381,6 +418,10 @@ export interface FileRoutesByFullPath {
   '/registry': typeof AuthenticatedRegistryRoute
   '/support': typeof AuthenticatedSupportRoute
   '/trades': typeof AuthenticatedTradesRoute
+  '/alpha-bravo/about': typeof AlphaBravoAboutRoute
+  '/alpha-bravo/for-bidders': typeof AlphaBravoForBiddersRoute
+  '/alpha-bravo/insights': typeof AlphaBravoInsightsRoute
+  '/alpha-bravo/marketplace': typeof AlphaBravoMarketplaceRoute
   '/docs/api': typeof DocsApiRoute
   '/docs/webhooks': typeof DocsWebhooksRoute
   '/products/audit-ledger': typeof ProductsAuditLedgerRoute
@@ -389,6 +430,7 @@ export interface FileRoutesByFullPath {
   '/solutions/finance': typeof SolutionsFinanceRoute
   '/solutions/sovereigns': typeof SolutionsSovereignsRoute
   '/solutions/traders': typeof SolutionsTradersRoute
+  '/alpha-bravo/': typeof AlphaBravoIndexRoute
   '/account/billing': typeof AuthenticatedAccountBillingRoute
   '/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/deal/$id': typeof AuthenticatedDealIdRoute
@@ -436,6 +478,10 @@ export interface FileRoutesByTo {
   '/registry': typeof AuthenticatedRegistryRoute
   '/support': typeof AuthenticatedSupportRoute
   '/trades': typeof AuthenticatedTradesRoute
+  '/alpha-bravo/about': typeof AlphaBravoAboutRoute
+  '/alpha-bravo/for-bidders': typeof AlphaBravoForBiddersRoute
+  '/alpha-bravo/insights': typeof AlphaBravoInsightsRoute
+  '/alpha-bravo/marketplace': typeof AlphaBravoMarketplaceRoute
   '/docs/api': typeof DocsApiRoute
   '/docs/webhooks': typeof DocsWebhooksRoute
   '/products/audit-ledger': typeof ProductsAuditLedgerRoute
@@ -444,6 +490,7 @@ export interface FileRoutesByTo {
   '/solutions/finance': typeof SolutionsFinanceRoute
   '/solutions/sovereigns': typeof SolutionsSovereignsRoute
   '/solutions/traders': typeof SolutionsTradersRoute
+  '/alpha-bravo': typeof AlphaBravoIndexRoute
   '/account/billing': typeof AuthenticatedAccountBillingRoute
   '/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/deal/$id': typeof AuthenticatedDealIdRoute
@@ -467,6 +514,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/alpha-bravo': typeof AlphaBravoRouteWithChildren
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
   '/docs': typeof DocsRouteWithChildren
@@ -493,6 +541,10 @@ export interface FileRoutesById {
   '/_authenticated/registry': typeof AuthenticatedRegistryRoute
   '/_authenticated/support': typeof AuthenticatedSupportRoute
   '/_authenticated/trades': typeof AuthenticatedTradesRoute
+  '/alpha-bravo/about': typeof AlphaBravoAboutRoute
+  '/alpha-bravo/for-bidders': typeof AlphaBravoForBiddersRoute
+  '/alpha-bravo/insights': typeof AlphaBravoInsightsRoute
+  '/alpha-bravo/marketplace': typeof AlphaBravoMarketplaceRoute
   '/docs/api': typeof DocsApiRoute
   '/docs/webhooks': typeof DocsWebhooksRoute
   '/products/audit-ledger': typeof ProductsAuditLedgerRoute
@@ -501,6 +553,7 @@ export interface FileRoutesById {
   '/solutions/finance': typeof SolutionsFinanceRoute
   '/solutions/sovereigns': typeof SolutionsSovereignsRoute
   '/solutions/traders': typeof SolutionsTradersRoute
+  '/alpha-bravo/': typeof AlphaBravoIndexRoute
   '/_authenticated/account/billing': typeof AuthenticatedAccountBillingRoute
   '/_authenticated/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/_authenticated/deal/$id': typeof AuthenticatedDealIdRoute
@@ -524,6 +577,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/alpha-bravo'
     | '/auth'
     | '/contact'
     | '/docs'
@@ -550,6 +604,10 @@ export interface FileRouteTypes {
     | '/registry'
     | '/support'
     | '/trades'
+    | '/alpha-bravo/about'
+    | '/alpha-bravo/for-bidders'
+    | '/alpha-bravo/insights'
+    | '/alpha-bravo/marketplace'
     | '/docs/api'
     | '/docs/webhooks'
     | '/products/audit-ledger'
@@ -558,6 +616,7 @@ export interface FileRouteTypes {
     | '/solutions/finance'
     | '/solutions/sovereigns'
     | '/solutions/traders'
+    | '/alpha-bravo/'
     | '/account/billing'
     | '/account/settings'
     | '/deal/$id'
@@ -605,6 +664,10 @@ export interface FileRouteTypes {
     | '/registry'
     | '/support'
     | '/trades'
+    | '/alpha-bravo/about'
+    | '/alpha-bravo/for-bidders'
+    | '/alpha-bravo/insights'
+    | '/alpha-bravo/marketplace'
     | '/docs/api'
     | '/docs/webhooks'
     | '/products/audit-ledger'
@@ -613,6 +676,7 @@ export interface FileRouteTypes {
     | '/solutions/finance'
     | '/solutions/sovereigns'
     | '/solutions/traders'
+    | '/alpha-bravo'
     | '/account/billing'
     | '/account/settings'
     | '/deal/$id'
@@ -635,6 +699,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/alpha-bravo'
     | '/auth'
     | '/contact'
     | '/docs'
@@ -661,6 +726,10 @@ export interface FileRouteTypes {
     | '/_authenticated/registry'
     | '/_authenticated/support'
     | '/_authenticated/trades'
+    | '/alpha-bravo/about'
+    | '/alpha-bravo/for-bidders'
+    | '/alpha-bravo/insights'
+    | '/alpha-bravo/marketplace'
     | '/docs/api'
     | '/docs/webhooks'
     | '/products/audit-ledger'
@@ -669,6 +738,7 @@ export interface FileRouteTypes {
     | '/solutions/finance'
     | '/solutions/sovereigns'
     | '/solutions/traders'
+    | '/alpha-bravo/'
     | '/_authenticated/account/billing'
     | '/_authenticated/account/settings'
     | '/_authenticated/deal/$id'
@@ -692,6 +762,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  AlphaBravoRoute: typeof AlphaBravoRouteWithChildren
   AuthRoute: typeof AuthRoute
   ContactRoute: typeof ContactRoute
   DocsRoute: typeof DocsRouteWithChildren
@@ -727,6 +798,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/alpha-bravo': {
+      id: '/alpha-bravo'
+      path: '/alpha-bravo'
+      fullPath: '/alpha-bravo'
+      preLoaderRoute: typeof AlphaBravoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -910,6 +988,41 @@ declare module '@tanstack/react-router' {
       fullPath: '/trades'
       preLoaderRoute: typeof AuthenticatedTradesRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/alpha-bravo/': {
+      id: '/alpha-bravo/'
+      path: '/'
+      fullPath: '/alpha-bravo/'
+      preLoaderRoute: typeof AlphaBravoIndexRouteImport
+      parentRoute: typeof AlphaBravoRoute
+    }
+    '/alpha-bravo/about': {
+      id: '/alpha-bravo/about'
+      path: '/about'
+      fullPath: '/alpha-bravo/about'
+      preLoaderRoute: typeof AlphaBravoAboutRouteImport
+      parentRoute: typeof AlphaBravoRoute
+    }
+    '/alpha-bravo/for-bidders': {
+      id: '/alpha-bravo/for-bidders'
+      path: '/for-bidders'
+      fullPath: '/alpha-bravo/for-bidders'
+      preLoaderRoute: typeof AlphaBravoForBiddersRouteImport
+      parentRoute: typeof AlphaBravoRoute
+    }
+    '/alpha-bravo/insights': {
+      id: '/alpha-bravo/insights'
+      path: '/insights'
+      fullPath: '/alpha-bravo/insights'
+      preLoaderRoute: typeof AlphaBravoInsightsRouteImport
+      parentRoute: typeof AlphaBravoRoute
+    }
+    '/alpha-bravo/marketplace': {
+      id: '/alpha-bravo/marketplace'
+      path: '/marketplace'
+      fullPath: '/alpha-bravo/marketplace'
+      preLoaderRoute: typeof AlphaBravoMarketplaceRouteImport
+      parentRoute: typeof AlphaBravoRoute
     }
     '/docs/api': {
       id: '/docs/api'
@@ -1170,6 +1283,26 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
   AuthenticatedRouteChildren,
 )
 
+interface AlphaBravoRouteChildren {
+  AlphaBravoAboutRoute: typeof AlphaBravoAboutRoute
+  AlphaBravoForBiddersRoute: typeof AlphaBravoForBiddersRoute
+  AlphaBravoInsightsRoute: typeof AlphaBravoInsightsRoute
+  AlphaBravoMarketplaceRoute: typeof AlphaBravoMarketplaceRoute
+  AlphaBravoIndexRoute: typeof AlphaBravoIndexRoute
+}
+
+const AlphaBravoRouteChildren: AlphaBravoRouteChildren = {
+  AlphaBravoAboutRoute: AlphaBravoAboutRoute,
+  AlphaBravoForBiddersRoute: AlphaBravoForBiddersRoute,
+  AlphaBravoInsightsRoute: AlphaBravoInsightsRoute,
+  AlphaBravoMarketplaceRoute: AlphaBravoMarketplaceRoute,
+  AlphaBravoIndexRoute: AlphaBravoIndexRoute,
+}
+
+const AlphaBravoRouteWithChildren = AlphaBravoRoute._addFileChildren(
+  AlphaBravoRouteChildren,
+)
+
 interface DocsRouteChildren {
   DocsApiRoute: typeof DocsApiRoute
   DocsWebhooksRoute: typeof DocsWebhooksRoute
@@ -1185,6 +1318,7 @@ const DocsRouteWithChildren = DocsRoute._addFileChildren(DocsRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  AlphaBravoRoute: AlphaBravoRouteWithChildren,
   AuthRoute: AuthRoute,
   ContactRoute: ContactRoute,
   DocsRoute: DocsRouteWithChildren,

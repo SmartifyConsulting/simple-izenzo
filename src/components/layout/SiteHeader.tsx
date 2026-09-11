@@ -1,5 +1,6 @@
+import { useEffect } from "react";
 import { Link } from "@tanstack/react-router";
-import { BarChart3, ChevronDown, Mail, Tag, TerminalSquare } from "lucide-react";
+import { ArrowLeftRight, BarChart3, ChevronDown, Mail, Tag, TerminalSquare } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { SearchButton } from "@/components/layout/SearchButton";
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import { applyAppSkin } from "@/lib/appSkin";
 
 /** The site header, shared by the home page, every marketing/content page (Glossary, Contact
  * Us…) and, once signed in, the same nav carries Search/Inbox/Profile — same as the app shell. */
@@ -24,6 +26,10 @@ export function SiteHeader({
 }) {
   const { user } = useAuth();
 
+  useEffect(() => {
+    applyAppSkin("izenzo");
+  }, []);
+
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur">
       <div className={cn("mx-auto flex h-14 max-w-6xl items-center gap-8 px-5", containerClassName)}>
@@ -33,6 +39,15 @@ export function SiteHeader({
 
         {user ? (
           <div className="ml-auto flex shrink-0 items-center gap-3">
+            <a
+              href="/alpha-bravo"
+              title="Switch App — demo the Alpha-Bravo look and feel"
+              aria-label="Switch App — demo the Alpha-Bravo look and feel"
+              className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ArrowLeftRight className="h-3.5 w-3.5" strokeWidth={2.25} />
+              <span className="hidden sm:inline">Switch App</span>
+            </a>
             <SearchButton />
             <nav className="flex shrink-0 items-center gap-4 text-sm font-medium text-muted-foreground">
               <a href="/pricing" className="flex items-center gap-1.5 hover:text-foreground">
@@ -72,6 +87,15 @@ export function SiteHeader({
           </div>
         ) : (
           <div className="ml-auto flex shrink-0 items-center gap-4">
+            <a
+              href="/alpha-bravo"
+              title="Switch App — demo the Alpha-Bravo look and feel"
+              aria-label="Switch App — demo the Alpha-Bravo look and feel"
+              className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ArrowLeftRight className="h-3.5 w-3.5" strokeWidth={2.25} />
+              <span className="hidden sm:inline">Switch App</span>
+            </a>
             <Link
               to="/auth"
               search={{ mode: "signin", next: undefined }}
