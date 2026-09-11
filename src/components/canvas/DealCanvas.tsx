@@ -539,6 +539,8 @@ export function DealCanvas({
                   </div>
                 )}
               </div>
+              {visible("trading", "choice") &&
+                node({ stage: "trading", step: "choice", icon: MousePointerClick }, { side: "center" })}
               {visible("trading", "online-media") && (
                 <div>
                   {node(
@@ -572,8 +574,6 @@ export function DealCanvas({
                   )}
                 </div>
               )}
-              {visible("trading", "choice") &&
-                node({ stage: "trading", step: "choice", icon: MousePointerClick }, { side: "center" })}
               {visible("trading", "media") && (
                 <div>
                   {node(
