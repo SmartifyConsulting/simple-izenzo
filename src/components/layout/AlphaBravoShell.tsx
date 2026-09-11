@@ -44,7 +44,7 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
             <Logo />
           </Link>
 
-          <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-6 text-sm text-muted-foreground sm:flex">
+          <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-5 whitespace-nowrap text-sm text-muted-foreground lg:flex">
             {NAV.map((item) => (
               <Link key={item.to} to={item.to} className="hover:text-foreground">
                 {item.label}
@@ -70,7 +70,7 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
           </nav>
 
           <div className="ml-auto flex shrink-0 items-center gap-3">
-            {user ? (
+            {user && (
               <>
                 <Link to="/live-deal-engine">
                   <Button size="sm" className="rounded-full">
@@ -79,30 +79,10 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
                 </Link>
                 <ProfileAvatarMenu />
               </>
-            ) : (
-              <Link
-                to="/auth"
-                search={{ mode: "signin", next: undefined }}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground"
-              >
-                Sign In
-              </Link>
             )}
           </div>
         </div>
       </header>
-
-      {!user && (
-        <Link
-          to="/auth"
-          search={{ mode: "signup", next: undefined }}
-          className="fixed right-5 top-[76px] z-50"
-        >
-          <Button size="sm" className="rounded-full shadow-lg">
-            Submit a Bid
-          </Button>
-        </Link>
-      )}
 
       <main>{children}</main>
 
