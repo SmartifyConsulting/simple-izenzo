@@ -111,6 +111,23 @@ function AlphaBravoHome() {
       </div>
 
       <p className="mt-20 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+        How a match plays out
+      </p>
+      <h2 className="mt-3 max-w-2xl text-3xl tracking-tight text-foreground sm:text-4xl">
+        Five stages, one governed flow.
+      </h2>
+      <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
+        {STAGES.map((s) => (
+          <div key={s.n} className="rounded-2xl border border-border bg-card p-5">
+            <p className="text-sm font-semibold text-primary">{s.n}</p>
+            <h3 className="mt-3 text-base font-medium tracking-tight text-foreground">{s.title}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">{s.tag}</p>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{s.body}</p>
+          </div>
+        ))}
+      </div>
+
+      <p className="mt-20 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
         Our promise
       </p>
       <h2 className="mt-3 max-w-2xl text-3xl tracking-tight text-foreground sm:text-4xl">
@@ -124,23 +141,6 @@ function AlphaBravoHome() {
               {p.title}
             </h3>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{p.body}</p>
-          </div>
-        ))}
-      </div>
-
-      <p className="mt-20 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-        How a match plays out
-      </p>
-      <h2 className="mt-3 max-w-2xl text-3xl tracking-tight text-foreground sm:text-4xl">
-        Five stages, one governed flow.
-      </h2>
-      <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
-        {STAGES.map((s) => (
-          <div key={s.n} className="rounded-2xl border border-border bg-card p-5">
-            <p className="text-sm font-semibold text-primary">{s.n}</p>
-            <h3 className="mt-3 text-base font-medium tracking-tight text-foreground">{s.title}</h3>
-            <p className="mt-1 text-xs text-muted-foreground">{s.tag}</p>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{s.body}</p>
           </div>
         ))}
       </div>
