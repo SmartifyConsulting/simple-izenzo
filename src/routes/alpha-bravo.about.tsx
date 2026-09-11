@@ -57,8 +57,6 @@ function About() {
       </p>
 
       <p className="mt-10 text-sm font-medium uppercase tracking-[0.1em] text-muted-foreground">
-        That's the name.
-        <br />
         That's the difference.
       </p>
     </section>
