@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { AuthTabs } from "@/components/auth/AuthTabs";
+import { HeroMatchCard } from "@/components/marketing/HeroMatchCard";
 
 export const Route = createFileRoute("/alpha-bravo/")({
   head: () => ({
@@ -87,7 +87,7 @@ function AlphaBravoHome() {
           </div>
         </div>
 
-        <AuthTabs className="w-full rounded-2xl border border-border bg-card p-6 shadow-sm" />
+        <HeroMatchCard />
       </div>
 
       <p className="mt-20 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">

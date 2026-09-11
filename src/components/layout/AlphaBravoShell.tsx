@@ -39,12 +39,12 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-6xl items-center gap-8 px-5">
+        <div className="relative mx-auto flex h-16 max-w-6xl items-center px-5">
           <Link to="/alpha-bravo" className="flex shrink-0 items-center gap-1.5">
             <Logo />
           </Link>
 
-          <nav className="hidden items-center gap-6 text-sm text-muted-foreground sm:flex">
+          <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-6 text-sm text-muted-foreground sm:flex">
             {NAV.map((item) => (
               <Link key={item.to} to={item.to} className="hover:text-foreground">
                 {item.label}
