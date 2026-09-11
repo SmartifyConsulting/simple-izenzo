@@ -123,7 +123,7 @@ function AlphaBravoHome() {
               <li>Double opt-in only</li>
             </ul>
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Link to="/alpha-bravo/marketplace">
+              <Link to="/alpha-bravo/trades">
                 <Button size="lg" variant="outline" className="gap-1.5 rounded-full">
                   See how matching works <ArrowRight className="h-4 w-4" />
                 </Button>

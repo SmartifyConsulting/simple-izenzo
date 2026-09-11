@@ -3,11 +3,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/alpha-bravo/marketplace")({
+export const Route = createFileRoute("/alpha-bravo/trades")({
   head: () => ({
-    meta: [{ title: "Marketplace — Izenzo Alpha-Bravo" }],
+    meta: [{ title: "Trades — Izenzo Alpha-Bravo" }],
   }),
-  component: Marketplace,
+  component: Trades,
 });
 
 type Stage = "Trading" | "Compliance" | "Execution" | "Finality";
@@ -29,7 +29,7 @@ const MATCHES: { name: string; sector: string; stage: Stage; status: string; bod
 
 const STAGES: readonly ("All" | Stage)[] = ["All", "Trading", "Compliance", "Execution", "Finality"];
 
-function Marketplace() {
+function Trades() {
   const [filter, setFilter] = useState<(typeof STAGES)[number]>("All");
   const visible = filter === "All" ? MATCHES : MATCHES.filter((m) => m.stage === filter);
 
@@ -37,7 +37,7 @@ function Marketplace() {
     <>
       <section className="mx-auto max-w-6xl px-5 py-20 sm:py-24">
         <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-          Matches
+          Trades
         </p>
         <h1 className="mt-4 max-w-2xl text-4xl tracking-tight text-foreground sm:text-5xl">
           Bidders and Responders we've matched.

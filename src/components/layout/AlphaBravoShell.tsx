@@ -13,15 +13,17 @@ import { applyAppSkin } from "@/lib/appSkin";
 
 const NAV = [
   { to: "/alpha-bravo/how-it-works", label: "How It Works" },
-  { to: "/alpha-bravo/marketplace", label: "Marketplace" },
-  { to: "/alpha-bravo/bidders", label: "Bidders" },
-  { to: "/alpha-bravo/responders", label: "Responders" },
   { to: "/alpha-bravo/pricing", label: "Pricing" },
 ] as const;
 
 const COMPANY_MENU = [
   { to: "/alpha-bravo/about", label: "About" },
   { to: "/alpha-bravo/insights", label: "Insights" },
+] as const;
+
+const GET_STARTED_MENU = [
+  { to: "/alpha-bravo/bidders", label: "Bidders" },
+  { to: "/alpha-bravo/responders", label: "Responders" },
 ] as const;
 
 /** Alpha-Bravo's own header/nav/footer — a demo re-skin of the Izenzo marketing site,
@@ -65,6 +67,23 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center gap-1 outline-none hover:text-foreground">
+                Get Started <ChevronDown className="h-3.5 w-3.5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {GET_STARTED_MENU.map((item) => (
+                  <DropdownMenuItem key={item.to} asChild>
+                    <Link to={item.to}>{item.label}</Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Link to="/alpha-bravo/trades" className="hover:text-foreground">
+              Trades
+            </Link>
           </nav>
 
           <div className="ml-auto flex shrink-0 items-center gap-3">
@@ -135,7 +154,7 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
   );
 }
 
-/** Small square-bracket step label used on the Marketplace/Insights list pages, matching the
+/** Small square-bracket step label used on the Trades/Insights list pages, matching the
  * reference site's "01 / 02 / 03" numbered-list styling. */
 export function AlphaBravoEyebrow({ children }: { children: ReactNode }) {
   return (
