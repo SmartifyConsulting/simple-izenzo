@@ -1,17 +1,29 @@
 import { useEffect, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeftRight } from "lucide-react";
+import { ArrowLeftRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth";
 import { applyAppSkin } from "@/lib/appSkin";
 
 const NAV = [
   { to: "/alpha-bravo/how-it-works", label: "How It Works" },
-  { to: "/alpha-bravo/pricing", label: "Pricing" },
-  { to: "/alpha-bravo/about", label: "About" },
   { to: "/alpha-bravo/marketplace", label: "Marketplace" },
   { to: "/alpha-bravo/responders", label: "Responders" },
+  { to: "/alpha-bravo/pricing", label: "Pricing" },
+] as const;
+
+const COMPANY_MENU = [
+  { to: "/alpha-bravo/about", label: "About" },
   { to: "/alpha-bravo/insights", label: "Insights" },
+] as const;
+
+const GET_STARTED_MENU = [
   { to: "/alpha-bravo/for-bidders", label: "For Bidders" },
   { to: "/alpha-bravo/for-responders", label: "For Responders" },
 ] as const;
@@ -44,6 +56,32 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
                 {item.label}
               </Link>
             ))}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center gap-1 outline-none hover:text-foreground">
+                Company <ChevronDown className="h-3.5 w-3.5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {COMPANY_MENU.map((item) => (
+                  <DropdownMenuItem key={item.to} asChild>
+                    <Link to={item.to}>{item.label}</Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center gap-1 outline-none hover:text-foreground">
+                Get Started <ChevronDown className="h-3.5 w-3.5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {GET_STARTED_MENU.map((item) => (
+                  <DropdownMenuItem key={item.to} asChild>
+                    <Link to={item.to}>{item.label}</Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </nav>
 
           <div className="ml-auto flex shrink-0 items-center gap-3">
