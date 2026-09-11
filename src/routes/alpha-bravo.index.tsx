@@ -91,11 +91,7 @@ function AlphaBravoHome() {
               Post your opportunity brief and get matched with verified Responders — fit scores,
               verified contacts, and ready-to-send outreach, all under one cryptographic record.
             </p>
-            <ul className="mt-6 space-y-1.5 text-sm text-muted-foreground">
-              <li>See 3 matches free</li>
-              <li>Your brief stays private</li>
-              <li>Double opt-in only</li>
-            </ul>
+            <p className="mt-6 text-sm text-muted-foreground">No subscriptions, pay as you go.</p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link to="/alpha-bravo/trades">
                 <Button size="lg" variant="outline" className="gap-1.5 rounded-full">
