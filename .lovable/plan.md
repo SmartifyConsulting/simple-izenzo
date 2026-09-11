@@ -33,3 +33,11 @@
 - All the white outlines around the black frames get thinner and softer.
 
 Technical: use the existing `--warning` token via `bg-warning/12` + `border-warning/40` for the Attachments badge and the AI/AI+ searching frame in `src/routes/_authenticated.live-deal-engine.tsx`; reduce `--glass-border` opacity and keep the `glass`/`glass-node` border at a hairline (`1px` at lower alpha) in `src/styles.css` so every dark frame's white edge is thinner.
+
+## Bid/Offer picker at the top
+
+- The horizontal scrolling strip of open bid numbers is replaced by a dropdown.
+- Each entry shows the bid/offer number together with the trade name.
+- It opens on the most recent trade by default; with no active trades it shows nothing selected.
+
+Technical: replace `OpenDealsStrip` usage with a shadcn `Select` listing open deals (`reference` + `title`), value bound to the current `dealTx.id`, defaulting to the newest by `created_at`, empty placeholder when the list is empty; selecting one loads that deal exactly as the strip does today.
