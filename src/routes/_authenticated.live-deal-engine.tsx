@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -18,6 +18,13 @@ import { TradeSummary } from "@/components/canvas/TradeSummary";
 import { MahjongView } from "@/components/canvas/MahjongView";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { advance, fallbackReference, fingerprintOf, recordEvent, type Transaction } from "@/lib/tx";
 import { useAuth } from "@/lib/auth";
@@ -51,7 +58,7 @@ export const Route = createFileRoute("/_authenticated/live-deal-engine")({
 
 type Attachment = {
   name: string;
-  kind: "ID front" | "ID back" | "Document";
+  kind: "ID" | "ID front" | "ID back" | "Document";
   /** Location of the stored file in the private `documents` bucket, so it can be opened later. */
   path?: string | null;
 };
@@ -74,12 +81,14 @@ function FileField({
   files,
   onChange,
   multiple,
+  accept,
 }: {
   id: string;
   label: string;
   files: File[];
   onChange: (files: File[]) => void;
   multiple?: boolean;
+  accept?: string;
 }) {
   const [dragOver, setDragOver] = useState(false);
 
@@ -121,6 +130,7 @@ function FileField({
           id={id}
           type="file"
           multiple={multiple}
+          {...(accept ? { accept } : {})}
           className="hidden"
           onChange={(e) => addFiles(e.target.files)}
         />
@@ -146,12 +156,13 @@ function FileField({
   );
 }
 
-/** A row of reference badges for every deal still in progress — newest added on the right, so the
- * strip reads left (oldest open deal) to right (most recently touched). A deal drops off the
- * strip the moment it reaches Memory (fully sealed and complete); from then on it's only findable
- * through the All Trades report, not here. */
-function OpenDealsStrip({ currentId }: { currentId: string | null }) {
+/** A dropdown of every deal still in progress, each entry showing its reference together with the
+ * trade name. It opens on the most recent deal; with nothing in progress it shows no selection. A
+ * deal drops off the list the moment it reaches Memory (fully sealed) — from then on it's only
+ * findable through the All Trades report. */
+function OpenDealsPicker({ currentId }: { currentId: string | null }) {
   const { org } = useAuth();
+  const navigate = useNavigate();
   const { data: open = [] } = useQuery({
     queryKey: ["open-deals", org?.id],
     enabled: Boolean(org?.id),
@@ -161,7 +172,8 @@ function OpenDealsStrip({ currentId }: { currentId: string | null }) {
         .select("id, reference, title, commodity, stage, created_at, bid_offers(direction, created_at)")
         .eq("org_id", org!.id)
         .neq("stage", "memory")
-        .order("created_at", { ascending: true })
+        // Newest first, so the most recent trade is what the dropdown lands on.
+        .order("created_at", { ascending: false })
         .limit(20);
       if (error) throw error;
       return (
@@ -189,25 +201,25 @@ function OpenDealsStrip({ currentId }: { currentId: string | null }) {
 
   if (open.length === 0) return <span />;
 
+  const selected = open.some((d) => d.id === currentId) ? currentId! : (open[0]?.id ?? "");
+
   return (
-    <div className="flex flex-wrap items-center justify-end gap-1.5">
-      {open.map((d) => (
-        <Link
-          key={d.id}
-          to="/live-deal-engine"
-          search={{ tx: d.id }}
-          title={d.name}
-          className={cn(
-            "rounded-full border px-2.5 py-1 font-mono text-[13px] font-semibold transition-colors",
-            d.id === currentId
-              ? "border-primary bg-primary/15 text-primary"
-              : "border-border bg-muted/40 text-muted-foreground hover:border-primary/40 hover:text-foreground",
-          )}
-        >
-          {d.reference}
-        </Link>
-      ))}
-    </div>
+    <Select
+      value={selected}
+      onValueChange={(id) => void navigate({ to: "/live-deal-engine", search: { tx: id } })}
+    >
+      <SelectTrigger className="h-9 w-[280px] text-[13px]">
+        <SelectValue placeholder="No active trades" />
+      </SelectTrigger>
+      <SelectContent>
+        {open.map((d) => (
+          <SelectItem key={d.id} value={d.id}>
+            <span className="font-mono font-semibold">{d.reference}</span>
+            <span className="text-muted-foreground"> — {d.name}</span>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -280,7 +292,6 @@ function LiveDealEngine() {
 
 
   const [idFront, setIdFront] = useState<File[]>([]);
-  const [idBack, setIdBack] = useState<File[]>([]);
   const [docFiles, setDocFiles] = useState<File[]>([]);
   const [documentSummary, setDocumentSummary] = useState<string | null>(null);
   const [documentSummaryBusy, setDocumentSummaryBusy] = useState(false);
@@ -727,8 +738,7 @@ function LiveDealEngine() {
     e.preventDefault();
     if (!dealTx) return;
     const collected: { file: File; kind: Attachment["kind"] }[] = [
-      ...idFront.map((f) => ({ file: f, kind: "ID front" as const })),
-      ...idBack.map((f) => ({ file: f, kind: "ID back" as const })),
+      ...idFront.map((f) => ({ file: f, kind: "ID" as const })),
       ...docFiles.map((f) => ({ file: f, kind: "Document" as const })),
     ];
 
@@ -794,7 +804,7 @@ function LiveDealEngine() {
       // ID front/back just uploaded — open the Didit ID check on them straight away instead of
       // leaving the bidder to go find this under Settings. The badge on the workspace panel picks
       // up the result on its own once Didit reports back.
-      if (idFront.length > 0 || idBack.length > 0) {
+      if (idFront.length > 0) {
         startIdCheck({
           data: {
             checkType: "id_document",
@@ -836,7 +846,7 @@ function LiveDealEngine() {
           ) : (
             <span />
           )}
-          <OpenDealsStrip currentId={dealTx?.id ?? null} />
+          <OpenDealsPicker currentId={dealTx?.id ?? null} />
         </div>
         <MahjongView
           tx={dealTx ?? FLOWCHART_PREVIEW_TX}
@@ -893,11 +903,23 @@ function LiveDealEngine() {
           {activity && dealTx && flowStep === "documents" && (
             <form onSubmit={submitDocuments} className="glass-node animate-node-rise mt-3 space-y-4 p-5 sm:p-6">
               <p className="text-base font-semibold tracking-tight">Upload ID and documents</p>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FileField id="id-front" label="ID upload — front" files={idFront} onChange={setIdFront} />
-                <FileField id="id-back" label="ID upload — back" files={idBack} onChange={setIdBack} />
+              <div className="grid gap-4">
+                <FileField
+                  id="id-front"
+                  label="ID upload — photo or scan"
+                  files={idFront}
+                  onChange={setIdFront}
+                  accept="image/*"
+                />
               </div>
-              <FileField id="docs" label="Documents" files={docFiles} onChange={setDocFiles} multiple />
+              <FileField
+                id="docs"
+                label="Documents — PDF, Word, Excel, CSV or text"
+                files={docFiles}
+                onChange={setDocFiles}
+                multiple
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.tsv,.txt,.md,.rtf,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,text/csv"
+              />
               <Button type="submit" disabled={busy} className="w-full">
                 {busy ? "Submitting…" : "Submit"}
               </Button>
@@ -905,9 +927,9 @@ function LiveDealEngine() {
           )}
 
           {activity && dealTx && flowStep === "searching" && (
-            <div className="mt-3 overflow-hidden rounded-xl border border-primary/20">
-              <div className="flex items-center gap-3 bg-primary/5 px-4 py-3">
-                <p className="text-sm text-primary">Running AI and AI+ search for matching counterparties…</p>
+            <div className="mt-3 overflow-hidden rounded-xl border border-warning/40">
+              <div className="flex items-center gap-3 bg-warning/15 px-4 py-3">
+                <p className="text-sm text-warning">Running AI and AI+ search for matching counterparties…</p>
               </div>
               <div className="h-1.5 w-full animate-ribbon-sweep" />
             </div>
@@ -1023,7 +1045,9 @@ function LiveDealEngine() {
                 {attachments.length > 0 && (
                   <div className="glass-node space-y-2 p-4">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="label-caps text-muted-foreground">Attachments</p>
+                      <p className="label-caps rounded-full border border-warning/40 bg-warning/15 px-2.5 py-0.5 text-warning">
+                        Attachments
+                      </p>
                       {idCheck?.status === "passed" && (
                         <span
                           title={`Verified via Didit${idCheck.completed_at ? ` — ${new Date(idCheck.completed_at).toLocaleString()}` : ""}`}

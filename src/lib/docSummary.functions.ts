@@ -2,11 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-/** Reads every document attached to a bid/offer (ID front/back, plus any other documents),
- * asks the AI to extract the deal's details and write a detailed summary, and saves that summary
- * onto the transaction — associated with whichever side (bidder or responder) recorded it. Runs
- * right after documents are uploaded, since the Submit a Bid/Offer form no longer collects the
- * commodity/quantity/price itself. */
+/** Reads every document attached to a bid/offer — the ID photo by sight (OCR), and PDF / Word /
+ * Excel / CSV / plain-text files as text — asks the AI to extract the deal's details, and saves a
+ * bullet-point summary onto the transaction. Any ID number found is encrypted and stored in the
+ * backend only; it never appears in the summary the other side reads. */
 export const summarizeBidDocuments = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => z.object({ transactionId: z.string().uuid() }).parse(data))
@@ -32,58 +31,93 @@ export const summarizeBidDocuments = createServerFn({ method: "POST" })
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) throw new Error("AI is not configured for this workspace.");
 
-    // Short-lived signed links so the AI gateway can read the private files directly, rather than
-    // this server reading and re-encoding every page itself.
     const IMAGE_EXT = /\.(jpe?g|png|webp|gif|heic|heif)$/i;
-    const readable: { kind: string; name: string; url: string }[] = [];
-    const unreadable: { kind: string; name: string }[] = [];
+    const PDF_EXT = /\.pdf$/i;
+    const DOCX_EXT = /\.docx$/i;
+    const XLSX_EXT = /\.xlsx$/i;
+    const TEXT_EXT = /\.(txt|md|csv|tsv|json|rtf|log)$/i;
+
+    type Part =
+      | { type: "text"; text: string }
+      | { type: "image_url"; image_url: { url: string } }
+      | { type: "file"; file: { filename: string; file_data: string } };
+
+    const parts: Part[] = [];
+    const unreadable: string[] = [];
+
     for (const d of docs) {
       if (!d.storage_path) continue;
+      const name = d.name;
       const kind = (d.notes as string | null) ?? "Document";
-      // The vision model can only actually open image files through an image_url part — a PDF or
-      // Word doc sent the same way isn't decodable as an image and makes the *whole* request
-      // fail, which is why no summary ever came back even though ID images were attached fine.
-      if (!IMAGE_EXT.test(d.name)) {
-        unreadable.push({ kind, name: d.name });
+
+      if (IMAGE_EXT.test(name)) {
+        // Images go by signed link so the gateway reads them directly instead of this server
+        // re-encoding every photo.
+        const { data: signed } = await supabase.storage
+          .from("documents")
+          .createSignedUrl(d.storage_path, 300);
+        if (signed?.signedUrl) {
+          parts.push({ type: "image_url", image_url: { url: signed.signedUrl } });
+          continue;
+        }
+        unreadable.push(name);
         continue;
       }
-      const { data: signed } = await supabase.storage
+
+      const { data: blob, error: dlErr } = await supabase.storage
         .from("documents")
-        .createSignedUrl(d.storage_path, 300);
-      if (signed?.signedUrl) {
-        readable.push({ kind, name: d.name, url: signed.signedUrl });
+        .download(d.storage_path);
+      if (dlErr || !blob) {
+        unreadable.push(name);
+        continue;
+      }
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+
+      try {
+        if (PDF_EXT.test(name)) {
+          parts.push({
+            type: "file",
+            file: { filename: name, file_data: `data:application/pdf;base64,${toBase64(bytes)}` },
+          });
+        } else if (DOCX_EXT.test(name)) {
+          const text = await docxText(bytes);
+          parts.push({ type: "text", text: `--- ${kind}: ${name} ---\n${text}` });
+        } else if (XLSX_EXT.test(name)) {
+          const text = await xlsxText(bytes);
+          parts.push({ type: "text", text: `--- ${kind}: ${name} ---\n${text}` });
+        } else if (TEXT_EXT.test(name)) {
+          const text = new TextDecoder().decode(bytes).slice(0, 200_000);
+          parts.push({ type: "text", text: `--- ${kind}: ${name} ---\n${text}` });
+        } else {
+          unreadable.push(name);
+        }
+      } catch {
+        unreadable.push(name);
       }
     }
-    if (readable.length === 0) {
+
+    if (parts.length === 0) {
       throw new Error(
-        unreadable.length > 0
-          ? "None of the attached documents are images the AI can read yet (PDF/Word documents aren't supported) — attach a photo or scan instead."
-          : "Could not open the uploaded documents.",
+        "None of the attached files contained readable content — attach a photo, PDF, Word, Excel or text document.",
       );
     }
 
-    const content: Array<
-      | { type: "text"; text: string }
-      | { type: "image_url"; image_url: { url: string } }
-    > = [
-      {
-        type: "text",
-        text:
-          "These are the ID and supporting documents attached to a trade bid/offer. Read them and extract:\n" +
-          "- the commodity or asset being traded\n" +
-          "- quantity and unit, if stated\n" +
-          "- price and currency, if stated\n" +
-          "- delivery/incoterms or timing, if stated\n" +
-          "- the bidder's identity as shown on the ID document(s)\n" +
-          "Then write a detailed plain-prose summary (4-8 sentences) covering all of the above. " +
-          "Only state what the documents actually show — never invent figures or terms that aren't there; " +
-          "say plainly when something isn't stated." +
-          (unreadable.length > 0
-            ? ` Note: ${unreadable.map((u) => u.name).join(", ")} ${unreadable.length === 1 ? "was" : "were"} also attached but isn't an image, so you can't read it — mention it wasn't reviewed rather than guessing its contents.`
-            : ""),
-      },
-      ...readable.map((a) => ({ type: "image_url" as const, image_url: { url: a.url } })),
-    ];
+    const instruction =
+      "These are the ID and supporting documents attached to a trade bid/offer. Read every one of them " +
+      "(photos by sight, documents by their text) and extract:\n" +
+      "- the commodity or asset being traded\n" +
+      "- quantity and unit, if stated\n" +
+      "- price and currency, if stated\n" +
+      "- delivery/incoterms or timing, if stated\n" +
+      "- the party's identity as shown on the ID document\n" +
+      'Reply with JSON only: {"summary_bullets": string[], "id_number": string|null}. ' +
+      "summary_bullets is 5-10 short bullet points covering the above, each a complete statement without " +
+      "a leading dash. Never put any identity/passport number inside the bullets — put it only in id_number " +
+      "(null when no ID number is visible). Only state what the documents actually show; say plainly when " +
+      "something isn't stated." +
+      (unreadable.length > 0
+        ? ` Note: ${unreadable.join(", ")} could not be read — mention ${unreadable.length === 1 ? "it was" : "they were"} not reviewed rather than guessing.`
+        : "");
 
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -94,10 +128,10 @@ export const summarizeBidDocuments = createServerFn({ method: "POST" })
           {
             role: "system",
             content:
-              "You read trade documents (IDs, contracts, invoices, spec sheets) and extract deal details " +
-              "precisely. Plain prose, no headings, no bullet points, no markdown.",
+              "You read trade documents (IDs, contracts, invoices, spec sheets, spreadsheets) and extract " +
+              "deal details precisely. Reply with raw JSON only — no markdown fences, no commentary.",
           },
-          { role: "user", content },
+          { role: "user", content: [{ type: "text", text: instruction }, ...parts] },
         ],
       }),
     });
@@ -108,19 +142,115 @@ export const summarizeBidDocuments = createServerFn({ method: "POST" })
       throw new Error(`The documents could not be read just now (${res.status}). ${body.slice(0, 300)}`.trim());
     }
     const json = (await res.json()) as { choices: { message: { content: string } }[] };
-    const summary = (json.choices?.[0]?.message?.content ?? "").trim();
+    const raw = (json.choices?.[0]?.message?.content ?? "").trim();
+    if (!raw) throw new Error("The document summary came back empty.");
+
+    const parsed = parseReply(raw);
+    const summary = parsed.bullets.map((b) => `• ${b}`).join("\n");
     if (!summary) throw new Error("The document summary came back empty.");
+
+    let idCipher: string | null = null;
+    if (parsed.idNumber) {
+      try {
+        const { encryptSecrets } = await import("./integrationCrypto.server");
+        idCipher = await encryptSecrets({ id_number: parsed.idNumber });
+      } catch {
+        // No encryption key configured — better to store nothing than to store it in the clear.
+        idCipher = null;
+      }
+    }
 
     const { error: upErr } = await supabase
       .from("transactions")
       .update({
         document_summary: summary,
         document_summary_generated_at: new Date().toISOString(),
+        ...(idCipher ? { id_number_encrypted: idCipher } : {}),
       } as never)
       .eq("id", tx.id);
-    const missingColumn =
-      upErr?.code === "42703" || upErr?.code === "PGRST204" || Boolean(upErr?.message?.includes("schema cache"));
-    if (upErr && !missingColumn) throw new Error(upErr.message);
+    if (upErr) throw new Error(upErr.message);
 
     return { summary };
   });
+
+function toBase64(bytes: Uint8Array) {
+  let s = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    s += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(s);
+}
+
+/** Pulls the visible text out of a .docx by unzipping it and stripping the WordprocessingML tags. */
+async function docxText(bytes: Uint8Array): Promise<string> {
+  const { unzipSync, strFromU8 } = await import("fflate");
+  const files = unzipSync(bytes);
+  const doc = files["word/document.xml"];
+  if (!doc) return "";
+  return xmlToText(strFromU8(doc)).slice(0, 200_000);
+}
+
+/** Pulls the cell values out of a .xlsx — shared strings plus any inline/number cells. */
+async function xlsxText(bytes: Uint8Array): Promise<string> {
+  const { unzipSync, strFromU8 } = await import("fflate");
+  const files = unzipSync(bytes);
+  const sharedRaw = files["xl/sharedStrings.xml"];
+  const shared = sharedRaw
+    ? [...strFromU8(sharedRaw).matchAll(/<si>([\s\S]*?)<\/si>/g)].map((m) => xmlToText(m[1] ?? ""))
+    : [];
+
+  const out: string[] = [];
+  for (const [path, content] of Object.entries(files)) {
+    if (!/^xl\/worksheets\/sheet\d+\.xml$/.test(path)) continue;
+    const sheet = strFromU8(content);
+    for (const row of sheet.matchAll(/<row[^>]*>([\s\S]*?)<\/row>/g)) {
+      const cells: string[] = [];
+      for (const cell of (row[1] ?? "").matchAll(/<c[^>]*?(?:\st="(\w+)")?[^>]*>([\s\S]*?)<\/c>/g)) {
+        const type = cell[1];
+        const inner = cell[2] ?? "";
+        const value = xmlToText(inner);
+        if (!value) continue;
+        cells.push(type === "s" ? (shared[Number(value)] ?? "") : value);
+      }
+      if (cells.length > 0) out.push(cells.join(" | "));
+    }
+  }
+  return out.join("\n").slice(0, 200_000);
+}
+
+function xmlToText(xml: string) {
+  return xml
+    .replace(/<\/w:p>/g, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/** The model is asked for raw JSON, but tolerate fenced JSON or a plain-prose fallback. */
+function parseReply(raw: string): { bullets: string[]; idNumber: string | null } {
+  const body = raw.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+  try {
+    const obj = JSON.parse(body) as { summary_bullets?: unknown; id_number?: unknown };
+    const bullets = Array.isArray(obj.summary_bullets)
+      ? obj.summary_bullets.map((b) => String(b).replace(/^[-•*]\s*/, "").trim()).filter(Boolean)
+      : [];
+    if (bullets.length > 0) {
+      return {
+        bullets,
+        idNumber: typeof obj.id_number === "string" && obj.id_number.trim() ? obj.id_number.trim() : null,
+      };
+    }
+  } catch {
+    // fall through to prose handling
+  }
+  const bullets = body
+    .split(/\n+/)
+    .map((line) => line.replace(/^[-•*]\s*/, "").trim())
+    .filter(Boolean);
+  return { bullets, idNumber: null };
+}
