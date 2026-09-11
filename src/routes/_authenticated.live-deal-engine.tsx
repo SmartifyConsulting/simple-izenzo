@@ -156,12 +156,13 @@ function FileField({
   );
 }
 
-/** A row of reference badges for every deal still in progress — newest added on the right, so the
- * strip reads left (oldest open deal) to right (most recently touched). A deal drops off the
- * strip the moment it reaches Memory (fully sealed and complete); from then on it's only findable
- * through the All Trades report, not here. */
-function OpenDealsStrip({ currentId }: { currentId: string | null }) {
+/** A dropdown of every deal still in progress, each entry showing its reference together with the
+ * trade name. It opens on the most recent deal; with nothing in progress it shows no selection. A
+ * deal drops off the list the moment it reaches Memory (fully sealed) — from then on it's only
+ * findable through the All Trades report. */
+function OpenDealsPicker({ currentId }: { currentId: string | null }) {
   const { org } = useAuth();
+  const navigate = useNavigate();
   const { data: open = [] } = useQuery({
     queryKey: ["open-deals", org?.id],
     enabled: Boolean(org?.id),
@@ -171,7 +172,8 @@ function OpenDealsStrip({ currentId }: { currentId: string | null }) {
         .select("id, reference, title, commodity, stage, created_at, bid_offers(direction, created_at)")
         .eq("org_id", org!.id)
         .neq("stage", "memory")
-        .order("created_at", { ascending: true })
+        // Newest first, so the most recent trade is what the dropdown lands on.
+        .order("created_at", { ascending: false })
         .limit(20);
       if (error) throw error;
       return (
@@ -199,25 +201,25 @@ function OpenDealsStrip({ currentId }: { currentId: string | null }) {
 
   if (open.length === 0) return <span />;
 
+  const selected = open.some((d) => d.id === currentId) ? currentId! : (open[0]?.id ?? "");
+
   return (
-    <div className="flex flex-wrap items-center justify-end gap-1.5">
-      {open.map((d) => (
-        <Link
-          key={d.id}
-          to="/live-deal-engine"
-          search={{ tx: d.id }}
-          title={d.name}
-          className={cn(
-            "rounded-full border px-2.5 py-1 font-mono text-[13px] font-semibold transition-colors",
-            d.id === currentId
-              ? "border-primary bg-primary/15 text-primary"
-              : "border-border bg-muted/40 text-muted-foreground hover:border-primary/40 hover:text-foreground",
-          )}
-        >
-          {d.reference}
-        </Link>
-      ))}
-    </div>
+    <Select
+      value={selected}
+      onValueChange={(id) => void navigate({ to: "/live-deal-engine", search: { tx: id } })}
+    >
+      <SelectTrigger className="h-9 w-[280px] text-[13px]">
+        <SelectValue placeholder="No active trades" />
+      </SelectTrigger>
+      <SelectContent>
+        {open.map((d) => (
+          <SelectItem key={d.id} value={d.id}>
+            <span className="font-mono font-semibold">{d.reference}</span>
+            <span className="text-muted-foreground"> — {d.name}</span>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
