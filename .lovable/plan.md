@@ -25,3 +25,11 @@
   - Model stays `google/gemini-3.8-flash` on `/v1/chat/completions`; keep the existing 429/402 handling.
   - Ask for a strict JSON reply `{ "summary_bullets": string[], "id_number": string|null }`; join the bullets into the stored summary text, and pass `id_number` through `encryptSecret` in `integrationCrypto.server.ts` before writing `id_number_encrypted`. Only `{ summary }` is returned to the client.
 - `src/routes/_authenticated.live-deal-engine.tsx`: remove `idBack` state, field and its branch in `submitDocuments`; `Attachment["kind"]` becomes `"ID" | "Document"`; the Didit ID check fires on the single ID photo; documents `<input>` gets a wide `accept` list.
+
+## Visual tweaks (same pass)
+
+- The Attachments badge gets a soft fill in the same orange as its border, instead of sitting on a plain background.
+- The "Running AI and AI+ search" frame gets that same orange fill and edge, so search and attachments read as one family.
+- All the white outlines around the black frames get thinner and softer.
+
+Technical: use the existing `--warning` token via `bg-warning/12` + `border-warning/40` for the Attachments badge and the AI/AI+ searching frame in `src/routes/_authenticated.live-deal-engine.tsx`; reduce `--glass-border` opacity and keep the `glass`/`glass-node` border at a hairline (`1px` at lower alpha) in `src/styles.css` so every dark frame's white edge is thinner.
