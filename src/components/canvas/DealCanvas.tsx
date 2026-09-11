@@ -62,7 +62,7 @@ import { ensureOrg } from "@/lib/org";
 import { FLAT_STEPS, lockReason, stepDef, stepIndex, type StageKey } from "@/lib/spine";
 import { advance, money, recordEvent, when, type Transaction, type TxEvent } from "@/lib/tx";
 import { setCounterpartyShortlist } from "@/lib/izenzo.functions";
-import { findCounterpartyContact, inviteCounterparty } from "@/lib/counterpartyOutreach.functions";
+import { findCounterpartyContact, inviteCounterparty, enrichCounterparty } from "@/lib/counterpartyOutreach.functions";
 import type { ScreeningCheck, ScreeningResult } from "@/lib/screening.functions";
 import type { MediaCheckResult, MediaFinding } from "@/lib/onlineMedia.functions";
 import {
@@ -558,7 +558,10 @@ export function DealCanvas({
                 (stateOf("trading", "choice") === "done"
                   ? tickedLine("Choice")
                   : node({ stage: "trading", step: "choice", icon: MousePointerClick }, { side: "center" }))}
-              {visible("trading", "online-media") && (
+              {visible("trading", "online-media") &&
+                (stateOf("trading", "online-media") === "done" ? (
+                  tickedLine("Online Media Screening")
+                ) : (
                 <div>
                   {node(
                     { stage: "trading", step: "online-media", icon: Globe },
@@ -590,8 +593,11 @@ export function DealCanvas({
                     </div>
                   )}
                 </div>
-              )}
-              {visible("trading", "media") && (
+                ))}
+              {visible("trading", "media") &&
+                (stateOf("trading", "media") === "done" ? (
+                  tickedLine("Background Screening")
+                ) : (
                 <div>
                   {node(
                     { stage: "trading", step: "media", label: "Background screening", icon: Newspaper },
@@ -627,7 +633,7 @@ export function DealCanvas({
                     </div>
                   )}
                 </div>
-              )}
+                ))}
               {visible("trading", "intent") &&
                 node({ stage: "trading", step: "intent", icon: Handshake }, { side: "center" })}
               {visible("trading", "poi") &&
@@ -845,6 +851,8 @@ type CounterpartyCandidate = {
   source: string | null;
   shortlisted?: boolean;
   contact_email?: string | null;
+  website?: string | null;
+  phone?: string | null;
   invited_at?: string | null;
 };
 
@@ -916,6 +924,7 @@ export function CounterpartyRecord({
   const setShortlist = useServerFn(setCounterpartyShortlist);
   const findContact = useServerFn(findCounterpartyContact);
   const sendInvite = useServerFn(inviteCounterparty);
+  const enrichContact = useServerFn(enrichCounterparty);
   const raiseChallengeFn = useServerFn(raiseChallenge);
   const listChallengesFn = useServerFn(listChallenges);
   const [invitingId, setInvitingId] = useState<string | null>(null);
@@ -1102,6 +1111,15 @@ export function CounterpartyRecord({
           payload: { counterpartyId: c.id, name: c.name, score: c.score },
         });
       }
+      // Fire-and-forget: pull website/contact details for this candidate the moment they're
+      // shortlisted, either straight off their platform org profile or via a best-effort web
+      // lookup. Never blocks the tick itself, and never surfaces as an error if it can't find
+      // anything.
+      if (next) {
+        void enrichContact({ data: { counterpartyId: c.id } })
+          .then(() => qc.invalidateQueries({ queryKey: ["counterparties", txId] }))
+          .catch(() => {});
+      }
     } catch (err) {
       toast.error((err as Error).message);
       qc.invalidateQueries({ queryKey: ["counterparties", txId] });
@@ -1221,6 +1239,11 @@ export function CounterpartyRecord({
                 <span className="block text-[11px] text-slate-500">
                   {[c.jurisdiction, c.sector].filter(Boolean).join(" · ") || (c.source ?? "manual")}
                 </span>
+                {(c.website || c.contact_email || c.phone) && (
+                  <span className="mt-0.5 block truncate text-[11px] text-slate-400">
+                    {[c.website, c.contact_email, c.phone].filter(Boolean).join(" · ")}
+                  </span>
+                )}
               </label>
               <button
                 type="button"

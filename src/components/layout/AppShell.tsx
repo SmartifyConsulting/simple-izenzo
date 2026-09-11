@@ -47,6 +47,24 @@ export function AppShell({
 }) {
   const { profile, org } = useAuth();
   const firstName = (profile?.full_name ?? profile?.email ?? "").split(/[\s@]/)[0];
+
+  // Keeps `profiles.last_accessed_at` fresh while this person actually has the app open, so the
+  // green/amber/red presence dot elsewhere in the app reflects real activity rather than just the
+  // moment they last signed in.
+  useEffect(() => {
+    if (!profile?.id) return;
+    const beat = () => {
+      if (document.visibilityState !== "visible") return;
+      void supabase.from("profiles").update({ last_accessed_at: new Date().toISOString() }).eq("id", profile.id);
+    };
+    beat();
+    const interval = setInterval(beat, 60_000);
+    document.addEventListener("visibilitychange", beat);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", beat);
+    };
+  }, [profile?.id]);
   const width = wide ? "max-w-[1680px]" : "max-w-7xl";
   const viewMode = useViewMode();
   const pathname = useRouterState({ select: (s) => s.location.pathname });

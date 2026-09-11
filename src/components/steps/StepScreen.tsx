@@ -17,15 +17,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { sealProofOfIntent, completeWad, runAiProposal, searchCounterparties } from "@/lib/izenzo.functions";
 import { runBackgroundScreening, type ScreeningCheck } from "@/lib/screening.functions";
+import { listIntentMessages, postIntentMessage } from "@/lib/intentChallenge.functions";
 import { advance, fingerprintOf, money, recordEvent, shortHash, when, type Transaction, type TxEvent } from "@/lib/tx";
 import { POI_COST, WAD_COST, type StageKey } from "@/lib/spine";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { routeIdentityVerification } from "@/lib/identityRouting";
 import { VerificationPanel } from "@/components/verification/VerificationPanel";
+import { AvatarWithPresence } from "@/components/PresenceDot";
 import { CommoditySearch } from "@/components/CommoditySearch";
 import { COUNTRIES } from "@/lib/countries";
 import { UNITS } from "@/lib/units";
@@ -62,20 +65,27 @@ function Panel({
   description,
   children,
   footer,
+  tone = "default",
 }: {
   title: string;
   description?: string;
   children: ReactNode;
   footer?: ReactNode;
+  /** "light" forces a white card with black text — used for Confirm Intent, which reads like a
+   * document that's about to be signed rather than another in-app step panel. */
+  tone?: "default" | "light";
 }) {
+  const light = tone === "light";
   return (
-    <div className="rounded-md border border-border">
-      <div className="border-b border-border px-6 py-4">
+    <div className={cn("rounded-md border", light ? "border-slate-200 bg-white text-slate-900" : "border-border")}>
+      <div className={cn("border-b px-6 py-4", light ? "border-slate-200" : "border-border")}>
         <h2 className="text-base font-semibold">{title}</h2>
-        {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
+        {description && (
+          <p className={cn("mt-1 text-sm", light ? "text-slate-500" : "text-muted-foreground")}>{description}</p>
+        )}
       </div>
       <div className="p-6">{children}</div>
-      {footer && <div className="border-t border-border px-6 py-4">{footer}</div>}
+      {footer && <div className={cn("border-t px-6 py-4", light ? "border-slate-200" : "border-border")}>{footer}</div>}
     </div>
   );
 }
@@ -1044,6 +1054,111 @@ function ChoiceStep({ tx, reload }: Props) {
   );
 }
 
+/** Opens the intent-challenge thread dialog. Shown next to Confirm Intent so either side can raise
+ * a question or objection on the terms before the bidder locks them in. */
+function IntentChallengeButton({ tx }: { tx: Transaction }) {
+  const [open, setOpen] = useState(false);
+  const listIntentMessagesFn = useServerFn(listIntentMessages);
+  const { data: messages = [] } = useQuery({
+    queryKey: ["intent-messages", tx.id],
+    queryFn: () => listIntentMessagesFn({ data: { transactionId: tx.id } }),
+    refetchInterval: 8000,
+  });
+  return (
+    <>
+      <Button type="button" size="sm" variant="outline" onClick={() => setOpen(true)} disabled={Boolean(tx.intent_confirmed_at)}>
+        Challenge{messages.length > 0 ? ` (${messages.length})` : ""}
+      </Button>
+      <IntentChallengeDialog tx={tx} open={open} onOpenChange={setOpen} />
+    </>
+  );
+}
+
+function IntentChallengeDialog({
+  tx,
+  open,
+  onOpenChange,
+}: {
+  tx: Transaction;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const qc = useQueryClient();
+  const listFn = useServerFn(listIntentMessages);
+  const postFn = useServerFn(postIntentMessage);
+  const [body, setBody] = useState("");
+  const [busy, setBusy] = useState(false);
+  const { data: messages = [] } = useQuery({
+    queryKey: ["intent-messages", tx.id],
+    enabled: open,
+    refetchInterval: open ? 5000 : false,
+    queryFn: () => listFn({ data: { transactionId: tx.id } }),
+  });
+
+  async function send() {
+    if (!body.trim()) return;
+    setBusy(true);
+    try {
+      await postFn({ data: { transactionId: tx.id, body: body.trim() } });
+      setBody("");
+      void qc.invalidateQueries({ queryKey: ["intent-messages", tx.id] });
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogTitle>Challenge on this deal's terms</DialogTitle>
+        <DialogDescription>
+          Goes back and forth between the bidder and the chosen counterparty, and is kept in this
+          deal's Logs. Closes once intent is confirmed.
+        </DialogDescription>
+        <div className="max-h-72 space-y-3 overflow-y-auto rounded-md border border-border p-3">
+          {messages.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nothing raised yet.</p>
+          ) : (
+            messages.map((m) => (
+              <div key={m.id} className="flex items-start gap-2">
+                <AvatarWithPresence
+                  name={m.sender_name ?? "Someone"}
+                  lastAccessedAt={m.sender_last_accessed_at}
+                  size={24}
+                />
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold">
+                    {m.sender_name ?? "Someone"}{" "}
+                    <span className="font-normal text-muted-foreground">{when(m.created_at)}</span>
+                  </p>
+                  <p className="text-sm">{m.body}</p>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+        {!tx.intent_confirmed_at ? (
+          <div className="flex items-end gap-2">
+            <Textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              placeholder="Raise a question or objection on the terms…"
+              className="min-h-16"
+            />
+            <Button size="sm" onClick={send} disabled={busy || !body.trim()}>
+              Send
+            </Button>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">Intent is confirmed — this thread is closed.</p>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function IntentStep({ tx, reload }: Props) {
   const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -1101,56 +1216,60 @@ function IntentStep({ tx, reload }: Props) {
     <Panel
       title="Confirm intent"
       description="Read the terms as they stand. Confirming does not seal them — that is the next step."
+      tone="light"
       footer={
         <div className="flex items-center justify-between">
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-2 text-sm text-slate-900">
             <Checkbox checked={agreed} onCheckedChange={(v) => setAgreed(Boolean(v))} />I confirm
             these terms reflect our intent
           </label>
-          <Button size="sm" onClick={confirm} disabled={!agreed || busy || Boolean(tx.intent_confirmed_at)}>
-            {tx.intent_confirmed_at ? "Intent confirmed" : "Confirm intent"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <IntentChallengeButton tx={tx} />
+            <Button size="sm" onClick={confirm} disabled={!agreed || busy || Boolean(tx.intent_confirmed_at)}>
+              {tx.intent_confirmed_at ? "Intent confirmed" : "Confirm intent"}
+            </Button>
+          </div>
         </div>
       }
     >
       <dl className="grid gap-3 text-sm sm:grid-cols-2">
         <div>
-          <dt className="label-caps">Transaction</dt>
-          <dd>{tx.title}</dd>
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-500">Transaction</dt>
+          <dd className="text-slate-900">{tx.title}</dd>
         </div>
         <div>
-          <dt className="label-caps">Commodity</dt>
-          <dd>{tx.commodity ?? "—"}</dd>
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-500">Commodity</dt>
+          <dd className="text-slate-900">{tx.commodity ?? "—"}</dd>
         </div>
         <div>
-          <dt className="label-caps">Quantity</dt>
-          <dd>
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-500">Quantity</dt>
+          <dd className="text-slate-900">
             {tx.quantity ?? "—"} {tx.unit ?? ""}
           </dd>
         </div>
         <div>
-          <dt className="label-caps">Price</dt>
-          <dd>{money(tx.price, tx.currency)}</dd>
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-500">Price</dt>
+          <dd className="text-slate-900">{money(tx.price, tx.currency)}</dd>
         </div>
         <div>
-          <dt className="label-caps">Incoterms</dt>
-          <dd>{tx.incoterms ?? "—"}</dd>
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-500">Incoterms</dt>
+          <dd className="text-slate-900">{tx.incoterms ?? "—"}</dd>
         </div>
         <div>
-          <dt className="label-caps">Jurisdiction</dt>
-          <dd>{tx.jurisdiction ?? "—"}</dd>
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-500">Jurisdiction</dt>
+          <dd className="text-slate-900">{tx.jurisdiction ?? "—"}</dd>
         </div>
         <div>
-          <dt className="label-caps">Counterparty</dt>
-          <dd>{chosen ?? "—"}</dd>
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-500">Counterparty</dt>
+          <dd className="text-slate-900">{chosen ?? "—"}</dd>
         </div>
         <div>
-          <dt className="label-caps">Signed by</dt>
-          <dd>{signer}</dd>
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-500">Signed by</dt>
+          <dd className="text-slate-900">{signer}</dd>
         </div>
       </dl>
       {tx.intent_confirmed_at && (
-        <p className="mt-4 text-xs text-muted-foreground">
+        <p className="mt-4 text-xs text-slate-500">
           Signed by {signer} · {when(tx.intent_confirmed_at)}
         </p>
       )}
