@@ -2641,8 +2641,11 @@ export type Database = {
           created_at: string
           created_by: string
           currency: string
+          document_summary: string | null
+          document_summary_generated_at: string | null
           finality_sealed_at: string | null
           id: string
+          id_number_encrypted: string | null
           incoterms: string | null
           intent_confirmed_at: string | null
           jurisdiction: string | null
@@ -2666,8 +2669,11 @@ export type Database = {
           created_at?: string
           created_by?: string
           currency?: string
+          document_summary?: string | null
+          document_summary_generated_at?: string | null
           finality_sealed_at?: string | null
           id?: string
+          id_number_encrypted?: string | null
           incoterms?: string | null
           intent_confirmed_at?: string | null
           jurisdiction?: string | null
@@ -2691,8 +2697,11 @@ export type Database = {
           created_at?: string
           created_by?: string
           currency?: string
+          document_summary?: string | null
+          document_summary_generated_at?: string | null
           finality_sealed_at?: string | null
           id?: string
+          id_number_encrypted?: string | null
           incoterms?: string | null
           intent_confirmed_at?: string | null
           jurisdiction?: string | null
