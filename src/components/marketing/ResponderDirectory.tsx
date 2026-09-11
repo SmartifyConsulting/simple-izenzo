@@ -35,7 +35,13 @@ export function slugify(value: string) {
   return value.toLowerCase().replace(/\s+/g, "-");
 }
 
-function useResponders({ sector, jurisdiction }: { sector?: string; jurisdiction?: string }) {
+function useResponders({
+  sector,
+  jurisdiction,
+}: {
+  sector?: string | undefined;
+  jurisdiction?: string | undefined;
+}) {
   return useQuery({
     queryKey: ["alpha-bravo-responders", sector ?? null, jurisdiction ?? null],
     queryFn: async () => {

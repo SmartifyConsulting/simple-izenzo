@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { initTheme } from "@/lib/theme";
-import { applyAppSkin } from "@/lib/appSkin";
+import { applyAppSkin, getPreferredAppSkin } from "@/lib/appSkin";
 
 function greeting() {
   const hour = new Date().getHours();
@@ -91,7 +91,7 @@ export function AppShell({
 
   useEffect(() => {
     initTheme();
-    applyAppSkin("izenzo");
+    applyAppSkin(getPreferredAppSkin());
   }, []);
 
   return (

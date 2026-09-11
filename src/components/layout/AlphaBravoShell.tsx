@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth";
 import { applyAppSkin } from "@/lib/appSkin";
+import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
 
 const NAV = [
   { to: "/alpha-bravo/about", label: "About" },
@@ -76,11 +77,14 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
 
           <div className="ml-auto flex shrink-0 items-center gap-3">
             {user ? (
-              <Link to="/live-deal-engine">
-                <Button size="sm" className="rounded-full">
-                  Go to app
-                </Button>
-              </Link>
+              <>
+                <Link to="/live-deal-engine">
+                  <Button size="sm" className="rounded-full">
+                    Go to app
+                  </Button>
+                </Link>
+                <ProfileAvatarMenu />
+              </>
             ) : (
               <>
                 <Link
