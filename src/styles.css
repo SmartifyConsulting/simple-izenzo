@@ -123,7 +123,7 @@
   --sidebar-ring: oklch(0.71 0.13 178);
 
   --glass-surface: oklch(0.255 0.02 253 / 62%);
-  --glass-border: oklch(1 0 0 / 14%);
+  --glass-border: oklch(1 0 0 / 8%);
   --glass-shadow: 0 24px 60px -28px oklch(0 0 0 / 85%), inset 0 1px 0 oklch(1 0 0 / 10%);
   --signal: oklch(0.71 0.13 178);
 
