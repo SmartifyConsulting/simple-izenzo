@@ -41,6 +41,7 @@ import { Route as AuthenticatedTradesRouteImport } from './routes/_authenticated
 import { Route as AlphaBravoIndexRouteImport } from './routes/alpha-bravo.index'
 import { Route as AlphaBravoAboutRouteImport } from './routes/alpha-bravo.about'
 import { Route as AlphaBravoForBiddersRouteImport } from './routes/alpha-bravo.for-bidders'
+import { Route as AlphaBravoForRespondersRouteImport } from './routes/alpha-bravo.for-responders'
 import { Route as AlphaBravoHowItWorksRouteImport } from './routes/alpha-bravo.how-it-works'
 import { Route as AlphaBravoInsightsRouteImport } from './routes/alpha-bravo.insights'
 import { Route as AlphaBravoMarketplaceRouteImport } from './routes/alpha-bravo.marketplace'
@@ -232,6 +233,11 @@ const AlphaBravoAboutRoute = AlphaBravoAboutRouteImport.update({
 const AlphaBravoForBiddersRoute = AlphaBravoForBiddersRouteImport.update({
   id: '/for-bidders',
   path: '/for-bidders',
+  getParentRoute: () => AlphaBravoRoute,
+} as any)
+const AlphaBravoForRespondersRoute = AlphaBravoForRespondersRouteImport.update({
+  id: '/for-responders',
+  path: '/for-responders',
   getParentRoute: () => AlphaBravoRoute,
 } as any)
 const AlphaBravoHowItWorksRoute = AlphaBravoHowItWorksRouteImport.update({
@@ -438,6 +444,7 @@ export interface FileRoutesByFullPath {
   '/trades': typeof AuthenticatedTradesRoute
   '/alpha-bravo/about': typeof AlphaBravoAboutRoute
   '/alpha-bravo/for-bidders': typeof AlphaBravoForBiddersRoute
+  '/alpha-bravo/for-responders': typeof AlphaBravoForRespondersRoute
   '/alpha-bravo/how-it-works': typeof AlphaBravoHowItWorksRoute
   '/alpha-bravo/insights': typeof AlphaBravoInsightsRoute
   '/alpha-bravo/marketplace': typeof AlphaBravoMarketplaceRoute
@@ -501,6 +508,7 @@ export interface FileRoutesByTo {
   '/trades': typeof AuthenticatedTradesRoute
   '/alpha-bravo/about': typeof AlphaBravoAboutRoute
   '/alpha-bravo/for-bidders': typeof AlphaBravoForBiddersRoute
+  '/alpha-bravo/for-responders': typeof AlphaBravoForRespondersRoute
   '/alpha-bravo/how-it-works': typeof AlphaBravoHowItWorksRoute
   '/alpha-bravo/insights': typeof AlphaBravoInsightsRoute
   '/alpha-bravo/marketplace': typeof AlphaBravoMarketplaceRoute
@@ -567,6 +575,7 @@ export interface FileRoutesById {
   '/_authenticated/trades': typeof AuthenticatedTradesRoute
   '/alpha-bravo/about': typeof AlphaBravoAboutRoute
   '/alpha-bravo/for-bidders': typeof AlphaBravoForBiddersRoute
+  '/alpha-bravo/for-responders': typeof AlphaBravoForRespondersRoute
   '/alpha-bravo/how-it-works': typeof AlphaBravoHowItWorksRoute
   '/alpha-bravo/insights': typeof AlphaBravoInsightsRoute
   '/alpha-bravo/marketplace': typeof AlphaBravoMarketplaceRoute
@@ -633,6 +642,7 @@ export interface FileRouteTypes {
     | '/trades'
     | '/alpha-bravo/about'
     | '/alpha-bravo/for-bidders'
+    | '/alpha-bravo/for-responders'
     | '/alpha-bravo/how-it-works'
     | '/alpha-bravo/insights'
     | '/alpha-bravo/marketplace'
@@ -696,6 +706,7 @@ export interface FileRouteTypes {
     | '/trades'
     | '/alpha-bravo/about'
     | '/alpha-bravo/for-bidders'
+    | '/alpha-bravo/for-responders'
     | '/alpha-bravo/how-it-works'
     | '/alpha-bravo/insights'
     | '/alpha-bravo/marketplace'
@@ -761,6 +772,7 @@ export interface FileRouteTypes {
     | '/_authenticated/trades'
     | '/alpha-bravo/about'
     | '/alpha-bravo/for-bidders'
+    | '/alpha-bravo/for-responders'
     | '/alpha-bravo/how-it-works'
     | '/alpha-bravo/insights'
     | '/alpha-bravo/marketplace'
@@ -1044,6 +1056,13 @@ declare module '@tanstack/react-router' {
       path: '/for-bidders'
       fullPath: '/alpha-bravo/for-bidders'
       preLoaderRoute: typeof AlphaBravoForBiddersRouteImport
+      parentRoute: typeof AlphaBravoRoute
+    }
+    '/alpha-bravo/for-responders': {
+      id: '/alpha-bravo/for-responders'
+      path: '/for-responders'
+      fullPath: '/alpha-bravo/for-responders'
+      preLoaderRoute: typeof AlphaBravoForRespondersRouteImport
       parentRoute: typeof AlphaBravoRoute
     }
     '/alpha-bravo/how-it-works': {
@@ -1343,6 +1362,7 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 interface AlphaBravoRouteChildren {
   AlphaBravoAboutRoute: typeof AlphaBravoAboutRoute
   AlphaBravoForBiddersRoute: typeof AlphaBravoForBiddersRoute
+  AlphaBravoForRespondersRoute: typeof AlphaBravoForRespondersRoute
   AlphaBravoHowItWorksRoute: typeof AlphaBravoHowItWorksRoute
   AlphaBravoInsightsRoute: typeof AlphaBravoInsightsRoute
   AlphaBravoMarketplaceRoute: typeof AlphaBravoMarketplaceRoute
@@ -1354,6 +1374,7 @@ interface AlphaBravoRouteChildren {
 const AlphaBravoRouteChildren: AlphaBravoRouteChildren = {
   AlphaBravoAboutRoute: AlphaBravoAboutRoute,
   AlphaBravoForBiddersRoute: AlphaBravoForBiddersRoute,
+  AlphaBravoForRespondersRoute: AlphaBravoForRespondersRoute,
   AlphaBravoHowItWorksRoute: AlphaBravoHowItWorksRoute,
   AlphaBravoInsightsRoute: AlphaBravoInsightsRoute,
   AlphaBravoMarketplaceRoute: AlphaBravoMarketplaceRoute,

@@ -118,7 +118,6 @@ function AlphaBravoHome() {
               verified contacts, and ready-to-send outreach, all under one cryptographic record.
             </p>
             <ul className="mt-6 space-y-1.5 text-sm text-muted-foreground">
-              <li>Free to start — no credit card required</li>
               <li>See 3 matches free</li>
               <li>Your brief stays private</li>
               <li>Double opt-in only</li>

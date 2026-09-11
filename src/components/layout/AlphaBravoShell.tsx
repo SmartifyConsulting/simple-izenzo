@@ -13,6 +13,7 @@ const NAV = [
   { to: "/alpha-bravo/responders", label: "Responders" },
   { to: "/alpha-bravo/insights", label: "Insights" },
   { to: "/alpha-bravo/for-bidders", label: "For Bidders" },
+  { to: "/alpha-bravo/for-responders", label: "For Responders" },
 ] as const;
 
 /** Alpha-Bravo's own header/nav/footer — a demo re-skin of the Izenzo marketing site,
