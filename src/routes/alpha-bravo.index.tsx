@@ -34,6 +34,39 @@ const THESIS = [
   },
 ];
 
+const STAGES = [
+  {
+    n: "01",
+    title: "Trading",
+    tag: "Find. Match. Structure.",
+    body: "Source opportunities, match Bidders with Responders, and capture the opportunity.",
+  },
+  {
+    n: "02",
+    title: "Compliance & Governance",
+    tag: "Verify. Assess. Authorise.",
+    body: "Complete KYC/KYB, assess risk, and verify evidence.",
+  },
+  {
+    n: "03",
+    title: "Execution",
+    tag: "Plan. Implement. Deliver.",
+    body: "Turn a matched opportunity into an executable project.",
+  },
+  {
+    n: "04",
+    title: "Finality",
+    tag: "Settle. Complete.",
+    body: "Finalise contracts, process payment, and close the transaction.",
+  },
+  {
+    n: "05",
+    title: "Memory",
+    tag: "Record. Learn. Scale.",
+    body: "Store verified outcomes and reuse intelligence for the next match.",
+  },
+];
+
 function AlphaBravoHome() {
   return (
     <>
@@ -79,6 +112,28 @@ function AlphaBravoHome() {
                 <p className="text-sm font-semibold text-primary">{t.n}</p>
                 <h3 className="mt-3 text-lg font-medium tracking-tight text-foreground">{t.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{t.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-border">
+        <div className="mx-auto max-w-6xl px-5 py-20">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+            How a match plays out
+          </p>
+          <h2 className="mt-3 max-w-2xl text-3xl tracking-tight text-foreground sm:text-4xl">
+            Five stages, one governed flow.
+          </h2>
+
+          <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
+            {STAGES.map((s) => (
+              <div key={s.n} className="rounded-2xl border border-border bg-card p-5">
+                <p className="text-sm font-semibold text-primary">{s.n}</p>
+                <h3 className="mt-3 text-base font-medium tracking-tight text-foreground">{s.title}</h3>
+                <p className="mt-1 text-xs text-muted-foreground">{s.tag}</p>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{s.body}</p>
               </div>
             ))}
           </div>
