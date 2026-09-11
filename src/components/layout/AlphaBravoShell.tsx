@@ -1,13 +1,6 @@
 import { useEffect, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth";
 import { applyAppSkin } from "@/lib/appSkin";
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
@@ -19,8 +12,6 @@ const NAV = [
   { to: "/alpha-bravo/intelligence-fabric", label: "The Intelligence Fabric" },
   { to: "/alpha-bravo/pricing", label: "Pricing" },
 ] as const;
-
-const GET_STARTED_MENU = [{ to: "/alpha-bravo/responders", label: "Responders" }] as const;
 
 /** Alpha-Bravo's own header/nav/footer — a demo re-skin of the Izenzo marketing site,
  * mirroring incisive.vc's page structure with content reframed to Izenzo's real Bidder/
@@ -47,19 +38,6 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
                 {item.label}
               </Link>
             ))}
-
-            <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-1 outline-none hover:text-foreground">
-                Traders <ChevronDown className="h-3.5 w-3.5" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                {GET_STARTED_MENU.map((item) => (
-                  <DropdownMenuItem key={item.to} asChild>
-                    <Link to={item.to}>{item.label}</Link>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
 
             <Link to="/alpha-bravo/trades" className="hover:text-foreground">
               Trades
