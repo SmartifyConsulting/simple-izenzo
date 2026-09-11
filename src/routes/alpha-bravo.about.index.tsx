@@ -19,43 +19,23 @@ function About() {
         Izenzo means "actions" in isiZulu.
       </h1>
       <p className="mt-6 leading-relaxed text-muted-foreground">
-        Because intent is only the beginning. We follow through.
-      </p>
-
-      <p className="mt-10 leading-relaxed text-foreground">
-        We built Izenzo around a simple idea:{" "}
-        <span className="font-medium">
-          trade should be driven by what should be there — not just what already is.
+        Because intent is only the beginning. We follow through:{" "}
+        <span className="font-medium text-foreground">
+          trade should be driven by what should be there, not just what already is.
         </span>
-      </p>
-
-      <p className="mt-6 leading-relaxed text-muted-foreground">
-        Most platforms search what exists. <span className="text-foreground">Izenzo looks
-        for what should exist.</span>
       </p>
 
       <p className="mt-6 leading-relaxed text-muted-foreground">
         At its core is <span className="font-medium text-foreground">AI+</span>, our patented
-        algorithm developed by Izenzo. Every search runs two models in parallel:{" "}
-        <span className="text-foreground">
-          AI finds what is there; AI+ looks beyond it — identifying the counterparty, structure
-          or opportunity that should be there, then testing whether it is real, plausible and
-          compliant.
-        </span>
+        algorithm. Every search runs two models in parallel: AI finds what is there; AI+ looks
+        beyond it, then tests whether it's real, plausible and compliant.{" "}
+        <span className="font-medium text-foreground">The models propose. You decide.</span>
       </p>
-
-      <p className="mt-6 text-lg font-medium text-foreground">The models propose. You decide.</p>
 
       <p className="mt-6 leading-relaxed text-muted-foreground">
-        From counterparty verification and compliance to execution and the permanent memory of
-        what was proven, Izenzo closes the gap between "we agree" and "it's done."
-      </p>
-
-      <p className="mt-10 leading-relaxed text-muted-foreground">
-        We don't make trade faster by cutting corners.
-      </p>
-      <p className="mt-2 text-lg font-medium text-foreground">
-        We make it possible to move faster because the trust behind the trade can be proven.
+        From verification to execution to the permanent memory of what was proven, Izenzo closes
+        the gap between "we agree" and "it's done" — not by cutting corners, but because the
+        trust behind the trade can be proven.
       </p>
 
       <p className="mt-10 text-sm font-medium uppercase tracking-[0.1em] text-muted-foreground">

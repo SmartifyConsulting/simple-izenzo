@@ -20,10 +20,7 @@ const NAV = [
   { to: "/alpha-bravo/pricing", label: "Pricing" },
 ] as const;
 
-const GET_STARTED_MENU = [
-  { to: "/alpha-bravo/bidders", label: "Bidders" },
-  { to: "/alpha-bravo/responders", label: "Responders" },
-] as const;
+const GET_STARTED_MENU = [{ to: "/alpha-bravo/responders", label: "Responders" }] as const;
 
 /** Alpha-Bravo's own header/nav/footer — a demo re-skin of the Izenzo marketing site,
  * mirroring incisive.vc's page structure with content reframed to Izenzo's real Bidder/
@@ -53,7 +50,7 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
 
             <DropdownMenu>
               <DropdownMenuTrigger className="flex items-center gap-1 outline-none hover:text-foreground">
-                Get Started <ChevronDown className="h-3.5 w-3.5" />
+                Traders <ChevronDown className="h-3.5 w-3.5" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
                 {GET_STARTED_MENU.map((item) => (

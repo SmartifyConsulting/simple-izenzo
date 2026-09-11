@@ -13,22 +13,22 @@ const LAYERS = [
   {
     icon: Search,
     title: "Search",
-    body: "Runs a structured search for possible counterparties against Izenzo's network — the first pass, before any AI reasoning is applied.",
+    body: "A structured first pass across Izenzo's network, before any AI reasoning.",
   },
   {
     icon: Sparkles,
     title: "AI",
-    body: "Reads the record and proposes matches. It never decides — every proposal is surfaced for a person to review, not auto-executed.",
+    body: "Proposes matches for review. It never decides.",
   },
   {
     icon: Gauge,
     title: "AI+",
-    body: "Deeper analysis on the shortlist: risk signals, pricing sanity checks, and jurisdiction notes — context a person needs to choose well, not just quickly.",
+    body: "Deeper analysis on the shortlist: risk, pricing sanity, jurisdiction.",
   },
   {
     icon: Radio,
     title: "Online Media Screening",
-    body: "Scans LinkedIn, Facebook, TikTok, marketplaces and news for each shortlisted counterparty, plus a Social/News Media scan on the deal itself — required before a Proof of Intent can be sealed.",
+    body: "Scans public media on each shortlisted counterparty before a Proof of Intent can seal.",
   },
 ];
 
@@ -36,17 +36,17 @@ const PRINCIPLES = [
   {
     n: "01",
     title: "AI proposes, a person chooses",
-    body: "The Choice step is always a human action, recorded as an event. AI narrows the field — it doesn't pick the counterparty.",
+    body: "Choice is always a human action, recorded as an event.",
   },
   {
     n: "02",
     title: "Every score has a rationale",
-    body: "Counterparty ratings (trusted, neutral, flagged) come with a computed score and a written rationale, not a black-box number.",
+    body: "Ratings come with a computed score and a written reason, not a black box.",
   },
   {
     n: "03",
     title: "Screening compounds, it doesn't reset",
-    body: "A counterparty's rating and screening history carry across the matches they're surfaced in, so the same background work isn't repeated from zero every time.",
+    body: "A counterparty's history carries across matches — no re-screening from zero.",
   },
 ];
 
@@ -67,8 +67,7 @@ function IntelligenceFabric() {
         The layers that find your match, before you ever see a name.
       </h1>
       <p className="mt-6 max-w-2xl leading-relaxed text-muted-foreground">
-        Every opportunity runs through the same four layers inside the Trading Gate — search,
-        AI, deeper AI analysis, and background screening — before a shortlist ever reaches you.
+        Four layers run on every opportunity before a shortlist reaches you.
       </p>
 
       <div className="mt-16 grid gap-8 sm:grid-cols-2">
