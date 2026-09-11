@@ -543,11 +543,13 @@ function LiveDealEngine() {
   async function reopenChoice() {
     if (!dealTx || dealTx.poi_sealed_at) return;
     try {
+      // Release the chosen party and clear every candidate's shortlist tick, so the full
+      // counterparty list comes back exactly as it was before anyone was picked — not just the
+      // one that got chosen.
       const { error: cpError } = await supabase
         .from("counterparties")
-        .update({ status: "screened", chosen_at: null })
-        .eq("transaction_id", dealTx.id)
-        .eq("status", "chosen");
+        .update({ status: "screened", chosen_at: null, shortlisted: false } as never)
+        .eq("transaction_id", dealTx.id);
       if (cpError) throw cpError;
       const { error: txError } = await supabase
         .from("transactions")
@@ -557,18 +559,27 @@ function LiveDealEngine() {
       await recordEvent({
         transactionId: dealTx.id,
         stage: "trading",
-        step: "media",
+        step: "choice",
         action: "counterparty_choice_reopened",
-        summary: "Reopened the counterparty choice",
+        summary: "Reopened the counterparty choice — Online Media and Background Screening reset",
       });
-      await advance(dealTx.id, "trading", "media");
+      // Back to Choice, not Online Media/Background Screening — those only make sense once a
+      // party has been picked again, so everything from Choice onward goes back to frame form.
+      await advance(dealTx.id, "trading", "choice");
       setDealTx((prev) =>
-        prev ? { ...prev, stage: "trading", step: "media", intent_confirmed_at: null } : prev,
+        prev ? { ...prev, stage: "trading", step: "choice", intent_confirmed_at: null } : prev,
       );
       setHasChosen(false);
       setStagePanel(null);
+      setMediaRunning(false);
+      setMediaResults(null);
+      setMediaProgress(null);
+      setScreening(false);
+      setScreeningResults(null);
+      setScreeningProgress(null);
 
       setFlowStep("results");
+      await queryClient.invalidateQueries({ queryKey: ["counterparties", dealTx.id] });
       toast.success("Choice reopened — pick the party you want to trade with");
     } catch (err) {
       toast.error((err as Error).message);

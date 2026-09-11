@@ -3,7 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Check, Download, Loader2, Sparkles, Lock } from "lucide-react";
+import { Check, Coins, Download, Loader2, Sparkles, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -86,6 +86,38 @@ function Panel({
       </div>
       <div className="p-6">{children}</div>
       {footer && <div className={cn("border-t px-6 py-4", light ? "border-slate-200" : "border-border")}>{footer}</div>}
+    </div>
+  );
+}
+
+/** Sits next to a token-gated action button: the org's current balance, a token icon, and a Buy
+ * Tokens link straight to the pay gate (carrying `returnTo` so a purchase drops the user right
+ * back here with the gate button already live). Used so it's never a mystery why a "Seal"/"Start
+ * WaD" button is greyed out — the cost and the shortfall are both visible up front, not just
+ * after a failed attempt. */
+function TokenGateFooter({ cost }: { cost: number }) {
+  const { org } = useAuth();
+  const balance = org?.credits ?? 0;
+  const short = balance < cost;
+  const returnTo = typeof window !== "undefined" ? window.location.pathname + window.location.search : undefined;
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      <span
+        className={cn(
+          "flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-semibold",
+          short ? "border-destructive/40 bg-destructive/10 text-destructive" : "border-border bg-muted/40 text-muted-foreground",
+        )}
+      >
+        <Coins className="h-3.5 w-3.5" />
+        {balance} token{balance === 1 ? "" : "s"}
+      </span>
+      {short && (
+        <Link to="/credits" search={{ returnTo }}>
+          <Button type="button" size="sm" variant="outline">
+            Buy tokens
+          </Button>
+        </Link>
+      )}
     </div>
   );
 }
@@ -1281,7 +1313,9 @@ function IntentStep({ tx, reload }: Props) {
 function PoiStep({ tx, reload }: Props) {
   const seal = useServerFn(sealProofOfIntent);
   const navigate = useNavigate();
+  const { org } = useAuth();
   const [busy, setBusy] = useState(false);
+  const shortOnTokens = (org?.credits ?? 0) < POI_COST;
 
   const { data: screened } = useQuery({
     queryKey: ["background-screening", tx.id],
@@ -1398,8 +1432,13 @@ function PoiStep({ tx, reload }: Props) {
       title="Seal the Proof of Intent"
       description={`This is a hard gate. It costs ${POI_COST} token (USD 10) and cannot be undone.`}
       footer={
-        <div className="text-right">
-          <Button size="sm" onClick={doSeal} disabled={busy || !tx.intent_confirmed_at || !screened}>
+        <div className="flex items-center justify-between gap-3">
+          <TokenGateFooter cost={POI_COST} />
+          <Button
+            size="sm"
+            onClick={doSeal}
+            disabled={busy || !tx.intent_confirmed_at || !screened || shortOnTokens}
+          >
             {busy ? "Sealing…" : "Seal Proof of Intent"}
           </Button>
         </div>
@@ -1413,6 +1452,11 @@ function PoiStep({ tx, reload }: Props) {
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
           <Lock className="h-3.5 w-3.5" /> Run the background screening (Social &amp; News Media step)
           before this can be sealed.
+        </p>
+      ) : shortOnTokens ? (
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Lock className="h-3.5 w-3.5" /> Not enough tokens — this needs {POI_COST} and the
+          organisation has {org?.credits ?? 0}.
         </p>
       ) : (
         <p className="text-sm text-muted-foreground">
@@ -1525,6 +1569,8 @@ function WadStep({ tx, reload }: Props) {
   const complete = useServerFn(completeWad);
   const runScreening = useServerFn(runBackgroundScreening);
   const navigate = useNavigate();
+  const { org } = useAuth();
+  const shortOnTokens = (org?.credits ?? 0) < WAD_COST;
   const [checks, setChecks] = useState<Record<string, boolean>>({});
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
@@ -1736,19 +1782,28 @@ function WadStep({ tx, reload }: Props) {
       title="Without a Doubt"
       description={`KYC, KYB, UBO, sanctions and PEP. Costs ${WAD_COST} tokens (USD 30) on decision.`}
       footer={
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button size="sm" variant="outline" disabled={busy} onClick={() => decide("referred")}>
-            Refer
-          </Button>
-          <Button size="sm" variant="outline" disabled={busy} onClick={() => decide("blocked")}>
-            Block
-          </Button>
-          <Button size="sm" disabled={busy || !allChecked} onClick={() => decide("cleared")}>
-            Clear WaD
-          </Button>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <TokenGateFooter cost={WAD_COST} />
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button size="sm" variant="outline" disabled={busy || shortOnTokens} onClick={() => decide("referred")}>
+              Refer
+            </Button>
+            <Button size="sm" variant="outline" disabled={busy || shortOnTokens} onClick={() => decide("blocked")}>
+              Block
+            </Button>
+            <Button size="sm" disabled={busy || !allChecked || shortOnTokens} onClick={() => decide("cleared")}>
+              Clear WaD
+            </Button>
+          </div>
         </div>
       }
     >
+      {shortOnTokens && (
+        <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
+          <Lock className="h-3.5 w-3.5" /> Not enough tokens — this needs {WAD_COST} and the
+          organisation has {org?.credits ?? 0}.
+        </div>
+      )}
       {flagged && (
         <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
           <strong>{chosenCp?.name}</strong> carries a Flagged counterparty rating. This requires

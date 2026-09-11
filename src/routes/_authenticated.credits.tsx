@@ -161,12 +161,11 @@ function Credits() {
       if (error) throw error;
       await refresh();
       await qc.invalidateQueries({ queryKey: ["credit_ledger"] });
-      toast.success(`${n} token${n === 1 ? "" : "s"} added`, {
-        action: returnTo
-          ? { label: "Back to trade", onClick: () => navigate({ to: returnTo }) }
-          : undefined,
-      });
+      toast.success(`${n} token${n === 1 ? "" : "s"} added`);
       setAmount(1);
+      // Drop straight back to whatever was waiting on tokens — its gate button is unlocked the
+      // moment the balance lands, so there's nothing left to click through here.
+      if (returnTo) void navigate({ to: returnTo });
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
