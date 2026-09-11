@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Lock, ShieldCheck, MailX, DatabaseZap, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AuthTabs } from "@/components/auth/AuthTabs";
 
@@ -16,29 +16,6 @@ export const Route = createFileRoute("/alpha-bravo/")({
   }),
   component: AlphaBravoHome,
 });
-
-const PROMISE = [
-  {
-    icon: Lock,
-    title: "Brief Stays Private",
-    body: "Your opportunity brief is encrypted and is never shared without your explicit consent.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Double Opt-In Only",
-    body: "Introductions only happen when both Bidder and Responder agree to connect.",
-  },
-  {
-    icon: MailX,
-    title: "No Spam, Ever",
-    body: "We never send unsolicited outreach. You control every message from your account.",
-  },
-  {
-    icon: DatabaseZap,
-    title: "Data Never Sold",
-    body: "Your information is never sold to third parties. Period. Full stop.",
-  },
-];
 
 const STAGES = [
   {
@@ -126,24 +103,6 @@ function AlphaBravoHome() {
             <h3 className="mt-3 text-base font-medium tracking-tight text-foreground">{s.title}</h3>
             <p className="mt-1 text-xs text-muted-foreground">{s.tag}</p>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{s.body}</p>
-          </div>
-        ))}
-      </div>
-
-      <p className="mt-20 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-        Our promise
-      </p>
-      <h2 className="mt-3 max-w-2xl text-3xl tracking-tight text-foreground sm:text-4xl">
-        Your privacy is our priority.
-      </h2>
-      <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-        {PROMISE.map((p) => (
-          <div key={p.title}>
-            <p.icon className="h-5 w-5 text-primary" />
-            <h3 className="mt-3 text-base font-medium tracking-tight text-foreground">
-              {p.title}
-            </h3>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{p.body}</p>
           </div>
         ))}
       </div>
