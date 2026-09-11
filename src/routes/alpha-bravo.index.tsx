@@ -85,9 +85,9 @@ function AlphaBravoHome() {
             Pre-vetted · Governed marketplace
           </p>
           <h1 className="mt-6 max-w-3xl text-5xl leading-[1.05] tracking-tight text-foreground sm:text-6xl">
-            Find the right Responders
+            Find the right Trade
             <br />
-            in less than 5 minutes.
+            in ~5 minutes.
           </h1>
           <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground">
             Post your opportunity brief and get matched with verified Responders — fit scores,

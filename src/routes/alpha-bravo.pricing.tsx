@@ -124,29 +124,19 @@ function Pricing() {
           All prices in USD. Institutional contracts include volume commitments and dedicated
           SLAs.
         </p>
-      </section>
 
-      <section className="border-t border-border">
-        <div className="mx-auto max-w-5xl px-5 py-16">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-            What costs a token
-          </p>
-          <h2 className="mt-3 max-w-2xl text-2xl tracking-tight text-foreground sm:text-3xl">
-            Everything else — browsing, matching, messaging — is free.
-          </h2>
-          <div className="mt-8 divide-y divide-border border-t border-border">
-            {TOKEN_COSTS.map((t) => (
-              <div key={t.label} className="flex items-center justify-between gap-4 py-4">
-                <div>
-                  <p className="text-sm font-medium text-foreground">{t.label}</p>
-                  <p className="text-sm text-muted-foreground">{t.detail}</p>
-                </div>
-                <p className="shrink-0 text-sm font-semibold text-foreground">
-                  {t.cost} token{t.cost === 1 ? "" : "s"} (${t.cost * TOKEN_PRICE_USD})
-                </p>
+        <div className="mt-8 divide-y divide-border border-t border-border">
+          {TOKEN_COSTS.map((t) => (
+            <div key={t.label} className="flex items-center justify-between gap-4 py-4">
+              <div>
+                <p className="text-sm font-medium text-foreground">{t.label}</p>
+                <p className="text-sm text-muted-foreground">{t.detail}</p>
               </div>
-            ))}
-          </div>
+              <p className="shrink-0 text-sm font-semibold text-foreground">
+                {t.cost} token{t.cost === 1 ? "" : "s"} (${t.cost * TOKEN_PRICE_USD})
+              </p>
+            </div>
+          ))}
         </div>
       </section>
     </>

@@ -6,6 +6,9 @@ export type Profile = {
   id: string;
   email: string | null;
   full_name: string | null;
+  last_name?: string | null;
+  contact_number?: string | null;
+  terms_accepted_at?: string | null;
   org_id: string | null;
   seat: string;
   login_count?: number | null;
@@ -30,6 +33,7 @@ export type Org = {
   primary_contact_email?: string | null;
   ai_brief?: string | null;
   ai_brief_generated_at?: string | null;
+  terms_of_trade?: string | null;
 };
 
 type AuthValue = {

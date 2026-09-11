@@ -1975,6 +1975,7 @@ export type Database = {
           primary_contact_name: string | null
           registration_no: string | null
           sector: string | null
+          terms_of_trade: string | null
           updated_at: string
           website: string | null
           years_in_business: number | null
@@ -1996,6 +1997,7 @@ export type Database = {
           primary_contact_name?: string | null
           registration_no?: string | null
           sector?: string | null
+          terms_of_trade?: string | null
           updated_at?: string
           website?: string | null
           years_in_business?: number | null
@@ -2017,6 +2019,7 @@ export type Database = {
           primary_contact_name?: string | null
           registration_no?: string | null
           sector?: string | null
+          terms_of_trade?: string | null
           updated_at?: string
           website?: string | null
           years_in_business?: number | null
@@ -2067,41 +2070,50 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          contact_number: string | null
           created_at: string
           email: string | null
           email_verified_at: string | null
           full_name: string | null
           id: string
           last_accessed_at: string | null
+          last_name: string | null
           login_count: number
           org_id: string | null
           seat: string
+          terms_accepted_at: string | null
           updated_at: string
         }
         Insert: {
           avatar_url?: string | null
+          contact_number?: string | null
           created_at?: string
           email?: string | null
           email_verified_at?: string | null
           full_name?: string | null
           id: string
           last_accessed_at?: string | null
+          last_name?: string | null
           login_count?: number
           org_id?: string | null
           seat?: string
+          terms_accepted_at?: string | null
           updated_at?: string
         }
         Update: {
           avatar_url?: string | null
+          contact_number?: string | null
           created_at?: string
           email?: string | null
           email_verified_at?: string | null
           full_name?: string | null
           id?: string
           last_accessed_at?: string | null
+          last_name?: string | null
           login_count?: number
           org_id?: string | null
           seat?: string
+          terms_accepted_at?: string | null
           updated_at?: string
         }
         Relationships: [

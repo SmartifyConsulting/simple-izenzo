@@ -41,7 +41,6 @@ import { Route as AuthenticatedTradesRouteImport } from './routes/_authenticated
 import { Route as AlphaBravoIndexRouteImport } from './routes/alpha-bravo.index'
 import { Route as AlphaBravoAboutRouteImport } from './routes/alpha-bravo.about'
 import { Route as AlphaBravoBiddersRouteImport } from './routes/alpha-bravo.bidders'
-import { Route as AlphaBravoBlogRouteImport } from './routes/alpha-bravo.blog'
 import { Route as AlphaBravoHowItWorksRouteImport } from './routes/alpha-bravo.how-it-works'
 import { Route as AlphaBravoIntelligenceFabricRouteImport } from './routes/alpha-bravo.intelligence-fabric'
 import { Route as AlphaBravoPricingRouteImport } from './routes/alpha-bravo.pricing'
@@ -72,8 +71,8 @@ import { Route as AuthenticatedGovernanceHealthRouteImport } from './routes/_aut
 import { Route as AuthenticatedGovernanceNotificationsRouteImport } from './routes/_authenticated.governance.notifications'
 import { Route as AuthenticatedGovernanceTriageRouteImport } from './routes/_authenticated.governance.triage'
 import { Route as AuthenticatedTransactionsNewRouteImport } from './routes/_authenticated.transactions.new'
-import { Route as AlphaBravoBlogIndexRouteImport } from './routes/alpha-bravo.blog.index'
-import { Route as AlphaBravoBlogSlugRouteImport } from './routes/alpha-bravo.blog.$slug'
+import { Route as AlphaBravoAboutIndexRouteImport } from './routes/alpha-bravo.about.index'
+import { Route as AlphaBravoAboutSlugRouteImport } from './routes/alpha-bravo.about.$slug'
 import { Route as AlphaBravoRespondersIndexRouteImport } from './routes/alpha-bravo.responders.index'
 import { Route as AlphaBravoRespondersLocationJurisdictionRouteImport } from './routes/alpha-bravo.responders.location.$jurisdiction'
 import { Route as AlphaBravoRespondersSectorSectorRouteImport } from './routes/alpha-bravo.responders.sector.$sector'
@@ -239,11 +238,6 @@ const AlphaBravoAboutRoute = AlphaBravoAboutRouteImport.update({
 const AlphaBravoBiddersRoute = AlphaBravoBiddersRouteImport.update({
   id: '/bidders',
   path: '/bidders',
-  getParentRoute: () => AlphaBravoRoute,
-} as any)
-const AlphaBravoBlogRoute = AlphaBravoBlogRouteImport.update({
-  id: '/blog',
-  path: '/blog',
   getParentRoute: () => AlphaBravoRoute,
 } as any)
 const AlphaBravoHowItWorksRoute = AlphaBravoHowItWorksRouteImport.update({
@@ -413,15 +407,15 @@ const AuthenticatedTransactionsNewRoute =
     path: '/transactions/new',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AlphaBravoBlogIndexRoute = AlphaBravoBlogIndexRouteImport.update({
+const AlphaBravoAboutIndexRoute = AlphaBravoAboutIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => AlphaBravoBlogRoute,
+  getParentRoute: () => AlphaBravoAboutRoute,
 } as any)
-const AlphaBravoBlogSlugRoute = AlphaBravoBlogSlugRouteImport.update({
+const AlphaBravoAboutSlugRoute = AlphaBravoAboutSlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
-  getParentRoute: () => AlphaBravoBlogRoute,
+  getParentRoute: () => AlphaBravoAboutRoute,
 } as any)
 const AlphaBravoRespondersIndexRoute =
   AlphaBravoRespondersIndexRouteImport.update({
@@ -482,9 +476,8 @@ export interface FileRoutesByFullPath {
   '/registry': typeof AuthenticatedRegistryRoute
   '/support': typeof AuthenticatedSupportRoute
   '/trades': typeof AuthenticatedTradesRoute
-  '/alpha-bravo/about': typeof AlphaBravoAboutRoute
+  '/alpha-bravo/about': typeof AlphaBravoAboutRouteWithChildren
   '/alpha-bravo/bidders': typeof AlphaBravoBiddersRoute
-  '/alpha-bravo/blog': typeof AlphaBravoBlogRouteWithChildren
   '/alpha-bravo/how-it-works': typeof AlphaBravoHowItWorksRoute
   '/alpha-bravo/intelligence-fabric': typeof AlphaBravoIntelligenceFabricRoute
   '/alpha-bravo/pricing': typeof AlphaBravoPricingRoute
@@ -516,8 +509,8 @@ export interface FileRoutesByFullPath {
   '/governance/notifications': typeof AuthenticatedGovernanceNotificationsRoute
   '/governance/triage': typeof AuthenticatedGovernanceTriageRoute
   '/transactions/new': typeof AuthenticatedTransactionsNewRoute
-  '/alpha-bravo/blog/$slug': typeof AlphaBravoBlogSlugRoute
-  '/alpha-bravo/blog/': typeof AlphaBravoBlogIndexRoute
+  '/alpha-bravo/about/$slug': typeof AlphaBravoAboutSlugRoute
+  '/alpha-bravo/about/': typeof AlphaBravoAboutIndexRoute
   '/alpha-bravo/responders/': typeof AlphaBravoRespondersIndexRoute
   '/alpha-bravo/responders/location/$jurisdiction': typeof AlphaBravoRespondersLocationJurisdictionRoute
   '/alpha-bravo/responders/sector/$sector': typeof AlphaBravoRespondersSectorSectorRoute
@@ -552,7 +545,6 @@ export interface FileRoutesByTo {
   '/registry': typeof AuthenticatedRegistryRoute
   '/support': typeof AuthenticatedSupportRoute
   '/trades': typeof AuthenticatedTradesRoute
-  '/alpha-bravo/about': typeof AlphaBravoAboutRoute
   '/alpha-bravo/bidders': typeof AlphaBravoBiddersRoute
   '/alpha-bravo/how-it-works': typeof AlphaBravoHowItWorksRoute
   '/alpha-bravo/intelligence-fabric': typeof AlphaBravoIntelligenceFabricRoute
@@ -584,8 +576,8 @@ export interface FileRoutesByTo {
   '/governance/notifications': typeof AuthenticatedGovernanceNotificationsRoute
   '/governance/triage': typeof AuthenticatedGovernanceTriageRoute
   '/transactions/new': typeof AuthenticatedTransactionsNewRoute
-  '/alpha-bravo/blog/$slug': typeof AlphaBravoBlogSlugRoute
-  '/alpha-bravo/blog': typeof AlphaBravoBlogIndexRoute
+  '/alpha-bravo/about/$slug': typeof AlphaBravoAboutSlugRoute
+  '/alpha-bravo/about': typeof AlphaBravoAboutIndexRoute
   '/alpha-bravo/responders': typeof AlphaBravoRespondersIndexRoute
   '/alpha-bravo/responders/location/$jurisdiction': typeof AlphaBravoRespondersLocationJurisdictionRoute
   '/alpha-bravo/responders/sector/$sector': typeof AlphaBravoRespondersSectorSectorRoute
@@ -623,9 +615,8 @@ export interface FileRoutesById {
   '/_authenticated/registry': typeof AuthenticatedRegistryRoute
   '/_authenticated/support': typeof AuthenticatedSupportRoute
   '/_authenticated/trades': typeof AuthenticatedTradesRoute
-  '/alpha-bravo/about': typeof AlphaBravoAboutRoute
+  '/alpha-bravo/about': typeof AlphaBravoAboutRouteWithChildren
   '/alpha-bravo/bidders': typeof AlphaBravoBiddersRoute
-  '/alpha-bravo/blog': typeof AlphaBravoBlogRouteWithChildren
   '/alpha-bravo/how-it-works': typeof AlphaBravoHowItWorksRoute
   '/alpha-bravo/intelligence-fabric': typeof AlphaBravoIntelligenceFabricRoute
   '/alpha-bravo/pricing': typeof AlphaBravoPricingRoute
@@ -657,8 +648,8 @@ export interface FileRoutesById {
   '/_authenticated/governance/notifications': typeof AuthenticatedGovernanceNotificationsRoute
   '/_authenticated/governance/triage': typeof AuthenticatedGovernanceTriageRoute
   '/_authenticated/transactions/new': typeof AuthenticatedTransactionsNewRoute
-  '/alpha-bravo/blog/$slug': typeof AlphaBravoBlogSlugRoute
-  '/alpha-bravo/blog/': typeof AlphaBravoBlogIndexRoute
+  '/alpha-bravo/about/$slug': typeof AlphaBravoAboutSlugRoute
+  '/alpha-bravo/about/': typeof AlphaBravoAboutIndexRoute
   '/alpha-bravo/responders/': typeof AlphaBravoRespondersIndexRoute
   '/alpha-bravo/responders/location/$jurisdiction': typeof AlphaBravoRespondersLocationJurisdictionRoute
   '/alpha-bravo/responders/sector/$sector': typeof AlphaBravoRespondersSectorSectorRoute
@@ -698,7 +689,6 @@ export interface FileRouteTypes {
     | '/trades'
     | '/alpha-bravo/about'
     | '/alpha-bravo/bidders'
-    | '/alpha-bravo/blog'
     | '/alpha-bravo/how-it-works'
     | '/alpha-bravo/intelligence-fabric'
     | '/alpha-bravo/pricing'
@@ -730,8 +720,8 @@ export interface FileRouteTypes {
     | '/governance/notifications'
     | '/governance/triage'
     | '/transactions/new'
-    | '/alpha-bravo/blog/$slug'
-    | '/alpha-bravo/blog/'
+    | '/alpha-bravo/about/$slug'
+    | '/alpha-bravo/about/'
     | '/alpha-bravo/responders/'
     | '/alpha-bravo/responders/location/$jurisdiction'
     | '/alpha-bravo/responders/sector/$sector'
@@ -766,7 +756,6 @@ export interface FileRouteTypes {
     | '/registry'
     | '/support'
     | '/trades'
-    | '/alpha-bravo/about'
     | '/alpha-bravo/bidders'
     | '/alpha-bravo/how-it-works'
     | '/alpha-bravo/intelligence-fabric'
@@ -798,8 +787,8 @@ export interface FileRouteTypes {
     | '/governance/notifications'
     | '/governance/triage'
     | '/transactions/new'
-    | '/alpha-bravo/blog/$slug'
-    | '/alpha-bravo/blog'
+    | '/alpha-bravo/about/$slug'
+    | '/alpha-bravo/about'
     | '/alpha-bravo/responders'
     | '/alpha-bravo/responders/location/$jurisdiction'
     | '/alpha-bravo/responders/sector/$sector'
@@ -838,7 +827,6 @@ export interface FileRouteTypes {
     | '/_authenticated/trades'
     | '/alpha-bravo/about'
     | '/alpha-bravo/bidders'
-    | '/alpha-bravo/blog'
     | '/alpha-bravo/how-it-works'
     | '/alpha-bravo/intelligence-fabric'
     | '/alpha-bravo/pricing'
@@ -870,8 +858,8 @@ export interface FileRouteTypes {
     | '/_authenticated/governance/notifications'
     | '/_authenticated/governance/triage'
     | '/_authenticated/transactions/new'
-    | '/alpha-bravo/blog/$slug'
-    | '/alpha-bravo/blog/'
+    | '/alpha-bravo/about/$slug'
+    | '/alpha-bravo/about/'
     | '/alpha-bravo/responders/'
     | '/alpha-bravo/responders/location/$jurisdiction'
     | '/alpha-bravo/responders/sector/$sector'
@@ -1130,13 +1118,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AlphaBravoBiddersRouteImport
       parentRoute: typeof AlphaBravoRoute
     }
-    '/alpha-bravo/blog': {
-      id: '/alpha-bravo/blog'
-      path: '/blog'
-      fullPath: '/alpha-bravo/blog'
-      preLoaderRoute: typeof AlphaBravoBlogRouteImport
-      parentRoute: typeof AlphaBravoRoute
-    }
     '/alpha-bravo/how-it-works': {
       id: '/alpha-bravo/how-it-works'
       path: '/how-it-works'
@@ -1347,19 +1328,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTransactionsNewRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/alpha-bravo/blog/': {
-      id: '/alpha-bravo/blog/'
+    '/alpha-bravo/about/': {
+      id: '/alpha-bravo/about/'
       path: '/'
-      fullPath: '/alpha-bravo/blog/'
-      preLoaderRoute: typeof AlphaBravoBlogIndexRouteImport
-      parentRoute: typeof AlphaBravoBlogRoute
+      fullPath: '/alpha-bravo/about/'
+      preLoaderRoute: typeof AlphaBravoAboutIndexRouteImport
+      parentRoute: typeof AlphaBravoAboutRoute
     }
-    '/alpha-bravo/blog/$slug': {
-      id: '/alpha-bravo/blog/$slug'
+    '/alpha-bravo/about/$slug': {
+      id: '/alpha-bravo/about/$slug'
       path: '/$slug'
-      fullPath: '/alpha-bravo/blog/$slug'
-      preLoaderRoute: typeof AlphaBravoBlogSlugRouteImport
-      parentRoute: typeof AlphaBravoBlogRoute
+      fullPath: '/alpha-bravo/about/$slug'
+      preLoaderRoute: typeof AlphaBravoAboutSlugRouteImport
+      parentRoute: typeof AlphaBravoAboutRoute
     }
     '/alpha-bravo/responders/': {
       id: '/alpha-bravo/responders/'
@@ -1473,18 +1454,18 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
   AuthenticatedRouteChildren,
 )
 
-interface AlphaBravoBlogRouteChildren {
-  AlphaBravoBlogSlugRoute: typeof AlphaBravoBlogSlugRoute
-  AlphaBravoBlogIndexRoute: typeof AlphaBravoBlogIndexRoute
+interface AlphaBravoAboutRouteChildren {
+  AlphaBravoAboutSlugRoute: typeof AlphaBravoAboutSlugRoute
+  AlphaBravoAboutIndexRoute: typeof AlphaBravoAboutIndexRoute
 }
 
-const AlphaBravoBlogRouteChildren: AlphaBravoBlogRouteChildren = {
-  AlphaBravoBlogSlugRoute: AlphaBravoBlogSlugRoute,
-  AlphaBravoBlogIndexRoute: AlphaBravoBlogIndexRoute,
+const AlphaBravoAboutRouteChildren: AlphaBravoAboutRouteChildren = {
+  AlphaBravoAboutSlugRoute: AlphaBravoAboutSlugRoute,
+  AlphaBravoAboutIndexRoute: AlphaBravoAboutIndexRoute,
 }
 
-const AlphaBravoBlogRouteWithChildren = AlphaBravoBlogRoute._addFileChildren(
-  AlphaBravoBlogRouteChildren,
+const AlphaBravoAboutRouteWithChildren = AlphaBravoAboutRoute._addFileChildren(
+  AlphaBravoAboutRouteChildren,
 )
 
 interface AlphaBravoRespondersRouteChildren {
@@ -1504,9 +1485,8 @@ const AlphaBravoRespondersRouteWithChildren =
   AlphaBravoRespondersRoute._addFileChildren(AlphaBravoRespondersRouteChildren)
 
 interface AlphaBravoRouteChildren {
-  AlphaBravoAboutRoute: typeof AlphaBravoAboutRoute
+  AlphaBravoAboutRoute: typeof AlphaBravoAboutRouteWithChildren
   AlphaBravoBiddersRoute: typeof AlphaBravoBiddersRoute
-  AlphaBravoBlogRoute: typeof AlphaBravoBlogRouteWithChildren
   AlphaBravoHowItWorksRoute: typeof AlphaBravoHowItWorksRoute
   AlphaBravoIntelligenceFabricRoute: typeof AlphaBravoIntelligenceFabricRoute
   AlphaBravoPricingRoute: typeof AlphaBravoPricingRoute
@@ -1517,9 +1497,8 @@ interface AlphaBravoRouteChildren {
 }
 
 const AlphaBravoRouteChildren: AlphaBravoRouteChildren = {
-  AlphaBravoAboutRoute: AlphaBravoAboutRoute,
+  AlphaBravoAboutRoute: AlphaBravoAboutRouteWithChildren,
   AlphaBravoBiddersRoute: AlphaBravoBiddersRoute,
-  AlphaBravoBlogRoute: AlphaBravoBlogRouteWithChildren,
   AlphaBravoHowItWorksRoute: AlphaBravoHowItWorksRoute,
   AlphaBravoIntelligenceFabricRoute: AlphaBravoIntelligenceFabricRoute,
   AlphaBravoPricingRoute: AlphaBravoPricingRoute,

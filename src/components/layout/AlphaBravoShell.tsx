@@ -42,7 +42,6 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-8 px-5">
           <Link to="/alpha-bravo" className="flex shrink-0 items-center gap-1.5">
             <Logo />
-            <span className="text-base font-medium tracking-tight text-primary">Alpha-Bravo</span>
           </Link>
 
           <nav className="hidden items-center gap-6 text-sm text-muted-foreground sm:flex">
@@ -67,10 +66,6 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
 
             <Link to="/alpha-bravo/trades" className="hover:text-foreground">
               Trades
-            </Link>
-
-            <Link to="/alpha-bravo/blog" className="hover:text-foreground">
-              Blog
             </Link>
           </nav>
 
