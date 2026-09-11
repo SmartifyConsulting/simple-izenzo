@@ -85,19 +85,19 @@ function HowItWorks() {
               <p className="text-sm italic leading-relaxed text-muted-foreground">"{t}"</p>
             </blockquote>
           ))}
+
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            Every step is recorded and independently verifiable. Verification can't be skipped or
+            waived — so speed never comes at the cost of certainty.
+          </p>
+
+          <Link to="/auth" search={{ mode: "signup", next: undefined }} className="inline-block">
+            <Button size="lg" className="rounded-full">
+              Submit a Bid
+            </Button>
+          </Link>
         </div>
       </div>
-
-      <p className="mt-14 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-        Every step is recorded and independently verifiable. Verification can't be skipped or
-        waived — so speed never comes at the cost of certainty.
-      </p>
-
-      <Link to="/auth" search={{ mode: "signup", next: undefined }} className="mt-8 inline-block">
-        <Button size="lg" className="rounded-full">
-          Submit a Bid
-        </Button>
-      </Link>
     </section>
   );
 }
