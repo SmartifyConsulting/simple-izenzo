@@ -45,6 +45,7 @@ import { Route as AlphaBravoHowItWorksRouteImport } from './routes/alpha-bravo.h
 import { Route as AlphaBravoInsightsRouteImport } from './routes/alpha-bravo.insights'
 import { Route as AlphaBravoMarketplaceRouteImport } from './routes/alpha-bravo.marketplace'
 import { Route as AlphaBravoPricingRouteImport } from './routes/alpha-bravo.pricing'
+import { Route as AlphaBravoRespondersRouteImport } from './routes/alpha-bravo.responders'
 import { Route as DocsApiRouteImport } from './routes/docs.api'
 import { Route as DocsWebhooksRouteImport } from './routes/docs.webhooks'
 import { Route as ProductsAuditLedgerRouteImport } from './routes/products.audit-ledger'
@@ -253,6 +254,11 @@ const AlphaBravoPricingRoute = AlphaBravoPricingRouteImport.update({
   path: '/pricing',
   getParentRoute: () => AlphaBravoRoute,
 } as any)
+const AlphaBravoRespondersRoute = AlphaBravoRespondersRouteImport.update({
+  id: '/responders',
+  path: '/responders',
+  getParentRoute: () => AlphaBravoRoute,
+} as any)
 const DocsApiRoute = DocsApiRouteImport.update({
   id: '/api',
   path: '/api',
@@ -436,6 +442,7 @@ export interface FileRoutesByFullPath {
   '/alpha-bravo/insights': typeof AlphaBravoInsightsRoute
   '/alpha-bravo/marketplace': typeof AlphaBravoMarketplaceRoute
   '/alpha-bravo/pricing': typeof AlphaBravoPricingRoute
+  '/alpha-bravo/responders': typeof AlphaBravoRespondersRoute
   '/docs/api': typeof DocsApiRoute
   '/docs/webhooks': typeof DocsWebhooksRoute
   '/products/audit-ledger': typeof ProductsAuditLedgerRoute
@@ -498,6 +505,7 @@ export interface FileRoutesByTo {
   '/alpha-bravo/insights': typeof AlphaBravoInsightsRoute
   '/alpha-bravo/marketplace': typeof AlphaBravoMarketplaceRoute
   '/alpha-bravo/pricing': typeof AlphaBravoPricingRoute
+  '/alpha-bravo/responders': typeof AlphaBravoRespondersRoute
   '/docs/api': typeof DocsApiRoute
   '/docs/webhooks': typeof DocsWebhooksRoute
   '/products/audit-ledger': typeof ProductsAuditLedgerRoute
@@ -563,6 +571,7 @@ export interface FileRoutesById {
   '/alpha-bravo/insights': typeof AlphaBravoInsightsRoute
   '/alpha-bravo/marketplace': typeof AlphaBravoMarketplaceRoute
   '/alpha-bravo/pricing': typeof AlphaBravoPricingRoute
+  '/alpha-bravo/responders': typeof AlphaBravoRespondersRoute
   '/docs/api': typeof DocsApiRoute
   '/docs/webhooks': typeof DocsWebhooksRoute
   '/products/audit-ledger': typeof ProductsAuditLedgerRoute
@@ -628,6 +637,7 @@ export interface FileRouteTypes {
     | '/alpha-bravo/insights'
     | '/alpha-bravo/marketplace'
     | '/alpha-bravo/pricing'
+    | '/alpha-bravo/responders'
     | '/docs/api'
     | '/docs/webhooks'
     | '/products/audit-ledger'
@@ -690,6 +700,7 @@ export interface FileRouteTypes {
     | '/alpha-bravo/insights'
     | '/alpha-bravo/marketplace'
     | '/alpha-bravo/pricing'
+    | '/alpha-bravo/responders'
     | '/docs/api'
     | '/docs/webhooks'
     | '/products/audit-ledger'
@@ -754,6 +765,7 @@ export interface FileRouteTypes {
     | '/alpha-bravo/insights'
     | '/alpha-bravo/marketplace'
     | '/alpha-bravo/pricing'
+    | '/alpha-bravo/responders'
     | '/docs/api'
     | '/docs/webhooks'
     | '/products/audit-ledger'
@@ -1062,6 +1074,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AlphaBravoPricingRouteImport
       parentRoute: typeof AlphaBravoRoute
     }
+    '/alpha-bravo/responders': {
+      id: '/alpha-bravo/responders'
+      path: '/responders'
+      fullPath: '/alpha-bravo/responders'
+      preLoaderRoute: typeof AlphaBravoRespondersRouteImport
+      parentRoute: typeof AlphaBravoRoute
+    }
     '/docs/api': {
       id: '/docs/api'
       path: '/api'
@@ -1328,6 +1347,7 @@ interface AlphaBravoRouteChildren {
   AlphaBravoInsightsRoute: typeof AlphaBravoInsightsRoute
   AlphaBravoMarketplaceRoute: typeof AlphaBravoMarketplaceRoute
   AlphaBravoPricingRoute: typeof AlphaBravoPricingRoute
+  AlphaBravoRespondersRoute: typeof AlphaBravoRespondersRoute
   AlphaBravoIndexRoute: typeof AlphaBravoIndexRoute
 }
 
@@ -1338,6 +1358,7 @@ const AlphaBravoRouteChildren: AlphaBravoRouteChildren = {
   AlphaBravoInsightsRoute: AlphaBravoInsightsRoute,
   AlphaBravoMarketplaceRoute: AlphaBravoMarketplaceRoute,
   AlphaBravoPricingRoute: AlphaBravoPricingRoute,
+  AlphaBravoRespondersRoute: AlphaBravoRespondersRoute,
   AlphaBravoIndexRoute: AlphaBravoIndexRoute,
 }
 

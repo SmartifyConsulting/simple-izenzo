@@ -10,6 +10,7 @@ const NAV = [
   { to: "/alpha-bravo/pricing", label: "Pricing" },
   { to: "/alpha-bravo/about", label: "About" },
   { to: "/alpha-bravo/marketplace", label: "Marketplace" },
+  { to: "/alpha-bravo/responders", label: "Responders" },
   { to: "/alpha-bravo/insights", label: "Insights" },
   { to: "/alpha-bravo/for-bidders", label: "For Bidders" },
 ] as const;
