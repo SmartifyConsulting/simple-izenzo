@@ -11,6 +11,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { applyAppSkin } from "@/lib/appSkin";
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
+import { Logo } from "@/components/Logo";
 
 const NAV = [
   { to: "/alpha-bravo/about", label: "About" },
@@ -39,11 +40,9 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-8 px-5">
-          <Link to="/alpha-bravo" className="shrink-0">
-            <span className="inline-flex items-center gap-1.5 text-base font-medium tracking-tight text-foreground">
-              <span className="text-muted-foreground">/</span> Izenzo{" "}
-              <span className="text-primary">Alpha-Bravo</span>
-            </span>
+          <Link to="/alpha-bravo" className="flex shrink-0 items-center gap-1.5">
+            <Logo />
+            <span className="text-base font-medium tracking-tight text-primary">Alpha-Bravo</span>
           </Link>
 
           <nav className="hidden items-center gap-6 text-sm text-muted-foreground sm:flex">
