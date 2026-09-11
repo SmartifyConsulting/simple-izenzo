@@ -7,31 +7,31 @@ const JOURNEY = [
     step: 1,
     title: "Trading",
     tag: "Find. Match. Structure.",
-    body: "Source opportunities, load deal documents, search with AI/AI+, discover counterparties, make a choice and record a Proof of Intent (POI).",
+    body: "Source opportunities, match parties, and capture the opportunity.",
   },
   {
     step: 2,
     title: "Compliance & Governance",
     tag: "Verify. Assess. Authorise.",
-    body: "Run WaD (non-waivable hard gate), complete KYC/KYB, confirm authority and review supporting evidence.",
+    body: "Complete KYC/KYB, assess risk, and verify evidence.",
   },
   {
     step: 3,
     title: "Execution",
     tag: "Plan. Implement. Deliver.",
-    body: "Move through project preparation (concept, pre-feasibility, feasibility, bankability) to implementation and execution.",
+    body: "Turn approved opportunities into executable projects.",
   },
   {
     step: 4,
     title: "Finality",
     tag: "Settle. Complete.",
-    body: "Finalise contracts, process payment and complete the transaction.",
+    body: "Finalise contracts, process payment, and close the transaction.",
   },
   {
     step: 5,
     title: "Memory",
     tag: "Record. Learn. Scale.",
-    body: "Store a verified record, capture insights and reuse intelligence for future opportunities.",
+    body: "Store verified outcomes and reuse intelligence for future opportunities.",
   },
 ];
 
