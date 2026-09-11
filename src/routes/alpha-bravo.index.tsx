@@ -91,7 +91,7 @@ function AlphaBravoHome() {
             verified contacts, and ready-to-send outreach, all under one cryptographic record.
           </p>
           <p className="mt-6 text-sm text-muted-foreground">No subscriptions, pay as you go.</p>
-          <div className="mt-8 flex flex-wrap items-center gap-3">
+          <div className="mt-8">
             <Link to="/alpha-bravo/trades">
               <Button size="lg" variant="outline" className="gap-1.5 rounded-full">
                 See how matching works <ArrowRight className="h-4 w-4" />
@@ -100,7 +100,7 @@ function AlphaBravoHome() {
             <Link
               to="/auth"
               search={{ mode: "signup", next: undefined }}
-              className="text-sm font-medium text-primary hover:underline"
+              className="mt-3 block text-sm font-medium text-primary hover:underline"
             >
               Are you a Responder? Sign up here →
             </Link>

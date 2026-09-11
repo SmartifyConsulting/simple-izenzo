@@ -1,5 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 export const Route = createFileRoute("/alpha-bravo/bidders")({
   head: () => ({
@@ -28,10 +34,22 @@ const TOOLS = [
 ];
 
 const FAQS = [
-  "What stage can I post an opportunity at?",
-  "What do you require before matching?",
-  "How do I get verified?",
-  "Where does Izenzo operate?",
+  {
+    q: "What stage can I post an opportunity at?",
+    a: "Any stage. Posting an opportunity opens the Trading Gate with a Bid/Offer — you don't need a finished deal to start. From there, Izenzo runs Search and AI-assisted matching to surface counterparties before you commit to anything.",
+  },
+  {
+    q: "What do you require before matching?",
+    a: "Just your Bid/Offer terms and any supporting documents (attached with a fingerprint). Full verification isn't required to be matched — it happens later, once you and a Responder choose to move forward.",
+  },
+  {
+    q: "How do I get verified?",
+    a: "Verification runs through a WaD case in the Compliance Gate — identity, ownership (UBO), and sanctions/PEP screening. It's a hard gate: 3 tokens, and it clears (or the match doesn't proceed to Execution). There's no way to skip it.",
+  },
+  {
+    q: "Where does Izenzo operate?",
+    a: "Izenzo is the trading name of Starfair162 (Pty) Ltd (Reg: 2018 / 331720 / 07). The platform itself is jurisdiction-agnostic — matches and counterparty screening cover multiple regions, tracked per-transaction.",
+  },
 ];
 
 function Bidders() {
@@ -71,13 +89,16 @@ function Bidders() {
       <p className="mt-16 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
         Common questions
       </p>
-      <div className="mt-6 divide-y divide-border border-t border-border">
-        {FAQS.map((q) => (
-          <p key={q} className="py-4 text-sm font-medium text-foreground">
-            {q}
-          </p>
+      <Accordion type="single" collapsible className="mt-6">
+        {FAQS.map((f) => (
+          <AccordionItem key={f.q} value={f.q}>
+            <AccordionTrigger className="text-foreground">{f.q}</AccordionTrigger>
+            <AccordionContent className="leading-relaxed text-muted-foreground">
+              {f.a}
+            </AccordionContent>
+          </AccordionItem>
         ))}
-      </div>
+      </Accordion>
     </section>
   );
 }

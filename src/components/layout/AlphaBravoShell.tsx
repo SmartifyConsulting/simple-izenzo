@@ -12,13 +12,10 @@ import { useAuth } from "@/lib/auth";
 import { applyAppSkin } from "@/lib/appSkin";
 
 const NAV = [
-  { to: "/alpha-bravo/how-it-works", label: "How It Works" },
-  { to: "/alpha-bravo/pricing", label: "Pricing" },
-] as const;
-
-const COMPANY_MENU = [
   { to: "/alpha-bravo/about", label: "About" },
-  { to: "/alpha-bravo/insights", label: "Insights" },
+  { to: "/alpha-bravo/how-it-works", label: "How It Works" },
+  { to: "/alpha-bravo/intelligence-fabric", label: "The Intelligence Fabric" },
+  { to: "/alpha-bravo/pricing", label: "Pricing" },
 ] as const;
 
 const GET_STARTED_MENU = [
@@ -72,18 +69,9 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
               Trades
             </Link>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-1 outline-none hover:text-foreground">
-                Company <ChevronDown className="h-3.5 w-3.5" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                {COMPANY_MENU.map((item) => (
-                  <DropdownMenuItem key={item.to} asChild>
-                    <Link to={item.to}>{item.label}</Link>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Link to="/alpha-bravo/blog" className="hover:text-foreground">
+              Blog
+            </Link>
           </nav>
 
           <div className="ml-auto flex shrink-0 items-center gap-3">
@@ -121,6 +109,12 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
             Izenzo is the trading name of Starfair162 (Pty) Ltd Reg: 2018 / 331720 / 07.
           </p>
           <nav aria-label="Footer" className="flex items-center gap-6">
+            <Link
+              to="/alpha-bravo/trust-center"
+              className="text-[11px] tracking-wide text-muted-foreground transition-colors hover:text-foreground sm:text-xs"
+            >
+              Trust Center
+            </Link>
             <a
               href="/privacy"
               className="text-[11px] tracking-wide text-muted-foreground transition-colors hover:text-foreground sm:text-xs"
@@ -146,7 +140,7 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
   );
 }
 
-/** Small square-bracket step label used on the Trades/Insights list pages, matching the
+/** Small square-bracket step label used on the Trades/Blog list pages, matching the
  * reference site's "01 / 02 / 03" numbered-list styling. */
 export function AlphaBravoEyebrow({ children }: { children: ReactNode }) {
   return (
