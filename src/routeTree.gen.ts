@@ -71,6 +71,8 @@ import { Route as AuthenticatedGovernanceHealthRouteImport } from './routes/_aut
 import { Route as AuthenticatedGovernanceNotificationsRouteImport } from './routes/_authenticated.governance.notifications'
 import { Route as AuthenticatedGovernanceTriageRouteImport } from './routes/_authenticated.governance.triage'
 import { Route as AuthenticatedTransactionsNewRouteImport } from './routes/_authenticated.transactions.new'
+import { Route as AlphaBravoInsightsIndexRouteImport } from './routes/alpha-bravo.insights.index'
+import { Route as AlphaBravoInsightsSlugRouteImport } from './routes/alpha-bravo.insights.$slug'
 import { Route as ApiPublicWebhooksDiditRouteImport } from './routes/api/public/webhooks/didit'
 import { Route as AuthenticatedTxIdStageStepRouteImport } from './routes/_authenticated.tx.$id.$stage.$step'
 
@@ -401,6 +403,16 @@ const AuthenticatedTransactionsNewRoute =
     path: '/transactions/new',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AlphaBravoInsightsIndexRoute = AlphaBravoInsightsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AlphaBravoInsightsRoute,
+} as any)
+const AlphaBravoInsightsSlugRoute = AlphaBravoInsightsSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => AlphaBravoInsightsRoute,
+} as any)
 const ApiPublicWebhooksDiditRoute = ApiPublicWebhooksDiditRouteImport.update({
   id: '/api/public/webhooks/didit',
   path: '/api/public/webhooks/didit',
@@ -446,7 +458,7 @@ export interface FileRoutesByFullPath {
   '/alpha-bravo/for-bidders': typeof AlphaBravoForBiddersRoute
   '/alpha-bravo/for-responders': typeof AlphaBravoForRespondersRoute
   '/alpha-bravo/how-it-works': typeof AlphaBravoHowItWorksRoute
-  '/alpha-bravo/insights': typeof AlphaBravoInsightsRoute
+  '/alpha-bravo/insights': typeof AlphaBravoInsightsRouteWithChildren
   '/alpha-bravo/marketplace': typeof AlphaBravoMarketplaceRoute
   '/alpha-bravo/pricing': typeof AlphaBravoPricingRoute
   '/alpha-bravo/responders': typeof AlphaBravoRespondersRoute
@@ -475,6 +487,8 @@ export interface FileRoutesByFullPath {
   '/governance/notifications': typeof AuthenticatedGovernanceNotificationsRoute
   '/governance/triage': typeof AuthenticatedGovernanceTriageRoute
   '/transactions/new': typeof AuthenticatedTransactionsNewRoute
+  '/alpha-bravo/insights/$slug': typeof AlphaBravoInsightsSlugRoute
+  '/alpha-bravo/insights/': typeof AlphaBravoInsightsIndexRoute
   '/api/public/webhooks/didit': typeof ApiPublicWebhooksDiditRoute
   '/tx/$id/$stage/$step': typeof AuthenticatedTxIdStageStepRoute
 }
@@ -510,7 +524,6 @@ export interface FileRoutesByTo {
   '/alpha-bravo/for-bidders': typeof AlphaBravoForBiddersRoute
   '/alpha-bravo/for-responders': typeof AlphaBravoForRespondersRoute
   '/alpha-bravo/how-it-works': typeof AlphaBravoHowItWorksRoute
-  '/alpha-bravo/insights': typeof AlphaBravoInsightsRoute
   '/alpha-bravo/marketplace': typeof AlphaBravoMarketplaceRoute
   '/alpha-bravo/pricing': typeof AlphaBravoPricingRoute
   '/alpha-bravo/responders': typeof AlphaBravoRespondersRoute
@@ -539,6 +552,8 @@ export interface FileRoutesByTo {
   '/governance/notifications': typeof AuthenticatedGovernanceNotificationsRoute
   '/governance/triage': typeof AuthenticatedGovernanceTriageRoute
   '/transactions/new': typeof AuthenticatedTransactionsNewRoute
+  '/alpha-bravo/insights/$slug': typeof AlphaBravoInsightsSlugRoute
+  '/alpha-bravo/insights': typeof AlphaBravoInsightsIndexRoute
   '/api/public/webhooks/didit': typeof ApiPublicWebhooksDiditRoute
   '/tx/$id/$stage/$step': typeof AuthenticatedTxIdStageStepRoute
 }
@@ -577,7 +592,7 @@ export interface FileRoutesById {
   '/alpha-bravo/for-bidders': typeof AlphaBravoForBiddersRoute
   '/alpha-bravo/for-responders': typeof AlphaBravoForRespondersRoute
   '/alpha-bravo/how-it-works': typeof AlphaBravoHowItWorksRoute
-  '/alpha-bravo/insights': typeof AlphaBravoInsightsRoute
+  '/alpha-bravo/insights': typeof AlphaBravoInsightsRouteWithChildren
   '/alpha-bravo/marketplace': typeof AlphaBravoMarketplaceRoute
   '/alpha-bravo/pricing': typeof AlphaBravoPricingRoute
   '/alpha-bravo/responders': typeof AlphaBravoRespondersRoute
@@ -606,6 +621,8 @@ export interface FileRoutesById {
   '/_authenticated/governance/notifications': typeof AuthenticatedGovernanceNotificationsRoute
   '/_authenticated/governance/triage': typeof AuthenticatedGovernanceTriageRoute
   '/_authenticated/transactions/new': typeof AuthenticatedTransactionsNewRoute
+  '/alpha-bravo/insights/$slug': typeof AlphaBravoInsightsSlugRoute
+  '/alpha-bravo/insights/': typeof AlphaBravoInsightsIndexRoute
   '/api/public/webhooks/didit': typeof ApiPublicWebhooksDiditRoute
   '/_authenticated/tx/$id/$stage/$step': typeof AuthenticatedTxIdStageStepRoute
 }
@@ -673,6 +690,8 @@ export interface FileRouteTypes {
     | '/governance/notifications'
     | '/governance/triage'
     | '/transactions/new'
+    | '/alpha-bravo/insights/$slug'
+    | '/alpha-bravo/insights/'
     | '/api/public/webhooks/didit'
     | '/tx/$id/$stage/$step'
   fileRoutesByTo: FileRoutesByTo
@@ -708,7 +727,6 @@ export interface FileRouteTypes {
     | '/alpha-bravo/for-bidders'
     | '/alpha-bravo/for-responders'
     | '/alpha-bravo/how-it-works'
-    | '/alpha-bravo/insights'
     | '/alpha-bravo/marketplace'
     | '/alpha-bravo/pricing'
     | '/alpha-bravo/responders'
@@ -737,6 +755,8 @@ export interface FileRouteTypes {
     | '/governance/notifications'
     | '/governance/triage'
     | '/transactions/new'
+    | '/alpha-bravo/insights/$slug'
+    | '/alpha-bravo/insights'
     | '/api/public/webhooks/didit'
     | '/tx/$id/$stage/$step'
   id:
@@ -803,6 +823,8 @@ export interface FileRouteTypes {
     | '/_authenticated/governance/notifications'
     | '/_authenticated/governance/triage'
     | '/_authenticated/transactions/new'
+    | '/alpha-bravo/insights/$slug'
+    | '/alpha-bravo/insights/'
     | '/api/public/webhooks/didit'
     | '/_authenticated/tx/$id/$stage/$step'
   fileRoutesById: FileRoutesById
@@ -1268,6 +1290,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTransactionsNewRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/alpha-bravo/insights/': {
+      id: '/alpha-bravo/insights/'
+      path: '/'
+      fullPath: '/alpha-bravo/insights/'
+      preLoaderRoute: typeof AlphaBravoInsightsIndexRouteImport
+      parentRoute: typeof AlphaBravoInsightsRoute
+    }
+    '/alpha-bravo/insights/$slug': {
+      id: '/alpha-bravo/insights/$slug'
+      path: '/$slug'
+      fullPath: '/alpha-bravo/insights/$slug'
+      preLoaderRoute: typeof AlphaBravoInsightsSlugRouteImport
+      parentRoute: typeof AlphaBravoInsightsRoute
+    }
     '/api/public/webhooks/didit': {
       id: '/api/public/webhooks/didit'
       path: '/api/public/webhooks/didit'
@@ -1359,12 +1395,25 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
   AuthenticatedRouteChildren,
 )
 
+interface AlphaBravoInsightsRouteChildren {
+  AlphaBravoInsightsSlugRoute: typeof AlphaBravoInsightsSlugRoute
+  AlphaBravoInsightsIndexRoute: typeof AlphaBravoInsightsIndexRoute
+}
+
+const AlphaBravoInsightsRouteChildren: AlphaBravoInsightsRouteChildren = {
+  AlphaBravoInsightsSlugRoute: AlphaBravoInsightsSlugRoute,
+  AlphaBravoInsightsIndexRoute: AlphaBravoInsightsIndexRoute,
+}
+
+const AlphaBravoInsightsRouteWithChildren =
+  AlphaBravoInsightsRoute._addFileChildren(AlphaBravoInsightsRouteChildren)
+
 interface AlphaBravoRouteChildren {
   AlphaBravoAboutRoute: typeof AlphaBravoAboutRoute
   AlphaBravoForBiddersRoute: typeof AlphaBravoForBiddersRoute
   AlphaBravoForRespondersRoute: typeof AlphaBravoForRespondersRoute
   AlphaBravoHowItWorksRoute: typeof AlphaBravoHowItWorksRoute
-  AlphaBravoInsightsRoute: typeof AlphaBravoInsightsRoute
+  AlphaBravoInsightsRoute: typeof AlphaBravoInsightsRouteWithChildren
   AlphaBravoMarketplaceRoute: typeof AlphaBravoMarketplaceRoute
   AlphaBravoPricingRoute: typeof AlphaBravoPricingRoute
   AlphaBravoRespondersRoute: typeof AlphaBravoRespondersRoute
@@ -1376,7 +1425,7 @@ const AlphaBravoRouteChildren: AlphaBravoRouteChildren = {
   AlphaBravoForBiddersRoute: AlphaBravoForBiddersRoute,
   AlphaBravoForRespondersRoute: AlphaBravoForRespondersRoute,
   AlphaBravoHowItWorksRoute: AlphaBravoHowItWorksRoute,
-  AlphaBravoInsightsRoute: AlphaBravoInsightsRoute,
+  AlphaBravoInsightsRoute: AlphaBravoInsightsRouteWithChildren,
   AlphaBravoMarketplaceRoute: AlphaBravoMarketplaceRoute,
   AlphaBravoPricingRoute: AlphaBravoPricingRoute,
   AlphaBravoRespondersRoute: AlphaBravoRespondersRoute,
