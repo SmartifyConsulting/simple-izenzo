@@ -3,7 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { BadgeCheck, CheckCircle2, Download, Eye, Paperclip, UploadCloud, X } from "lucide-react";
+import { BadgeCheck, CheckCircle2, Download, Eye, Paperclip, Search, UploadCloud, X } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import {
   CanvasStart,
@@ -18,13 +18,8 @@ import { TradeSummary } from "@/components/canvas/TradeSummary";
 import { MahjongView } from "@/components/canvas/MahjongView";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { supabase } from "@/integrations/supabase/client";
 import { advance, fallbackReference, fingerprintOf, recordEvent, type Transaction } from "@/lib/tx";
 import { useAuth } from "@/lib/auth";
@@ -55,6 +50,28 @@ export const Route = createFileRoute("/_authenticated/live-deal-engine")({
   },
   component: LiveDealEngine,
 });
+
+// Picks out the facts a reader actually scans an AI summary for — amounts, quantities, dates and
+// percentages — and renders them in green so they stand out from the surrounding prose.
+const KEY_TERM_PATTERN =
+  /(?:[$€£R]\s?\d[\d,]*(?:\.\d+)?(?:\s?(?:million|billion|k|m|bn))?)|(?:\b(?:USD|EUR|GBP|ZAR|R)\s?\d[\d,]*(?:\.\d+)?\b)|(?:\b\d[\d,]*(?:\.\d+)?\s?(?:MT|kg|tonnes?|tons?|barrels?|units?|bbl|%)\b)|(?:\b\d{1,3}(?:\.\d+)?%\b)|(?:\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b)|(?:\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\b)/gi;
+
+function highlightKeyTerms(text: string): React.ReactNode[] {
+  const parts = text.split(KEY_TERM_PATTERN);
+  const matches = text.match(KEY_TERM_PATTERN) ?? [];
+  const nodes: React.ReactNode[] = [];
+  parts.forEach((part, i) => {
+    if (part) nodes.push(<span key={`t${i}`}>{part}</span>);
+    if (matches[i]) {
+      nodes.push(
+        <span key={`m${i}`} className="font-semibold text-emerald-600">
+          {matches[i]}
+        </span>,
+      );
+    }
+  });
+  return nodes;
+}
 
 type Attachment = {
   name: string;
@@ -160,10 +177,15 @@ function FileField({
  * trade name. It opens on the most recent deal; with nothing in progress it shows no selection. A
  * deal drops off the list the moment it reaches Memory (fully sealed) — from then on it's only
  * findable through the All Trades report. */
+// A deal that never got a commodity/title of its own still needs a fallback for internal record-
+// keeping, but that placeholder shouldn't surface as if it were a real deal name in this picker.
+const GENERIC_TITLES = new Set(["New buy bid", "New sell offer"]);
+
 function OpenDealsPicker({ currentId }: { currentId: string | null }) {
   const { org } = useAuth();
   const navigate = useNavigate();
-  const { data: open = [] } = useQuery({
+  const [open, setOpen] = useState(false);
+  const { data: deals = [] } = useQuery({
     queryKey: ["open-deals", org?.id],
     enabled: Boolean(org?.id),
     queryFn: async () => {
@@ -172,7 +194,7 @@ function OpenDealsPicker({ currentId }: { currentId: string | null }) {
         .select("id, reference, title, commodity, stage, created_at, bid_offers(direction, created_at)")
         .eq("org_id", org!.id)
         .neq("stage", "memory")
-        // Newest first, so the most recent trade is what the dropdown lands on.
+        // Newest first, so the most recent trade is what the picker lands on.
         .order("created_at", { ascending: false })
         .limit(20);
       if (error) throw error;
@@ -190,36 +212,64 @@ function OpenDealsPicker({ currentId }: { currentId: string | null }) {
           (a, b) => +new Date(a.created_at) - +new Date(b.created_at),
         )[0];
         const direction: "bid" | "offer" = earliest?.direction === "offer" ? "offer" : "bid";
+        const name = t.commodity ?? (GENERIC_TITLES.has(t.title) ? "" : t.title);
         return {
           id: t.id,
           reference: t.reference ?? fallbackReference(t.id, direction),
-          name: t.commodity ?? t.title,
+          name,
         };
       });
     },
   });
 
-  if (open.length === 0) return <span />;
+  if (deals.length === 0) return <span />;
 
-  const selected = open.some((d) => d.id === currentId) ? currentId! : (open[0]?.id ?? "");
+  const selected = deals.find((d) => d.id === currentId) ?? deals[0];
 
   return (
-    <Select
-      value={selected}
-      onValueChange={(id) => void navigate({ to: "/live-deal-engine", search: { tx: id } })}
-    >
-      <SelectTrigger className="h-9 w-[280px] text-[13px]">
-        <SelectValue placeholder="No active trades" />
-      </SelectTrigger>
-      <SelectContent>
-        {open.map((d) => (
-          <SelectItem key={d.id} value={d.id}>
-            <span className="font-mono font-semibold">{d.reference}</span>
-            <span className="text-muted-foreground"> — {d.name}</span>
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="h-9 w-[280px] justify-start gap-2 text-[13px] font-normal"
+        >
+          <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          {selected ? (
+            <span className="min-w-0 truncate">
+              <span className="font-mono font-semibold">{selected.reference}</span>
+              {selected.name && <span className="text-muted-foreground"> — {selected.name}</span>}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">Search</span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[280px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Search a bid or offer…" />
+          <CommandList>
+            <CommandEmpty>No matching bids or offers.</CommandEmpty>
+            <CommandGroup>
+              {deals.map((d) => (
+                <CommandItem
+                  key={d.id}
+                  value={`${d.reference} ${d.name}`}
+                  onSelect={() => {
+                    setOpen(false);
+                    void navigate({ to: "/live-deal-engine", search: { tx: d.id } });
+                  }}
+                >
+                  <span className="font-mono font-semibold">{d.reference}</span>
+                  {d.name && <span className="text-muted-foreground"> — {d.name}</span>}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -1007,7 +1057,9 @@ function LiveDealEngine() {
                         Reading the uploaded documents…
                       </p>
                     ) : (
-                      <p className="text-sm leading-relaxed text-foreground">{documentSummary}</p>
+                      <p className="text-sm leading-relaxed text-foreground">
+                        {highlightKeyTerms(documentSummary ?? "")}
+                      </p>
                     )}
                   </div>
                 )}
@@ -1045,7 +1097,7 @@ function LiveDealEngine() {
                 {attachments.length > 0 && (
                   <div className="glass-node space-y-2 p-4">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="label-caps rounded-full border border-warning/40 bg-warning/15 px-2.5 py-0.5 text-warning">
+                      <p className="label-caps rounded-full border border-[#F59E0B] bg-[#F59E0B] px-2.5 py-0.5 text-white">
                         Attachments
                       </p>
                       {idCheck?.status === "passed" && (
