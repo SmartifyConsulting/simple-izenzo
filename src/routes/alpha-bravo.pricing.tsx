@@ -77,7 +77,7 @@ function Pricing() {
             </div>
 
             <Link to="/auth" search={{ mode: "signup", next: undefined }}>
-              <Button className="mt-6 w-full rounded-full">Post an Opportunity</Button>
+              <Button className="mt-6 w-full rounded-full">Submit a Bid</Button>
             </Link>
 
             <ul className="mt-6 space-y-2 text-sm">

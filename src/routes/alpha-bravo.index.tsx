@@ -17,24 +17,6 @@ export const Route = createFileRoute("/alpha-bravo/")({
   component: AlphaBravoHome,
 });
 
-const THESIS = [
-  {
-    n: "01",
-    title: "Matching is the opportunity",
-    body: "The best outcomes come from pairing the right Bidder with the right Responder — not just the fastest one.",
-  },
-  {
-    n: "02",
-    title: "Verified, before capital moves",
-    body: "Every match clears KYC/KYB and a non-waivable risk gate before a cent changes hands.",
-  },
-  {
-    n: "03",
-    title: "A record that compounds",
-    body: "Every completed match becomes reusable intelligence for the next opportunity.",
-  },
-];
-
 const PROMISE = [
   {
     icon: Lock,
@@ -56,14 +38,6 @@ const PROMISE = [
     title: "Data Never Sold",
     body: "Your information is never sold to third parties. Period. Full stop.",
   },
-];
-
-const WHY = [
-  "A database of verified Responders spanning every sector Izenzo covers.",
-  "Fit scores based on stage, sector, deal size, and governance thesis — not pay-to-play placement.",
-  "Ready-to-send outreach drafted for each Responder so you can reach out the same day.",
-  "Detailed Responder profiles with verification history and what each firm looks for.",
-  "Privacy by design — your brief is never shared without consent, and introductions are double opt-in.",
 ];
 
 const STAGES = [
@@ -158,48 +132,6 @@ function AlphaBravoHome() {
                   {p.title}
                 </h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{p.body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="border-t border-border">
-        <div className="mx-auto max-w-6xl px-5 py-20">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-            Why Bidders choose Izenzo
-          </p>
-          <h2 className="mt-3 max-w-2xl text-3xl tracking-tight text-foreground sm:text-4xl">
-            The tedious, error-prone parts of Responder research — done for you.
-          </h2>
-          <ul className="mt-10 grid gap-4 sm:grid-cols-2">
-            {WHY.map((w) => (
-              <li
-                key={w}
-                className="rounded-2xl border border-border bg-card p-5 text-sm leading-relaxed text-muted-foreground"
-              >
-                {w}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      <section className="border-t border-border">
-        <div className="mx-auto max-w-6xl px-5 py-20">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-            The thesis
-          </p>
-          <h2 className="mt-3 max-w-2xl text-3xl tracking-tight text-foreground sm:text-4xl">
-            We back matches that hold up under scrutiny.
-          </h2>
-
-          <div className="mt-12 grid gap-10 sm:grid-cols-3">
-            {THESIS.map((t) => (
-              <div key={t.n}>
-                <p className="text-sm font-semibold text-primary">{t.n}</p>
-                <h3 className="mt-3 text-lg font-medium tracking-tight text-foreground">{t.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{t.body}</p>
               </div>
             ))}
           </div>

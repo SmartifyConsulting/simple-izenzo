@@ -125,7 +125,7 @@ export function ResponderDirectory({
           Post an opportunity and we'll screen your counterparties automatically.
         </p>
         <Link to="/auth" search={{ mode: "signup", next: undefined }} className="mt-5 inline-block">
-          <Button className="rounded-full">Post an Opportunity</Button>
+          <Button className="rounded-full">Submit a Bid</Button>
         </Link>
       </div>
     </>

@@ -84,7 +84,7 @@ function Trades() {
             Post an opportunity and get verified Responders.
           </p>
           <Link to="/auth" search={{ mode: "signup", next: undefined }} className="mt-5 inline-block">
-            <Button className="rounded-full">Post an Opportunity</Button>
+            <Button className="rounded-full">Submit a Bid</Button>
           </Link>
         </div>
       </section>

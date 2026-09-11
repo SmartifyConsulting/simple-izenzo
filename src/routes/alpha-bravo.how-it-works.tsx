@@ -35,6 +35,24 @@ const STAGE_COPY: Record<(typeof SPINE)[number]["key"], { title: string; body: s
   },
 };
 
+const THESIS = [
+  {
+    n: "01",
+    title: "Matching is the opportunity",
+    body: "The best outcomes come from pairing the right Bidder with the right Responder — not just the fastest one.",
+  },
+  {
+    n: "02",
+    title: "Verified, before capital moves",
+    body: "Every match clears KYC/KYB and a non-waivable risk gate before a cent changes hands.",
+  },
+  {
+    n: "03",
+    title: "A record that compounds",
+    body: "Every completed match becomes reusable intelligence for the next opportunity.",
+  },
+];
+
 function HowItWorks() {
   return (
     <>
@@ -80,9 +98,32 @@ function HowItWorks() {
 
           <Link to="/auth" search={{ mode: "signup", next: undefined }} className="mt-8 inline-block">
             <Button size="lg" className="rounded-full">
-              Post an Opportunity
+              Submit a Bid
             </Button>
           </Link>
+        </div>
+      </section>
+
+      <section className="border-t border-border">
+        <div className="mx-auto max-w-3xl px-5 py-16">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+            The thesis
+          </p>
+          <h2 className="mt-3 max-w-2xl text-2xl tracking-tight text-foreground sm:text-3xl">
+            We back matches that hold up under scrutiny.
+          </h2>
+
+          <div className="mt-10 grid gap-8 sm:grid-cols-3">
+            {THESIS.map((t) => (
+              <div key={t.n}>
+                <p className="text-sm font-semibold text-primary">{t.n}</p>
+                <h3 className="mt-3 text-base font-medium tracking-tight text-foreground">
+                  {t.title}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{t.body}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     </>

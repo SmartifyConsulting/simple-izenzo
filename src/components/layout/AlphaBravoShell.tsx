@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeftRight, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -57,19 +57,6 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
 
             <DropdownMenu>
               <DropdownMenuTrigger className="flex items-center gap-1 outline-none hover:text-foreground">
-                Company <ChevronDown className="h-3.5 w-3.5" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                {COMPANY_MENU.map((item) => (
-                  <DropdownMenuItem key={item.to} asChild>
-                    <Link to={item.to}>{item.label}</Link>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-1 outline-none hover:text-foreground">
                 Get Started <ChevronDown className="h-3.5 w-3.5" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
@@ -84,17 +71,22 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
             <Link to="/alpha-bravo/trades" className="hover:text-foreground">
               Trades
             </Link>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center gap-1 outline-none hover:text-foreground">
+                Company <ChevronDown className="h-3.5 w-3.5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {COMPANY_MENU.map((item) => (
+                  <DropdownMenuItem key={item.to} asChild>
+                    <Link to={item.to}>{item.label}</Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </nav>
 
           <div className="ml-auto flex shrink-0 items-center gap-3">
-            <Link
-              to="/"
-              className="flex h-8 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-              title="Switch back to Izenzo"
-            >
-              <ArrowLeftRight className="h-3.5 w-3.5" />
-              Izenzo
-            </Link>
             {user ? (
               <Link to="/live-deal-engine">
                 <Button size="sm" className="rounded-full">
@@ -112,7 +104,7 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
                 </Link>
                 <Link to="/auth" search={{ mode: "signup", next: undefined }}>
                   <Button size="sm" className="rounded-full">
-                    Post an Opportunity
+                    Submit a Bid
                   </Button>
                 </Link>
               </>
