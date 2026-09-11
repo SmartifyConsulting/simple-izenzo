@@ -912,7 +912,14 @@ function LiveDealEngine() {
                   accept="image/*"
                 />
               </div>
-              <FileField id="docs" label="Documents" files={docFiles} onChange={setDocFiles} multiple />
+              <FileField
+                id="docs"
+                label="Documents — PDF, Word, Excel, CSV or text"
+                files={docFiles}
+                onChange={setDocFiles}
+                multiple
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.tsv,.txt,.md,.rtf,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,text/csv"
+              />
               <Button type="submit" disabled={busy} className="w-full">
                 {busy ? "Submitting…" : "Submit"}
               </Button>
@@ -920,9 +927,9 @@ function LiveDealEngine() {
           )}
 
           {activity && dealTx && flowStep === "searching" && (
-            <div className="mt-3 overflow-hidden rounded-xl border border-primary/20">
-              <div className="flex items-center gap-3 bg-primary/5 px-4 py-3">
-                <p className="text-sm text-primary">Running AI and AI+ search for matching counterparties…</p>
+            <div className="mt-3 overflow-hidden rounded-xl border border-warning/40">
+              <div className="flex items-center gap-3 bg-warning/15 px-4 py-3">
+                <p className="text-sm text-warning">Running AI and AI+ search for matching counterparties…</p>
               </div>
               <div className="h-1.5 w-full animate-ribbon-sweep" />
             </div>
@@ -1038,7 +1045,9 @@ function LiveDealEngine() {
                 {attachments.length > 0 && (
                   <div className="glass-node space-y-2 p-4">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="label-caps text-muted-foreground">Attachments</p>
+                      <p className="label-caps rounded-full border border-warning/40 bg-warning/15 px-2.5 py-0.5 text-warning">
+                        Attachments
+                      </p>
                       {idCheck?.status === "passed" && (
                         <span
                           title={`Verified via Didit${idCheck.completed_at ? ` — ${new Date(idCheck.completed_at).toLocaleString()}` : ""}`}
