@@ -73,6 +73,9 @@ import { Route as AuthenticatedGovernanceTriageRouteImport } from './routes/_aut
 import { Route as AuthenticatedTransactionsNewRouteImport } from './routes/_authenticated.transactions.new'
 import { Route as AlphaBravoInsightsIndexRouteImport } from './routes/alpha-bravo.insights.index'
 import { Route as AlphaBravoInsightsSlugRouteImport } from './routes/alpha-bravo.insights.$slug'
+import { Route as AlphaBravoRespondersIndexRouteImport } from './routes/alpha-bravo.responders.index'
+import { Route as AlphaBravoRespondersLocationJurisdictionRouteImport } from './routes/alpha-bravo.responders.location.$jurisdiction'
+import { Route as AlphaBravoRespondersSectorSectorRouteImport } from './routes/alpha-bravo.responders.sector.$sector'
 import { Route as ApiPublicWebhooksDiditRouteImport } from './routes/api/public/webhooks/didit'
 import { Route as AuthenticatedTxIdStageStepRouteImport } from './routes/_authenticated.tx.$id.$stage.$step'
 
@@ -413,6 +416,24 @@ const AlphaBravoInsightsSlugRoute = AlphaBravoInsightsSlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => AlphaBravoInsightsRoute,
 } as any)
+const AlphaBravoRespondersIndexRoute =
+  AlphaBravoRespondersIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AlphaBravoRespondersRoute,
+  } as any)
+const AlphaBravoRespondersLocationJurisdictionRoute =
+  AlphaBravoRespondersLocationJurisdictionRouteImport.update({
+    id: '/location/$jurisdiction',
+    path: '/location/$jurisdiction',
+    getParentRoute: () => AlphaBravoRespondersRoute,
+  } as any)
+const AlphaBravoRespondersSectorSectorRoute =
+  AlphaBravoRespondersSectorSectorRouteImport.update({
+    id: '/sector/$sector',
+    path: '/sector/$sector',
+    getParentRoute: () => AlphaBravoRespondersRoute,
+  } as any)
 const ApiPublicWebhooksDiditRoute = ApiPublicWebhooksDiditRouteImport.update({
   id: '/api/public/webhooks/didit',
   path: '/api/public/webhooks/didit',
@@ -461,7 +482,7 @@ export interface FileRoutesByFullPath {
   '/alpha-bravo/insights': typeof AlphaBravoInsightsRouteWithChildren
   '/alpha-bravo/marketplace': typeof AlphaBravoMarketplaceRoute
   '/alpha-bravo/pricing': typeof AlphaBravoPricingRoute
-  '/alpha-bravo/responders': typeof AlphaBravoRespondersRoute
+  '/alpha-bravo/responders': typeof AlphaBravoRespondersRouteWithChildren
   '/docs/api': typeof DocsApiRoute
   '/docs/webhooks': typeof DocsWebhooksRoute
   '/products/audit-ledger': typeof ProductsAuditLedgerRoute
@@ -489,6 +510,9 @@ export interface FileRoutesByFullPath {
   '/transactions/new': typeof AuthenticatedTransactionsNewRoute
   '/alpha-bravo/insights/$slug': typeof AlphaBravoInsightsSlugRoute
   '/alpha-bravo/insights/': typeof AlphaBravoInsightsIndexRoute
+  '/alpha-bravo/responders/': typeof AlphaBravoRespondersIndexRoute
+  '/alpha-bravo/responders/location/$jurisdiction': typeof AlphaBravoRespondersLocationJurisdictionRoute
+  '/alpha-bravo/responders/sector/$sector': typeof AlphaBravoRespondersSectorSectorRoute
   '/api/public/webhooks/didit': typeof ApiPublicWebhooksDiditRoute
   '/tx/$id/$stage/$step': typeof AuthenticatedTxIdStageStepRoute
 }
@@ -526,7 +550,6 @@ export interface FileRoutesByTo {
   '/alpha-bravo/how-it-works': typeof AlphaBravoHowItWorksRoute
   '/alpha-bravo/marketplace': typeof AlphaBravoMarketplaceRoute
   '/alpha-bravo/pricing': typeof AlphaBravoPricingRoute
-  '/alpha-bravo/responders': typeof AlphaBravoRespondersRoute
   '/docs/api': typeof DocsApiRoute
   '/docs/webhooks': typeof DocsWebhooksRoute
   '/products/audit-ledger': typeof ProductsAuditLedgerRoute
@@ -554,6 +577,9 @@ export interface FileRoutesByTo {
   '/transactions/new': typeof AuthenticatedTransactionsNewRoute
   '/alpha-bravo/insights/$slug': typeof AlphaBravoInsightsSlugRoute
   '/alpha-bravo/insights': typeof AlphaBravoInsightsIndexRoute
+  '/alpha-bravo/responders': typeof AlphaBravoRespondersIndexRoute
+  '/alpha-bravo/responders/location/$jurisdiction': typeof AlphaBravoRespondersLocationJurisdictionRoute
+  '/alpha-bravo/responders/sector/$sector': typeof AlphaBravoRespondersSectorSectorRoute
   '/api/public/webhooks/didit': typeof ApiPublicWebhooksDiditRoute
   '/tx/$id/$stage/$step': typeof AuthenticatedTxIdStageStepRoute
 }
@@ -595,7 +621,7 @@ export interface FileRoutesById {
   '/alpha-bravo/insights': typeof AlphaBravoInsightsRouteWithChildren
   '/alpha-bravo/marketplace': typeof AlphaBravoMarketplaceRoute
   '/alpha-bravo/pricing': typeof AlphaBravoPricingRoute
-  '/alpha-bravo/responders': typeof AlphaBravoRespondersRoute
+  '/alpha-bravo/responders': typeof AlphaBravoRespondersRouteWithChildren
   '/docs/api': typeof DocsApiRoute
   '/docs/webhooks': typeof DocsWebhooksRoute
   '/products/audit-ledger': typeof ProductsAuditLedgerRoute
@@ -623,6 +649,9 @@ export interface FileRoutesById {
   '/_authenticated/transactions/new': typeof AuthenticatedTransactionsNewRoute
   '/alpha-bravo/insights/$slug': typeof AlphaBravoInsightsSlugRoute
   '/alpha-bravo/insights/': typeof AlphaBravoInsightsIndexRoute
+  '/alpha-bravo/responders/': typeof AlphaBravoRespondersIndexRoute
+  '/alpha-bravo/responders/location/$jurisdiction': typeof AlphaBravoRespondersLocationJurisdictionRoute
+  '/alpha-bravo/responders/sector/$sector': typeof AlphaBravoRespondersSectorSectorRoute
   '/api/public/webhooks/didit': typeof ApiPublicWebhooksDiditRoute
   '/_authenticated/tx/$id/$stage/$step': typeof AuthenticatedTxIdStageStepRoute
 }
@@ -692,6 +721,9 @@ export interface FileRouteTypes {
     | '/transactions/new'
     | '/alpha-bravo/insights/$slug'
     | '/alpha-bravo/insights/'
+    | '/alpha-bravo/responders/'
+    | '/alpha-bravo/responders/location/$jurisdiction'
+    | '/alpha-bravo/responders/sector/$sector'
     | '/api/public/webhooks/didit'
     | '/tx/$id/$stage/$step'
   fileRoutesByTo: FileRoutesByTo
@@ -729,7 +761,6 @@ export interface FileRouteTypes {
     | '/alpha-bravo/how-it-works'
     | '/alpha-bravo/marketplace'
     | '/alpha-bravo/pricing'
-    | '/alpha-bravo/responders'
     | '/docs/api'
     | '/docs/webhooks'
     | '/products/audit-ledger'
@@ -757,6 +788,9 @@ export interface FileRouteTypes {
     | '/transactions/new'
     | '/alpha-bravo/insights/$slug'
     | '/alpha-bravo/insights'
+    | '/alpha-bravo/responders'
+    | '/alpha-bravo/responders/location/$jurisdiction'
+    | '/alpha-bravo/responders/sector/$sector'
     | '/api/public/webhooks/didit'
     | '/tx/$id/$stage/$step'
   id:
@@ -825,6 +859,9 @@ export interface FileRouteTypes {
     | '/_authenticated/transactions/new'
     | '/alpha-bravo/insights/$slug'
     | '/alpha-bravo/insights/'
+    | '/alpha-bravo/responders/'
+    | '/alpha-bravo/responders/location/$jurisdiction'
+    | '/alpha-bravo/responders/sector/$sector'
     | '/api/public/webhooks/didit'
     | '/_authenticated/tx/$id/$stage/$step'
   fileRoutesById: FileRoutesById
@@ -1304,6 +1341,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AlphaBravoInsightsSlugRouteImport
       parentRoute: typeof AlphaBravoInsightsRoute
     }
+    '/alpha-bravo/responders/': {
+      id: '/alpha-bravo/responders/'
+      path: '/'
+      fullPath: '/alpha-bravo/responders/'
+      preLoaderRoute: typeof AlphaBravoRespondersIndexRouteImport
+      parentRoute: typeof AlphaBravoRespondersRoute
+    }
+    '/alpha-bravo/responders/location/$jurisdiction': {
+      id: '/alpha-bravo/responders/location/$jurisdiction'
+      path: '/location/$jurisdiction'
+      fullPath: '/alpha-bravo/responders/location/$jurisdiction'
+      preLoaderRoute: typeof AlphaBravoRespondersLocationJurisdictionRouteImport
+      parentRoute: typeof AlphaBravoRespondersRoute
+    }
+    '/alpha-bravo/responders/sector/$sector': {
+      id: '/alpha-bravo/responders/sector/$sector'
+      path: '/sector/$sector'
+      fullPath: '/alpha-bravo/responders/sector/$sector'
+      preLoaderRoute: typeof AlphaBravoRespondersSectorSectorRouteImport
+      parentRoute: typeof AlphaBravoRespondersRoute
+    }
     '/api/public/webhooks/didit': {
       id: '/api/public/webhooks/didit'
       path: '/api/public/webhooks/didit'
@@ -1408,6 +1466,22 @@ const AlphaBravoInsightsRouteChildren: AlphaBravoInsightsRouteChildren = {
 const AlphaBravoInsightsRouteWithChildren =
   AlphaBravoInsightsRoute._addFileChildren(AlphaBravoInsightsRouteChildren)
 
+interface AlphaBravoRespondersRouteChildren {
+  AlphaBravoRespondersIndexRoute: typeof AlphaBravoRespondersIndexRoute
+  AlphaBravoRespondersLocationJurisdictionRoute: typeof AlphaBravoRespondersLocationJurisdictionRoute
+  AlphaBravoRespondersSectorSectorRoute: typeof AlphaBravoRespondersSectorSectorRoute
+}
+
+const AlphaBravoRespondersRouteChildren: AlphaBravoRespondersRouteChildren = {
+  AlphaBravoRespondersIndexRoute: AlphaBravoRespondersIndexRoute,
+  AlphaBravoRespondersLocationJurisdictionRoute:
+    AlphaBravoRespondersLocationJurisdictionRoute,
+  AlphaBravoRespondersSectorSectorRoute: AlphaBravoRespondersSectorSectorRoute,
+}
+
+const AlphaBravoRespondersRouteWithChildren =
+  AlphaBravoRespondersRoute._addFileChildren(AlphaBravoRespondersRouteChildren)
+
 interface AlphaBravoRouteChildren {
   AlphaBravoAboutRoute: typeof AlphaBravoAboutRoute
   AlphaBravoForBiddersRoute: typeof AlphaBravoForBiddersRoute
@@ -1416,7 +1490,7 @@ interface AlphaBravoRouteChildren {
   AlphaBravoInsightsRoute: typeof AlphaBravoInsightsRouteWithChildren
   AlphaBravoMarketplaceRoute: typeof AlphaBravoMarketplaceRoute
   AlphaBravoPricingRoute: typeof AlphaBravoPricingRoute
-  AlphaBravoRespondersRoute: typeof AlphaBravoRespondersRoute
+  AlphaBravoRespondersRoute: typeof AlphaBravoRespondersRouteWithChildren
   AlphaBravoIndexRoute: typeof AlphaBravoIndexRoute
 }
 
@@ -1428,7 +1502,7 @@ const AlphaBravoRouteChildren: AlphaBravoRouteChildren = {
   AlphaBravoInsightsRoute: AlphaBravoInsightsRouteWithChildren,
   AlphaBravoMarketplaceRoute: AlphaBravoMarketplaceRoute,
   AlphaBravoPricingRoute: AlphaBravoPricingRoute,
-  AlphaBravoRespondersRoute: AlphaBravoRespondersRoute,
+  AlphaBravoRespondersRoute: AlphaBravoRespondersRouteWithChildren,
   AlphaBravoIndexRoute: AlphaBravoIndexRoute,
 }
 
