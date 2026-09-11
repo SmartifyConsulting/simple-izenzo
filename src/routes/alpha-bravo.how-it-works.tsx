@@ -36,21 +36,9 @@ const STAGE_COPY: Record<(typeof SPINE)[number]["key"], { title: string; body: s
 };
 
 const THESIS = [
-  {
-    n: "01",
-    title: "Matching is the opportunity",
-    body: "The best outcomes come from pairing the right Bidder with the right Responder — not just the fastest one.",
-  },
-  {
-    n: "02",
-    title: "Verified, before capital moves",
-    body: "Every match clears KYC/KYB and a non-waivable risk gate before a cent changes hands.",
-  },
-  {
-    n: "03",
-    title: "A record that compounds",
-    body: "Every completed match becomes reusable intelligence for the next opportunity.",
-  },
+  "The best outcomes come from pairing the right Bidder with the right Responder — not just the fastest one.",
+  "Every match clears KYC/KYB and a non-waivable risk gate before a cent changes hands.",
+  "Every completed match becomes reusable intelligence for the next opportunity.",
 ];
 
 function HowItWorks() {
@@ -66,24 +54,39 @@ function HowItWorks() {
         Every match runs through the same five stages — no shortcuts, no skipped checks.
       </p>
 
-      <ol className="mt-12 max-w-2xl space-y-10">
-        {SPINE.map((stage, i) => {
-          const copy = STAGE_COPY[stage.key];
-          return (
-            <li key={stage.key} className="flex gap-5">
-              <span className="text-sm font-semibold text-primary">
-                {String(i + 1).padStart(2, "0")}
-              </span>
-              <div>
-                <h2 className="text-lg font-medium tracking-tight text-foreground">
-                  {copy.title}
-                </h2>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{copy.body}</p>
-              </div>
-            </li>
-          );
-        })}
-      </ol>
+      <div className="mt-12 grid gap-12 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <ol className="space-y-10">
+          {SPINE.map((stage, i) => {
+            const copy = STAGE_COPY[stage.key];
+            return (
+              <li key={stage.key} className="flex gap-5">
+                <span className="text-sm font-semibold text-primary">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <div>
+                  <h2 className="text-lg font-medium tracking-tight text-foreground">
+                    {copy.title}
+                  </h2>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    {copy.body}
+                  </p>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+
+        <div className="space-y-8 lg:border-l lg:border-border lg:pl-8">
+          <p className="text-lg font-medium italic tracking-tight text-foreground">
+            "We back matches that hold up under scrutiny."
+          </p>
+          {THESIS.map((t) => (
+            <blockquote key={t} className="border-l-2 border-primary/40 pl-4">
+              <p className="text-sm italic leading-relaxed text-muted-foreground">"{t}"</p>
+            </blockquote>
+          ))}
+        </div>
+      </div>
 
       <p className="mt-14 max-w-2xl text-sm leading-relaxed text-muted-foreground">
         Every step is recorded and independently verifiable. Verification can't be skipped or
@@ -95,24 +98,6 @@ function HowItWorks() {
           Submit a Bid
         </Button>
       </Link>
-
-      <p className="mt-16 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-        The thesis
-      </p>
-      <h2 className="mt-3 max-w-2xl text-2xl tracking-tight text-foreground sm:text-3xl">
-        We back matches that hold up under scrutiny.
-      </h2>
-      <div className="mt-10 grid gap-8 sm:grid-cols-3">
-        {THESIS.map((t) => (
-          <div key={t.n}>
-            <p className="text-sm font-semibold text-primary">{t.n}</p>
-            <h3 className="mt-3 text-base font-medium tracking-tight text-foreground">
-              {t.title}
-            </h3>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{t.body}</p>
-          </div>
-        ))}
-      </div>
     </section>
   );
 }
