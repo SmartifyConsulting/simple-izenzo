@@ -52,15 +52,15 @@ export function JourneyBanner() {
           <div key={j.step} className="contents">
             <div className="glass-node flex min-w-0 flex-1 basis-0 flex-col p-3.5">
               <div className="flex items-center gap-2">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/20 text-[11px] font-bold text-primary">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/20 text-[13px] font-bold text-primary">
                   {j.step}
                 </span>
                 <div className="min-w-0">
-                  <p className="text-[12.5px] font-semibold leading-tight tracking-tight">{j.title}</p>
-                  <p className="truncate text-[10px] text-muted-foreground">{j.tag}</p>
+                  <p className="text-[14px] font-semibold leading-tight tracking-tight">{j.title}</p>
+                  <p className="truncate text-[12px] text-muted-foreground">{j.tag}</p>
                 </div>
               </div>
-              <p className="mt-2 text-[11px] leading-snug text-muted-foreground">{j.body}</p>
+              <p className="mt-2 text-[13px] leading-snug text-muted-foreground">{j.body}</p>
             </div>
             {i < JOURNEY.length - 1 && (
               <div
