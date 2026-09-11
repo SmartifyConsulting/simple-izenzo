@@ -7,6 +7,7 @@ import { applyAppSkin } from "@/lib/appSkin";
 
 const NAV = [
   { to: "/alpha-bravo/how-it-works", label: "How It Works" },
+  { to: "/alpha-bravo/pricing", label: "Pricing" },
   { to: "/alpha-bravo/about", label: "About" },
   { to: "/alpha-bravo/marketplace", label: "Marketplace" },
   { to: "/alpha-bravo/insights", label: "Insights" },
