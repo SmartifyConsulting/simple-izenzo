@@ -52,7 +52,7 @@ const STAGES = [
 
 function AlphaBravoHome() {
   return (
-    <section className="mx-auto max-w-6xl px-5 py-24 sm:py-28">
+    <section className="mx-auto max-w-6xl px-5 py-12 sm:py-16">
       <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
         <div className="min-w-0">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
@@ -77,26 +77,19 @@ function AlphaBravoHome() {
                 See how matching works <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
-            <Link
-              to="/auth"
-              search={{ mode: "signup", next: undefined }}
-              className="mt-3 block text-sm font-medium text-primary hover:underline"
-            >
-              Are you a Responder? Sign up here →
-            </Link>
           </div>
         </div>
 
         <HeroMatchCard />
       </div>
 
-      <p className="mt-20 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+      <p className="mt-10 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
         How a match plays out
       </p>
       <h2 className="mt-3 max-w-2xl text-3xl tracking-tight text-foreground sm:text-4xl">
         Five stages, one governed flow.
       </h2>
-      <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mt-6 grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
         {STAGES.map((s) => (
           <div key={s.n} className="rounded-2xl border border-border bg-card p-5">
             <p className="text-sm font-semibold text-primary">{s.n}</p>
