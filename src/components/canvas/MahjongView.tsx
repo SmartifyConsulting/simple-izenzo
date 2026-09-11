@@ -39,35 +39,22 @@ function currentStepNumber(tx: Transaction): number {
 
 // Diagram coordinate system — everything below is placed on this fixed canvas and scaled to the
 // container with percentages, so boxes and their connecting arrows always stay aligned with each
-// other regardless of viewport width. The canvas is deliberately wide-and-short so the whole
-// workflow fits on screen without scrolling.
+// other regardless of viewport width.
 const W = 1246;
 const pctX = (v: number) => `${(v / W) * 100}%`;
 
-const ROW = 42; // shared node height
-const PITCH = 72; // vertical distance from one row's top to the next
-const CENTER_W = 310; // shared width for the center-column nodes, matched to Choice
-const SIDE_W = 220;
-const TOP_Y = 20;
-// Extra vertical room between the Step 1 and Step 2 frames — without it the two frames' borders
-// (and Step 2's "Step 2 · Compliance & Governance" label, which sits above its own frame) overlap.
-const STEP2_GAP_EXTRA = 61;
-// A little breathing room before the three parallel branches split off from Without a Doubt.
-const BRANCH_Y = TOP_Y + PITCH * 6 + 58 + STEP2_GAP_EXTRA;
+const ROW = 46; // shared node height
+const PITCH = 86; // vertical distance from one row's top to the next
+const CENTER_W = 360; // shared width for the center-column nodes, matched to Choice
+const TOP_Y = 24;
 
-const GROUP_PAD = 18;
-// Used where two frames sit close together (Step 1 above Step 2), so their borders don't overlap.
-const GROUP_PAD_TIGHT = 10;
-// A touch more height on the Step 1 frame so its bottom border stays clear of the Step 2 label.
-const STEP1_EXTRA_H = 10;
-// Gap between the Step 2 frame's top border and the Proof of Intent box it contains, so the
-// "Step 2 · Compliance & Governance" label (which sits above that border) doesn't crowd it.
-const STEP2_TOP_PAD = GROUP_PAD_TIGHT + 12;
+const GROUP_PAD = 20;
+// Vertical gap between one step's frame and the next, whether expanded or collapsed.
+const STEP_GAP = 52;
+// Height of a collapsed step — just enough room for its label bar.
+const COLLAPSED_H = 34;
 
-
-// Steps 3, 4 and 5 stack vertically, one frame under the next, all sharing the same left edge
-// and width as the Execution frame.
-const S3_W = 556;
+const S3_W = 620;
 const COL_GAP = (W - S3_W) / 2;
 const S3_X = COL_GAP;
 
@@ -75,70 +62,110 @@ const S3_X = COL_GAP;
 const S3_L = S3_X + GROUP_PAD;
 const S3_R = S3_X + S3_W - GROUP_PAD;
 
-const PREP_W = 300;
-const SUB_W = 145;
-const EXEC_W = 190;
+const PREP_W = 330;
+const SUB_W = 165;
+const EXEC_W = 210;
 const FIN_W = S3_W - GROUP_PAD * 2;
 const MEM_W = S3_W - GROUP_PAD * 2;
-// Vertical gap between the stacked Step 3 → Step 4 → Step 5 frames.
-const STACK_GAP = 46;
-// Bottom edge of the Execution frame (Project Preparation/Concept/Pre-feasibility/Feasibility/
-// Bankability, 3 rows tall) — Step 4's frame starts STACK_GAP below this.
-const STEP3_BOTTOM = BRANCH_Y + PITCH * 2 + ROW + GROUP_PAD;
-const FIN_Y = STEP3_BOTTOM + STACK_GAP + GROUP_PAD;
-// Bottom edge of the Finality frame (Finality/Payment/Completion, 3 rows tall) — Step 5's frame
-// starts STACK_GAP below this.
-const STEP4_BOTTOM = FIN_Y + PITCH * 2 + ROW + GROUP_PAD;
-const MEM_Y = STEP4_BOTTOM + STACK_GAP + GROUP_PAD;
-
-// Canvas height follows from the content — Step 3, 4 and 5 now stack instead of sitting
-// side by side, so the diagram is taller than it is wide.
-const H = MEM_Y + ROW + GROUP_PAD + 20;
-const pctY = (v: number) => `${(v / H) * 100}%`;
 
 type Box = { x: number; y: number; w: number; h: number };
 // Left edge shared by the Trading, Compliance & Governance and Execution frames, so Steps 1, 2
 // and 3 all line up on the same left margin.
 const STEP_X = S3_L;
-// Bid/Offer sit directly above Search, one on each half of its width, so both feed straight down
-// into it — the two starting moves converging on the one search step, instead of routing through
-// separate Load Docs / Counterparty boxes first.
-const BID_OFFER_GAP = 10;
-const BID_OFFER_W = (CENTER_W - BID_OFFER_GAP) / 2;
-const BOXES = {
-  bid: { x: STEP_X, y: TOP_Y, w: BID_OFFER_W, h: ROW },
-  offer: { x: STEP_X + BID_OFFER_W + BID_OFFER_GAP, y: TOP_Y, w: BID_OFFER_W, h: ROW },
 
-  search: { x: STEP_X, y: TOP_Y + PITCH, w: CENTER_W, h: ROW },
+// Each step's content height when fully expanded (excludes GROUP_PAD framing).
+const STEP1_H = PITCH * 4 + ROW; // bid, offer, search, surfaceRoutes, choice — full width, stacked
+const STEP2_H = PITCH + ROW; // poi, wad
+const STEP3_H = PITCH * 2 + ROW; // projectPrep/execution, concept/prefeasibility/implementation, feasibility/bankability
+const STEP4_H = PITCH * 2 + ROW; // finality, payment, completion
+const STEP5_H = ROW; // memory
 
-  // In the main sequence between Search and Choice, not off to the side.
-  surfaceRoutes: { x: STEP_X, y: TOP_Y + PITCH * 2, w: CENTER_W, h: ROW },
-  choice: { x: STEP_X, y: TOP_Y + PITCH * 3, w: CENTER_W, h: ROW },
+const STEP_FULL_H: Record<number, number> = { 1: STEP1_H, 2: STEP2_H, 3: STEP3_H, 4: STEP4_H, 5: STEP5_H };
 
-  poi: { x: STEP_X, y: TOP_Y + PITCH * 4 + STEP2_GAP_EXTRA, w: CENTER_W, h: ROW },
-  wad: { x: STEP_X, y: TOP_Y + PITCH * 5 + STEP2_GAP_EXTRA, w: CENTER_W, h: ROW },
+type Collapsed = Record<number, boolean>;
 
-  projectPrep: { x: S3_L, y: BRANCH_Y, w: PREP_W, h: ROW },
-  execution: { x: S3_R - EXEC_W, y: BRANCH_Y, w: EXEC_W, h: ROW },
+/** Frame top (outer, including GROUP_PAD) for each step, given which steps are collapsed —
+ * steps stack top to bottom, each one's height shrinking to COLLAPSED_H when collapsed, so
+ * collapsing a step reclaims the space every step below it. */
+function stepFrameTops(collapsed: Collapsed): Record<number, number> {
+  const tops: Record<number, number> = {};
+  let y = TOP_Y - GROUP_PAD;
+  for (const step of [1, 2, 3, 4, 5]) {
+    tops[step] = y;
+    const contentH = collapsed[step] ? COLLAPSED_H - GROUP_PAD * 2 : STEP_FULL_H[step]!;
+    y += contentH + GROUP_PAD * 2 + STEP_GAP;
+  }
+  return tops;
+}
 
-  // Sub-nodes align with the nearest edge of their parent: Concept/Feasibility flush with Project
-  // Preparation's left edge, Pre-feasibility/Bankability flush with its right edge.
-  concept: { x: S3_L, y: BRANCH_Y + PITCH, w: SUB_W, h: ROW },
-  prefeasibility: { x: S3_L + PREP_W - SUB_W, y: BRANCH_Y + PITCH, w: SUB_W, h: ROW },
-  implementation: { x: S3_R - EXEC_W, y: BRANCH_Y + PITCH, w: EXEC_W, h: ROW },
+/** Builds every node box and frame box for the current collapse state. Boxes belonging to a
+ * collapsed step are still returned (so arrows/lookups don't break) but are simply not rendered. */
+function layout(collapsed: Collapsed) {
+  const frameTop = stepFrameTops(collapsed);
+  const y1 = frameTop[1]! + GROUP_PAD;
+  const y2 = frameTop[2]! + GROUP_PAD;
+  const y3 = frameTop[3]! + GROUP_PAD;
+  const y4 = frameTop[4]! + GROUP_PAD;
+  const y5 = frameTop[5]! + GROUP_PAD;
 
-  feasibility: { x: S3_L, y: BRANCH_Y + PITCH * 2, w: SUB_W, h: ROW },
-  bankability: { x: S3_L + PREP_W - SUB_W, y: BRANCH_Y + PITCH * 2, w: SUB_W, h: ROW },
+  const boxes = {
+    bid: { x: STEP_X, y: y1, w: CENTER_W, h: ROW },
+    offer: { x: STEP_X, y: y1 + PITCH, w: CENTER_W, h: ROW },
+    search: { x: STEP_X, y: y1 + PITCH * 2, w: CENTER_W, h: ROW },
+    surfaceRoutes: { x: STEP_X, y: y1 + PITCH * 3, w: CENTER_W, h: ROW },
+    choice: { x: STEP_X, y: y1 + PITCH * 4, w: CENTER_W, h: ROW },
 
-  // Step 4 (Finality) stacks directly under Step 3, same left edge and width.
-  finality: { x: S3_L, y: FIN_Y, w: FIN_W, h: ROW },
-  payment: { x: S3_L, y: FIN_Y + PITCH, w: FIN_W, h: ROW },
-  completion: { x: S3_L, y: FIN_Y + PITCH * 2, w: FIN_W, h: ROW },
+    poi: { x: STEP_X, y: y2, w: CENTER_W, h: ROW },
+    wad: { x: STEP_X, y: y2 + PITCH, w: CENTER_W, h: ROW },
 
-  // Step 5 (Memory) stacks directly under Step 4, same left edge and width.
-  memory: { x: S3_L, y: MEM_Y, w: MEM_W, h: ROW },
+    projectPrep: { x: S3_L, y: y3, w: PREP_W, h: ROW },
+    execution: { x: S3_R - EXEC_W, y: y3, w: EXEC_W, h: ROW },
+    concept: { x: S3_L, y: y3 + PITCH, w: SUB_W, h: ROW },
+    prefeasibility: { x: S3_L + PREP_W - SUB_W, y: y3 + PITCH, w: SUB_W, h: ROW },
+    implementation: { x: S3_R - EXEC_W, y: y3 + PITCH, w: EXEC_W, h: ROW },
+    feasibility: { x: S3_L, y: y3 + PITCH * 2, w: SUB_W, h: ROW },
+    bankability: { x: S3_L + PREP_W - SUB_W, y: y3 + PITCH * 2, w: SUB_W, h: ROW },
 
-} as const satisfies Record<string, Box>;
+    finality: { x: S3_L, y: y4, w: FIN_W, h: ROW },
+    payment: { x: S3_L, y: y4 + PITCH, w: FIN_W, h: ROW },
+    completion: { x: S3_L, y: y4 + PITCH * 2, w: FIN_W, h: ROW },
+
+    memory: { x: S3_L, y: y5, w: MEM_W, h: ROW },
+  } as const satisfies Record<string, Box>;
+
+  const groups: { label: string; step: number; box: Box; emphasis?: boolean }[] = [
+    {
+      label: "Trading",
+      step: 1,
+      emphasis: true,
+      box: { x: S3_X, y: frameTop[1]!, w: S3_W, h: collapsed[1] ? COLLAPSED_H : STEP1_H + GROUP_PAD * 2 },
+    },
+    {
+      label: "Compliance & Governance",
+      step: 2,
+      box: { x: S3_X, y: frameTop[2]!, w: S3_W, h: collapsed[2] ? COLLAPSED_H : STEP2_H + GROUP_PAD * 2 },
+    },
+    {
+      label: "Execution",
+      step: 3,
+      box: { x: S3_X, y: frameTop[3]!, w: S3_W, h: collapsed[3] ? COLLAPSED_H : STEP3_H + GROUP_PAD * 2 },
+    },
+    {
+      label: "Finality",
+      step: 4,
+      box: { x: S3_X, y: frameTop[4]!, w: S3_W, h: collapsed[4] ? COLLAPSED_H : STEP4_H + GROUP_PAD * 2 },
+    },
+    {
+      label: "Memory",
+      step: 5,
+      box: { x: S3_X, y: frameTop[5]!, w: S3_W, h: collapsed[5] ? COLLAPSED_H : STEP5_H + GROUP_PAD * 2 },
+    },
+  ];
+
+  const totalH = frameTop[5]! + (collapsed[5] ? COLLAPSED_H : STEP5_H + GROUP_PAD * 2) + 20;
+
+  return { boxes, groups, totalH };
+}
 
 // Connector points sit exactly on each box's border, so a line leaves touching the box it comes
 // from and its arrowhead tip lands on the border of the box it points at.
@@ -146,11 +173,7 @@ const cx = (b: Box) => b.x + b.w / 2;
 const cy = (b: Box) => b.y + b.h / 2;
 const top = (b: Box) => ({ x: cx(b), y: b.y });
 const bottom = (b: Box) => ({ x: cx(b), y: b.y + b.h });
-const left = (b: Box) => ({ x: b.x, y: cy(b) });
 const right = (b: Box) => ({ x: b.x + b.w, y: cy(b) });
-// A point partway along a box's top edge — used to give Bid and Offer their own distinct landing
-// spot on Search's top edge instead of both arrows converging on the exact same center point.
-const topAt = (b: Box, frac: number) => ({ x: b.x + b.w * frac, y: b.y });
 
 type Point = { x: number; y: number };
 /** An elbow connector: straight from `a`, turning once, ending at `b`. `via: "x"` turns
@@ -162,6 +185,12 @@ function elbow(a: Point, b: Point, via: "x" | "y" = "y"): string {
   return `M ${a.x} ${a.y} L ${mid.x} ${mid.y} L ${b.x} ${b.y}`;
 }
 
+/** Routes Bid's arrow around Offer (which sits directly beneath it) via a detour out to the
+ * right, down alongside, then into Search's right edge — so it never crosses through Offer's box. */
+function detourRight(a: Point, b: Point, out = 24): string {
+  return `M ${a.x} ${a.y} L ${a.x + out} ${a.y} L ${a.x + out} ${b.y} L ${b.x} ${b.y}`;
+}
+
 /** A tree connector: a short vertical stub leaves `a`'s border before the line fans out along a
  * shared trunk — so multiple branches leaving the same point don't bunch up right at the box
  * border — then drops straight down into each target so every arrowhead points down. */
@@ -170,130 +199,85 @@ function branchDown(a: Point, targets: Point[], stub = 26): string[] {
   return targets.map((t) => `M ${a.x} ${a.y} L ${a.x} ${trunkY} L ${t.x} ${trunkY} L ${t.x} ${t.y}`);
 }
 
-const ARROWS: { d: string; arrow?: boolean }[] = [
-  { d: elbow(bottom(BOXES.bid), topAt(BOXES.search, 0.28), "x") },
-  { d: elbow(bottom(BOXES.offer), topAt(BOXES.search, 0.72), "x") },
-  { d: elbow(bottom(BOXES.search), top(BOXES.surfaceRoutes), "x") },
-  { d: elbow(bottom(BOXES.surfaceRoutes), top(BOXES.choice), "x") },
-  { d: elbow(bottom(BOXES.choice), top(BOXES.poi), "x") },
-  { d: elbow(bottom(BOXES.poi), top(BOXES.wad), "x") },
-  ...branchDown(
-    bottom(BOXES.wad),
-    [top(BOXES.projectPrep), top(BOXES.execution)],
-    44,
-  ).map((d) => ({ d })),
-
-  { d: elbow(bottom(BOXES.execution), top(BOXES.implementation), "x") },
-  { d: elbow(bottom(BOXES.execution), top(BOXES.finality), "x") },
-  { d: elbow(bottom(BOXES.finality), top(BOXES.payment), "x") },
-  { d: elbow(bottom(BOXES.payment), top(BOXES.completion), "x") },
-  { d: elbow(bottom(BOXES.completion), top(BOXES.memory), "x") },
-  ...branchDown(
-    bottom(BOXES.projectPrep),
-    [top(BOXES.concept), top(BOXES.prefeasibility)],
-    14,
-  ).map((d) => ({ d })),
-
-  { d: elbow(bottom(BOXES.concept), top(BOXES.feasibility), "x") },
-  { d: elbow(bottom(BOXES.prefeasibility), top(BOXES.bankability), "x") },
-];
-
-
-// Frames the diagram into the same 5 stages as the Journey banner above it — Step 1 (Trading,
-// everything through Choice), Step 2 (Compliance & Governance: POI, WaD), Step 3
-// (Execution, spanning Project Preparation through Implementation), Step 4 (Finality) and Step 5
-// (Memory).
-const GROUPS: { label: string; step: number; box: Box; emphasis?: boolean }[] = [
-  {
-    label: "Trading",
-    step: 1,
-    emphasis: true,
-    box: {
-      x: BOXES.bid.x - GROUP_PAD,
-      y: BOXES.bid.y - GROUP_PAD,
-      w: CENTER_W + GROUP_PAD * 2,
-      h: BOXES.choice.y + ROW - BOXES.bid.y + GROUP_PAD + GROUP_PAD_TIGHT + STEP1_EXTRA_H,
-    },
-  },
-  {
-    label: "Compliance & Governance",
-    step: 2,
-    box: {
-      x: BOXES.poi.x - GROUP_PAD,
-      y: BOXES.poi.y - STEP2_TOP_PAD,
-      w: BOXES.poi.w + GROUP_PAD * 2,
-      h: BOXES.wad.y + ROW - BOXES.poi.y + STEP2_TOP_PAD + GROUP_PAD,
-    },
-  },
-  {
-    label: "Execution",
-    step: 3,
-    box: {
-      x: S3_X,
-      y: BOXES.projectPrep.y - GROUP_PAD,
-      w: S3_W,
-      h: BOXES.feasibility.y + ROW - BOXES.projectPrep.y + GROUP_PAD * 2,
-    },
-  },
-  {
-    label: "Finality",
-    step: 4,
-    box: {
-      x: S3_X,
-      y: BOXES.finality.y - GROUP_PAD,
-      w: S3_W,
-      h: BOXES.completion.y + ROW - BOXES.finality.y + GROUP_PAD * 2,
-    },
-  },
-  {
-    label: "Memory",
-    step: 5,
-    box: {
-      x: S3_X,
-      y: BOXES.memory.y - GROUP_PAD,
-      w: S3_W,
-      h: BOXES.memory.h + GROUP_PAD * 2,
-    },
-  },
-];
-
+/** Every connector, keyed by the pair of steps it runs between — hidden if either endpoint's
+ * step is currently collapsed, since the boxes at each end aren't shown. */
+function buildArrows(boxes: ReturnType<typeof layout>["boxes"]): { d: string; steps: [number, number] }[] {
+  return [
+    { d: detourRight(right(boxes.bid), right(boxes.search)), steps: [1, 1] },
+    { d: elbow(bottom(boxes.offer), top(boxes.search), "x"), steps: [1, 1] },
+    { d: elbow(bottom(boxes.search), top(boxes.surfaceRoutes), "x"), steps: [1, 1] },
+    { d: elbow(bottom(boxes.surfaceRoutes), top(boxes.choice), "x"), steps: [1, 1] },
+    { d: elbow(bottom(boxes.choice), top(boxes.poi), "x"), steps: [1, 2] },
+    { d: elbow(bottom(boxes.poi), top(boxes.wad), "x"), steps: [2, 2] },
+    ...branchDown(bottom(boxes.wad), [top(boxes.projectPrep), top(boxes.execution)], 44).map(
+      (d): { d: string; steps: [number, number] } => ({ d, steps: [2, 3] }),
+    ),
+    { d: elbow(bottom(boxes.execution), top(boxes.implementation), "x"), steps: [3, 3] },
+    { d: elbow(bottom(boxes.execution), top(boxes.finality), "x"), steps: [3, 4] },
+    { d: elbow(bottom(boxes.finality), top(boxes.payment), "x"), steps: [4, 4] },
+    { d: elbow(bottom(boxes.payment), top(boxes.completion), "x"), steps: [4, 4] },
+    { d: elbow(bottom(boxes.completion), top(boxes.memory), "x"), steps: [4, 5] },
+    ...branchDown(bottom(boxes.projectPrep), [top(boxes.concept), top(boxes.prefeasibility)], 14).map(
+      (d): { d: string; steps: [number, number] } => ({ d, steps: [3, 3] }),
+    ),
+    { d: elbow(bottom(boxes.concept), top(boxes.feasibility), "x"), steps: [3, 3] },
+    { d: elbow(bottom(boxes.prefeasibility), top(boxes.bankability), "x"), steps: [3, 3] },
+  ];
+}
 
 function GroupFrame({
   label,
   step,
   box,
-  emphasis,
   active,
+  collapsed,
+  onToggle,
+  h,
 }: {
   label: string;
   step: number;
   box: Box;
-  /** A bolder, brighter border — used for Step 1, which otherwise reads too faint against the
-   * busier top row of the diagram. */
-  emphasis?: boolean;
   /** Whichever step the deal is actually in right now gets a soft green wash behind its frame —
    * shifts from step to step as the deal moves on, so it's always obvious where things stand. */
   active?: boolean;
+  collapsed: boolean;
+  onToggle: () => void;
+  h: (v: number) => string;
 }) {
   return (
     <div
-      className={cn(
-        "pointer-events-none absolute rounded-xl transition-colors duration-500",
-        active && "bg-gradient-to-br from-primary/14 via-primary/5 to-transparent",
-      )}
-      style={{ left: pctX(box.x), top: pctY(box.y), width: pctX(box.w), height: pctY(box.h) }}
+      className="pointer-events-none absolute rounded-xl"
+      style={{ left: pctX(box.x), top: h(box.y), width: pctX(box.w), height: h(box.h) }}
     >
-      <span className="absolute -top-3 left-2.5 rounded-full border border-primary/50 bg-background px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
-        Step {step} · {label}
-      </span>
+      <button
+        type="button"
+        onClick={onToggle}
+        style={{ transform: "translate(-100%, -50%)" }}
+        className="pointer-events-auto absolute left-[-10px] top-6 whitespace-nowrap text-left text-[10px] font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-primary"
+        aria-expanded={!collapsed}
+      >
+        {collapsed ? "+ " : "− "}Step {step} · {label}
+      </button>
     </div>
   );
 }
 
-function ArrowLayer() {
+function ArrowLayer({
+  arrows,
+  collapsed,
+  w,
+  h,
+}: {
+  arrows: { d: string; steps: [number, number] }[];
+  collapsed: Collapsed;
+  totalW: number;
+  totalH: number;
+  w: number;
+  h: number;
+}) {
   return (
     <svg
-      viewBox={`0 0 ${W} ${H}`}
+      viewBox={`0 0 ${w} ${h}`}
       preserveAspectRatio="none"
       className="pointer-events-none absolute inset-0 h-full w-full"
       aria-hidden
@@ -303,16 +287,18 @@ function ArrowLayer() {
           <path d="M0,0 L8,4 L0,8 Z" className="fill-muted-foreground/50" />
         </marker>
       </defs>
-      {ARROWS.map((a, i) => (
-        <path
-          key={i}
-          d={a.d}
-          fill="none"
-          className="stroke-muted-foreground/40"
-          strokeWidth={1.5}
-          markerEnd={a.arrow === false ? undefined : "url(#mj-arrowhead)"}
-        />
-      ))}
+      {arrows
+        .filter((a) => !collapsed[a.steps[0]] && !collapsed[a.steps[1]])
+        .map((a, i) => (
+          <path
+            key={i}
+            d={a.d}
+            fill="none"
+            className="stroke-muted-foreground/40"
+            strokeWidth={1.5}
+            markerEnd="url(#mj-arrowhead)"
+          />
+        ))}
     </svg>
   );
 }
@@ -330,6 +316,7 @@ function MjNode({
   onClick,
   tone = "neutral",
   frameClassName,
+  pctY,
 }: {
   box: Box;
   label: string;
@@ -347,6 +334,7 @@ function MjNode({
   /** Overrides the whole frame's border/fill/text, whatever the state — used to pick a single
    * node out permanently (e.g. Search AI + AI+'s terracotta fill), not just while it's active. */
   frameClassName?: string;
+  pctY: (v: number) => string;
 }) {
   return (
     <button
@@ -355,7 +343,7 @@ function MjNode({
       disabled={!onClick}
       style={{ left: pctX(box.x), top: pctY(box.y), width: pctX(box.w), height: pctY(box.h) }}
       className={cn(
-        "absolute flex flex-col items-center justify-center gap-0.5 rounded-lg border px-2 text-center text-[11px] font-semibold leading-tight tracking-tight transition-colors sm:text-xs",
+        "absolute flex flex-col items-center justify-center gap-0.5 overflow-hidden rounded-lg border px-2 text-center text-[12px] font-semibold leading-tight tracking-tight transition-colors sm:text-sm",
         // Register Bid/Offer pulse as an open invitation to click the moment nothing has started
         // yet — same idea as the active-step pulse elsewhere, just for the two starting moves.
         tone === "header" && state === "open" && "bg-black text-[#00e5ff] border-[#00e5ff] hover:border-[#00e5ff] animate-throb-aqua",
@@ -400,7 +388,8 @@ function MjNode({
 
 /** The Mahjong view: the whole deal pipeline laid out as the product's workflow diagram — boxes
  * and arrows in the same relative positions as the source flowchart — instead of the Classic
- * view's vertical gate list. Each node opens the same step form as its Classic-view counterpart. */
+ * view's vertical gate list. Each node opens the same step form as its Classic-view counterpart.
+ * Each of the 5 numbered steps collapses independently, like an accordion. */
 export function MahjongView({
   tx,
   reload,
@@ -419,6 +408,7 @@ export function MahjongView({
   onOpenClassic?: (stage: StageKey, step: string) => void;
 }) {
   const [panel, setPanel] = useState<{ stage: StageKey; step: string } | null>(null);
+  const [collapsed, setCollapsed] = useState<Collapsed>({});
 
   const open = (stage: StageKey, step: string) => {
     if (readOnly) return;
@@ -429,176 +419,222 @@ export function MahjongView({
     setPanel((p) => (p?.stage === stage && p?.step === step ? null : { stage, step }));
   };
 
+  const toggleStep = (step: number) => setCollapsed((c) => ({ ...c, [step]: !c[step] }));
+
   const st = (stage: StageKey, step: string) => nodeState(stage, step, tx);
   const active = panel && !readOnly ? panel : null;
   const activeStep = currentStepNumber(tx);
 
+  const { boxes: BOXES, groups: GROUPS, totalH: H } = layout(collapsed);
+  const ARROWS = buildArrows(BOXES);
+  const pctYFn = (v: number) => `${(v / H) * 100}%`;
+
   return (
     <div className="relative">
       <div
-        className="relative mx-auto"
-        style={{
-          aspectRatio: `${W} / ${H}`,
-          // Keeps the whole diagram inside the viewport, so it never needs scrolling.
-          width: `min(100%, calc((100vh - 230px) * ${W} / ${H}))`,
-        }}
+        className="relative mx-auto w-full"
+        style={{ aspectRatio: `${W} / ${H}` }}
       >
 
-        <ArrowLayer />
+        <ArrowLayer arrows={ARROWS} collapsed={collapsed} totalW={W} totalH={H} w={W} h={H} />
         {GROUPS.map((g) => (
-          <GroupFrame key={g.label} {...g} active={g.step === activeStep} />
+          <GroupFrame
+            key={g.label}
+            {...g}
+            active={g.step === activeStep}
+            collapsed={Boolean(collapsed[g.step])}
+            onToggle={() => toggleStep(g.step)}
+            h={pctYFn}
+          />
         ))}
 
-        <MjNode
-          box={BOXES.bid}
-          label="Submit a Bid"
-          tone="header"
-          state={readOnly ? "open" : st("trading", "bid-offer")}
-          // Always starts a fresh bid, even when a deal is already loaded on this canvas — it's a
-          // new registration, not a way back into whatever's currently open.
-          onClick={() => onRegister?.("bid")}
-        />
-        <MjNode
-          box={BOXES.offer}
-          label="Submit a Response"
-          tone="header"
-          state={readOnly ? "open" : st("trading", "bid-offer")}
-          onClick={() => onRegister?.("offer")}
-        />
+        {!collapsed[1] && (
+          <>
+            <MjNode
+              box={BOXES.bid}
+              label="Submit a Bid"
+              tone="header"
+              state={readOnly ? "open" : st("trading", "bid-offer")}
+              // Always starts a fresh bid, even when a deal is already loaded on this canvas —
+              // it's a new registration, not a way back into whatever's currently open.
+              onClick={() => onRegister?.("bid")}
+              pctY={pctYFn}
+            />
+            <MjNode
+              box={BOXES.offer}
+              label="Submit a Response"
+              tone="header"
+              state={readOnly ? "open" : st("trading", "bid-offer")}
+              onClick={() => onRegister?.("offer")}
+              pctY={pctYFn}
+            />
+            <MjNode
+              box={BOXES.search}
+              label="Search AI + AI+"
+              icon={Search}
+              tone="light"
+              frameClassName="border-white bg-[#C1653D] text-white hover:border-white"
+              state={st("trading", "search")}
+              onClick={() => open("trading", "search")}
+              pctY={pctYFn}
+            />
+            <MjNode
+              box={BOXES.surfaceRoutes}
+              label="Online Media Screening"
+              icon={Globe}
+              tone="light"
+              state={st("trading", "online-media")}
+              onClick={() => open("trading", "online-media")}
+              pctY={pctYFn}
+            />
+            <MjNode
+              box={BOXES.choice}
+              label="Choice"
+              labelClassName="text-white"
+              icon={ListChecks}
+              tone="light"
+              frameClassName="border-info bg-info text-white hover:border-info"
+              state={st("trading", "choice")}
+              onClick={() => open("trading", "choice")}
+              pctY={pctYFn}
+            />
+          </>
+        )}
 
-        <MjNode
-          box={BOXES.search}
-          label="Search AI + AI+"
-          icon={Search}
-          tone="light"
-          frameClassName="border-white bg-[#C1653D] text-white hover:border-white"
-          state={st("trading", "search")}
-          onClick={() => open("trading", "search")}
-        />
-        <MjNode
-          box={BOXES.surfaceRoutes}
-          label="Online Media Screening"
-          icon={Globe}
-          tone="light"
-          state={st("trading", "online-media")}
-          onClick={() => open("trading", "online-media")}
-        />
+        {!collapsed[2] && (
+          <>
+            <MjNode
+              box={BOXES.poi}
+              label="Proof of Intent"
+              labelClassName="text-primary"
+              icon={FileText}
+              tone="light"
+              frameClassName="border-primary bg-primary/15 text-primary hover:border-primary"
+              state={st("trading", "poi")}
+              onClick={() => open("trading", "poi")}
+              pctY={pctYFn}
+            />
+            <MjNode
+              box={BOXES.wad}
+              label="Without a Doubt"
+              labelClassName="text-primary"
+              sub="Hard gate · non-waivable"
+              subClassName="text-[#C1653D]"
+              icon={ShieldCheck}
+              tone="light"
+              frameClassName="border-primary bg-primary/15 text-primary hover:border-primary"
+              state={st("compliance", "wad")}
+              onClick={() => open("compliance", "wad")}
+              pctY={pctYFn}
+            />
+          </>
+        )}
 
-        <MjNode
-          box={BOXES.choice}
-          label="Choice"
-          labelClassName="text-white"
-          icon={ListChecks}
-          tone="light"
-          frameClassName="border-info bg-info text-white hover:border-info"
-          state={st("trading", "choice")}
-          onClick={() => open("trading", "choice")}
-        />
-        <MjNode
-          box={BOXES.poi}
-          label="Proof of Intent"
-          labelClassName="text-primary"
-          icon={FileText}
-          tone="light"
-          frameClassName="border-primary bg-primary/15 text-primary hover:border-primary"
-          state={st("trading", "poi")}
-          onClick={() => open("trading", "poi")}
-        />
-        <MjNode
-          box={BOXES.wad}
-          label="Without a Doubt"
-          labelClassName="text-primary"
-          sub="Hard gate · non-waivable"
-          subClassName="text-[#C1653D]"
-          icon={ShieldCheck}
-          tone="light"
-          frameClassName="border-primary bg-primary/15 text-primary hover:border-primary"
-          state={st("compliance", "wad")}
-          onClick={() => open("compliance", "wad")}
-        />
-        <MjNode
-          box={BOXES.projectPrep}
-          tone="light"
-          label="Project Preparation"
-          icon={Briefcase}
-          state={st("execution", "preparation")}
-          onClick={() => open("execution", "preparation")}
-        />
-        <MjNode
-          box={BOXES.execution}
-          tone="light"
-          label="Execution"
-          icon={Hammer}
-          state={st("execution", "entry")}
-          onClick={() => open("execution", "entry")}
-        />
-        <MjNode
-          box={BOXES.finality}
-          tone="light"
-          label="Finality"
-          icon={CheckCircle2}
-          state={st("finality", "entry")}
-          onClick={() => open("finality", "entry")}
-        />
+        {!collapsed[3] && (
+          <>
+            <MjNode
+              box={BOXES.projectPrep}
+              tone="light"
+              label="Project Preparation"
+              icon={Briefcase}
+              state={st("execution", "preparation")}
+              onClick={() => open("execution", "preparation")}
+              pctY={pctYFn}
+            />
+            <MjNode
+              box={BOXES.execution}
+              tone="light"
+              label="Execution"
+              icon={Hammer}
+              state={st("execution", "entry")}
+              onClick={() => open("execution", "entry")}
+              pctY={pctYFn}
+            />
+            <MjNode
+              box={BOXES.concept}
+              tone="light"
+              label="Concept"
+              state={st("execution", "preparation")}
+              onClick={() => open("execution", "preparation")}
+              pctY={pctYFn}
+            />
+            <MjNode
+              box={BOXES.prefeasibility}
+              tone="light"
+              label="Pre-feasibility"
+              state={st("execution", "preparation")}
+              onClick={() => open("execution", "preparation")}
+              pctY={pctYFn}
+            />
+            <MjNode
+              box={BOXES.feasibility}
+              tone="light"
+              label="Feasibility"
+              state={st("execution", "preparation")}
+              onClick={() => open("execution", "preparation")}
+              pctY={pctYFn}
+            />
+            <MjNode
+              box={BOXES.bankability}
+              tone="light"
+              label="Bankability"
+              state={st("execution", "bankability")}
+              onClick={() => open("execution", "bankability")}
+              pctY={pctYFn}
+            />
+            <MjNode
+              box={BOXES.implementation}
+              tone="light"
+              label="Implementation"
+              state={st("execution", "implementation")}
+              onClick={() => open("execution", "implementation")}
+              pctY={pctYFn}
+            />
+          </>
+        )}
 
-        <MjNode
-          box={BOXES.concept}
-          tone="light"
-          label="Concept"
-          state={st("execution", "preparation")}
-          onClick={() => open("execution", "preparation")}
-        />
-        <MjNode
-          box={BOXES.prefeasibility}
-          tone="light"
-          label="Pre-feasibility"
-          state={st("execution", "preparation")}
-          onClick={() => open("execution", "preparation")}
-        />
-        <MjNode
-          box={BOXES.feasibility}
-          tone="light"
-          label="Feasibility"
-          state={st("execution", "preparation")}
-          onClick={() => open("execution", "preparation")}
-        />
-        <MjNode
-          box={BOXES.bankability}
-          tone="light"
-          label="Bankability"
-          state={st("execution", "bankability")}
-          onClick={() => open("execution", "bankability")}
-        />
-        <MjNode
-          box={BOXES.implementation}
-          tone="light"
-          label="Implementation"
-          state={st("execution", "implementation")}
-          onClick={() => open("execution", "implementation")}
-        />
-        <MjNode
-          box={BOXES.payment}
-          tone="light"
-          label="Payment"
-          icon={Banknote}
-          state={st("finality", "type")}
-          onClick={() => open("finality", "type")}
-        />
-        <MjNode
-          box={BOXES.completion}
-          tone="light"
-          label="Completion"
-          state={st("finality", "record")}
-          onClick={() => open("finality", "record")}
-        />
-        <MjNode
-          box={BOXES.memory}
-          tone="light"
-          label="Memory"
-          icon={Database}
-          state={st("memory", "ledger")}
-          onClick={() => open("memory", "ledger")}
-        />
+        {!collapsed[4] && (
+          <>
+            <MjNode
+              box={BOXES.finality}
+              tone="light"
+              label="Finality"
+              icon={CheckCircle2}
+              state={st("finality", "entry")}
+              onClick={() => open("finality", "entry")}
+              pctY={pctYFn}
+            />
+            <MjNode
+              box={BOXES.payment}
+              tone="light"
+              label="Payment"
+              icon={Banknote}
+              state={st("finality", "type")}
+              onClick={() => open("finality", "type")}
+              pctY={pctYFn}
+            />
+            <MjNode
+              box={BOXES.completion}
+              tone="light"
+              label="Completion"
+              state={st("finality", "record")}
+              onClick={() => open("finality", "record")}
+              pctY={pctYFn}
+            />
+          </>
+        )}
+
+        {!collapsed[5] && (
+          <MjNode
+            box={BOXES.memory}
+            tone="light"
+            label="Memory"
+            icon={Database}
+            state={st("memory", "ledger")}
+            onClick={() => open("memory", "ledger")}
+            pctY={pctYFn}
+          />
+        )}
       </div>
 
       {active && (

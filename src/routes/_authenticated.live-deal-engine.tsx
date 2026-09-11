@@ -3,7 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { BadgeCheck, CheckCircle2, Download, Eye, Paperclip, Search, UploadCloud, X } from "lucide-react";
+import { BadgeCheck, CheckCircle2, Download, Eye, Paperclip, Search } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import {
   CanvasStart,
@@ -16,18 +16,16 @@ import { TradeSummary } from "@/components/canvas/TradeSummary";
 
 import { MahjongView } from "@/components/canvas/MahjongView";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { supabase } from "@/integrations/supabase/client";
-import { advance, fallbackReference, fingerprintOf, recordEvent, type Transaction } from "@/lib/tx";
+import { advance, fallbackReference, recordEvent, type Transaction } from "@/lib/tx";
 import type { StageKey } from "@/lib/spine";
 import { useAuth } from "@/lib/auth";
 import { searchCounterparties } from "@/lib/izenzo.functions";
 import { runBackgroundScreening, type ScreeningResult } from "@/lib/screening.functions";
 import { runOnlineMediaChecks, type MediaCheckResult } from "@/lib/onlineMedia.functions";
-import { summarizeBidDocuments } from "@/lib/docSummary.functions";
-import { startVerification, listVerificationsForTx } from "@/lib/didit.functions";
+import { listVerificationsForTx } from "@/lib/didit.functions";
 import { pushRecentDeal } from "@/lib/recentDeals";
 
 import { cn } from "@/lib/utils";
@@ -79,9 +77,6 @@ type Attachment = {
   path?: string | null;
 };
 
-/** Files bigger than this are rejected before upload — the bucket rejects them anyway, and a
- * clear message beats a raw storage error. */
-const MAX_FILE_BYTES = 20 * 1024 * 1024;
 type FlowStep = "documents" | "searching" | "results";
 
 // Keyed to the created transaction so a user who navigates away (or refreshes) lands back on the
@@ -89,96 +84,13 @@ type FlowStep = "documents" | "searching" | "results";
 // generated client-side and has nowhere else to persist.
 const ACTIVE_DEAL_KEY = "izenzo:active-deal";
 
-/** A file picker that also accepts drag-and-drop, and lists the names of whatever's currently
- * selected. `multiple` collects any number of files; otherwise a new pick replaces the old one. */
-function FileField({
-  id,
-  label,
-  files,
-  onChange,
-  multiple,
-  accept,
-}: {
-  id: string;
-  label: string;
-  files: File[];
-  onChange: (files: File[]) => void;
-  multiple?: boolean;
-  accept?: string;
-}) {
-  const [dragOver, setDragOver] = useState(false);
-
-  function addFiles(list: FileList | null) {
-    if (!list || list.length === 0) return;
-    const picked = Array.from(list);
-    const first = picked[0];
-    if (!first) return;
-    onChange(multiple ? [...files, ...picked] : [first]);
-  }
-
-  function removeAt(i: number) {
-    onChange(files.filter((_, idx) => idx !== i));
-  }
-
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id}>{label}</Label>
-      <label
-        htmlFor={id}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragOver(true);
-        }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragOver(false);
-          addFiles(e.dataTransfer.files);
-        }}
-        className={cn(
-          "flex cursor-pointer flex-col items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-4 text-center transition-colors hover:border-primary/50 hover:bg-muted/20",
-          dragOver && "border-primary bg-primary/10",
-        )}
-      >
-        <UploadCloud className="h-4 w-4 text-muted-foreground" />
-        <span className="text-xs text-muted-foreground">Drag a file here, or click to browse</span>
-        <input
-          id={id}
-          type="file"
-          multiple={multiple}
-          {...(accept ? { accept } : {})}
-          className="hidden"
-          onChange={(e) => addFiles(e.target.files)}
-        />
-      </label>
-      {files.length > 0 && (
-        <ul className="space-y-1">
-          {files.map((f, i) => (
-            <li key={i} className="flex items-center gap-2 rounded-md bg-muted/30 px-2.5 py-1.5 text-xs">
-              <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-              <span className="min-w-0 flex-1 truncate">{f.name}</span>
-              <button
-                type="button"
-                onClick={() => removeAt(i)}
-                className="shrink-0 text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
 /** A dropdown of every deal still in progress, each entry showing its reference together with the
  * trade name. It opens on the most recent deal; with nothing in progress it shows no selection. A
  * deal drops off the list the moment it reaches Memory (fully sealed) — from then on it's only
  * findable through the All Trades report. */
 // A deal that never got a commodity/title of its own still needs a fallback for internal record-
 // keeping, but that placeholder shouldn't surface as if it were a real deal name in this picker.
-const GENERIC_TITLES = new Set(["New buy bid", "New sell offer"]);
+const GENERIC_TITLES = new Set(["New Bid", "New Offer"]);
 
 function OpenDealsPicker({ currentId }: { currentId: string | null }) {
   const { org } = useAuth();
@@ -286,7 +198,6 @@ function LiveDealEngine() {
   const [flowStep, setFlowStep] = useState<FlowStep>("documents");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
   const [screening, setScreening] = useState(false);
   const [screeningResults, setScreeningResults] = useState<ScreeningResult[] | null>(null);
   const [mediaRunning, setMediaRunning] = useState(false);
@@ -343,15 +254,10 @@ function LiveDealEngine() {
 
 
 
-  const [idFront, setIdFront] = useState<File[]>([]);
-  const [docFiles, setDocFiles] = useState<File[]>([]);
   const [documentSummary, setDocumentSummary] = useState<string | null>(null);
-  const [documentSummaryBusy, setDocumentSummaryBusy] = useState(false);
   const search = useServerFn(searchCounterparties);
   const runScreening = useServerFn(runBackgroundScreening);
-  const summarizeDocs = useServerFn(summarizeBidDocuments);
   const runMediaChecks = useServerFn(runOnlineMediaChecks);
-  const startIdCheck = useServerFn(startVerification);
   const listIdChecks = useServerFn(listVerificationsForTx);
   const queryClient = useQueryClient();
 
@@ -819,119 +725,18 @@ function LiveDealEngine() {
     link.click();
   }
 
-  async function submitDocuments(e: React.FormEvent) {
-    e.preventDefault();
-    if (!dealTx) return;
-    const collected: { file: File; kind: Attachment["kind"] }[] = [
-      ...idFront.map((f) => ({ file: f, kind: "ID" as const })),
-      ...docFiles.map((f) => ({ file: f, kind: "Document" as const })),
-    ];
-
-    if (collected.length === 0) {
-      toast.error("Attach at least one file");
-      return;
-    }
-
-    const tooBig = collected.find(({ file }) => file.size > MAX_FILE_BYTES);
-    if (tooBig) {
-      toast.error(`${tooBig.file.name} is larger than 20 MB — please attach a smaller file`);
-      return;
-    }
-    const empty = collected.find(({ file }) => file.size === 0);
-    if (empty) {
-      toast.error(`${empty.file.name} is empty — please attach the actual file`);
-      return;
-    }
-
-    setBusy(true);
-    try {
-      let version = 1;
-      const saved: Attachment[] = [];
-      // Upload first, insert second: the row is only worth writing once the file itself is
-      // safely stored against this bid/offer.
-      for (const { file, kind } of collected) {
-        const path = `deals/${dealTx.id}/${Date.now()}-${file.name}`;
-        const { error: upErr } = await supabase.storage.from("documents").upload(path, file);
-        if (upErr) throw new Error(`Could not upload ${file.name}: ${upErr.message}`);
-
-        const sha = await fingerprintOf({ name: file.name, size: file.size, at: Date.now() });
-        const { error: insErr } = await supabase.from("documents").insert({
-          transaction_id: dealTx.id,
-          name: file.name,
-          doc_type: kind === "Document" ? "other" : "certificate",
-          notes: kind,
-          version: version++,
-          sha256: sha,
-          storage_path: path,
-        });
-        if (insErr) throw new Error(`Could not save ${file.name}: ${insErr.message}`);
-        saved.push({ name: file.name, kind, path });
-      }
-      await recordEvent({
-        transactionId: dealTx.id,
-        stage: "trading",
-        step: "documents",
-        action: "document_attached",
-        summary: `${saved.length} document${saved.length === 1 ? "" : "s"} attached`,
-        payload: { files: saved },
-      });
-      await advance(dealTx.id, "trading", "search");
-      setDealTx((prev) => (prev ? { ...prev, stage: "trading", step: "search" } : prev));
-      setAttachments((prev) => [...prev, ...saved]);
-      // Runs alongside the counterparty search rather than blocking it — a slow or failed AI read
-      // shouldn't hold up matching, which doesn't depend on it.
-      setDocumentSummaryBusy(true);
-      summarizeDocs({ data: { transactionId: dealTx.id } })
-        .then((r) => setDocumentSummary(r.summary))
-        .catch((err) => toast.error(`Could not summarize the documents: ${(err as Error).message}`))
-        .finally(() => setDocumentSummaryBusy(false));
-
-      // ID front/back just uploaded — open the Didit ID check on them straight away instead of
-      // leaving the bidder to go find this under Settings. The badge on the workspace panel picks
-      // up the result on its own once Didit reports back.
-      if (idFront.length > 0) {
-        startIdCheck({
-          data: {
-            checkType: "id_document",
-            transactionId: dealTx.id,
-            ...(typeof window !== "undefined" ? { origin: window.location.origin } : {}),
-          },
-        })
-          .then((res) => {
-            window.open(res.url, "_blank", "noopener");
-            toast.success("ID verification opened in a new tab — the badge here updates once it's back.");
-            void queryClient.invalidateQueries({ queryKey: ["id-verification", dealTx.id] });
-          })
-          .catch((err) => toast.error(`Could not start ID verification: ${(err as Error).message}`));
-      }
-
-      await runSearch(dealTx.id);
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
     <AppShell wide>
-      <div className="mb-3 flex items-center justify-between gap-3">
-        {dealTx ? (
-          <span className="rounded-full border border-primary/40 bg-primary/12 px-2.5 py-1 text-[11px] font-bold tracking-wide text-primary">
-            {dealTx.reference ?? activity?.reference ?? dealTx.id.slice(0, 8)}
-          </span>
-        ) : (
-          <span />
-        )}
+      <div className="mb-3 flex items-center justify-end gap-3">
         <OpenDealsPicker currentId={dealTx?.id ?? null} />
       </div>
 
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[3fr_2fr]">
         {/* Engine Map — always visible on the left. Clicking a node opens that step inline in
             the Live Workspace beside it, instead of navigating away from this screen. */}
-        <div className="ink-grid w-full rounded-3xl border border-border p-3 sm:p-5">
+        <div className="ink-grid flex min-h-[860px] w-full flex-col rounded-3xl border border-border p-3 sm:p-5">
           <p className="label-caps text-white">Izenzo Engine Map</p>
-          <div className="mt-3">
+          <div className="mt-3 flex-1">
             <MahjongView
               tx={dealTx ?? FLOWCHART_PREVIEW_TX}
               reload={() => void reloadDeal()}
@@ -943,7 +748,7 @@ function LiveDealEngine() {
         </div>
 
         {/* Live Workspace — always visible on the right. */}
-        <div className="ink-grid w-full rounded-3xl border border-border p-3 sm:p-5">
+        <div className="ink-grid min-h-[860px] w-full rounded-3xl border border-border p-3 sm:p-5">
           <div className="flex items-start justify-between gap-3">
             <p className="label-caps text-white">Live workspace</p>
             {(dealTx?.reference ?? activity?.reference) && (
@@ -963,12 +768,14 @@ function LiveDealEngine() {
                   setPendingDirection(null);
                   setActivity(recorded);
                   setDealTx(tx);
-                  setFlowStep("documents");
                   try {
                     localStorage.setItem(ACTIVE_DEAL_KEY, JSON.stringify({ txId: tx.id, activity: recorded }));
                   } catch {
                     // Best-effort — resuming later just won't work if storage is unavailable.
                   }
+                  // ID/documents are collected at signup now, not per-deal — go straight to
+                  // matching instead of asking for an upload here.
+                  void runSearch(tx.id);
                 }}
                 onPickingChange={setPicking}
                 onDirectionChange={setDirection}
@@ -980,32 +787,6 @@ function LiveDealEngine() {
             <p className="mt-4 label-caps text-white">
               Live deal engine for {activity.direction === "bid" ? "The Bid" : "Responder"}
             </p>
-          )}
-
-          {activity && dealTx && flowStep === "documents" && (
-            <form onSubmit={submitDocuments} className="glass-node animate-node-rise mt-3 space-y-4 p-5 sm:p-6">
-              <p className="text-base font-semibold tracking-tight">Upload ID and documents</p>
-              <div className="grid gap-4">
-                <FileField
-                  id="id-front"
-                  label="ID upload — photo or scan"
-                  files={idFront}
-                  onChange={setIdFront}
-                  accept="image/*"
-                />
-              </div>
-              <FileField
-                id="docs"
-                label="Documents — PDF, Word, Excel, CSV or text"
-                files={docFiles}
-                onChange={setDocFiles}
-                multiple
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.tsv,.txt,.md,.rtf,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,text/csv"
-              />
-              <Button type="submit" disabled={busy} className="w-full">
-                {busy ? "Submitting…" : "Submit"}
-              </Button>
-            </form>
           )}
 
           {activity && dealTx && flowStep === "searching" && (
@@ -1044,20 +825,14 @@ function LiveDealEngine() {
 
           {activity ? (
             <div className="mt-4 space-y-3">
-              {(documentSummaryBusy || documentSummary) && (
-                  <div className="glass-node space-y-2 p-4">
-                    <p className="label-caps text-muted-foreground">AI document summary</p>
-                    {documentSummaryBusy && !documentSummary ? (
-                      <p className="text-sm text-muted-foreground">
-                        Reading the uploaded documents…
-                      </p>
-                    ) : (
-                      <p className="text-sm leading-relaxed text-foreground">
-                        {highlightKeyTerms(documentSummary ?? "")}
-                      </p>
-                    )}
-                  </div>
-                )}
+              {documentSummary && (
+                <div className="glass-node space-y-2 p-4">
+                  <p className="label-caps text-muted-foreground">AI document summary</p>
+                  <p className="text-sm leading-relaxed text-foreground">
+                    {highlightKeyTerms(documentSummary)}
+                  </p>
+                </div>
+              )}
 
                 <div className="flex flex-wrap gap-1.5">
                   {activity.commodity && (

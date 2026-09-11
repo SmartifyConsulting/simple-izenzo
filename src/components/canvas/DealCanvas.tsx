@@ -1839,9 +1839,9 @@ export function CanvasStart({
         org_id: activeOrg.id,
         stage: "trading",
         step: "bid-offer",
-        // A placeholder until the AI summary of the uploaded documents fills in the real title —
-        // there's nothing else to name it from at this point.
-        title: direction === "bid" ? "New buy bid" : "New sell offer",
+        // A placeholder until the deal is named from its own details — there's nothing else to
+        // name it from at this point.
+        title: direction === "bid" ? "New Bid" : "New Offer",
         commodity: null,
         quantity: null,
         unit: null,

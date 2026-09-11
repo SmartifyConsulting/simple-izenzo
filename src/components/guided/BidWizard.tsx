@@ -89,7 +89,7 @@ export function BidWizard({
           org_id: org.id,
           stage: "trading",
           step: "bid-offer",
-          title: form.commodity || (direction === "bid" ? "New buy bid" : "New sell offer"),
+          title: form.commodity || (direction === "bid" ? "New Bid" : "New Offer"),
           commodity: form.commodity || null,
           quantity: form.quantity ? Number(form.quantity) : null,
           unit: form.unit || null,
