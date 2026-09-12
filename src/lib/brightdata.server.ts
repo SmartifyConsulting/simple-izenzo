@@ -43,7 +43,7 @@ export async function brightDataCredentials(): Promise<BrightDataCreds> {
       .maybeSingle();
     if (data) {
       saved = await decryptSecrets((data.secrets_encrypted as string | null) ?? null);
-      config = ((data.config ?? {}) as Record<string, string>) ?? {};
+      config = (data.config ?? {}) as Record<string, string>;
     }
   } catch {
     // No saved entry (or no key to read it with) — the server secrets below still work.
