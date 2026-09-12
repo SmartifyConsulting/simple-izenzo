@@ -338,6 +338,7 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       `Incoterms: ${tx.incoterms ?? "n/a"}`,
       `Jurisdiction: ${tx.jurisdiction ?? "n/a"}`,
       data.region ? `Preferred counterparty region: ${data.region}` : "",
+      typedPrompt ? `What the submitter is looking for (their own words):\n${typedPrompt.slice(0, 2000)}` : "",
       docSummary ? `What the attached documents say:\n${docSummary.slice(0, 4000)}` : "",
       latestBid
         ? `Latest ${latestBid.direction}: ${latestBid.price ?? "n/a"} ${latestBid.currency} for ${latestBid.quantity ?? "n/a"} ${latestBid.unit ?? ""}. Terms: ${latestBid.terms ?? "n/a"}`
