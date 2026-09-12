@@ -121,6 +121,13 @@ export function SignInForm({
         Continue with Google
       </Button>
 
+      <FaceSignIn next={next} />
+
+      <p className="mt-3 text-center text-xs text-muted-foreground">
+        Just checking on your bids? Sign in — there's nothing to upload.
+      </p>
+
+
       {!hideFooterLink && (
         <p className="mt-6 text-center text-sm text-muted-foreground">
           No account yet?{" "}
