@@ -248,11 +248,59 @@ function xmlToText(xml: string) {
     .trim();
 }
 
+/** The few machine-readable details the counterparty search needs, all optional. */
+export type DocumentFacts = {
+  commodity: string | null;
+  quantity: number | null;
+  unit: string | null;
+  price: number | null;
+  currency: string | null;
+  incoterms: string | null;
+  jurisdiction: string | null;
+  side: "buy" | "sell" | null;
+};
+
+const EMPTY_FACTS: DocumentFacts = {
+  commodity: null,
+  quantity: null,
+  unit: null,
+  price: null,
+  currency: null,
+  incoterms: null,
+  jurisdiction: null,
+  side: null,
+};
+
+function str(v: unknown): string | null {
+  return typeof v === "string" && v.trim() ? v.trim().slice(0, 120) : null;
+}
+
+function num(v: unknown): number | null {
+  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v.replace(/[, ]/g, "")) : NaN;
+  return Number.isFinite(n) ? n : null;
+}
+
+function readFacts(v: unknown): DocumentFacts {
+  if (!v || typeof v !== "object") return EMPTY_FACTS;
+  const f = v as Record<string, unknown>;
+  const side = str(f["side"])?.toLowerCase();
+  return {
+    commodity: str(f["commodity"]),
+    quantity: num(f["quantity"]),
+    unit: str(f["unit"]),
+    price: num(f["price"]),
+    currency: str(f["currency"])?.toUpperCase().slice(0, 3) ?? null,
+    incoterms: str(f["incoterms"]),
+    jurisdiction: str(f["jurisdiction"]),
+    side: side === "buy" || side === "sell" ? side : null,
+  };
+}
+
 /** The model is asked for raw JSON, but tolerate fenced JSON or a plain-prose fallback. */
-function parseReply(raw: string): { bullets: string[]; idNumber: string | null } {
+function parseReply(raw: string): { bullets: string[]; idNumber: string | null; facts: DocumentFacts } {
   const body = raw.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
   try {
-    const obj = JSON.parse(body) as { summary_bullets?: unknown; id_number?: unknown };
+    const obj = JSON.parse(body) as { summary_bullets?: unknown; id_number?: unknown; facts?: unknown };
     const bullets = Array.isArray(obj.summary_bullets)
       ? obj.summary_bullets.map((b) => String(b).replace(/^[-•*]\s*/, "").trim()).filter(Boolean)
       : [];
@@ -260,6 +308,7 @@ function parseReply(raw: string): { bullets: string[]; idNumber: string | null }
       return {
         bullets,
         idNumber: typeof obj.id_number === "string" && obj.id_number.trim() ? obj.id_number.trim() : null,
+        facts: readFacts(obj.facts),
       };
     }
   } catch {
@@ -269,5 +318,5 @@ function parseReply(raw: string): { bullets: string[]; idNumber: string | null }
     .split(/\n+/)
     .map((line) => line.replace(/^[-•*]\s*/, "").trim())
     .filter(Boolean);
-  return { bullets, idNumber: null };
+  return { bullets, idNumber: null, facts: EMPTY_FACTS };
 }
