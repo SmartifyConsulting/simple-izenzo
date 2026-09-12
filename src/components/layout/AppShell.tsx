@@ -1,22 +1,11 @@
 import { useEffect, type ReactNode } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, BarChart3, ChevronDown, Coins, DollarSign, Mail } from "lucide-react";
+import { useRouterState } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 
-import { Logo } from "@/components/Logo";
-import { SearchButton } from "@/components/layout/SearchButton";
-import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
-import { ThemeToggle } from "@/components/guided/ThemeToggle";
+import { MainHeader } from "@/components/layout/MainHeader";
 import { SiteFooter } from "@/components/layout/SiteFooter";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 import { applyCurrentStylePreset } from "@/lib/stylePreset";
 
@@ -49,7 +38,7 @@ export function AppShell({
    * space is at a premium. */
   compactFooter?: boolean;
 }) {
-  const { profile, org } = useAuth();
+  const { profile } = useAuth();
   const firstName = (profile?.full_name ?? profile?.email ?? "").split(/[\s@]/)[0];
 
   // Keeps `profiles.last_accessed_at` fresh while this person actually has the app open, so the
@@ -72,19 +61,6 @@ export function AppShell({
   const width = wide ? "max-w-[1680px]" : "max-w-7xl";
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
-  // Unread Inbox notifications — e.g. "this counterparty matched on all checks".
-  const { data: unread = 0 } = useQuery({
-    queryKey: ["notifications-unread", org?.id],
-    enabled: Boolean(org?.id),
-    refetchInterval: 60_000,
-    queryFn: async () => {
-      const { count } = await supabase
-        .from("notifications")
-        .select("id", { count: "exact", head: true })
-        .eq("read", false);
-      return count ?? 0;
-    },
-  });
 
   // Document-style screens (settings, admin, reporting, API docs) drop the canvas grid and give
   // every frame the same green edge — the grid belongs to the deal canvas, not to tables and forms.
@@ -105,82 +81,8 @@ export function AppShell({
       )}
       style={pureBlack ? { backgroundColor: "#000" } : undefined}
     >
-      <header className="sticky top-0 z-30 border-b border-border bg-background/70 backdrop-blur-xl">
-        <div className={cn("mx-auto flex h-16 items-center gap-3 px-4 sm:px-6", width)}>
-          <Link to="/live-deal-engine" className="shrink-0" aria-label="Izenzo — workflow">
-            <Logo onDark className="h-7 w-auto" />
-          </Link>
-          <a
-            href="/alpha-bravo"
-            className="label-caps flex shrink-0 items-center gap-1.5 normal-case transition-colors hover:text-foreground"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" /> Home
-          </a>
-
-          <div className="min-w-0 flex-1" />
-          <nav className="flex shrink-0 items-center gap-3 text-sm font-medium text-foreground/80 sm:gap-5">
-            <SearchButton />
-            <a
-              href="/pricing"
-              className="flex items-center transition-colors hover:text-primary"
-              title="Pricing"
-              aria-label="Pricing"
-            >
-              <DollarSign className="h-5 w-5" strokeWidth={2.25} />
-            </a>
-            {/* Developer/API surfaces are hidden from the interface for now — the pages live in
-             * .hidden-surfaces/developer and can be restored later. */}
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                className="flex items-center gap-1 outline-none transition-colors hover:text-primary"
-                title="Report"
-                aria-label="Report"
-              >
-                <BarChart3 className="h-5 w-5" strokeWidth={2.25} />
-                <ChevronDown className="h-4 w-4" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                <DropdownMenuItem asChild>
-                  <Link to="/trades">All Trades</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/credits" search={{ returnTo: undefined }}>
-                    Token Management
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </nav>
-          <Link
-            to="/inbox"
-            title="Inbox"
-            className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-foreground/80 transition-colors hover:text-primary"
-          >
-            <Mail className="h-5 w-5" strokeWidth={2.25} />
-            {unread > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
-                {unread}
-              </span>
-            )}
-          </Link>
-
-          <ThemeToggle />
-
-          {org && (
-            <Link
-              to="/credits"
-              search={{ returnTo: undefined }}
-              aria-label={`${org.credits} token${org.credits === 1 ? "" : "s"} — Token Management`}
-              className="flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-primary/40 bg-primary/12 px-2.5 text-xs font-semibold text-foreground"
-            >
-              <Coins className="h-4 w-4 text-primary" strokeWidth={2.25} />
-              {org.credits}
-            </Link>
-          )}
-
-          <ProfileAvatarMenu />
-        </div>
-      </header>
+      {/* Same menu as every other screen in the app. */}
+      <MainHeader />
 
       <main
         className={cn(

@@ -57,6 +57,11 @@ export function VerificationPanel({ transactionId, checks, title, description }:
   const listMine = useServerFn(listMyVerifications);
   const listForTx = useServerFn(listVerificationsForTx);
   const [busy, setBusy] = useState<string | null>(null);
+  // The hosted provider page refuses to display inside another site's frame, so we always hand
+  // over the link itself as well — if the new tab is blocked, the person can still open it.
+  const [sessionUrl, setSessionUrl] = useState<string | null>(null);
+  const [blocked, setBlocked] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const { data: rows = [], isLoading, refetch } = useQuery({
     queryKey: ["identity-verifications", transactionId ?? "me"],
@@ -68,15 +73,23 @@ export function VerificationPanel({ transactionId, checks, title, description }:
 
   async function onStart(type: CheckType) {
     setBusy(type);
+    setError(null);
     try {
       const origin = typeof window !== "undefined" ? window.location.origin : undefined;
       const res = await start({
         data: { checkType: type, ...(transactionId ? { transactionId } : {}), ...(origin ? { origin } : {}) },
       });
-      window.open(res.url, "_blank", "noopener");
-      toast.success("Verification opened in a new tab. The result lands here on its own.");
+      setSessionUrl(res.url);
+      const win = window.open(res.url, "_blank", "noopener,noreferrer");
+      if (win) {
+        setBlocked(false);
+        toast.success("Verification opened in a new tab. The result lands here on its own.");
+      } else {
+        setBlocked(true);
+      }
       void refetch();
     } catch (err) {
+      setError((err as Error).message);
       toast.error((err as Error).message);
     } finally {
       setBusy(null);
@@ -89,9 +102,19 @@ export function VerificationPanel({ transactionId, checks, title, description }:
       await refresh({ data: { id } });
       void refetch();
     } catch (err) {
+      setError((err as Error).message);
       toast.error((err as Error).message);
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function copyLink(url: string) {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link copied — paste it into a new browser tab.");
+    } catch {
+      toast.error("Could not copy the link. Select it and copy it by hand.");
     }
   }
 
@@ -140,7 +163,12 @@ export function VerificationPanel({ transactionId, checks, title, description }:
                 </Badge>
 
                 {row && row.status === "in_progress" && row.provider_url && (
-                  <a href={row.provider_url} target="_blank" rel="noopener noreferrer">
+                  <a
+                    href={row.provider_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setSessionUrl(row.provider_url)}
+                  >
                     <Button size="sm" variant="outline">
                       Continue
                     </Button>
@@ -170,6 +198,33 @@ export function VerificationPanel({ transactionId, checks, title, description }:
             </div>
           );
         })}
+
+        {error && (
+          <p className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
+            {error}
+          </p>
+        )}
+
+        {sessionUrl && (
+          <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
+            <p className="text-xs text-muted-foreground">
+              {blocked
+                ? "Your browser blocked the new tab. The verification page cannot be shown inside this window, so open it in its own tab:"
+                : "Verification page not showing? It cannot be displayed inside this window — open it in its own tab:"}
+            </p>
+            <p className="break-all text-[11px] text-muted-foreground">{sessionUrl}</p>
+            <div className="flex flex-wrap gap-2">
+              <a href={sessionUrl} target="_blank" rel="noopener noreferrer">
+                <Button size="sm" variant="outline">
+                  Open in a new tab
+                </Button>
+              </a>
+              <Button size="sm" variant="ghost" onClick={() => void copyLink(sessionUrl)}>
+                Copy link
+              </Button>
+            </div>
+          </div>
+        )}
 
         <p className="text-xs text-muted-foreground">
           A result that is not an outright pass is routed to manual review — it never clears a gate

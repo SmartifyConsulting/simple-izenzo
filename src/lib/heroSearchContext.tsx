@@ -22,6 +22,12 @@ export function useHeroSearch() {
   return ctx;
 }
 
+/** Same as `useHeroSearch`, but safe on screens rendered outside the provider (the signed-in
+ * shells): there is simply no typed prompt to carry there. */
+export function useHeroSearchOptional(): HeroSearchContextValue {
+  return useContext(HeroSearchContext) ?? { prompt: "", setPrompt: () => {} };
+}
+
 /** Builds the `next` search-and-path destination that carries a typed prompt into the Live
  * Workspace, or `undefined` when there's nothing to carry. */
 export function seedNext(prompt: string): string | undefined {
