@@ -431,18 +431,47 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       throw new Error("No matching organisations were found in the sources that were read. Try again.");
 
     const source = data.kind === "ai" ? "ai_search" : "ai_plus_search";
-    const rows = candidates.map((c) => ({
-      transaction_id: tx.id,
-      name: c.name,
-      jurisdiction: c.jurisdiction ?? null,
-      sector: c.sector ?? null,
-      score: c.score ?? null,
-      source,
-      rationale: c.rationale ?? null,
-      status: "surfaced",
-      // Evidence lives in media_flags so the source page can be opened next to the name.
-      media_flags: c.sourceUrl ? { evidence: [{ url: c.sourceUrl, source: "web_search" }] } : null,
-    }));
+
+    // Which of these names have already proved who they are through the app — one of the five
+    // inputs to the match percentage.
+    const verifiedNames = new Set<string>();
+    try {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: listed } = await supabaseAdmin
+        .from("responder_listings")
+        .select("name, verified_at")
+        .in("name", candidates.map((c) => c.name));
+      for (const row of listed ?? []) {
+        if (row.verified_at) verifiedNames.add(row.name.toLowerCase());
+      }
+    } catch {
+      // Absent verification data simply scores zero for that component.
+    }
+
+    const scoreRegion = data.region ?? tx.jurisdiction ?? null;
+    const rows = candidates.map((c) => {
+      const scored = scoreCandidate(c, {
+        subject,
+        region: scoreRegion,
+        verified: verifiedNames.has(c.name.toLowerCase()),
+      });
+      return {
+        transaction_id: tx.id,
+        name: c.name,
+        jurisdiction: c.jurisdiction ?? null,
+        sector: c.sector ?? null,
+        score: scored.total,
+        source,
+        rationale: c.rationale ?? null,
+        status: "surfaced",
+        // Evidence lives in media_flags so the source page can be opened next to the name, along
+        // with the breakdown behind the percentage.
+        media_flags: {
+          ...(c.sourceUrl ? { evidence: [{ url: c.sourceUrl, source: "web_search" }] } : {}),
+          scoring: { total: scored.total, components: scored.components },
+        },
+      };
+    });
     const { data: inserted, error } = await supabase.from("counterparties").insert(rows).select();
     if (error) throw error;
 
