@@ -55,10 +55,16 @@ export async function sendEmail(
   creds: ResendCreds,
   opts: { to: string; subject: string; html: string },
 ): Promise<void> {
-  const res = await fetch("https://api.resend.com/emails", {
+  const url = creds.viaGateway
+    ? "https://connector-gateway.lovable.dev/resend/emails"
+    : "https://api.resend.com/emails";
+  const res = await fetch(url, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${creds.apiKey}`,
+      Authorization: creds.viaGateway
+        ? `Bearer ${process.env["LOVABLE_API_KEY"]}`
+        : `Bearer ${creds.apiKey}`,
+      ...(creds.viaGateway ? { "X-Connection-Api-Key": creds.apiKey } : {}),
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
