@@ -94,11 +94,32 @@ export function MatchResultsPanel({ query, className }: { query?: string | undef
             <p className="mt-1 text-sm font-medium text-foreground">{m.name}</p>
             <p className="text-xs text-muted-foreground">
               {m.jurisdiction ?? "Jurisdiction pending"}
-              {m.score != null ? ` · Score: ${m.score}` : ""}
+              {m.score != null ? ` · ${m.score}% match` : ""}
             </p>
             {/* What the search found about this match, plus the page it came from. */}
             {m.rationale && (
               <p className="mt-1.5 text-xs leading-relaxed text-foreground/80">{m.rationale}</p>
+            )}
+            {/* Why the percentage is what it is — every match is explainable. */}
+            {scoreComponents(m.media_flags).length > 0 && (
+              <ul className="mt-2 space-y-1">
+                {scoreComponents(m.media_flags).map((c) => (
+                  <li key={c.label} className="flex items-start gap-2 text-[11px]">
+                    <span className="mt-1 h-1 w-8 shrink-0 rounded-full bg-muted">
+                      <span
+                        className="block h-1 rounded-full bg-primary"
+                        style={{ width: `${Math.max(0, Math.min(100, (c.points / c.max) * 100))}%` }}
+                      />
+                    </span>
+                    <span className="text-muted-foreground">
+                      <span className="font-medium text-foreground">
+                        {c.label} {c.points}/{c.max}
+                      </span>
+                      {c.note ? ` — ${c.note}` : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             )}
             {evidenceUrl(m.media_flags) && (
               <a
