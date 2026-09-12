@@ -37,6 +37,10 @@
 
 9. "Bid creation" is renamed "Bid Registration" everywhere it appears.
 
+10. Breathing room and the value in the summary
+   - Space is added under the "Live Workspace" heading so the content below it no longer sits tight against it.
+   - The bid/offer amount or value moves into the Summary frame, listed with the other material aspects of the trade instead of sitting apart from them.
+
 ## Unchanged
 
 - Gates, tokens, certificates and all business rules.
