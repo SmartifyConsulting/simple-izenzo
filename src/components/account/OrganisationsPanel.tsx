@@ -228,6 +228,7 @@ export function OrganisationsPanel() {
                         </AccordionContent>
                       </AccordionItem>
                     </Accordion>
+                    <PublicListingToggle orgId={o.id} />
                   </div>
                 </div>
                 <div className="flex shrink-0 gap-2">
