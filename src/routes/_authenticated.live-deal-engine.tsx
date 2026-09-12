@@ -1213,16 +1213,7 @@ function LiveDealEngine() {
                       {activity.commodity}
                     </span>
                   )}
-                  {activity.quantity && (
-                    <span className="rounded-full border border-border bg-muted/40 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
-                      {activity.quantity} {activity.unit}
-                    </span>
-                  )}
-                  {activity.price && (
-                    <span className="rounded-full border border-border bg-muted/40 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
-                      {activity.currency} {activity.price}
-                    </span>
-                  )}
+                  {/* Quantity and value now live inside the summary frame above. */}
                 </div>
 
                 <div className="glass-node flex items-start gap-3 p-4">
