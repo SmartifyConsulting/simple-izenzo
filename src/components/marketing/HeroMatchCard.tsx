@@ -22,7 +22,7 @@ function useIllustrativeMatches(enabled: boolean, prompt: string) {
     queryFn: async () => {
       let q = supabase
         .from("responder_listings")
-        .select("id, org_id, name, sector, jurisdiction, source, is_example, verified_at", {
+        .select("id, org_id, name, sector, jurisdiction, source, is_example, verified_at, summary, source_url", {
           count: "exact",
         })
         .eq("published", true);
