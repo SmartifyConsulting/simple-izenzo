@@ -260,12 +260,13 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       .filter(Boolean)
       .join("\n");
 
-    const model = data.kind === "ai" ? "google/gemini-3.7-flash" : "openai/gpt-5.4";
+    const model = data.kind === "ai" ? AI_MODEL : AI_PLUS_MODEL;
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
+        ...aiPlusOptions(model),
         messages: [
           { role: "system", content: system },
           { role: "user", content: prompt },
@@ -346,12 +347,13 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
 
     const prompt = `Search: "${data.query}"\nRole: ${data.role}\nPropose 4-6 candidates.`;
 
-    const model = data.kind === "ai" ? "google/gemini-3.7-flash" : "openai/gpt-5.4";
+    const model = data.kind === "ai" ? AI_MODEL : AI_PLUS_MODEL;
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
+        ...aiPlusOptions(model),
         messages: [
           { role: "system", content: system },
           { role: "user", content: prompt },
@@ -484,12 +486,13 @@ export const runAiProposal = createServerFn({ method: "POST" })
       .filter(Boolean)
       .join("\n");
 
-    const model = data.kind === "ai" ? "google/gemini-3.7-flash" : "openai/gpt-5.4";
+    const model = data.kind === "ai" ? AI_MODEL : AI_PLUS_MODEL;
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
+        ...aiPlusOptions(model),
         messages: [
           { role: "system", content: system },
           { role: "user", content: prompt },
