@@ -60,7 +60,7 @@ function AlphaBravoHome() {
         Pre-vetted · Governed marketplace
       </p>
 
-      <div className="mt-6 grid gap-12 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+      <div className="mt-6 grid gap-12 lg:grid-cols-[minmax(0,1fr)_396px] lg:items-start">
         <div className="min-w-0">
           <h1 className="max-w-3xl text-5xl leading-[1.05] tracking-tight text-foreground sm:text-6xl">
             Find the right Trade

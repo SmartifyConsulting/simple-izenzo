@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Lock, ShieldCheck, UploadCloud, FileCheck2, Loader2, Sparkles, RotateCcw } from "lucide-react";
+import { Lock, ShieldCheck, UploadCloud, FileCheck2, Loader2, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -11,13 +11,15 @@ function useIllustrativeMatches(enabled: boolean) {
     queryKey: ["hero-illustrative-matches"],
     enabled,
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Counted separately (head: true, no rows) so the card can say how many matches exist in
+      // total while still only ever rendering the top 5 as the teaser.
+      const { data, error, count } = await supabase
         .from("counterparties")
-        .select("id, name, sector, jurisdiction, rating_band, score")
+        .select("id, name, sector, jurisdiction, rating_band, score", { count: "exact" })
         .order("rating_computed_at", { ascending: false })
         .limit(5);
       if (error) throw error;
-      return data;
+      return { matches: data, total: count ?? data?.length ?? 0 };
     },
   });
 }
@@ -35,12 +37,14 @@ const RATING_LABEL: Record<string, string> = {
  * Selecting a match is gated behind sign-up/sign-in — this is a preview, not a live workspace. */
 export function HeroMatchCard({ className }: { className?: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [fileName, setFileName] = useState<string | null>(null);
+  const [fileNames, setFileNames] = useState<string[]>([]);
   const [searched, setSearched] = useState(false);
   const [searching, setSearching] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
-  const { data: matches, isLoading } = useIllustrativeMatches(searched);
+  const { data: matchData, isLoading } = useIllustrativeMatches(searched);
+  const matches = matchData?.matches;
+  const total = matchData?.total ?? 0;
   const searchTimer = useRef<number | null>(null);
 
   useEffect(() => () => {
@@ -58,13 +62,25 @@ export function HeroMatchCard({ className }: { className?: string }) {
 
   function reset() {
     if (searchTimer.current) window.clearTimeout(searchTimer.current);
-    setFileName(null);
+    setFileNames([]);
     setSearched(false);
     setSearching(false);
   }
 
-  const canSearch = Boolean(fileName);
-  const canReset = Boolean(fileName) || searching || searched;
+  function addFiles(files: FileList | File[]) {
+    const names = Array.from(files).map((f) => f.name);
+    if (names.length === 0) return;
+    // Dropping/selecting again adds to the pile rather than replacing it, so a visitor can
+    // build up a small set of supporting documents before searching.
+    setFileNames((prev) => [...prev, ...names.filter((n) => !prev.includes(n))]);
+  }
+
+  function removeFile(name: string) {
+    setFileNames((prev) => prev.filter((n) => n !== name));
+  }
+
+  const canSearch = fileNames.length > 0;
+  const canReset = canSearch || searching || searched;
 
   return (
     <div className={cn("w-full rounded-2xl border border-border bg-card p-6 shadow-sm", className)}>
@@ -82,11 +98,9 @@ export function HeroMatchCard({ className }: { className?: string }) {
             <button
               type="button"
               onClick={reset}
-              title="Start over"
-              aria-label="Start over"
-              className="rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
-              <RotateCcw className="h-4 w-4" />
+              Cancel
             </button>
           )}
         </div>
@@ -104,34 +118,60 @@ export function HeroMatchCard({ className }: { className?: string }) {
             onDrop={(e) => {
               e.preventDefault();
               setDragOver(false);
-              const file = e.dataTransfer.files?.[0];
-              if (file) setFileName(file.name);
+              if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
             }}
             className={cn(
               "mt-4 flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed p-6 text-center transition-colors",
               dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
             )}
           >
-            {fileName ? (
+            {fileNames.length > 0 ? (
               <>
                 <FileCheck2 className="h-5 w-5 text-success" />
-                <p className="text-sm font-medium text-foreground">{fileName}</p>
-                <p className="text-xs text-muted-foreground">Click to replace</p>
+                <p className="text-sm font-medium text-foreground">
+                  {fileNames.length} file{fileNames.length === 1 ? "" : "s"} added
+                </p>
+                <p className="text-xs text-muted-foreground">Click, or drop more, to add another</p>
               </>
             ) : (
               <>
                 <UploadCloud className="h-5 w-5 text-muted-foreground" />
                 <p className="text-sm font-medium text-foreground">Drop files here</p>
-                <p className="text-xs text-muted-foreground">Pitch deck, proposal, or any file</p>
+                <p className="text-xs text-muted-foreground">Pitch deck, proposal, or any file — multiple OK</p>
               </>
             )}
             <input
               ref={inputRef}
               type="file"
+              multiple
               className="hidden"
-              onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
+              onChange={(e) => {
+                if (e.target.files?.length) addFiles(e.target.files);
+                e.target.value = "";
+              }}
             />
           </div>
+
+          {fileNames.length > 0 && (
+            <ul className="mt-3 space-y-1.5">
+              {fileNames.map((name) => (
+                <li
+                  key={name}
+                  className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-1.5 text-xs"
+                >
+                  <span className="min-w-0 flex-1 break-words text-foreground">{name}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeFile(name)}
+                    aria-label={`Remove ${name}`}
+                    className="shrink-0 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
 
           <Button className="mt-5 w-full rounded-full" disabled={!canSearch} onClick={onFindMatches}>
             Find Matches
@@ -153,7 +193,17 @@ export function HeroMatchCard({ className }: { className?: string }) {
       {searched && (
         <>
           <p className="mt-1 text-xs text-muted-foreground">
-            A teaser of your top 5 — real Responder records, sign up to unlock full contacts.
+            {!isLoading && total > 0 ? (
+              <>
+                <span className="font-medium text-foreground">
+                  {total} match{total === 1 ? "" : "es"} found
+                </span>
+                {total > 5 ? " — showing your top 5. " : ". "}
+                Real Responder records, sign up to unlock full contacts.
+              </>
+            ) : (
+              "A teaser of your top 5 — real Responder records, sign up to unlock full contacts."
+            )}
           </p>
 
           <div className="mt-4 space-y-3">
@@ -197,7 +247,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
               search={{ mode: "signin", next: undefined }}
               className="font-medium text-primary hover:underline"
             >
-              Sign in
+              Sign in with facial recognition
             </Link>
           </p>
         </>
