@@ -19,6 +19,13 @@ Your check passed, but the provider was told to send you to a signed-in page. Th
    - The page asks the provider directly for the outcome, so the result is saved even if the provider's automatic notification is missing or misconfigured.
    - If the provider cannot be reached, the page says so and offers a retry rather than sitting blank.
 
+4. Opening the check without leaving the app
+   - The provider deliberately refuses to be displayed inside another site, so it can never appear embedded in your page. What it can do is open cleanly in its own window.
+   - Pressing Start now opens a proper popup window sized for the check, launched directly from your click so browsers don't block it, with the app still open behind it.
+   - While it is open the app shows a live "Verification in progress" state with a "Reopen window" button, so a closed or lost window is one click away.
+   - When the check finishes, that window lands on the completion page above and closes itself, and the app behind it updates on its own — no copying links, no hunting for tabs.
+   - The copy-link fallback stays for the rare case a browser refuses the popup, and on a phone it simply opens in a new tab instead.
+
 ## Technical notes
 
 - New public route `src/routes/verify.complete.tsx` reading `?vid=<verification id>`; no auth required, so it renders in a fresh tab.
@@ -26,3 +33,6 @@ Your check passed, but the provider was told to send you to a signed-in page. Th
 - `startVerification`: `callbackUrl` becomes `${origin}/verify/complete?vid=${row.id}` instead of `${origin}/account/settings`.
 - The complete page polls that fn a few times (2s interval, ~30s cap), then shows the final state with a "Check again" button; on pass, a `Link` to `/live-deal-engine`.
 - `_authenticated.tsx` already polls `identity_verifications` every 4s, so the original tab closes the dialog on its own once the row flips to `passed` — no change needed there.
+- Popup launch: `VerificationPanel.onStart` keeps the click in the same task — open a blank `window.open("", "izenzo-verify", "popup,width=520,height=800")` synchronously, then set `win.location.href = res.url` once `startVerification` resolves, so no popup blocker fires. Keep a ref to the window for "Reopen window"; treat `win === null` as blocked and fall back to the existing link/copy block. On small viewports (`matchMedia("(max-width: 640px)")`) use a plain new tab.
+- `src/routes/verify.complete.tsx` calls `window.close()` after a pass when `window.opener` exists, otherwise shows the "Go to your workspace" button.
+- Embedding the provider in an iframe is not possible — it sends `X-Frame-Options`/frame-ancestors headers (the `ERR_BLOCKED_BY_RESPONSE` you saw), so no in-page dialog can host it.
