@@ -289,10 +289,21 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       .limit(1);
     const latestBid = bids?.[0];
 
+    // Search the real web first — the model only ranks what was actually found.
+    const wantedSide = (latestBid?.direction ?? "bid") === "bid" ? "suppliers" : "buyers";
+    const searchQuery = [
+      tx.commodity ?? tx.title,
+      wantedSide,
+      data.region ?? tx.jurisdiction ?? "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+    const { sources, failures, context: grounding } = await groundOnWeb(searchQuery, data.kind);
+
     const system =
       data.kind === "ai"
-        ? "You are the Izenzo counterparty search assistant. Given a bid or offer, propose plausible counterparty organisations that could plausibly transact on these terms. You never decide and never contact anyone — you only propose candidates for a person to review. Respond with ONLY a JSON array, each item: {\"name\":string,\"jurisdiction\":string,\"sector\":string,\"score\":number 0-100,\"rationale\":string under 40 words}. No prose outside the array."
-        : "You are Izenzo AI+, a deeper counterparty search. Given a bid or offer, propose well-matched counterparty organisations, weighing jurisdiction fit, sector fit and deal size. You never decide and never contact anyone. Respond with ONLY a JSON array, each item: {\"name\":string,\"jurisdiction\":string,\"sector\":string,\"score\":number 0-100,\"rationale\":string under 40 words covering fit and any risk notes}. No prose outside the array.";
+        ? `You are the Izenzo counterparty search assistant. ${GROUNDING_RULES} Given a bid or offer, pick the organisations in the sources that could transact on these terms. You never decide and never contact anyone — you only propose candidates for a person to review. Respond with ONLY a JSON array, each item: {"name":string,"jurisdiction":string,"sector":string,"score":number 0-100,"rationale":string under 40 words,"sourceUrl":string}. No prose outside the array.`
+        : `You are Izenzo AI+, a deeper counterparty search. ${GROUNDING_RULES} Pick the best-matched organisations in the sources, weighing jurisdiction fit, sector fit and deal size. You never decide and never contact anyone. Respond with ONLY a JSON array, each item: {"name":string,"jurisdiction":string,"sector":string,"score":number 0-100,"rationale":string under 40 words covering fit and any risk notes,"sourceUrl":string}. No prose outside the array.`;
 
     const prompt = [
       `Commodity: ${tx.commodity ?? "n/a"}`,
@@ -304,7 +315,9 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       latestBid
         ? `Latest ${latestBid.direction}: ${latestBid.price ?? "n/a"} ${latestBid.currency} for ${latestBid.quantity ?? "n/a"} ${latestBid.unit ?? ""}. Terms: ${latestBid.terms ?? "n/a"}`
         : "",
-      "Propose 4-6 candidates.",
+      "Propose 4-6 candidates, all from the sources below.",
+      "",
+      grounding,
     ]
       .filter(Boolean)
       .join("\n");
@@ -315,7 +328,7 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
-        ...aiPlusOptions(model),
+        ...aiPlusOptions(model, data.kind),
         messages: [
           { role: "system", content: system },
           { role: "user", content: prompt },
@@ -328,7 +341,8 @@ export const searchCounterparties = createServerFn({ method: "POST" })
     const json = (await res.json()) as { choices: { message: { content: string } }[] };
     const output = json.choices?.[0]?.message?.content ?? "";
     const candidates = parseCandidates(output);
-    if (candidates.length === 0) throw new Error("AI did not return any candidates. Try again.");
+    if (candidates.length === 0)
+      throw new Error("No matching organisations were found in the sources that were read. Try again.");
 
     const source = data.kind === "ai" ? "ai_search" : "ai_plus_search";
     const rows = candidates.map((c) => ({
@@ -340,11 +354,18 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       source,
       rationale: c.rationale ?? null,
       status: "surfaced",
+      // Evidence lives in media_flags so the source page can be opened next to the name.
+      media_flags: c.sourceUrl ? { evidence: [{ url: c.sourceUrl, source: "web_search" }] } : null,
     }));
     const { data: inserted, error } = await supabase.from("counterparties").insert(rows).select();
     if (error) throw error;
 
-    return { candidates: inserted ?? [], model };
+    return {
+      candidates: inserted ?? [],
+      model,
+      sourcesRead: sources.map((s) => ({ label: s.label, url: s.url })),
+      sourcesSkipped: failures.map((f) => ({ label: f.label, reason: f.reason })),
+    };
   });
 
 /** Marks/unmarks a discovered counterparty as shortlisted — a non-committal "interested" flag a
