@@ -1,7 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Coins, DollarSign, Mail } from "lucide-react";
+import { Coins, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -9,7 +9,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { applyCurrentStylePreset } from "@/lib/stylePreset";
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
 import { ThemeToggle } from "@/components/guided/ThemeToggle";
-import { SearchButton } from "@/components/layout/SearchButton";
 import { SignInModal } from "@/components/auth/SignInModal";
 import { Logo } from "@/components/Logo";
 import { HeroSearchProvider, seedNext, useHeroSearch } from "@/lib/heroSearchContext";
@@ -93,15 +92,6 @@ function AlphaBravoShellInner({ children }: { children: ReactNode }) {
           <div className="ml-6 flex shrink-0 items-center gap-3 lg:ml-3">
             {user ? (
               <>
-                <SearchButton />
-                <a
-                  href="/pricing"
-                  className="flex items-center transition-colors hover:text-primary"
-                  title="Pricing"
-                  aria-label="Pricing"
-                >
-                  <DollarSign className="h-5 w-5" strokeWidth={2.25} />
-                </a>
                 <Link
                   to="/inbox"
                   title="Inbox"

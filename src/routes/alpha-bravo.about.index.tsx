@@ -51,10 +51,7 @@ function About() {
           </div>
         </div>
 
-        <div className="space-y-6 lg:pl-8 lg:pt-24">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-            From our writing
-          </p>
+        <div className="space-y-6 lg:pl-8 lg:pt-[136px]">
           {INSIGHT_ARTICLES.map((a) => (
             <Link key={a.slug} to="/alpha-bravo/about/$slug" params={{ slug: a.slug }} className="block group">
               <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">

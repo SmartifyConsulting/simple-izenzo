@@ -48,42 +48,42 @@ function IntelligenceFabric() {
     <>
       {/* Hero */}
       <section className="bg-gradient-to-b from-primary/[0.04] to-transparent">
-        <div className="mx-auto max-w-5xl px-5 py-20 sm:py-28">
+        <div className="mx-auto max-w-5xl px-5 py-10 sm:py-14">
           <div className="flex items-start justify-between gap-4">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
               <Sparkles className="h-3.5 w-3.5" /> The Intelligence Fabric
             </span>
             <SubmitBidButton size="sm" className="hidden shrink-0 sm:inline-flex" />
           </div>
-          <h1 className="mt-6 max-w-3xl text-4xl leading-[1.05] tracking-tight text-foreground sm:text-6xl">
+          <h1 className="mt-4 max-w-3xl text-4xl leading-[1.05] tracking-tight text-foreground sm:text-6xl">
             The engine that finds what should be there—before you even hit search.
           </h1>
-          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
+          <p className="mt-4 max-w-2xl text-lg leading-relaxed text-muted-foreground">
             Izenzo AI+ is an advanced decision engine that works behind the scenes to create
             better choices before you make a commitment.
           </p>
-          <p className="mt-4 max-w-2xl leading-relaxed text-muted-foreground">
+          <p className="mt-3 max-w-2xl leading-relaxed text-muted-foreground">
             While traditional AI simply scans existing databases to show you what is already
             there, Izenzo AI+ looks beyond visible data to discover hidden possibilities,
             construct new trade paths, and automatically verify them for real-world execution.
           </p>
-          <div className="mt-8 sm:hidden">
+          <div className="mt-5 sm:hidden">
             <SubmitBidButton size="sm" />
           </div>
         </div>
       </section>
 
       {/* How it transforms decision-making, with Why It Matters as a sidebar */}
-      <section className="mx-auto max-w-5xl px-5 py-20 sm:py-24">
+      <section className="mx-auto max-w-5xl px-5 py-10 sm:py-12">
         <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
           How it transforms decision-making
         </p>
-        <h2 className="mt-3 max-w-2xl text-3xl tracking-tight text-foreground sm:text-4xl">
+        <h2 className="mt-2 max-w-2xl text-3xl tracking-tight text-foreground sm:text-4xl">
           Five ways AI+ works before you ever make a call.
         </h2>
 
-        <div className="mt-14 grid gap-12 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="space-y-10">
+        <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="space-y-6">
             {TRANSFORMS.map((t) => (
               <div key={t.title} className="flex gap-4">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary/25 bg-primary/10 text-primary">
@@ -93,13 +93,13 @@ function IntelligenceFabric() {
                   <h3 className="text-base font-medium tracking-tight text-foreground">
                     {t.title}
                   </h3>
-                  <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{t.body}</p>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{t.body}</p>
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="space-y-8">
+          <div className="space-y-5">
             <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
               Why it matters
             </p>
