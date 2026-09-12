@@ -1,38 +1,28 @@
-# One menu everywhere, plus fixing the 403 on creating a bid
+# Getting unstuck from the identity check
 
-## Part 1 — Why the bid creation fails (confirmed)
+## What is happening
 
-I checked the database directly. Two real problems, both left behind by the earlier project remix:
+Right now the app will not let you past the "Verify your identity" window on any signed-in screen until an ID check has actually passed. When you press Start, the identity provider's page is asked to open — and inside the preview it refuses to load, which is the "verify.didit.me is blocked" message you saw. That provider deliberately refuses to display inside another site's frame, so in the preview you end up with a dead end and no way back into the app.
 
-1. **No table permissions at all.** Not one table in the app's database currently grants access to signed-in users. Every single write — creating a bid or offer, saving a document, recording a step — is refused before any ownership rule is even considered. That is the 403 you hit, and it explains why a plain manual "test bid" fails too. The ownership rule on the bids table itself is correct and is not the problem.
-2. **New sign-ups get no account record.** The automatic step that creates a person's account row when they sign up is missing, so the second test account (`info@georgiaadams.co.za`) has no account record and no company attached. Even once permissions are restored, that account would still be refused, because the rule requires the new bid to belong to the signer's company.
+## What to change
 
-### The fix
+1. Stop the check from locking you out
+   - The identity window becomes closable: a clear "Do this later" action returns you to your workspace.
+   - It still reappears where identity genuinely matters (the compliance stage and the party gates), so nothing gets waved through — you just are not blocked from looking around, testing search, or creating a trade.
+   - Once a check passes, the window stops appearing and the verified badge shows as before.
 
-- Restore the access grants for every table in the app database: signed-in users get read/write where the ownership rules already scope them, background jobs get full access, and anonymous visitors get read access only where a public rule already exists (for example the public responder directory).
-- Restore the sign-up step that creates a person's account row, and fill in the missing record for the existing account so it has a company.
-- Then create a bid end-to-end as the signed-in test account and confirm it saves, rather than declaring it fixed.
+2. Make the provider page actually open
+   - The Start action opens the provider in a real new browser tab rather than something the preview can swallow.
+   - If the browser or the preview blocks that tab, the window shows the link itself with a "Copy link" and "Open in a new tab" option, plus one plain line explaining that the provider will not display inside the preview and needs to be opened in its own tab.
+   - The same treatment for the existing "Continue" action on an in-progress check.
 
-## Part 2 — One menu on every screen
-
-There is no duplicate screen. The app has three different top bars and each screen picks one, which is why this screen's menu differs.
-
-- One single top bar is used by every screen, public and signed-in.
-- It carries the same named items everywhere: Home, About Izenzo, How It Works, The Intelligence Fabric, Pricing, Trades.
-- The right-hand side keeps today's signed-in tools: search, inbox with unread count, token balance, light/dark switch, profile menu. Signed out it shows Sign In / Sign Up.
-- The current page is highlighted the same way on every screen; on narrow screens the named items collapse into one menu button.
-- The two other top bars are removed once nothing uses them.
-
-Page content, footers, themes, permissions and workflow behaviour are unchanged.
-
-## Part 3 — Landing behaviour (as tested)
-
-- Visiting the workspace directly with no earlier search keeps showing the upload/search form.
-- Arriving from the homepage with a search already typed creates the deal on arrival and lands straight on the summary panel instead of asking again.
+3. Say what went wrong, in words
+   - If the provider is not connected, or has no workflow set up, the window says exactly that and points to Admin → Integrations instead of failing silently.
+   - The refresh action keeps working so a result completed in the other tab lands back in the app.
 
 ## Technical notes
 
-- New migration: `GRANT SELECT, INSERT, UPDATE, DELETE ... TO authenticated` and `GRANT ALL ... TO service_role` for every table in `public`; `GRANT SELECT ... TO anon` only for tables with an existing `TO anon` SELECT policy (`responder_listings`, and any other public read table). Also `GRANT USAGE ON SCHEMA public` and `GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public` to `authenticated`/`anon`/`service_role`, since the RLS helpers (`current_org_id`, `can_access_tx`, `has_role`) and the `admin_*` / `support_*` RPCs are called from the app.
-- Recreate the `on_auth_user_created` trigger on `auth.users` calling the existing `public.handle_new_user()`; backfill `profiles` + `org_members` + `profiles.org_id` for `af30db32-…`. `ensureOrg` already upserts `profiles.org_id`, so it keeps working once grants exist.
-- Header: promote the markup in `AlphaBravoShell.tsx` into `src/components/layout/MainHeader.tsx` (NAV + Trades, unread query, `SearchButton`, inbox, token pill, `ThemeToggle`, `ProfileAvatarMenu`, signed-out `SignInModal` pair). `AlphaBravoShell`, `AppShell` and `SiteHeader` render it; `AppShell` keeps `wide` / `compactFooter` / `ink-grid` body and footer behaviour. Keep `HeroSearchProvider` above wherever the header renders so `useHeroSearch` resolves. Add a `lg:hidden` dropdown of the same NAV entries.
-- Verify: `bunx tsgo --noEmit`, then a Playwright pass that signs in, creates a bid (expect a saved row, no 403), and loads `/live-deal-engine?panel=matches`, `/alpha-bravo` and `/pricing` to compare menus.
+- `src/routes/_authenticated.tsx`: `needsIdentity` no longer hard-gates the subtree; the dialog gains a dismissed state (session-scoped) so it does not re-open on every navigation within the session.
+- `src/components/verification/VerifyIdentityDialog.tsx`: allow escape/outside close, add the "Do this later" footer action, keep auto-close on pass.
+- `src/components/verification/VerificationPanel.tsx`: after `startVerification`, keep the returned URL in state; render an anchor with `target="_blank" rel="noopener noreferrer"` plus a copy-link button, and surface it whenever `window.open` returns null (popup blocked). Error text from `startVerification` shown inline, not only as a toast.
+- Places that must still require a passed check (Without a Doubt / party gates in `live-deal-engine`) keep using the existing verification state — no change to their rules.
