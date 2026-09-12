@@ -17,8 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { initTheme } from "@/lib/theme";
-import { applyAppSkin, getPreferredAppSkin } from "@/lib/appSkin";
+import { applyCurrentStylePreset } from "@/lib/stylePreset";
 
 function greeting() {
   const hour = new Date().getHours();
@@ -90,8 +89,7 @@ export function AppShell({
   );
 
   useEffect(() => {
-    initTheme();
-    applyAppSkin(getPreferredAppSkin());
+    applyCurrentStylePreset();
   }, []);
 
   return (

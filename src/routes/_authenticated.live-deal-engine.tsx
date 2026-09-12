@@ -32,7 +32,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { supabase } from "@/integrations/supabase/client";
-import { advance, fallbackReference, recordEvent, type Transaction } from "@/lib/tx";
+import { advance, fallbackReference, recordEvent, swapReferencePrefix, type Transaction } from "@/lib/tx";
 import type { StageKey } from "@/lib/spine";
 import { useAuth } from "@/lib/auth";
 import { searchCounterparties } from "@/lib/izenzo.functions";
@@ -697,6 +697,34 @@ function LiveDealEngine() {
     });
   }, [dealTx?.id, activity]);
 
+  /** The direction picked before any document existed was just a starting guess ("bid") — once
+   * the first uploaded document is classified, correct the deal's actual direction and BID/OFF
+   * reference to match what was really uploaded, rather than leaving it on the default. */
+  async function applyDirectionGuess(directionGuess: "bid" | "offer" | null) {
+    if (!dealTx || !directionGuess) return;
+    const currentDirection = activity?.direction ?? "bid";
+    if (directionGuess === currentDirection) return;
+    const currentReference =
+      dealTx.reference || activity?.reference || fallbackReference(dealTx.id, currentDirection);
+    const newReference = swapReferencePrefix(currentReference, directionGuess);
+    const newTitle = directionGuess === "bid" ? "New Bid" : "New Offer";
+    const [{ error: boError }, { error: txError }] = await Promise.all([
+      supabase.from("bid_offers").update({ direction: directionGuess }).eq("transaction_id", dealTx.id),
+      supabase.from("transactions").update({ reference: newReference, title: newTitle }).eq("id", dealTx.id),
+    ]);
+    if (boError || txError) {
+      toast.error("Could not update the deal's direction from the upload.");
+      return;
+    }
+    setDealTx((prev) => (prev ? { ...prev, reference: newReference, title: newTitle } : prev));
+    setActivity((prev) =>
+      prev ? { ...prev, direction: directionGuess, reference: newReference, title: newTitle } : prev,
+    );
+    toast.success(
+      `This reads like ${directionGuess === "bid" ? "a bid proposal" : "a response to a bid"} — updated to ${newReference}.`,
+    );
+  }
+
   async function runSearch(txId: string) {
     setFlowStep("searching");
     setSearchError(null);
@@ -770,6 +798,10 @@ function LiveDealEngine() {
   useEffect(() => {
     if (popout) return;
     registerWindow(windowId, windowLabel);
+    // The not-yet-created placeholder isn't a real saved workspace worth remembering a stray
+    // docked position or minimized state for — always present it maximized, even if a stale
+    // "new" entry from before this page had that default was left sitting in localStorage.
+    if (windowId === "new") setMode(windowId, "maximized");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [windowId, windowLabel, popout]);
 
@@ -903,6 +935,7 @@ function LiveDealEngine() {
                     <DocumentUploadStep
                       transactionId={dealTx.id}
                       onNext={() => void runSearch(dealTx.id)}
+                      onFirstClassified={({ directionGuess }) => void applyDirectionGuess(directionGuess)}
                     />
                   ) : (
                     <div className="space-y-1.5 rounded-xl border border-border bg-muted/30 p-3">

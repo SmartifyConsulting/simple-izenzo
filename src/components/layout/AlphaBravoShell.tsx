@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { applyCurrentStylePreset } from "@/lib/stylePreset";
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
-import { StylePresetSwitcher } from "@/components/marketing/StylePresetSwitcher";
 import { Logo } from "@/components/Logo";
 
 const NAV = [
@@ -56,7 +55,6 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
                 <ProfileAvatarMenu />
               </>
             )}
-            <StylePresetSwitcher />
           </div>
         </div>
       </header>

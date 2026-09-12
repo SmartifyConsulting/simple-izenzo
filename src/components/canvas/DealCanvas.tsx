@@ -1760,7 +1760,7 @@ export type RecordedActivity = {
 const BID_REFERENCE_BASE = 9088778;
 const OFFER_REFERENCE_BASE = 8979667;
 
-function nextReference(direction: "bid" | "offer") {
+export function nextReference(direction: "bid" | "offer") {
   const base = direction === "bid" ? BID_REFERENCE_BASE : OFFER_REFERENCE_BASE;
   const unique = base + Math.floor(Math.random() * 1000);
   return `${direction === "bid" ? "BID" : "OFF"}${unique}`;
@@ -1929,6 +1929,10 @@ export function CanvasStart({
             setDirection(null);
           } else {
             setPicking(true);
+            // Direction is no longer picked here — it's inferred once a document is uploaded
+            // (a bid proposal vs. a response to a bid read differently to the classifier). "bid"
+            // is just the starting default until that classification comes back.
+            setDirection("bid");
           }
         }}
         className="group block w-full animate-node-rise px-6 py-5 text-center"
@@ -1950,7 +1954,7 @@ export function CanvasStart({
           Open a bid or an offer
         </span>
         <span className="mt-1 block text-[12.5px] font-medium text-muted-foreground">
-          Bids to the left, Offers to the right.
+          Upload your document — we'll tell a bid proposal from a response automatically.
         </span>
       </button>
     </div>
@@ -2008,89 +2012,23 @@ export function CanvasStart({
   );
 
   return (
-    <>
-      {!direction && (
-        <div className="ink-grid relative rounded-3xl border border-border p-4 sm:p-6">
-          <p className="label-caps text-center">Live deal engine</p>
-          <div className="mt-6">{startNode}</div>
+    <div className="relative rounded-3xl p-3 sm:p-5">
+      <div className="glass-node animate-node-rise p-5 sm:p-6">
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <p className="text-base font-semibold tracking-tight">New bid or offer</p>
+          <button
+            type="button"
+            onClick={() => {
+              setPicking(false);
+              setDirection(null);
+            }}
+            className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
-      )}
-      <div
-        className={cn(
-          "relative rounded-3xl p-3 sm:p-5",
-          !direction && "ink-grid mt-4 border border-border",
-        )}
-      >
-      <p className="label-caps mb-3">
-        {direction === "bid" ? "Live deal engine for The Bid" : direction === "offer" ? "Live deal engine for Responder" : "Live deal engine"}
-      </p>
-      {!direction && (
-        <div className="grid grid-cols-2 gap-4 sm:gap-8">
-          <LaneHeader label="The Bid" side="left" />
-          <LaneHeader label="Responder" side="right" />
-        </div>
-      )}
-      <div className={cn("mt-3", !direction && "grid grid-cols-2 gap-4 sm:gap-8")}>
-        {direction !== "offer" && (
-          <div className="space-y-3">
-            {direction === "bid" ? (
-              <div className="glass-node animate-node-rise p-5 sm:p-6">
-                <div className="mb-4 flex items-start justify-between gap-4">
-                  <p className="text-base font-semibold tracking-tight">Submit a Bid</p>
-                  <button
-                    type="button"
-                    onClick={() => setDirection(null)}
-                    className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-                {form_}
-              </div>
-            ) : (
-              <div style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
-                <PickButton
-                  label="Submit a Bid"
-                  blurb="Record the opening bid and its terms."
-                  side="left"
-                  onClick={() => setDirection("bid")}
-                  examples={BID_EXAMPLES}
-                />
-              </div>
-            )}
-          </div>
-        )}
-        {direction !== "bid" && (
-          <div className={cn("space-y-3", !direction && "col-start-2")}>
-            {direction === "offer" ? (
-              <div className="glass-node animate-node-rise p-5 sm:p-6">
-                <div className="mb-4 flex items-start justify-between gap-4">
-                  <p className="text-base font-semibold tracking-tight">Submit an Offer</p>
-                  <button
-                    type="button"
-                    onClick={() => setDirection(null)}
-                    className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-                {form_}
-              </div>
-            ) : (
-              <div className="ml-auto" style={{ width: `calc(100% - ${LANE_INSET}px)` }}>
-                <PickButton
-                  label="Submit an Offer"
-                  blurb="State what you're supplying, at what price, and your delivery terms."
-                  side="right"
-                  onClick={() => setDirection("offer")}
-                  examples={OFFER_EXAMPLES}
-                />
-              </div>
-            )}
-          </div>
-        )}
+        {form_}
       </div>
-      </div>
-    </>
+    </div>
   );
 }

@@ -20,7 +20,18 @@ const DOC_TYPE_LABEL: Record<string, string> = {
 
 /** Step 2 of the Simple Mode bid wizard — drag-and-drop upload for ID and deal documents, with
  * the document type guessed by AI (see classifyDocument) rather than picked from a dropdown. */
-export function DocumentUploadStep({ transactionId, onNext }: { transactionId: string; onNext: () => void }) {
+export function DocumentUploadStep({
+  transactionId,
+  onNext,
+  onFirstClassified,
+}: {
+  transactionId: string;
+  onNext: () => void;
+  /** Fires once, with the very first document ever attached to this transaction — lets the
+   * caller correct a bid/offer's direction from what the document actually looks like, rather
+   * than a side picked before any document existed. */
+  onFirstClassified?: (info: { docType: string; directionGuess: "bid" | "offer" | null }) => void;
+}) {
   const qc = useQueryClient();
   const classify = useServerFn(classifyDocument);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -45,9 +56,11 @@ export function DocumentUploadStep({ transactionId, onNext }: { transactionId: s
       const list = Array.from(files);
       if (list.length === 0) return;
       setUploading(true);
+      const isFirstEver = docs.length === 0;
       try {
-        for (const file of list) {
-          const { docType } = await classify({ data: { filename: file.name } });
+        for (const [i, file] of list.entries()) {
+          const { docType, directionGuess } = await classify({ data: { filename: file.name } });
+          if (isFirstEver && i === 0) onFirstClassified?.({ docType, directionGuess });
 
           let storagePath: string | null = null;
           const path = `deals/${transactionId}/${Date.now()}-${file.name}`;

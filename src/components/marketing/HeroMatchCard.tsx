@@ -86,7 +86,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
     <div className={cn("w-full rounded-2xl border border-border bg-card p-6 shadow-sm", className)}>
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-base font-medium tracking-tight text-foreground">
-          {searched ? "Top 5 matches" : "Upload Bid Proposal"}
+          {searched ? "Top 5 matches" : "Upload files"}
         </h2>
         <div className="flex items-center gap-2">
           {searched && (

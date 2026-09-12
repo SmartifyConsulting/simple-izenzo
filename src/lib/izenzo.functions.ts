@@ -529,15 +529,31 @@ function classifyByFilename(filename: string): (typeof DOC_TYPES)[number] {
   return "other";
 }
 
-/** AI-assisted document classification for the compact Simple Mode bid wizard's upload step.
- * Falls back to a filename heuristic if AI isn't configured, so uploads never block on it. */
+type DirectionGuess = "bid" | "offer" | null;
+
+/** Filenames don't usually say "bid" or "offer" outright, but they often hint at which side of
+ * the trade the document belongs to — a tender/RFQ/proposal reads as an opening bid, a quotation
+ * or reply reads as a response to one. Used only as a fallback when AI isn't configured. */
+function directionByFilename(filename: string): DirectionGuess {
+  const n = filename.toLowerCase();
+  if (/response|reply|quote|quotation|counter[\s_-]?offer|offer/.test(n)) return "offer";
+  if (/rfq|tender|request[\s_-]?for|proposal|bid/.test(n)) return "bid";
+  return null;
+}
+
+/** AI-assisted document classification for the compact Simple Mode bid wizard's upload step —
+ * also guesses, from the same filename, whether the document reads as an opening bid proposal or
+ * a response/offer to one, so a new deal's BID/OFF reference can be set from what's actually
+ * uploaded rather than a side picked blind before any document exists. Falls back to filename
+ * heuristics if AI isn't configured, so uploads never block on it. */
 export const classifyDocument = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data) => z.object({ filename: z.string().min(1).max(300) }).parse(data))
   .handler(async ({ data }) => {
     const apiKey = process.env["LOVABLE_API_KEY"];
-    const fallback = classifyByFilename(data.filename);
-    if (!apiKey) return { docType: fallback, source: "heuristic" as const };
+    const fallbackType = classifyByFilename(data.filename);
+    const fallbackDirection = directionByFilename(data.filename);
+    if (!apiKey) return { docType: fallbackType, directionGuess: fallbackDirection, source: "heuristic" as const };
 
     try {
       const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -548,20 +564,25 @@ export const classifyDocument = createServerFn({ method: "POST" })
           messages: [
             {
               role: "system",
-              content: `Classify a trade-deal document by its filename alone into exactly one of: ${DOC_TYPES.join(", ")}. "identity" means a personal or entity ID/KYC document (passport, ID card, company registration). Respond with ONLY the single lowercase category word, nothing else.`,
+              content: `Classify a trade-deal document by its filename alone. Respond with ONLY two lowercase words separated by a comma, nothing else: first, exactly one of ${DOC_TYPES.join(
+                ", ",
+              )} ("identity" means a personal or entity ID/KYC document); second, exactly one of bid, offer, unknown — "bid" if the filename reads like an opening proposal/tender/RFQ, "offer" if it reads like a response/quotation/reply to one, "unknown" if it's not clear.`,
             },
             { role: "user", content: data.filename },
           ],
         }),
       });
-      if (!res.ok) return { docType: fallback, source: "heuristic" as const };
+      if (!res.ok) return { docType: fallbackType, directionGuess: fallbackDirection, source: "heuristic" as const };
       const json = (await res.json()) as { choices: { message: { content: string } }[] };
-      const guess = (json.choices?.[0]?.message?.content ?? "").trim().toLowerCase();
-      const docType = (DOC_TYPES as readonly string[]).includes(guess)
-        ? (guess as (typeof DOC_TYPES)[number])
-        : fallback;
-      return { docType, source: "ai" as const };
+      const raw = (json.choices?.[0]?.message?.content ?? "").trim().toLowerCase();
+      const [typeGuess, dirGuess] = raw.split(",").map((s) => s.trim());
+      const docType = (DOC_TYPES as readonly string[]).includes(typeGuess ?? "")
+        ? (typeGuess as (typeof DOC_TYPES)[number])
+        : fallbackType;
+      const directionGuess: DirectionGuess =
+        dirGuess === "bid" || dirGuess === "offer" ? dirGuess : fallbackDirection;
+      return { docType, directionGuess, source: "ai" as const };
     } catch {
-      return { docType: fallback, source: "heuristic" as const };
+      return { docType: fallbackType, directionGuess: fallbackDirection, source: "heuristic" as const };
     }
   });

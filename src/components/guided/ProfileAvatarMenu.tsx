@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { LogOut, Moon, Settings, ShieldCheck, Sun } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { useTheme } from "@/lib/theme";
+import { useStylePreset } from "@/lib/stylePreset";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +16,9 @@ import {
 export function ProfileAvatarMenu() {
   const { profile, signOut, roles } = useAuth();
   const navigate = useNavigate();
-  const [theme, toggleTheme] = useTheme();
+  const [preset, setPreset] = useStylePreset();
+  const theme = preset === "cream" ? "light" : "dark";
+  const toggleTheme = () => setPreset(theme === "dark" ? "cream" : "black");
 
   const name = profile?.full_name ?? profile?.email ?? "";
   const initials = (name || "?").slice(0, 2).toUpperCase();

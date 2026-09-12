@@ -97,6 +97,14 @@ export function fallbackReference(id: string, direction: "bid" | "offer") {
   return `${direction === "bid" ? "BID" : "OFF"}${suffix}`;
 }
 
+/** Swaps a reference's BID/OFF prefix while keeping its numeric suffix, so correcting a deal's
+ * direction after the fact (once an uploaded document reveals it) doesn't hand the user a
+ * completely different-looking ID than the one they've already seen on screen. */
+export function swapReferencePrefix(reference: string, direction: "bid" | "offer") {
+  const digits = reference.replace(/^[A-Za-z]+/, "");
+  return `${direction === "bid" ? "BID" : "OFF"}${digits}`;
+}
+
 export function money(value: number | null | undefined, currency = "USD") {
   if (value === null || value === undefined) return "—";
   return new Intl.NumberFormat("en-GB", {
