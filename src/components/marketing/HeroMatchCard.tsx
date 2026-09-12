@@ -139,31 +139,48 @@ export function HeroMatchCard({ className }: { className?: string }) {
         <>
           <p className="mb-4 text-center text-lg font-medium text-foreground">Ready when you are.</p>
 
-          <div
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragOver(true);
-            }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragOver(false);
-              if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
-            }}
-            className={cn(
-              "flex items-center gap-1 rounded-full border-2 bg-background p-2 shadow-sm transition-colors focus-within:border-primary",
-              dragOver ? "border-primary bg-primary/5" : "border-border",
-            )}
-          >
+          <div className="flex items-stretch gap-2 rounded-2xl border-2 border-border bg-background p-2 shadow-sm transition-colors focus-within:border-primary">
+            {/* Left half: the typed description. */}
+            <input
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && canSearch) onFindMatches();
+              }}
+              placeholder="Describe what you're looking for — product, quantity, location, terms…"
+              className="min-w-0 flex-1 basis-1/2 bg-transparent px-2 text-base text-foreground outline-none placeholder:text-muted-foreground"
+            />
+
+            {/* Right half: the same strip doubles as the drop zone, so no + button is needed. */}
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
-              title="Attach files"
-              aria-label="Attach files"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOver(true);
+              }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOver(false);
+                if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
+              }}
+              aria-label="Drop files here or click to browse"
+              className={cn(
+                "flex min-w-0 flex-1 basis-1/2 items-center justify-center gap-2 rounded-xl border border-dashed px-2 text-xs transition-colors",
+                dragOver
+                  ? "border-primary bg-primary/5 text-foreground"
+                  : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground",
+              )}
             >
-              <Plus className="h-5 w-5" />
+              <UploadCloud className="h-4 w-4 shrink-0" />
+              <span className="truncate">
+                {fileNames.length > 0
+                  ? `${fileNames.length} file${fileNames.length === 1 ? "" : "s"} attached`
+                  : "Drop files here or click to browse"}
+              </span>
             </button>
+
             <input
               ref={inputRef}
               type="file"
@@ -174,25 +191,18 @@ export function HeroMatchCard({ className }: { className?: string }) {
                 e.target.value = "";
               }}
             />
-            <input
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && canSearch) onFindMatches();
-              }}
-              placeholder="Describe what you're looking for — product, quantity, location, terms…"
-              className="min-w-0 flex-1 bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground"
-            />
+
             <button
               type="button"
               onClick={onFindMatches}
               disabled={!canSearch}
               aria-label="Find matches"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex h-10 w-10 shrink-0 items-center justify-center self-center rounded-full bg-primary text-primary-foreground transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
             >
               <ArrowUp className="h-4 w-4" />
             </button>
           </div>
+
 
           {fileNames.length > 0 && (
             <ul className="mt-3 space-y-1.5">
