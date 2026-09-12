@@ -38,7 +38,7 @@ export function AppShell({
    * space is at a premium. */
   compactFooter?: boolean;
 }) {
-  const { profile, org } = useAuth();
+  const { profile } = useAuth();
   const firstName = (profile?.full_name ?? profile?.email ?? "").split(/[\s@]/)[0];
 
   // Keeps `profiles.last_accessed_at` fresh while this person actually has the app open, so the
