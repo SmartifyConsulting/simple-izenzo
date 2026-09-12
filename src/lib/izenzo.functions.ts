@@ -385,6 +385,27 @@ export const searchCounterparties = createServerFn({ method: "POST" })
     const { data: inserted, error } = await supabase.from("counterparties").insert(rows).select();
     if (error) throw error;
 
+    // Publish each web-found name to the public Responder directory as an unclaimed listing,
+    // keeping the page it was found on as evidence. Private per-bid rows above stay untouched.
+    try {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await supabaseAdmin.from("responder_listings").upsert(
+        candidates.map((c) => ({
+          name: c.name,
+          sector: c.sector ?? null,
+          jurisdiction: c.jurisdiction ?? null,
+          summary: c.rationale ?? null,
+          source: "web_search",
+          source_url: c.sourceUrl ?? null,
+          published: true,
+        })),
+        { onConflict: "name,jurisdiction", ignoreDuplicates: true },
+      );
+    } catch {
+      // Directory publishing must never break the search the person is waiting on.
+    }
+
+
     return {
       candidates: inserted ?? [],
       model,
