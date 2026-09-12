@@ -62,12 +62,13 @@ function bandOf(l: { verified_at: string | null; org_id: string | null }) {
  * Selecting a match is gated behind sign-up/sign-in — this is a preview, not a live workspace. */
 export function HeroMatchCard({ className }: { className?: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [prompt, setPrompt] = useState("");
   const [fileNames, setFileNames] = useState<string[]>([]);
   const [searched, setSearched] = useState(false);
   const [searching, setSearching] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
-  const { data: matchData, isLoading } = useIllustrativeMatches(searched);
+  const { data: matchData, isLoading } = useIllustrativeMatches(searched, prompt);
   const matches = matchData?.matches;
   const total = matchData?.total ?? 0;
   const searchTimer = useRef<number | null>(null);
@@ -87,6 +88,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
 
   function reset() {
     if (searchTimer.current) window.clearTimeout(searchTimer.current);
+    setPrompt("");
     setFileNames([]);
     setSearched(false);
     setSearching(false);
@@ -104,7 +106,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
     setFileNames((prev) => prev.filter((n) => n !== name));
   }
 
-  const canSearch = fileNames.length > 0;
+  const canSearch = prompt.trim().length > 0 || fileNames.length > 0;
   const canReset = canSearch || searching || searched;
 
   return (
