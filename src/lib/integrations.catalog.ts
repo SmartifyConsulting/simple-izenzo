@@ -34,8 +34,10 @@ export const INTEGRATION_GROUPS = [
   "Email & Notifications",
   "Sanctions & Fraud",
   "Currency",
+  "Web Scraping",
   "Archival Storage",
 ] as const;
+
 
 export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
   {
