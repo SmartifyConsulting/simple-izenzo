@@ -314,8 +314,9 @@ export function DocumentUploadStep({
           })();
         }}
       >
-        {autoAdvance ? "Submit" : "Next"}
+        {docs.length > 0 ? "Find Matching Interest" : autoAdvance ? "Submit" : "Next"}
       </Button>
+
     </div>
   );
 }
