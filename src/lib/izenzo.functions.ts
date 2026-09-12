@@ -410,12 +410,17 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
     if (!apiKey) throw new Error("AI is not configured");
 
     const counterpart = data.role === "buyer" ? "suppliers/sellers" : "buyers";
+    const { sources, failures, context: grounding } = await groundOnWeb(
+      `${data.query} ${counterpart}`,
+      data.kind,
+    );
+
     const system =
       data.kind === "ai"
-        ? `You are the Izenzo counterparty search assistant. The user is a ${data.role} searching for ${counterpart}. Propose plausible counterparty organisations matching their search. You never decide and never contact anyone — you only propose candidates for a person to review. Respond with ONLY a JSON array, each item: {"name":string,"jurisdiction":string,"sector":string,"score":number 0-100,"rationale":string under 40 words}. No prose outside the array.`
-        : `You are Izenzo AI+, a deeper counterparty search. The user is a ${data.role} searching for ${counterpart}. Propose well-matched counterparty organisations, weighing jurisdiction fit, sector fit and plausibility. You never decide and never contact anyone. Respond with ONLY a JSON array, each item: {"name":string,"jurisdiction":string,"sector":string,"score":number 0-100,"rationale":string under 40 words covering fit and any risk notes}. No prose outside the array.`;
+        ? `You are the Izenzo counterparty search assistant. ${GROUNDING_RULES} The user is a ${data.role} searching for ${counterpart}. Pick the organisations in the sources that match their search. You never decide and never contact anyone — you only propose candidates for a person to review. Respond with ONLY a JSON array, each item: {"name":string,"jurisdiction":string,"sector":string,"score":number 0-100,"rationale":string under 40 words,"sourceUrl":string}. No prose outside the array.`
+        : `You are Izenzo AI+, a deeper counterparty search. ${GROUNDING_RULES} The user is a ${data.role} searching for ${counterpart}. Pick the best-matched organisations in the sources, weighing jurisdiction fit, sector fit and plausibility. You never decide and never contact anyone. Respond with ONLY a JSON array, each item: {"name":string,"jurisdiction":string,"sector":string,"score":number 0-100,"rationale":string under 40 words covering fit and any risk notes,"sourceUrl":string}. No prose outside the array.`;
 
-    const prompt = `Search: "${data.query}"\nRole: ${data.role}\nPropose 4-6 candidates.`;
+    const prompt = `Search: "${data.query}"\nRole: ${data.role}\nPropose 4-6 candidates, all from the sources below.\n\n${grounding}`;
 
     const model = data.kind === "ai" ? AI_MODEL : AI_PLUS_MODEL;
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -423,7 +428,7 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
-        ...aiPlusOptions(model),
+        ...aiPlusOptions(model, data.kind),
         messages: [
           { role: "system", content: system },
           { role: "user", content: prompt },
@@ -437,7 +442,13 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
     const output = json.choices?.[0]?.message?.content ?? "";
     const candidates = parseCandidates(output);
 
-    return { candidates, model, kind: data.kind };
+    return {
+      candidates,
+      model,
+      kind: data.kind,
+      sourcesRead: sources.map((s) => ({ label: s.label, url: s.url })),
+      sourcesSkipped: failures.map((f) => ({ label: f.label, reason: f.reason })),
+    };
   });
 
 const STOPWORDS = new Set([
