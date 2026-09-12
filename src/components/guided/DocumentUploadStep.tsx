@@ -209,10 +209,14 @@ export function DocumentUploadStep({
 
   return (
     <div className="space-y-4">
+      {/* Once something is attached, the description box and drop strip give way to the files and
+          the single "Find Matching Interest" action — the ask has already been made. */}
+      {docs.length === 0 && (
       <div className="space-y-1.5">
         <Label htmlFor="deal-search-prompt" className="text-xs font-medium">
-          Search Prompt
+          Search Prompt{reference ? ` — ${reference}` : ""}
         </Label>
+
         {/* One strip, split down the middle: description on the left, drop zone on the right. */}
         <div className="flex items-stretch gap-2 rounded-2xl border-2 border-border bg-background p-2 transition-colors focus-within:border-primary">
           <Textarea
