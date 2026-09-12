@@ -201,16 +201,16 @@ export function VerificationPanel({ transactionId, checks, title, description }:
                 </Badge>
 
                 {row && row.status === "in_progress" && row.provider_url && (
-                  <a
-                    href={row.provider_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => setSessionUrl(row.provider_url)}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setSessionUrl(row.provider_url);
+                      openProviderWindow(row.provider_url!);
+                    }}
                   >
-                    <Button size="sm" variant="outline">
-                      Continue
-                    </Button>
-                  </a>
+                    {popupRef.current && !popupRef.current.closed ? "Reopen window" : "Continue"}
+                  </Button>
                 )}
 
                 {row && (
@@ -247,11 +247,14 @@ export function VerificationPanel({ transactionId, checks, title, description }:
           <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
             <p className="text-xs text-muted-foreground">
               {blocked
-                ? "Your browser blocked the new tab. The verification page cannot be shown inside this window, so open it in its own tab:"
-                : "Verification page not showing? It cannot be displayed inside this window — open it in its own tab:"}
+                ? "Your browser blocked the verification window. It cannot be shown inside this page, so open it yourself:"
+                : "Verification in progress in its own window. Lost it? Reopen it here — it cannot be shown inside this page."}
             </p>
             <p className="break-all text-[11px] text-muted-foreground">{sessionUrl}</p>
             <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => openProviderWindow(sessionUrl)}>
+                Reopen window
+              </Button>
               <a href={sessionUrl} target="_blank" rel="noopener noreferrer">
                 <Button size="sm" variant="outline">
                   Open in a new tab
