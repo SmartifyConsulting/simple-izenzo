@@ -21,7 +21,7 @@ export function WorkspaceTaskbar() {
   if (windows.length === 0 || isMarketingPath(pathname)) return null;
 
   function activate(id: string, mode: string) {
-    if (mode === "minimized") setMode(id, "docked");
+    if (mode === "minimized") setMode(id, "maximized");
     void navigate({ to: "/live-deal-engine", search: id === "new" ? {} : { tx: id } });
   }
 
@@ -41,7 +41,7 @@ export function WorkspaceTaskbar() {
           >
             <button
               type="button"
-              className="max-w-[180px] truncate font-mono text-sm font-bold uppercase tracking-wide"
+              className="max-w-[180px] truncate font-sans text-sm font-bold uppercase tracking-wide"
               onClick={() => activate(w.id, w.mode)}
               title={w.label}
             >

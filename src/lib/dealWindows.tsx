@@ -94,7 +94,7 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
       const offset = current.length * 24;
       persist([
         ...current,
-        { id, label, mode: "docked", x: 80 + offset, y: 80 + offset },
+        { id, label, mode: "maximized", x: 80 + offset, y: 80 + offset },
       ]);
     },
     [persist],
@@ -116,7 +116,7 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
       const offset = current.length * 24;
       persist([
         ...current,
-        { id, label, mode: "docked", x: 80 + offset, y: 80 + offset },
+        { id, label, mode: "maximized", x: 80 + offset, y: 80 + offset },
       ]);
     },
     [persist],

@@ -50,7 +50,7 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
               <>
                 <Link to="/live-deal-engine">
                   <Button size="sm" className="rounded-full">
-                    View Live Workspace
+                    Live workspace
                   </Button>
                 </Link>
                 <ProfileAvatarMenu />
