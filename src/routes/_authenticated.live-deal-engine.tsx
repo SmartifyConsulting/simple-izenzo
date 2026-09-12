@@ -1023,7 +1023,7 @@ function LiveDealEngine() {
               (before any document is attached) or a bulleted list of what's been classified from
               the documents already uploaded. */}
           <div className="h-[calc(100vh-190px)] w-full overflow-y-auto rounded-3xl border border-border bg-card p-3 shadow-sm sm:p-5">
-          <p className="label-caps shrink-0 text-foreground">Live Workspace</p>
+          <p className="label-caps mb-3 shrink-0 text-foreground">Live Workspace</p>
           {/* Bidder details + AI summary come first — the very top of the workspace, before the
               reference header and anything else — so what was actually submitted is never buried
               behind the progress ribbon or the workflow ticks below it. The attachment(s), with a
@@ -1118,14 +1118,11 @@ function LiveDealEngine() {
                 </div>
               </div>
             ) : (
-              <p
-                className={cn(
-                  "label-caps text-foreground",
-                  draftReference && "font-mono text-base font-bold uppercase tracking-wide",
-                )}
-              >
-                {draftReference ?? "Live workspace"}
-              </p>
+              draftReference && (
+                <p className="label-caps font-mono text-base font-bold uppercase tracking-wide text-foreground">
+                  {draftReference}
+                </p>
+              )
             )}
 
           {/* No deal yet: shows the upload/search starting card. If a `seed` came from the
@@ -1179,7 +1176,7 @@ function LiveDealEngine() {
             <div className="mt-3 space-y-1.5">
               <div className="flex items-center gap-2 text-sm text-primary">
                 <CheckCircle2 className="h-4 w-4 shrink-0" />
-                Bid Creation
+                Bid Registration
               </div>
               <div className="flex items-center gap-2 text-sm text-primary">
                 <CheckCircle2 className="h-4 w-4 shrink-0" />
