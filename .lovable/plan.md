@@ -33,3 +33,6 @@ Your check passed, but the provider was told to send you to a signed-in page. Th
 - `startVerification`: `callbackUrl` becomes `${origin}/verify/complete?vid=${row.id}` instead of `${origin}/account/settings`.
 - The complete page polls that fn a few times (2s interval, ~30s cap), then shows the final state with a "Check again" button; on pass, a `Link` to `/live-deal-engine`.
 - `_authenticated.tsx` already polls `identity_verifications` every 4s, so the original tab closes the dialog on its own once the row flips to `passed` — no change needed there.
+- Popup launch: `VerificationPanel.onStart` keeps the click in the same task — open a blank `window.open("", "izenzo-verify", "popup,width=520,height=800")` synchronously, then set `win.location.href = res.url` once `startVerification` resolves, so no popup blocker fires. Keep a ref to the window for "Reopen window"; treat `win === null` as blocked and fall back to the existing link/copy block. On small viewports (`matchMedia("(max-width: 640px)")`) use a plain new tab.
+- `src/routes/verify.complete.tsx` calls `window.close()` after a pass when `window.opener` exists, otherwise shows the "Go to your workspace" button.
+- Embedding the provider in an iframe is not possible — it sends `X-Frame-Options`/frame-ancestors headers (the `ERR_BLOCKED_BY_RESPONSE` you saw), so no in-page dialog can host it.
