@@ -737,6 +737,7 @@ function SearchStep({ tx, reload }: Props) {
                   {[c.jurisdiction, c.sector].filter(Boolean).join(" · ")}
                 </p>
                 {c.rationale && <p className="mt-1 text-xs text-muted-foreground">{c.rationale}</p>}
+                <EvidenceLink flags={c.media_flags} />
               </li>
             ))}
           </ul>
