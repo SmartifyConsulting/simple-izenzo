@@ -18,7 +18,6 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import {
-  CanvasStart,
   CounterpartyRecord,
   InlineFrame,
   FLOWCHART_PREVIEW_TX,
@@ -1041,35 +1040,6 @@ function LiveDealEngine() {
                 {draftReference ?? "Live workspace"}
               </p>
             )}
-
-          {!activity && (
-            <div className="mt-4">
-              <CanvasStart
-                initialDirection={pendingDirection}
-                initialPrompt={seed}
-                onDraftReference={setDraftReference}
-                onCreated={(tx, recorded, seed) => {
-                  setPicking(false);
-                  setDirection(null);
-                  setPendingDirection(null);
-                  setDraftReference(null);
-                  setActivity(recorded);
-                  setDealTx(tx);
-                  setSeedPrompt(seed.prompt);
-                  setSeedFiles(seed.files);
-                  try {
-                    localStorage.setItem(ACTIVE_DEAL_KEY, JSON.stringify({ txId: tx.id, activity: recorded }));
-                  } catch {
-                    // Best-effort — resuming later just won't work if storage is unavailable.
-                  }
-                  // Stays on "documents" so the caller (this page) still treats it as such —
-                  // the workspace header above now owns showing the upload frame.
-                }}
-                onPickingChange={setPicking}
-                onDirectionChange={setDirection}
-              />
-            </div>
-          )}
 
           {panel === "matches" && (
             <MatchResultsPanel query={matchQuery} className="mt-4" />
