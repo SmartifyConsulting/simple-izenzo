@@ -5,7 +5,6 @@ import { Lock, ShieldCheck, UploadCloud, FileCheck2, Loader2, RotateCcw, Sparkle
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { SignInModal } from "@/components/auth/SignInModal";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -62,7 +61,15 @@ function bandOf(l: { verified_at: string | null; org_id: string | null }) {
  * actual matching engine. What it shows is real, live Responder data (same counterparties table
  * the Responder Directory reads), framed as an illustration of what a signed-in search returns.
  * Selecting a match is gated behind sign-up/sign-in — this is a preview, not a live workspace. */
-export function HeroMatchCard({ className }: { className?: string }) {
+export function HeroMatchCard({
+  className,
+  horizontal = false,
+}: {
+  className?: string;
+  /** Lays the Search Prompt and Upload files sections side by side instead of stacked — used
+   * when the card spans the full page width instead of sitting in a narrow sidebar column. */
+  horizontal?: boolean;
+}) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [prompt, setPrompt] = useState("");
   const [fileNames, setFileNames] = useState<string[]>([]);
@@ -112,9 +119,18 @@ export function HeroMatchCard({ className }: { className?: string }) {
   const canReset = canSearch || searching || searched;
 
   return (
-    <div className={cn("w-full rounded-2xl border border-border bg-card p-6 shadow-sm", className)}>
+    <div
+      className={cn(
+        "w-full rounded-2xl bg-gradient-to-r from-primary/50 via-fuchsia-400/40 to-cyan-400/50 p-px shadow-sm",
+        className,
+      )}
+    >
+    <div className="rounded-[calc(1rem-1px)] bg-card p-6">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-base font-medium tracking-tight text-foreground">
+        <h2 className="flex items-center gap-1.5 text-base font-medium tracking-tight text-foreground">
+          {!searched && (
+            <Sparkles className="h-4 w-4 shrink-0 animate-pulse text-primary" aria-hidden />
+          )}
           {searched ? "Top 5 matches" : "Find a match"}
         </h2>
         <div className="flex items-center gap-2">
@@ -139,88 +155,92 @@ export function HeroMatchCard({ className }: { className?: string }) {
 
       {!searched && !searching && (
         <>
-          <div className="mt-4 space-y-1.5">
-            <Label htmlFor="hero-search-prompt" className="text-xs font-medium text-foreground">
-              Search Prompt
-            </Label>
-            <p className="text-[11px] text-muted-foreground">
-              Describe what you're looking for — product, quantity, location, terms. Used together
-              with any files you add.
-            </p>
-            <Textarea
-              id="hero-search-prompt"
-              rows={3}
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              className="resize-none text-sm"
-            />
-          </div>
+          <div className={cn("mt-4", horizontal ? "grid grid-cols-1 gap-4 sm:grid-cols-2" : "space-y-4")}>
+            <div className="space-y-1.5">
+              <Label htmlFor="hero-search-prompt" className="text-xs font-medium text-foreground">
+                Search Prompt
+              </Label>
+              <p className="text-[11px] text-muted-foreground">
+                Describe what you're looking for — product, quantity, location, terms. Used
+                together with any files you add.
+              </p>
+              <Textarea
+                id="hero-search-prompt"
+                rows={horizontal ? 5 : 3}
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                className="resize-none text-sm"
+              />
+            </div>
 
-          <Label className="mt-4 block text-xs font-medium text-foreground">Upload files</Label>
-          <div
-            onClick={() => inputRef.current?.click()}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragOver(true);
-            }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragOver(false);
-              if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
-            }}
-            className={cn(
-              "mt-1.5 flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed p-6 text-center transition-colors",
-              dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
-            )}
-          >
-            {fileNames.length > 0 ? (
-              <>
-                <FileCheck2 className="h-5 w-5 text-success" />
-                <p className="text-sm font-medium text-foreground">
-                  {fileNames.length} file{fileNames.length === 1 ? "" : "s"} added
-                </p>
-                <p className="text-xs text-muted-foreground">Click, or drop more, to add another</p>
-              </>
-            ) : (
-              <>
-                <UploadCloud className="h-5 w-5 text-muted-foreground" />
-                <p className="text-sm font-medium text-foreground">Drop files here</p>
-                <p className="text-xs text-muted-foreground">Pitch deck, proposal, or any file — multiple OK</p>
-              </>
-            )}
-            <input
-              ref={inputRef}
-              type="file"
-              multiple
-              className="hidden"
-              onChange={(e) => {
-                if (e.target.files?.length) addFiles(e.target.files);
-                e.target.value = "";
-              }}
-            />
-          </div>
+            <div className="space-y-1.5">
+              <Label className="block text-xs font-medium text-foreground">Upload files</Label>
+              <div
+                onClick={() => inputRef.current?.click()}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOver(true);
+                }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragOver(false);
+                  if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
+                }}
+                className={cn(
+                  "flex h-full min-h-[96px] cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed p-6 text-center transition-colors",
+                  dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
+                )}
+              >
+                {fileNames.length > 0 ? (
+                  <>
+                    <FileCheck2 className="h-5 w-5 text-success" />
+                    <p className="text-sm font-medium text-foreground">
+                      {fileNames.length} file{fileNames.length === 1 ? "" : "s"} added
+                    </p>
+                    <p className="text-xs text-muted-foreground">Click, or drop more, to add another</p>
+                  </>
+                ) : (
+                  <>
+                    <UploadCloud className="h-5 w-5 text-muted-foreground" />
+                    <p className="text-sm font-medium text-foreground">Drop files here</p>
+                    <p className="text-xs text-muted-foreground">Pitch deck, proposal, or any file — multiple OK</p>
+                  </>
+                )}
+                <input
+                  ref={inputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files?.length) addFiles(e.target.files);
+                    e.target.value = "";
+                  }}
+                />
+              </div>
 
-          {fileNames.length > 0 && (
-            <ul className="mt-3 space-y-1.5">
-              {fileNames.map((name) => (
-                <li
-                  key={name}
-                  className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-1.5 text-xs"
-                >
-                  <span className="min-w-0 flex-1 break-words text-foreground">{name}</span>
-                  <button
-                    type="button"
-                    onClick={() => removeFile(name)}
-                    aria-label={`Remove ${name}`}
-                    className="shrink-0 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+              {fileNames.length > 0 && (
+                <ul className="space-y-1.5">
+                  {fileNames.map((name) => (
+                    <li
+                      key={name}
+                      className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-1.5 text-xs"
+                    >
+                      <span className="min-w-0 flex-1 break-words text-foreground">{name}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeFile(name)}
+                        aria-label={`Remove ${name}`}
+                        className="shrink-0 text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
 
           <Button
             className="mt-5 w-full rounded-full text-base font-bold"
@@ -309,16 +329,9 @@ export function HeroMatchCard({ className }: { className?: string }) {
               <Sparkles className="h-4 w-4" /> Sign up to unlock matches
             </Button>
           </Link>
-          <p className="mt-3 text-center text-[11px] text-muted-foreground">
-            Already have an account?{" "}
-            <SignInModal>
-              <button type="button" className="font-medium text-primary hover:underline">
-                Sign in with facial recognition
-              </button>
-            </SignInModal>
-          </p>
         </>
       )}
+    </div>
     </div>
   );
 }

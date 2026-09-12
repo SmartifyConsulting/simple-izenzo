@@ -2,9 +2,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HeroMatchCard } from "@/components/marketing/HeroMatchCard";
-import { SignInModal } from "@/components/auth/SignInModal";
-import { ThemeToggle } from "@/components/guided/ThemeToggle";
-import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/alpha-bravo/")({
   head: () => ({
@@ -54,8 +51,6 @@ const STAGES = [
 ];
 
 function AlphaBravoHome() {
-  const { user } = useAuth();
-
   return (
     <section className="mx-auto max-w-6xl px-5 py-12 sm:py-16">
       <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
@@ -65,53 +60,28 @@ function AlphaBravoHome() {
         Pre-vetted · Governed marketplace
       </p>
 
-      <div className="mt-6 grid gap-12 lg:grid-cols-[minmax(0,1fr)_396px] lg:items-start">
-        <div className="min-w-0">
-          <h1 className="max-w-3xl text-5xl leading-[1.05] tracking-tight text-foreground sm:text-6xl">
-            Find the right Trade
-            <br />
-            in ~5 minutes.
-          </h1>
-          <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground">
-            Post your opportunity brief and get matched with verified Responders — fit scores,
-            verified contacts, and ready-to-send outreach, all under one cryptographic record.
-          </p>
-          <p className="mt-6 text-sm text-muted-foreground">No subscriptions, pay as you go.</p>
-          <div className="mt-8">
-            <Link to="/alpha-bravo/trades">
-              <Button size="lg" variant="outline" className="gap-1.5 rounded-full">
-                See how matching works <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
-          </div>
+      <div className="mt-6 max-w-3xl">
+        <h1 className="text-5xl leading-[1.05] tracking-tight text-foreground sm:text-6xl">
+          Find the right Trade
+          <br />
+          in ~5 minutes.
+        </h1>
+        <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground">
+          Post your opportunity brief and get matched with verified Responders — fit scores,
+          verified contacts, and ready-to-send outreach, all under one cryptographic record.
+        </p>
+        <p className="mt-6 text-sm text-muted-foreground">No subscriptions, pay as you go.</p>
+        <div className="mt-8">
+          <Link to="/alpha-bravo/trades">
+            <Button size="lg" variant="outline" className="gap-1.5 rounded-full">
+              See how matching works <ArrowRight className="h-4 w-4" />
+            </Button>
+          </Link>
         </div>
+      </div>
 
-        <div className="min-w-0">
-          {!user && (
-            <div className="mb-3 flex items-center justify-end gap-2">
-              <div className="flex items-center gap-1 rounded-full border border-border p-1">
-                <SignInModal defaultTab="signin">
-                  <button
-                    type="button"
-                    className="rounded-full px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-                  >
-                    Sign In
-                  </button>
-                </SignInModal>
-                <SignInModal defaultTab="signup">
-                  <button
-                    type="button"
-                    className="rounded-full px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-                  >
-                    Sign Up
-                  </button>
-                </SignInModal>
-              </div>
-              <ThemeToggle />
-            </div>
-          )}
-          <HeroMatchCard />
-        </div>
+      <div className="mt-10 w-full">
+        <HeroMatchCard horizontal />
       </div>
 
       <p className="mt-10 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">

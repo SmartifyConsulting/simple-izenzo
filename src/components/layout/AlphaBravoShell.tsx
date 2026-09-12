@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { applyCurrentStylePreset } from "@/lib/stylePreset";
@@ -13,7 +13,7 @@ const NAV = [
   { to: "/alpha-bravo/how-it-works", label: "How It Works" },
   { to: "/alpha-bravo/intelligence-fabric", label: "The Intelligence Fabric" },
   { to: "/alpha-bravo/pricing", label: "Pricing" },
-  { to: "/alpha-bravo/about", label: "About" },
+  { to: "/alpha-bravo/about", label: "About Izenzo" },
 ] as const;
 
 /** Alpha-Bravo's own header/nav/footer — a demo re-skin of the Izenzo marketing site,
@@ -22,6 +22,10 @@ const NAV = [
  * Izenzo marketing site — this only changes what the pages look like and say. */
 export function AlphaBravoShell({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  // The home page shows a Sign In/Sign Up toggle instead of the plain "Sign in" button used
+  // everywhere else, so a visitor sees both options are open to them right away.
+  const isHome = pathname === "/alpha-bravo" || pathname === "/alpha-bravo/";
 
   useEffect(() => {
     applyCurrentStylePreset();
@@ -30,24 +34,31 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur">
-        <div className="relative mx-auto flex h-16 max-w-6xl items-center px-5">
+        <div className="mx-auto flex h-16 max-w-6xl items-center px-5">
           <Link to="/alpha-bravo" className="flex shrink-0 items-center gap-1.5">
             <Logo />
           </Link>
 
-          <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-5 whitespace-nowrap text-sm text-muted-foreground lg:flex">
+          <nav className="ml-auto hidden items-center gap-2 whitespace-nowrap text-sm text-muted-foreground lg:flex">
             {NAV.map((item) => (
-              <Link key={item.to} to={item.to} className="hover:text-foreground">
+              <Link
+                key={item.to}
+                to={item.to}
+                className="rounded-full border border-transparent px-3 py-1.5 transition-colors hover:border-border hover:text-foreground"
+              >
                 {item.label}
               </Link>
             ))}
 
-            <Link to="/alpha-bravo/trades" className="hover:text-foreground">
+            <Link
+              to="/alpha-bravo/trades"
+              className="rounded-full border border-transparent px-3 py-1.5 transition-colors hover:border-border hover:text-foreground"
+            >
               Trades
             </Link>
           </nav>
 
-          <div className="ml-auto flex shrink-0 items-center gap-3">
+          <div className="ml-6 flex shrink-0 items-center gap-3 lg:ml-3">
             <ThemeToggle />
             {user ? (
               <>
@@ -58,6 +69,25 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
                 </Link>
                 <ProfileAvatarMenu />
               </>
+            ) : isHome ? (
+              <div className="flex items-center gap-1 rounded-full border border-border p-1">
+                <SignInModal defaultTab="signin">
+                  <button
+                    type="button"
+                    className="rounded-full px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                  >
+                    Sign In
+                  </button>
+                </SignInModal>
+                <SignInModal defaultTab="signup">
+                  <button
+                    type="button"
+                    className="rounded-full px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                  >
+                    Sign Up
+                  </button>
+                </SignInModal>
+              </div>
             ) : (
               <SignInModal>
                 <Button size="sm" variant="outline" className="rounded-full">
