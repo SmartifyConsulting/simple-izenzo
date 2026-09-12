@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowUp, Lock, Plus, ShieldCheck, FileCheck2, Loader2, RotateCcw, Sparkles, X } from "lucide-react";
+import { ArrowUp, ShieldCheck, FileCheck2, Loader2, RotateCcw, Sparkles, UploadCloud, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
