@@ -206,7 +206,7 @@ function OpenDealsPicker({ currentId }: { currentId: string | null }) {
 /** The Live Deal Engine is the one screen users work from — the workflow canvas itself, never a
  * separate per-deal detail page. */
 function LiveDealEngine() {
-  const { tx: txParam, popout } = Route.useSearch();
+  const { tx: txParam, popout, panel, q: matchQuery } = Route.useSearch();
   const [picking, setPicking] = useState(false);
   const [direction, setDirection] = useState<"bid" | "offer" | null>(null);
   // Reserved for pre-selecting a bid/offer direction before the Workspace form opens; the
