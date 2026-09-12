@@ -58,7 +58,7 @@ function HowItWorks() {
       </div>
 
       <div className="mt-12 grid gap-12 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <ol className="space-y-10">
+        <ol className="space-y-7">
           {SPINE.map((stage, i) => {
             const copy = STAGE_COPY[stage.key];
             return (
