@@ -14,7 +14,7 @@ export const summarizeBidDocuments = createServerFn({ method: "POST" })
 
     const { data: tx, error: txErr } = await supabase
       .from("transactions")
-      .select("id, title")
+      .select("id, title, commodity, quantity, unit, price, currency, incoterms, jurisdiction")
       .eq("id", data.transactionId)
       .maybeSingle();
     if (txErr) throw new Error(txErr.message);
