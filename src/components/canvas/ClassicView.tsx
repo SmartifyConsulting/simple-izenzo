@@ -149,7 +149,11 @@ function SubRow({
         itemClasses(state, item.isEntry),
       )}
     >
-      {Icon && <Icon className="h-3.5 w-3.5 shrink-0" />}
+      {state === "done" ? (
+        <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+      ) : (
+        Icon && <Icon className="h-3.5 w-3.5 shrink-0" />
+      )}
       <span className="min-w-0 flex-1 truncate">{item.label}</span>
       {item.sub && (
         <span className="shrink-0 truncate text-[9px] font-semibold uppercase tracking-wide text-[#C1653D]">
@@ -199,10 +203,14 @@ export function ClassicView({
   readOnly,
   onRegister,
   onOpenStep,
+  overrideStates,
 }: {
   tx: Transaction;
   reload: () => void;
   readOnly?: boolean;
+  /** Lets the page say which item is genuinely current right now (keyed by SubItem.key) — the
+   * stored stage/step alone can't tell "searching" from "results are in". */
+  overrideStates?: Record<string, NodeState>;
   /** Fires when "Create a bid or an offer" is clicked, before any real deal exists — the caller
    * opens the form that actually records it, where the direction itself is picked. */
   onRegister?: () => void;
