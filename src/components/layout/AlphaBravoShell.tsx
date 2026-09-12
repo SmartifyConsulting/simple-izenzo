@@ -9,10 +9,10 @@ import { Logo } from "@/components/Logo";
 
 const NAV = [
   { to: "/live-deal-engine", label: "Live Workspace" },
-  { to: "/alpha-bravo/about", label: "About" },
   { to: "/alpha-bravo/how-it-works", label: "How It Works" },
   { to: "/alpha-bravo/intelligence-fabric", label: "The Intelligence Fabric" },
   { to: "/alpha-bravo/pricing", label: "Pricing" },
+  { to: "/alpha-bravo/about", label: "About" },
 ] as const;
 
 /** Alpha-Bravo's own header/nav/footer — a demo re-skin of the Izenzo marketing site,
