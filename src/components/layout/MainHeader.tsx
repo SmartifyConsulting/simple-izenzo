@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
  * a different set of items to any other. */
 const NAV = [
   { to: "/alpha-bravo", label: "Home" },
+  { to: "/live-deal-engine", label: "Live Workspace" },
   { to: "/alpha-bravo/about", label: "About Izenzo" },
   { to: "/alpha-bravo/how-it-works", label: "How It Works" },
   { to: "/alpha-bravo/intelligence-fabric", label: "The Intelligence Fabric" },
