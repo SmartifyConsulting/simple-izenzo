@@ -1,109 +1,13 @@
 import { useEffect } from "react";
-import { Link } from "@tanstack/react-router";
-import { ArrowLeft, BarChart3, ChevronDown, Mail, Tag } from "lucide-react";
-import { Logo } from "@/components/Logo";
-import { Button } from "@/components/ui/button";
-import { SearchButton } from "@/components/layout/SearchButton";
-import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
-import { ThemeToggle } from "@/components/guided/ThemeToggle";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useAuth } from "@/lib/auth";
-import { cn } from "@/lib/utils";
+import { MainHeader } from "@/components/layout/MainHeader";
 import { applyAppSkin } from "@/lib/appSkin";
 
-/** The site header, shared by the home page, every marketing/content page (Glossary, Contact
- * Us…) and, once signed in, the same nav carries Search/Inbox/Profile — same as the app shell. */
-export function SiteHeader({
-  logoClassName,
-  containerClassName,
-}: {
-  logoClassName?: string | undefined;
-  containerClassName?: string | undefined;
-}) {
-  const { user } = useAuth();
-
+/** Kept as a thin wrapper so the older content pages (Pricing, Glossary, Contact, Privacy,
+ * Terms, Status, product and solution pages) render the exact same menu as every other screen. */
+export function SiteHeader(_props: { logoClassName?: string | undefined; containerClassName?: string | undefined } = {}) {
   useEffect(() => {
     applyAppSkin("izenzo");
   }, []);
 
-  return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur">
-      <div className={cn("mx-auto flex h-14 max-w-6xl items-center gap-8 px-5", containerClassName)}>
-        <Link to={user ? "/live-deal-engine" : "/"}>
-          <Logo className={logoClassName} />
-        </Link>
-
-        {user ? (
-          <div className="ml-auto flex shrink-0 items-center gap-3">
-            <a
-              href="/alpha-bravo"
-              className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" /> Home
-            </a>
-            <SearchButton />
-            <nav className="flex shrink-0 items-center gap-4 text-sm font-medium text-muted-foreground">
-              <a href="/pricing" className="flex items-center gap-1.5 hover:text-foreground">
-                <Tag className="h-3.5 w-3.5" />
-                Pricing
-              </a>
-              {/* Developer/API surfaces hidden for now — see .hidden-surfaces/developer. */}
-              <DropdownMenu>
-                <DropdownMenuTrigger className="flex items-center gap-1.5 outline-none hover:text-foreground">
-                  <BarChart3 className="h-3.5 w-3.5" />
-                  Report
-                  <ChevronDown className="h-3.5 w-3.5" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <DropdownMenuItem asChild>
-                    <Link to="/trades">All Trades</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/credits" search={{ returnTo: undefined }}>
-                      Token Management
-                    </Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </nav>
-            <Link
-              to="/inbox"
-              title="Inbox"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground hover:text-foreground"
-            >
-              <Mail className="h-4 w-4" />
-            </Link>
-            <ThemeToggle className="h-8 w-8" />
-            <ProfileAvatarMenu />
-          </div>
-        ) : (
-          <div className="ml-auto flex shrink-0 items-center gap-4">
-            <a
-              href="/alpha-bravo"
-              className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" /> Home
-            </a>
-            <Link
-              to="/auth"
-              search={{ mode: "signin", next: undefined }}
-              className="text-sm font-medium text-muted-foreground hover:text-foreground"
-            >
-              Log In
-            </Link>
-            <Link to="/auth" search={{ mode: "signup", next: undefined }}>
-              <Button size="sm" className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90">
-                Create Account →
-              </Button>
-            </Link>
-          </div>
-        )}
-      </div>
-    </header>
-  );
+  return <MainHeader />;
 }
