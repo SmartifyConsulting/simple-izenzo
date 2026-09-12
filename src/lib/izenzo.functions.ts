@@ -257,6 +257,64 @@ function parseCandidates(raw: string): CandidateResult[] {
   }
 }
 
+type ScoreComponent = { label: string; points: number; max: number; note: string };
+
+/** Turns a candidate into an explainable percentage. The model's own read is only one of five
+ * inputs, so the number can always be broken down for the person deciding — an opaque LLM score
+ * is not something anyone can act on. */
+function scoreCandidate(
+  c: CandidateResult,
+  ctx: { subject: string; region: string | null; verified: boolean },
+): { total: number; components: ScoreComponent[] } {
+  const wanted = keywords(ctx.subject);
+  const theirs = keywords([c.name, c.sector ?? "", c.rationale ?? ""].join(" "));
+  let hits = 0;
+  for (const w of wanted) if (theirs.has(w)) hits++;
+  const fit = wanted.size ? Math.round((hits / wanted.size) * 30) : 0;
+
+  const region = (ctx.region ?? "").trim().toLowerCase();
+  const where = (c.jurisdiction ?? "").trim().toLowerCase();
+  let place = 10;
+  let placeNote = "No location on record";
+  if (region && where) {
+    const same = where.includes(region) || region.includes(where);
+    place = same ? 20 : 4;
+    placeNote = same ? `Located in ${c.jurisdiction}` : `${c.jurisdiction}, not ${ctx.region}`;
+  } else if (where) {
+    place = 14;
+    placeNote = `Located in ${c.jurisdiction}`;
+  }
+
+  const evidence = c.sourceUrl ? 20 : 6;
+  const verified = ctx.verified ? 15 : 0;
+  const read = Math.round(((c.score ?? 50) / 100) * 15);
+
+  const components: ScoreComponent[] = [
+    {
+      label: "What they trade",
+      points: fit,
+      max: 30,
+      note: hits > 0 ? `${hits} of ${wanted.size} search terms appear on their listing` : "No search terms matched",
+    },
+    { label: "Where they are", points: place, max: 20, note: placeNote },
+    {
+      label: "Evidence",
+      points: evidence,
+      max: 20,
+      note: c.sourceUrl ? "Found on a real page we can open" : "No page recorded",
+    },
+    {
+      label: "Verified on Izenzo",
+      points: verified,
+      max: 15,
+      note: ctx.verified ? "Identity confirmed through the app" : "Not verified through the app yet",
+    },
+    { label: "Izenzo AI read", points: read, max: 15, note: c.rationale ?? "No note" },
+  ];
+
+  return { total: components.reduce((sum, k) => sum + k.points, 0), components };
+}
+
 /** Pulls the searchable subject out of a document summary when nobody typed a commodity — the
  * first substantial line of the bullet summary, stripped of bullet marks and filler, capped so the
  * web query stays a query rather than a paragraph. */
