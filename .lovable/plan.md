@@ -47,3 +47,30 @@
   lists; tier badges keep saying AI / AI+.
 - Other AI calls (document summaries, org brief, outreach drafting, AI proposal) stay on their
   current models — this change is scoped to searching.
+
+## Landing-page match results: five, then an ellipsis
+
+- Drop the word "teaser" everywhere in the app's wording. The match card on the landing page says
+  how many matches were found and that the top five are shown, with no marketing-speak.
+- Show exactly five result rows. Below them, an ellipsis control ("…", labelled "Show all matches"
+  for screen readers) appears whenever there are more than five.
+- Clicking the ellipsis takes the visitor to the workspace split view with the full result list in
+  the right-hand panel — the same panel the deal workflow uses, so results and workflow sit side by
+  side.
+- Engaging with anything in that panel — opening a record, contacting, shortlisting — requires an
+  account: a visitor who is not signed in is sent to sign up, or to sign in with facial
+  recognition, and lands back on the same results panel afterwards.
+
+### Technical detail
+
+- `src/components/marketing/HeroMatchCard.tsx`: remove the "teaser" copy, cap the rendered list at
+  five, and add the ellipsis button. It links to `/live-deal-engine` with a search param carrying
+  the visitor's query/role (e.g. `?panel=matches&q=…&role=…`).
+- `src/routes/_authenticated.live-deal-engine.tsx`: read that param and render the full match list
+  in the right panel (left panel for the Offer/mirrored layout), reusing the existing results list
+  component rather than a new one.
+- The route already sits under `_authenticated`, so an unauthenticated visitor is redirected to
+  `/auth` with `next` set to the same URL, and the existing facial-recognition sign-in stays the
+  sign-in path. Blurred names and locks remain only for the pre-sign-in landing card.
+- Rename the unrelated `teaser` field on insight articles (`src/lib/alphaBravoInsights.ts` and
+  `alpha-bravo.about.$slug.tsx`) to `summary` so the word disappears from the codebase too.
