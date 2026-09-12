@@ -6,8 +6,12 @@ import { FileCheck2, Loader2, UploadCloud, IdCard, FileText } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { classifyDocument } from "@/lib/izenzo.functions";
+import { summarizeBidDocuments } from "@/lib/docSummary.functions";
 import { advance, fingerprintOf, recordEvent, shortHash } from "@/lib/tx";
 import { cn } from "@/lib/utils";
+
+/** Photos are the ID capture — only one is allowed per deal. */
+const IMAGE_NAME = /\.(jpe?g|png|webp|gif|heic|heif)$/i;
 
 const DOC_TYPE_LABEL: Record<string, string> = {
   identity: "ID document",
@@ -39,9 +43,11 @@ export function DocumentUploadStep({
 }) {
   const qc = useQueryClient();
   const classify = useServerFn(classifyDocument);
+  const summarize = useServerFn(summarizeBidDocuments);
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [reading, setReading] = useState(false);
 
   const { data: docs = [] } = useQuery({
     queryKey: ["documents", transactionId],
@@ -161,13 +167,19 @@ export function DocumentUploadStep({
           dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
         )}
       >
-        {uploading ? (
+        {uploading || reading ? (
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
         ) : (
           <UploadCloud className="h-6 w-6 text-muted-foreground" />
         )}
-        <p className="text-sm font-medium">Drag and drop ID or deal documents here</p>
-        <p className="text-xs text-muted-foreground">or click to browse — AI determines the document type</p>
+        <p className="text-sm font-medium">
+          {reading ? "Reading your documents…" : "Drag and drop ID or deal documents here"}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {reading
+            ? "Pulling out the ask, quantities, prices and terms"
+            : "One photo of your ID, plus any written documents (PDF, Word, Excel, CSV, text)"}
+        </p>
         <input
           ref={inputRef}
           type="file"
@@ -202,7 +214,7 @@ export function DocumentUploadStep({
       )}
 
       {!autoAdvance && (
-        <Button className="w-full" disabled={docs.length === 0 || uploading} onClick={next}>
+        <Button className="w-full" disabled={docs.length === 0 || uploading || reading} onClick={next}>
           Next
         </Button>
       )}
