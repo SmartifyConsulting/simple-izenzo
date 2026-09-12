@@ -19,6 +19,13 @@ Your check passed, but the provider was told to send you to a signed-in page. Th
    - The page asks the provider directly for the outcome, so the result is saved even if the provider's automatic notification is missing or misconfigured.
    - If the provider cannot be reached, the page says so and offers a retry rather than sitting blank.
 
+4. Opening the check without leaving the app
+   - The provider deliberately refuses to be displayed inside another site, so it can never appear embedded in your page. What it can do is open cleanly in its own window.
+   - Pressing Start now opens a proper popup window sized for the check, launched directly from your click so browsers don't block it, with the app still open behind it.
+   - While it is open the app shows a live "Verification in progress" state with a "Reopen window" button, so a closed or lost window is one click away.
+   - When the check finishes, that window lands on the completion page above and closes itself, and the app behind it updates on its own — no copying links, no hunting for tabs.
+   - The copy-link fallback stays for the rare case a browser refuses the popup, and on a phone it simply opens in a new tab instead.
+
 ## Technical notes
 
 - New public route `src/routes/verify.complete.tsx` reading `?vid=<verification id>`; no auth required, so it renders in a fresh tab.
