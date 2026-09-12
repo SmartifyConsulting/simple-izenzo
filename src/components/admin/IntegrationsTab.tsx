@@ -266,6 +266,9 @@ function ProviderCard({
 
   const configured = Boolean(row);
   const archived = config["archived"] === "true";
+  const savedFieldCount = provider.fields.filter((f) =>
+    f.secret ? Boolean(row?.maskedSecrets[f.key]) : Boolean((config[f.key] ?? "").trim()),
+  ).length;
 
   async function onSave() {
     setBusy("save");
@@ -367,6 +370,9 @@ function ProviderCard({
             {archived && (
               <Badge variant="outline" className="text-[10px] text-muted-foreground">Archived</Badge>
             )}
+            <span className="text-[10px] text-muted-foreground">
+              {savedFieldCount}/{provider.fields.length} settings saved
+            </span>
           </div>
           {!expanded && <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{provider.summary}</p>}
         </div>
