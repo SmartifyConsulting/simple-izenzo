@@ -20,7 +20,7 @@ export function MatchResultsPanel({ query, className }: { query?: string | undef
     queryFn: async () => {
       let builder = supabase
         .from("counterparties")
-        .select("id, name, sector, jurisdiction, rating_band, score")
+        .select("id, name, sector, jurisdiction, rating_band, score, rationale, media_flags")
         .order("rating_computed_at", { ascending: false })
         .limit(50);
       if (q) builder = builder.or(`name.ilike.%${q}%,sector.ilike.%${q}%`);
