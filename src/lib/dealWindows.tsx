@@ -133,7 +133,16 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
         return;
       }
       popped.current.delete(id);
-      persist(current.map((win) => (win.id === id ? { ...win, mode } : win)));
+      // Only one workspace is ever open (maximized or docked) at a time — bringing one forward
+      // always minimizes every other one, so a minimized tab never has any on-screen footprint to
+      // overlap with whatever's actually open.
+      const opening = mode === "maximized" || mode === "docked";
+      persist(
+        current.map((win) => {
+          if (win.id === id) return { ...win, mode };
+          return opening && win.mode !== "minimized" ? { ...win, mode: "minimized" } : win;
+        }),
+      );
     },
     [persist],
   );

@@ -13,7 +13,6 @@ import {
   Minus,
   Move,
   Paperclip,
-  Search,
   X as XIcon,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
@@ -117,7 +116,7 @@ const ACTIVE_DEAL_KEY = "izenzo:active-deal";
 // keeping, but that placeholder shouldn't surface as if it were a real deal name in this picker.
 const GENERIC_TITLES = new Set(["New Bid", "New Offer"]);
 
-function OpenDealsPicker({ currentId }: { currentId: string | null }) {
+function OpenDealsPicker({ currentId, hasAttachment }: { currentId: string | null; hasAttachment?: boolean }) {
   const { org } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -171,7 +170,7 @@ function OpenDealsPicker({ currentId }: { currentId: string | null }) {
           aria-expanded={open}
           className="h-9 w-[280px] justify-start gap-2 text-[13px] font-normal"
         >
-          <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          {hasAttachment && <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
           {selected ? (
             <span className="min-w-0 truncate">
               <span className="font-mono font-semibold">{selected.reference}</span>
@@ -962,7 +961,7 @@ function LiveDealEngine() {
       )}
 
       <div className="mb-3 flex items-center justify-end gap-3">
-        <OpenDealsPicker currentId={dealTx?.id ?? null} />
+        <OpenDealsPicker currentId={dealTx?.id ?? null} hasAttachment={workspaceDocs.length > 0} />
       </div>
 
       {/* When several workspaces are open, the pair reads as one floating card sitting above the
@@ -1011,8 +1010,68 @@ function LiveDealEngine() {
               soloWorkspace ? "shadow-sm" : "shadow-2xl",
             )}
           >
+          {/* Bidder details + AI summary come first — the very top of the workspace, before the
+              reference header and anything else — so what was actually submitted is never buried
+              behind the progress ribbon or the workflow ticks below it. The attachment(s), with a
+              download link, live here too, right after the summary. */}
+          {activity && dealTx && (
+            <div className="glass-node space-y-2 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="label-caps text-muted-foreground">Bidder details &amp; AI summary</p>
+                <SubmitterIdentity orgId={dealTx.org_id} createdBy={(dealTx as unknown as { created_by?: string | null }).created_by ?? null} />
+              </div>
+              {dealTx.created_at && (
+                <p className="text-xs text-muted-foreground">
+                  Registered {new Date(dealTx.created_at).toLocaleDateString(undefined, {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </p>
+              )}
+              {documentSummary ? (
+                <ul className="mt-1 list-disc space-y-1 pl-4 text-sm leading-relaxed text-foreground">
+                  {documentSummary
+                    .split("\n")
+                    .map((line) => line.replace(/^[-•*]\s*/, "").trim())
+                    .filter(Boolean)
+                    .map((line, i) => <li key={i}>{highlightKeyTerms(line)}</li>)}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {workspaceDocs.length === 0
+                    ? "The AI summary appears here once a document is uploaded."
+                    : "Reading the uploaded document…"}
+                </p>
+              )}
+              {attachments.length > 0 && (
+                <ul className="mt-2 space-y-1 border-t border-border pt-2">
+                  {attachments.map((a, i) => (
+                    <li key={i} className="flex items-center gap-2 text-sm">
+                      <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      <span className="min-w-0 flex-1 truncate">{a.name}</span>
+                      <button
+                        type="button"
+                        disabled={!a.path}
+                        onClick={() => downloadAttachment(a)}
+                        title={
+                          a.path
+                            ? `Download ${a.name}`
+                            : "No stored copy — this file was recorded before uploads were kept"
+                        }
+                        className="shrink-0 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
             {dealTx ? (
-              <div className="flex items-start justify-between gap-4">
+              <div className="mt-4 flex items-start justify-between gap-4">
                 <p className="label-caps shrink-0 font-mono text-base font-bold uppercase tracking-wide text-foreground">
                   {dealTx.reference || activity?.reference || fallbackReference(dealTx.id, activity?.direction ?? "bid")}
                 </p>
@@ -1089,42 +1148,6 @@ function LiveDealEngine() {
                 onPickingChange={setPicking}
                 onDirectionChange={setDirection}
               />
-            </div>
-          )}
-
-          {/* Bidder details + AI summary come first, right under the header — before anything
-              else in the workspace — so what was actually submitted is never buried behind the
-              progress ribbon or the workflow ticks below it. */}
-          {activity && dealTx && (
-            <div className="glass-node mt-4 space-y-2 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="label-caps text-muted-foreground">Bidder details &amp; AI summary</p>
-                <SubmitterIdentity orgId={dealTx.org_id} createdBy={(dealTx as unknown as { created_by?: string | null }).created_by ?? null} />
-              </div>
-              {dealTx.created_at && (
-                <p className="text-xs text-muted-foreground">
-                  Registered {new Date(dealTx.created_at).toLocaleDateString(undefined, {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </p>
-              )}
-              {documentSummary ? (
-                <ul className="mt-1 list-disc space-y-1 pl-4 text-sm leading-relaxed text-foreground">
-                  {documentSummary
-                    .split("\n")
-                    .map((line) => line.replace(/^[-•*]\s*/, "").trim())
-                    .filter(Boolean)
-                    .map((line, i) => <li key={i}>{highlightKeyTerms(line)}</li>)}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  {workspaceDocs.length === 0
-                    ? "The AI summary appears here once a document is uploaded."
-                    : "Reading the uploaded document…"}
-                </p>
-              )}
             </div>
           )}
 
@@ -1332,7 +1355,9 @@ function LiveDealEngine() {
   if (windowMode === "maximized") {
     return (
       <AppShell wide compactFooter>
-        <div className="fixed inset-4 z-50 overflow-y-auto rounded-2xl border border-border bg-background p-4 shadow-2xl">
+        {/* bottom-14 (not inset-4 on every side) leaves room for the taskbar of open deal tabs
+            fixed to the viewport bottom, so a maximized workspace never draws over it. */}
+        <div className="fixed inset-x-4 top-4 bottom-14 z-30 overflow-y-auto rounded-2xl border border-border bg-background p-4 shadow-2xl">
           {workspaceContent}
         </div>
       </AppShell>
@@ -1342,7 +1367,7 @@ function LiveDealEngine() {
   return (
     <AppShell wide compactFooter>
       <div
-        className="fixed z-40 w-[min(1040px,calc(100vw-2rem))] rounded-2xl"
+        className="fixed z-30 w-[min(1040px,calc(100vw-2rem))] rounded-2xl"
         style={{ left: posX, top: posY }}
       >
         {workspaceContent}

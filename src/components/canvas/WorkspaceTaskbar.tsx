@@ -37,7 +37,7 @@ export function WorkspaceTaskbar() {
             className={cn(
               "group relative flex shrink-0 items-center gap-2 rounded-t-md border border-b-0 px-3 py-1.5 text-xs font-medium transition-colors",
               active
-                ? "border-border bg-card text-foreground shadow-[0_-1px_0_0_var(--card)_inset]"
+                ? "border-[#F59E0B] bg-[#F59E0B]/15 text-foreground shadow-[0_-1px_0_0_var(--card)_inset]"
                 : "border-transparent bg-transparent text-muted-foreground hover:bg-card/50 hover:text-foreground",
             )}
           >
@@ -57,7 +57,7 @@ export function WorkspaceTaskbar() {
               }}
             />
             {active && (
-              <span className="absolute inset-x-0 -top-px h-0.5 rounded-t bg-primary" aria-hidden />
+              <span className="absolute inset-x-0 -top-px h-0.5 rounded-t bg-[#F59E0B]" aria-hidden />
             )}
           </div>
         );
