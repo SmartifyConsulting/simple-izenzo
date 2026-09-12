@@ -385,6 +385,36 @@ export const searchCounterparties = createServerFn({ method: "POST" })
     const { data: inserted, error } = await supabase.from("counterparties").insert(rows).select();
     if (error) throw error;
 
+    // Publish each web-found name to the public Responder directory as an unclaimed listing,
+    // keeping the page it was found on as evidence. Private per-bid rows above stay untouched.
+    // Names already listed are skipped, so an existing (or claimed) listing is never overwritten.
+    try {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: already } = await supabaseAdmin
+        .from("responder_listings")
+        .select("name")
+        .in("name", candidates.map((c) => c.name));
+      const taken = new Set((already ?? []).map((r) => r.name.toLowerCase()));
+      const fresh = candidates.filter((c) => !taken.has(c.name.toLowerCase()));
+      if (fresh.length > 0) {
+        await supabaseAdmin.from("responder_listings").insert(
+          fresh.map((c) => ({
+            name: c.name,
+            sector: c.sector ?? null,
+            jurisdiction: c.jurisdiction ?? null,
+            summary: c.rationale ?? null,
+            source: "web_search",
+            source_url: c.sourceUrl ?? null,
+            published: true,
+          })),
+        );
+      }
+    } catch {
+      // Directory publishing must never break the search the person is waiting on.
+    }
+
+
+
     return {
       candidates: inserted ?? [],
       model,
