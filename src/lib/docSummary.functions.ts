@@ -104,17 +104,22 @@ export const summarizeBidDocuments = createServerFn({ method: "POST" })
 
     const instruction =
       "These are the ID and supporting documents attached to a trade bid/offer. Read every one of them " +
-      "(photos by sight, documents by their text) and extract:\n" +
-      "- the commodity or asset being traded\n" +
-      "- quantity and unit, if stated\n" +
-      "- price and currency, if stated\n" +
-      "- delivery/incoterms or timing, if stated\n" +
-      "- the party's identity as shown on the ID document\n" +
-      'Reply with JSON only: {"summary_bullets": string[], "id_number": string|null}. ' +
-      "summary_bullets is 5-10 short bullet points covering the above, each a complete statement without " +
-      "a leading dash. Never put any identity/passport number inside the bullets — put it only in id_number " +
-      "(null when no ID number is visible). Only state what the documents actually show; say plainly when " +
-      "something isn't stated." +
+      "(photos by sight, documents by their text) and write out the party's ask in their own terms.\n" +
+      'Reply with JSON only: {"summary_bullets": string[], "id_number": string|null, "facts": ' +
+      '{"commodity": string|null, "quantity": number|null, "unit": string|null, "price": number|null, ' +
+      '"currency": string|null, "incoterms": string|null, "jurisdiction": string|null, "side": "buy"|"sell"|null}}.\n' +
+      "summary_bullets is 5-12 short bullet points, each a complete statement without a leading dash, covering " +
+      "everything material to the exchange that the documents actually state: what is wanted or offered, " +
+      "quantities and units, prices and currency, grades/specifications, delivery terms, timing, payment terms, " +
+      "conditions, and who the party is. Do not force the documents into a fixed shape — if a document states " +
+      "something material that none of these words cover, say it anyway. Only state what the documents show, " +
+      "and say plainly when something isn't stated.\n" +
+      "facts repeats just the few details needed to search for a counterparty, in machine form: commodity as a " +
+      "short plain name, numbers as numbers, currency as a 3-letter code, jurisdiction as a country or region " +
+      "name, side as buy when the party wants to acquire and sell when they want to dispose. Use null for " +
+      "anything the documents do not state — never guess.\n" +
+      "Never put any identity/passport number inside the bullets or facts — put it only in id_number " +
+      "(null when no ID number is visible)." +
       (unreadable.length > 0
         ? ` Note: ${unreadable.join(", ")} could not be read — mention ${unreadable.length === 1 ? "it was" : "they were"} not reviewed rather than guessing.`
         : "");
