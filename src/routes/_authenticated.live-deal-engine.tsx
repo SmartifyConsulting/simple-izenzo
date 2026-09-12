@@ -55,9 +55,14 @@ export const Route = createFileRoute("/_authenticated/live-deal-engine")({
   }),
   // Lets a Bid/Offer ID elsewhere (e.g. the Report list) link straight into this workflow for
   // that specific deal, instead of only ever resuming whatever was last worked on here.
-  validateSearch: (search: Record<string, unknown>): { tx?: string; popout?: boolean } => ({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { tx?: string; popout?: boolean; panel?: "matches"; q?: string } => ({
     ...(typeof search["tx"] === "string" ? { tx: search["tx"] as string } : {}),
     popout: search["popout"] === "1",
+    // Opened from the homepage's "…" — shows the full match list in the Live Workspace.
+    ...(search["panel"] === "matches" ? { panel: "matches" as const } : {}),
+    ...(typeof search["q"] === "string" ? { q: search["q"] as string } : {}),
   }),
   component: LiveDealEngine,
 });
