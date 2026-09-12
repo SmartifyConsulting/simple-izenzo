@@ -27,7 +27,7 @@ export const generateOrgBrief = createServerFn({ method: "POST" })
         const { brightDataConfigured, fetchPageText, summarisePage } = await import(
           "@/lib/brightdata.server"
         );
-        if (brightDataConfigured()) {
+        if (await brightDataConfigured()) {
           const text = await fetchPageText(org.website);
           if (text) siteText = summarisePage(text).excerpt;
         }

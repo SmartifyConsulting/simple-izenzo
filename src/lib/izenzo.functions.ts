@@ -209,7 +209,7 @@ type CandidateResult = {
  * names, which is worse than no answer. */
 async function groundOnWeb(query: string, kind: "ai" | "ai_plus") {
   const { brightDataConfigured, fetchSearchResults } = await import("@/lib/brightdata.server");
-  if (!brightDataConfigured()) {
+  if (!(await brightDataConfigured())) {
     throw new Error(
       "Live web search is not connected, so this search cannot be grounded in real listings. Add the Bright Data connection in Admin → Integrations.",
     );
@@ -255,6 +255,64 @@ function parseCandidates(raw: string): CandidateResult[] {
   } catch {
     return [];
   }
+}
+
+type ScoreComponent = { label: string; points: number; max: number; note: string };
+
+/** Turns a candidate into an explainable percentage. The model's own read is only one of five
+ * inputs, so the number can always be broken down for the person deciding — an opaque LLM score
+ * is not something anyone can act on. */
+function scoreCandidate(
+  c: CandidateResult,
+  ctx: { subject: string; region: string | null; verified: boolean },
+): { total: number; components: ScoreComponent[] } {
+  const wanted = keywords(ctx.subject);
+  const theirs = keywords([c.name, c.sector ?? "", c.rationale ?? ""].join(" "));
+  let hits = 0;
+  for (const w of wanted) if (theirs.has(w)) hits++;
+  const fit = wanted.size ? Math.round((hits / wanted.size) * 30) : 0;
+
+  const region = (ctx.region ?? "").trim().toLowerCase();
+  const where = (c.jurisdiction ?? "").trim().toLowerCase();
+  let place = 10;
+  let placeNote = "No location on record";
+  if (region && where) {
+    const same = where.includes(region) || region.includes(where);
+    place = same ? 20 : 4;
+    placeNote = same ? `Located in ${c.jurisdiction}` : `${c.jurisdiction}, not ${ctx.region}`;
+  } else if (where) {
+    place = 14;
+    placeNote = `Located in ${c.jurisdiction}`;
+  }
+
+  const evidence = c.sourceUrl ? 20 : 6;
+  const verified = ctx.verified ? 15 : 0;
+  const read = Math.round(((c.score ?? 50) / 100) * 15);
+
+  const components: ScoreComponent[] = [
+    {
+      label: "What they trade",
+      points: fit,
+      max: 30,
+      note: hits > 0 ? `${hits} of ${wanted.size} search terms appear on their listing` : "No search terms matched",
+    },
+    { label: "Where they are", points: place, max: 20, note: placeNote },
+    {
+      label: "Evidence",
+      points: evidence,
+      max: 20,
+      note: c.sourceUrl ? "Found on a real page we can open" : "No page recorded",
+    },
+    {
+      label: "Verified on Izenzo",
+      points: verified,
+      max: 15,
+      note: ctx.verified ? "Identity confirmed through the app" : "Not verified through the app yet",
+    },
+    { label: "Izenzo AI read", points: read, max: 15, note: c.rationale ?? "No note" },
+  ];
+
+  return { total: components.reduce((sum, k) => sum + k.points, 0), components };
 }
 
 /** Pulls the searchable subject out of a document summary when nobody typed a commodity — the
@@ -373,18 +431,47 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       throw new Error("No matching organisations were found in the sources that were read. Try again.");
 
     const source = data.kind === "ai" ? "ai_search" : "ai_plus_search";
-    const rows = candidates.map((c) => ({
-      transaction_id: tx.id,
-      name: c.name,
-      jurisdiction: c.jurisdiction ?? null,
-      sector: c.sector ?? null,
-      score: c.score ?? null,
-      source,
-      rationale: c.rationale ?? null,
-      status: "surfaced",
-      // Evidence lives in media_flags so the source page can be opened next to the name.
-      media_flags: c.sourceUrl ? { evidence: [{ url: c.sourceUrl, source: "web_search" }] } : null,
-    }));
+
+    // Which of these names have already proved who they are through the app — one of the five
+    // inputs to the match percentage.
+    const verifiedNames = new Set<string>();
+    try {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: listed } = await supabaseAdmin
+        .from("responder_listings")
+        .select("name, verified_at")
+        .in("name", candidates.map((c) => c.name));
+      for (const row of listed ?? []) {
+        if (row.verified_at) verifiedNames.add(row.name.toLowerCase());
+      }
+    } catch {
+      // Absent verification data simply scores zero for that component.
+    }
+
+    const scoreRegion = data.region ?? tx.jurisdiction ?? null;
+    const rows = candidates.map((c) => {
+      const scored = scoreCandidate(c, {
+        subject,
+        region: scoreRegion,
+        verified: verifiedNames.has(c.name.toLowerCase()),
+      });
+      return {
+        transaction_id: tx.id,
+        name: c.name,
+        jurisdiction: c.jurisdiction ?? null,
+        sector: c.sector ?? null,
+        score: scored.total,
+        source,
+        rationale: c.rationale ?? null,
+        status: "surfaced",
+        // Evidence lives in media_flags so the source page can be opened next to the name, along
+        // with the breakdown behind the percentage.
+        media_flags: {
+          ...(c.sourceUrl ? { evidence: [{ url: c.sourceUrl, source: "web_search" }] } : {}),
+          scoring: { total: scored.total, components: scored.components },
+        },
+      };
+    });
     const { data: inserted, error } = await supabase.from("counterparties").insert(rows).select();
     if (error) throw error;
 
@@ -545,7 +632,7 @@ export const checkCandidateProducts = createServerFn({ method: "POST" })
 
     // Preferred path: Bright Data's remote browser, which renders JavaScript-only sites.
     const { brightDataConfigured, fetchPageText } = await import("@/lib/brightdata.server");
-    if (brightDataConfigured()) {
+    if (await brightDataConfigured()) {
       try {
         text = await fetchPageText(data.url);
       } catch (err) {
