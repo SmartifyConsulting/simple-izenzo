@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { AuthTabs } from "@/components/auth/AuthTabs";
 import { useAuth } from "@/lib/auth";
+import { applyCurrentStylePreset } from "@/lib/stylePreset";
 
 type Search = { mode?: "signin" | "signup" | undefined; next?: string | undefined };
 
@@ -30,6 +31,10 @@ function AuthPage() {
   const { next } = Route.useSearch();
   const navigate = useNavigate();
   const { session, loading } = useAuth();
+
+  useEffect(() => {
+    applyCurrentStylePreset();
+  }, []);
 
   useEffect(() => {
     if (!loading && session) navigate({ to: safeNext(next), replace: true });

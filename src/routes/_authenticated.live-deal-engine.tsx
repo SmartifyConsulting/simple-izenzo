@@ -732,28 +732,38 @@ function LiveDealEngine() {
         <OpenDealsPicker currentId={dealTx?.id ?? null} />
       </div>
 
-      <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
-        {/* Engine Map — always visible on the left. Clicking a node opens that step inline in
-            the Live Workspace beside it, instead of navigating away from this screen. Both
-            panels share the same fixed viewport-relative height so the pair fits on screen
-            without the page itself needing to scroll — the Map scales its diagram to fit, the
-            Workspace scrolls its own content internally if it runs long. */}
-        <div className="ink-grid flex h-[calc(100vh-190px)] w-full flex-col overflow-hidden rounded-3xl border border-border p-3 sm:p-5">
-          <p className="label-caps shrink-0 text-white">Izenzo Engine Map</p>
-          <div className="mt-3 min-h-0 flex-1">
-            <ClassicView
-              tx={dealTx ?? FLOWCHART_PREVIEW_TX}
-              reload={() => void reloadDeal()}
-              readOnly={!dealTx}
-              onRegister={startNewDeal}
-              onOpenStep={openMapStep}
-            />
+      {/* The whole two-panel pair reads as one floating card sitting above the page — a soft
+          halo/backdrop layer behind it plus a strong shadow on the panels themselves — rather
+          than panels flush with the page background. It's a static visual treatment only: the
+          card doesn't move or drag, it just makes clear this is a workspace overlapping the app
+          underneath, not part of the page's own flow. */}
+      <div className="relative">
+        <div
+          aria-hidden
+          className="absolute -inset-3 rounded-[2rem] bg-card/60 blur-xl"
+        />
+        <div className="relative grid grid-cols-1 items-stretch gap-4 rounded-3xl lg:grid-cols-2">
+          {/* Engine Map — always visible on the left. Clicking a node opens that step inline in
+              the Live Workspace beside it, instead of navigating away from this screen. Both
+              panels share the same fixed viewport-relative height so the pair fits on screen
+              without the page itself needing to scroll — the Map scales its diagram to fit, the
+              Workspace scrolls its own content internally if it runs long. */}
+          <div className="ink-grid flex h-[calc(100vh-190px)] w-full flex-col overflow-hidden rounded-3xl border border-border bg-card p-3 shadow-2xl sm:p-5">
+            <p className="label-caps shrink-0 text-foreground">Izenzo Engine Map</p>
+            <div className="mt-3 min-h-0 flex-1">
+              <ClassicView
+                tx={dealTx ?? FLOWCHART_PREVIEW_TX}
+                reload={() => void reloadDeal()}
+                readOnly={!dealTx}
+                onRegister={startNewDeal}
+                onOpenStep={openMapStep}
+              />
+            </div>
           </div>
-        </div>
 
-        {/* Live Workspace — always visible on the right. */}
-        <div className="ink-grid h-[calc(100vh-190px)] w-full overflow-y-auto rounded-3xl border border-border p-3 sm:p-5">
-          <p className="label-caps text-white">Live workspace</p>
+          {/* Live Workspace — always visible on the right. */}
+          <div className="ink-grid h-[calc(100vh-190px)] w-full overflow-y-auto rounded-3xl border border-border bg-card p-3 shadow-2xl sm:p-5">
+            <p className="label-caps text-foreground">Live workspace</p>
 
           {!activity && (
             <div className="mt-4">
@@ -974,6 +984,7 @@ function LiveDealEngine() {
                 {dealTx?.wad_completed_at && <TradeSummary tx={dealTx} />}
               </div>
             ) : null}
+        </div>
         </div>
       </div>
     </AppShell>
