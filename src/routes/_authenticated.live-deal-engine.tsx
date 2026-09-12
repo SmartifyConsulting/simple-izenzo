@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -173,13 +173,12 @@ function OpenDealsPicker({ currentId, hasAttachment }: { currentId: string | nul
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="h-9 w-[280px] justify-start gap-2 text-[13px] font-normal"
+          className="h-9 w-[140px] justify-start gap-2 text-[13px] font-normal"
         >
           {hasAttachment && <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
           {selected ? (
             <span className="min-w-0 truncate">
-              <span className="font-mono font-semibold">{selected.reference}</span>
-              {selected.name && <span className="text-muted-foreground"> — {selected.name}</span>}
+              <span className="font-mono text-base font-bold">{selected.reference}</span>
             </span>
           ) : (
             <span className="text-muted-foreground">Search</span>
