@@ -988,6 +988,11 @@ function LiveDealEngine() {
               </p>
             )}
 
+          {panel === "matches" && (
+            <MatchResultsPanel query={matchQuery} className="mt-4" />
+          )}
+
+
           {!activity && (
             <div className="mt-4">
               <CanvasStart
