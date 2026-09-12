@@ -235,8 +235,9 @@ export function HeroMatchCard({ className }: { className?: string }) {
               <div key={m.id} className="rounded-xl border border-border p-3">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-primary">
-                    {m.rating_band ? RATING_LABEL[m.rating_band] : "Unrated"}
+                    {BAND_LABEL[bandOf(m)]}
                     {m.sector ? ` · ${m.sector}` : ""}
+                    {m.is_example ? " · Example" : ""}
                   </p>
                   <Lock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                 </div>
