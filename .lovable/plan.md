@@ -13,7 +13,7 @@ So the page needs its own public list, not the private one.
 
 **A public responder directory, drawn from both sources**
 
-- Businesses registered on Izenzo can switch on "show us in the public directory" from their organisation profile. Off by default — nothing appears without consent.
+- Registered businesses appear in the public directory by default, and can switch it off from their organisation profile at any time.
 - Names found by the web search get published as *unclaimed* listings, each carrying a link to the page it was found on, and each marked as not yet on Izenzo.
 - Registered, verified businesses sort first; then registered; then unclaimed listings.
 - Each row shows name, sector, region, a short line about them, and one of three badges: **Verified** (identity checked through Izenzo), **On Izenzo** (registered, not yet verified), **Unclaimed** (found on the web).
@@ -23,6 +23,10 @@ So the page needs its own public list, not the private one.
 **Example listings so the page looks alive**
 
 A small set of sample businesses across the existing sectors, each visibly labelled **Example**, inserted with the change so the page has content on first load. They are flagged as examples and can be cleared in one action from Admin later.
+
+**Reword the "Live from database" label**
+
+The three cards carrying a "Live from database" badge get plain wording — **Live listings** — describing what the visitor is seeing rather than where it is stored.
 
 **Honest empty state**
 
@@ -39,5 +43,6 @@ The current bid never reached the search step: no commodity was typed and no doc
 - `verified_at` is set from a passed `identity_verifications` row for that org — never defaulted, so the Verified badge cannot be self-awarded.
 - Publishing web-found names happens in a server function alongside `searchCounterparties`, writing unclaimed listings with the source URL kept as evidence. Private per-bid rows in `counterparties` stay exactly as they are.
 - `ResponderDirectory.tsx` and `useResponderFacets` switch to `responder_listings`; the sector and location routes inherit it unchanged.
-- Opt-in toggle added to the organisation profile screen, writing a `registered` listing for that org.
+- `published` defaults to `true`; a `registered` listing is written for the org, with an opt-out toggle on the organisation profile screen.
+- Badge text updated in `HeroMatchCard.tsx`, `LiveCounterpartyCard.tsx` and `LiveDealCard.tsx`.
 - Example rows are literal `INSERT` statements in the same migration with `is_example = true`.
