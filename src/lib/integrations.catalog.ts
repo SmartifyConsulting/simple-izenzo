@@ -41,40 +41,6 @@ export const INTEGRATION_GROUPS = [
 
 export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
   {
-    id: "smile_identity",
-    name: "Smile ID",
-    group: "KYC & Identity",
-    summary: "South African and pan-African ID document checks with liveness.",
-    usedAt: "Compliance Gate → Without a Doubt (KYC identity check).",
-    environments: ["sandbox", "production"],
-    fields: [
-      { key: "partner_id", label: "Partner ID", secret: false, placeholder: "0000" },
-      { key: "api_key", label: "API key", secret: true },
-      { key: "callback_url", label: "Callback URL", secret: false, placeholder: "https://…/smile-callback" },
-      { key: "dev_center_url", label: "Dev center login URL", secret: false, placeholder: "https://…" },
-      { key: "portal_username", label: "Username", secret: false },
-      { key: "portal_credentials", label: "Credentials", secret: true, help: "Password or API secret used to sign in to the provider portal." },
-    ],
-    testable: false,
-    testNote: "Smile ID has no read-only check endpoint — credentials are verified on the first live job.",
-  },
-  {
-    id: "onfido",
-    name: "Onfido",
-    group: "KYC & Identity",
-    summary: "Global identity document and biometric verification.",
-    usedAt: "Compliance Gate → Without a Doubt (KYC identity check), for counterparties outside Smile ID's coverage.",
-    environments: ["sandbox", "production"],
-    fields: [
-      { key: "api_token", label: "API token", secret: true, placeholder: "api_sandbox…" },
-      { key: "region", label: "Region", secret: false, placeholder: "eu, us or ca" },
-      { key: "dev_center_url", label: "Dev center login URL", secret: false, placeholder: "https://…" },
-      { key: "portal_username", label: "Username", secret: false },
-      { key: "portal_credentials", label: "Credentials", secret: true, help: "Password or API secret used to sign in to the provider portal." },
-    ],
-    testable: true,
-  },
-  {
     id: "didit",
     name: "Didit",
     group: "KYC & Identity",

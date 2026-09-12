@@ -25,14 +25,7 @@ import {
 } from "@/lib/integrations.functions";
 
 /** Most useful first — the order the guided setup walks through. */
-const GUIDED_ORDER = [
-  "resend",
-  "payfast",
-  "smile_identity",
-  "cipc",
-  "complyadvantage",
-  "exchangerate_host",
-];
+const GUIDED_ORDER = ["resend", "payfast", "cipc", "complyadvantage"];
 
 function guidedProviders(): IntegrationProvider[] {
   const ranked = GUIDED_ORDER.map((id) => INTEGRATION_PROVIDERS.find((p) => p.id === id)).filter(
