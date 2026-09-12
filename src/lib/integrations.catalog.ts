@@ -226,20 +226,6 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
     testable: true,
   },
   {
-    id: "exchangerate_host",
-    name: "exchangerate.host",
-    group: "Currency",
-    summary: "Multi-currency conversion for cross-border trade and token pricing.",
-    usedAt: "Trading Gate → Bid/Offer (price/currency display) and token pricing.",
-    fields: [
-      { key: "access_key", label: "Access key", secret: true },
-      { key: "dev_center_url", label: "Dev center login URL", secret: false, placeholder: "https://…" },
-      { key: "portal_username", label: "Username", secret: false },
-      { key: "portal_credentials", label: "Credentials", secret: true, help: "Password or API secret used to sign in to the provider portal." },
-    ],
-    testable: true,
-  },
-  {
     id: "open_exchange_rates",
     name: "Open Exchange Rates",
     group: "Currency",
