@@ -165,17 +165,29 @@ export const summarizeBidDocuments = createServerFn({ method: "POST" })
       }
     }
 
+    // The documents only fill blanks — anything the user typed themselves stays as they typed it.
+    const facts = parsed.facts;
+    const filled: Record<string, unknown> = {};
+    if (!tx.commodity && facts.commodity) filled["commodity"] = facts.commodity;
+    if (tx.quantity == null && facts.quantity != null) filled["quantity"] = facts.quantity;
+    if (!tx.unit && facts.unit) filled["unit"] = facts.unit;
+    if (tx.price == null && facts.price != null) filled["price"] = facts.price;
+    if (facts.currency && (!tx.currency || tx.currency === "USD")) filled["currency"] = facts.currency;
+    if (!tx.incoterms && facts.incoterms) filled["incoterms"] = facts.incoterms;
+    if (!tx.jurisdiction && facts.jurisdiction) filled["jurisdiction"] = facts.jurisdiction;
+
     const { error: upErr } = await supabase
       .from("transactions")
       .update({
         document_summary: summary,
         document_summary_generated_at: new Date().toISOString(),
+        ...filled,
         ...(idCipher ? { id_number_encrypted: idCipher } : {}),
       } as never)
       .eq("id", tx.id);
     if (upErr) throw new Error(upErr.message);
 
-    return { summary };
+    return { summary, facts, unreadable };
   });
 
 function toBase64(bytes: Uint8Array) {
