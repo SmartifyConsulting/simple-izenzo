@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { applyCurrentStylePreset } from "@/lib/stylePreset";
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
 import { ThemeToggle } from "@/components/guided/ThemeToggle";
+import { SignInModal } from "@/components/auth/SignInModal";
 import { Logo } from "@/components/Logo";
 
 const NAV = [
@@ -48,7 +49,7 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
 
           <div className="ml-auto flex shrink-0 items-center gap-3">
             <ThemeToggle />
-            {user && (
+            {user ? (
               <>
                 <Link to="/live-deal-engine">
                   <Button size="sm" className="rounded-full">
@@ -57,6 +58,12 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
                 </Link>
                 <ProfileAvatarMenu />
               </>
+            ) : (
+              <SignInModal>
+                <Button size="sm" variant="outline" className="rounded-full">
+                  Sign in
+                </Button>
+              </SignInModal>
             )}
           </div>
         </div>

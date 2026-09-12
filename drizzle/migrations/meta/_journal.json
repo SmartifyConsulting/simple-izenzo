@@ -15,6 +15,13 @@
       "when": 1789212559769,
       "tag": "0001_add_search_prompt_to_transactions",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789212763169,
+      "tag": "0002_create_face_sign_in_attempts",
+      "breakpoints": true
     }
   ]
 }

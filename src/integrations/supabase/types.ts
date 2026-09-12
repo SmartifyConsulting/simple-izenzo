@@ -1225,6 +1225,48 @@ export type Database = {
           },
         ]
       }
+      face_sign_in_attempts: {
+        Row: {
+          consumed_at: string | null
+          created_at: string
+          decision: string | null
+          email: string
+          expires_at: string
+          id: string
+          provider_session_id: string | null
+          provider_url: string | null
+          reason: string | null
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          consumed_at?: string | null
+          created_at?: string
+          decision?: string | null
+          email: string
+          expires_at?: string
+          id?: string
+          provider_session_id?: string | null
+          provider_url?: string | null
+          reason?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          consumed_at?: string | null
+          created_at?: string
+          decision?: string | null
+          email?: string
+          expires_at?: string
+          id?: string
+          provider_session_id?: string | null
+          provider_url?: string | null
+          reason?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       facilitation_case_events: {
         Row: {
           actor_id: string
