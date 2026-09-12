@@ -287,6 +287,22 @@ function LiveDealEngine() {
   });
   const idCheck = idVerifications.find((v) => v.check_type === "id_document") ?? null;
 
+  // Same query key DocumentUploadStep uses, so once a file is attached there (or here) both
+  // stay in sync off one cache entry rather than each polling storage independently.
+  const { data: workspaceDocs = [] } = useQuery({
+    queryKey: ["documents", dealTx?.id],
+    enabled: Boolean(dealTx?.id),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("documents")
+        .select("*")
+        .eq("transaction_id", dealTx!.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   // Which canvas step should pulse, on top of whichever step the canvas already highlights as
   // "active": Choice, until results have come back at least once; Background screening, while the
   // provider checks are actually running. Once screening has returned, the step it's attached to
@@ -743,15 +759,17 @@ function LiveDealEngine() {
   // A deal that hasn't been created yet still needs a stable id so it can register as its own
   // taskbar entry rather than being lost the moment the user starts filling in a bid/offer.
   const windowId = dealTx?.id ?? "new";
-  const windowLabel = dealTx?.reference || dealTx?.title || "New workspace";
-  const { windows, open: openWindow, setMode, move, close: closeWindow, isPoppedElsewhere } = useDealWindows();
+  const windowLabel = dealTx
+    ? dealTx.reference || activity?.reference || fallbackReference(dealTx.id, activity?.direction ?? "bid")
+    : "New workspace";
+  const { windows, register: registerWindow, setMode, move, close: closeWindow, isPoppedElsewhere } = useDealWindows();
   const win = windows.find((w) => w.id === windowId);
   const windowMode = popout ? "docked" : (win?.mode ?? "docked");
   const poppedElsewhere = !popout && isPoppedElsewhere(windowId);
 
   useEffect(() => {
     if (popout) return;
-    openWindow(windowId, windowLabel);
+    registerWindow(windowId, windowLabel);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [windowId, windowLabel, popout]);
 
@@ -858,30 +876,51 @@ function LiveDealEngine() {
               without the page itself needing to scroll — the Map scales its diagram to fit, the
               Workspace scrolls its own content internally if it runs long. */}
           <div className="ink-grid flex h-[calc(100vh-190px)] w-full flex-col overflow-hidden rounded-3xl border border-border bg-card p-3 shadow-2xl sm:p-5">
-            <p className="label-caps shrink-0 text-foreground">
-              {dealTx && flowStep === "documents" ? "Upload deal documents" : "Izenzo Engine Map"}
-            </p>
+            <p className="label-caps shrink-0 text-foreground">Izenzo Engine Map</p>
             <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
-              {dealTx && flowStep === "documents" ? (
-                <DocumentUploadStep
-                  transactionId={dealTx.id}
-                  onNext={() => void runSearch(dealTx.id)}
-                />
-              ) : (
-                <ClassicView
-                  tx={dealTx ?? FLOWCHART_PREVIEW_TX}
-                  reload={() => void reloadDeal()}
-                  readOnly={!dealTx}
-                  onRegister={startNewDeal}
-                  onOpenStep={openMapStep}
-                />
-              )}
+              <ClassicView
+                tx={dealTx ?? FLOWCHART_PREVIEW_TX}
+                reload={() => void reloadDeal()}
+                readOnly={!dealTx}
+                onRegister={startNewDeal}
+                onOpenStep={openMapStep}
+              />
             </div>
           </div>
 
-          {/* Live Workspace — always visible on the right. */}
+          {/* Live Workspace — always visible on the right. Once a bid/offer exists, its header
+              is the bid/offer ID on the left; the top right is either the real upload frame
+              (before any document is attached) or a bulleted list of what's been classified from
+              the documents already uploaded. */}
           <div className="ink-grid h-[calc(100vh-190px)] w-full overflow-y-auto rounded-3xl border border-border bg-card p-3 shadow-2xl sm:p-5">
-            <p className="label-caps text-foreground">Live workspace</p>
+            {dealTx ? (
+              <div className="flex items-start justify-between gap-4">
+                <p className="label-caps shrink-0 font-mono text-base font-bold uppercase tracking-wide text-foreground">
+                  {dealTx.reference || activity?.reference || fallbackReference(dealTx.id, activity?.direction ?? "bid")}
+                </p>
+                <div className="w-1/2 max-w-[260px] shrink-0">
+                  {workspaceDocs.length === 0 ? (
+                    <DocumentUploadStep
+                      transactionId={dealTx.id}
+                      onNext={() => void runSearch(dealTx.id)}
+                    />
+                  ) : (
+                    <div className="space-y-1.5 rounded-xl border border-border bg-muted/30 p-3">
+                      <p className="label-caps text-muted-foreground">AI findings</p>
+                      <ul className="space-y-1 text-xs text-foreground">
+                        {workspaceDocs.slice(0, 5).map((d) => (
+                          <li key={d.id} className="truncate">
+                            • {d.name} — {String(d.doc_type).replace(/_/g, " ")}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p className="label-caps text-foreground">Live workspace</p>
+            )}
 
           {!activity && (
             <div className="mt-4">
@@ -898,19 +937,13 @@ function LiveDealEngine() {
                   } catch {
                     // Best-effort — resuming later just won't work if storage is unavailable.
                   }
-                  // Stays on "documents" — the Engine Map panel picks this up and swaps in the
-                  // upload frame until the user attaches something and moves on.
+                  // Stays on "documents" so the caller (this page) still treats it as such —
+                  // the workspace header above now owns showing the upload frame.
                 }}
                 onPickingChange={setPicking}
                 onDirectionChange={setDirection}
               />
             </div>
-          )}
-
-          {activity && (
-            <p className="mt-4 label-caps text-white">
-              Live deal engine for {activity.direction === "bid" ? "The Bid" : "Responder"}
-            </p>
           )}
 
           {activity && dealTx && flowStep === "searching" && (

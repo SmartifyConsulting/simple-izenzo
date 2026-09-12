@@ -34,8 +34,12 @@ function writeAll(windows: DealWindow[]) {
 
 type DealWindowsValue = {
   windows: DealWindow[];
-  /** Opens (or re-focuses, if already open) the workspace window for this deal. */
+  /** Opens (or re-focuses, if already open) the workspace window for this deal — forces it back
+   * to docked, so only use this for an explicit "open this deal" action. */
   open: (id: string, label: string) => void;
+  /** Registers a window if it doesn't exist yet, and keeps its label current, but never changes
+   * an existing window's mode — safe to call on every render of the page that owns this deal. */
+  register: (id: string, label: string) => void;
   setMode: (id: string, mode: WindowMode) => void;
   move: (id: string, x: number, y: number) => void;
   close: (id: string) => void;
@@ -84,7 +88,29 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
       const current = readAll();
       const already = current.find((w) => w.id === id);
       if (already) {
-        persist(current.map((w) => (w.id === id ? { ...w, mode: "docked" } : w)));
+        persist(current.map((w) => (w.id === id ? { ...w, mode: "docked", label } : w)));
+        return;
+      }
+      const offset = current.length * 24;
+      persist([
+        ...current,
+        { id, label, mode: "docked", x: 80 + offset, y: 80 + offset },
+      ]);
+    },
+    [persist],
+  );
+
+  const register = useCallback(
+    (id: string, label: string) => {
+      const current = readAll();
+      const already = current.find((w) => w.id === id);
+      if (already) {
+        // Keeps the tab's label current — a brand-new bid/offer opens as "New workspace" and
+        // gets a real reference moments later once it's recorded, and the tab should pick that
+        // up without disturbing whatever mode the window is already in (minimized, maximized…).
+        if (already.label !== label) {
+          persist(current.map((w) => (w.id === id ? { ...w, label } : w)));
+        }
         return;
       }
       const offset = current.length * 24;
@@ -135,7 +161,7 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <DealWindowsContext.Provider value={{ windows, open, setMode, move, close, isPoppedElsewhere }}>
+    <DealWindowsContext.Provider value={{ windows, open, register, setMode, move, close, isPoppedElsewhere }}>
       {children}
     </DealWindowsContext.Provider>
   );
