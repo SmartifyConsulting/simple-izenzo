@@ -32,7 +32,7 @@ function InsightArticlePage() {
         <h1 className="mt-2 text-3xl tracking-tight text-foreground sm:text-4xl">
           {article.title}
         </h1>
-        <p className="mt-4 text-base leading-relaxed text-muted-foreground">{article.teaser}</p>
+        <p className="mt-4 text-base leading-relaxed text-muted-foreground">{article.summary}</p>
 
         <div className="mt-10 space-y-5 border-t border-border pt-10">
           {article.body.map((p, i) => (

@@ -25,6 +25,7 @@ import {
   type RecordedActivity,
 } from "@/components/canvas/DealCanvas";
 import { TradeSummary } from "@/components/canvas/TradeSummary";
+import { MatchResultsPanel } from "@/components/canvas/MatchResultsPanel";
 
 import { ClassicView } from "@/components/canvas/ClassicView";
 import { DocumentUploadStep } from "@/components/guided/DocumentUploadStep";
@@ -55,9 +56,14 @@ export const Route = createFileRoute("/_authenticated/live-deal-engine")({
   }),
   // Lets a Bid/Offer ID elsewhere (e.g. the Report list) link straight into this workflow for
   // that specific deal, instead of only ever resuming whatever was last worked on here.
-  validateSearch: (search: Record<string, unknown>): { tx?: string; popout?: boolean } => ({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { tx?: string; popout?: boolean; panel?: "matches"; q?: string } => ({
     ...(typeof search["tx"] === "string" ? { tx: search["tx"] as string } : {}),
     popout: search["popout"] === "1",
+    // Opened from the homepage's "…" — shows the full match list in the Live Workspace.
+    ...(search["panel"] === "matches" ? { panel: "matches" as const } : {}),
+    ...(typeof search["q"] === "string" ? { q: search["q"] as string } : {}),
   }),
   component: LiveDealEngine,
 });
@@ -201,7 +207,7 @@ function OpenDealsPicker({ currentId }: { currentId: string | null }) {
 /** The Live Deal Engine is the one screen users work from — the workflow canvas itself, never a
  * separate per-deal detail page. */
 function LiveDealEngine() {
-  const { tx: txParam, popout } = Route.useSearch();
+  const { tx: txParam, popout, panel, q: matchQuery } = Route.useSearch();
   const [picking, setPicking] = useState(false);
   const [direction, setDirection] = useState<"bid" | "offer" | null>(null);
   // Reserved for pre-selecting a bid/offer direction before the Workspace form opens; the
@@ -982,6 +988,11 @@ function LiveDealEngine() {
                 {draftReference ?? "Live workspace"}
               </p>
             )}
+
+          {panel === "matches" && (
+            <MatchResultsPanel query={matchQuery} className="mt-4" />
+          )}
+
 
           {!activity && (
             <div className="mt-4">

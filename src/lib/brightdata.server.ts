@@ -149,3 +149,65 @@ export function summarisePage(text: string) {
     wordCount: clean ? clean.split(" ").length : 0,
   };
 }
+
+/** One search-result page that was actually loaded, with the visible text we read off it. */
+export type ScrapedSource = { label: string; url: string; text: string };
+
+/** The open-web surfaces a counterparty search reads, in priority order: general web first, then
+ * marketplaces/supplier directories, then trade registries and news. AI reads the first few, AI+
+ * reads them all. */
+export const SEARCH_SURFACES: { label: string; url: (q: string) => string }[] = [
+  { label: "Web", url: (q) => `https://www.bing.com/search?q=${q}` },
+  {
+    label: "Marketplaces",
+    url: (q) => `https://www.bing.com/search?q=${q}+(marketplace+OR+B2B+OR+listing)`,
+  },
+  {
+    label: "Supplier directories",
+    url: (q) => `https://www.bing.com/search?q=${q}+(supplier+OR+exporter+OR+distributor+OR+directory)`,
+  },
+  {
+    label: "Trade registries",
+    url: (q) => `https://www.bing.com/search?q=${q}+(company+registry+OR+trade+register+OR+chamber+of+commerce)`,
+  },
+  {
+    label: "Buyers & tenders",
+    url: (q) => `https://www.bing.com/search?q=${q}+(buyer+OR+importer+OR+tender+OR+RFQ)`,
+  },
+  { label: "News", url: (q) => `https://www.bing.com/news/search?q=${q}` },
+];
+
+/** Scrapes the first `limit` search surfaces for one query through Bright Data's remote browser.
+ * Individual surfaces are allowed to fail (blocked, slow, empty) — the caller gets whatever came
+ * back plus the failures, so the UI can be honest about which sources were read. */
+export async function fetchSearchResults(
+  query: string,
+  limit = 3,
+  timeoutMs = 25_000,
+): Promise<{ sources: ScrapedSource[]; failures: { label: string; url: string; reason: string }[] }> {
+  const q = encodeURIComponent(query);
+  const surfaces = SEARCH_SURFACES.slice(0, Math.max(1, Math.min(limit, SEARCH_SURFACES.length)));
+
+  const sources: ScrapedSource[] = [];
+  const failures: { label: string; url: string; reason: string }[] = [];
+
+  // Bounded concurrency: two pages at a time keeps the remote browser (and our runtime) happy.
+  const queue = [...surfaces];
+  const worker = async () => {
+    for (;;) {
+      const surface = queue.shift();
+      if (!surface) return;
+      const url = surface.url(q);
+      try {
+        const text = (await fetchPageText(url, timeoutMs)).replace(/\s+/g, " ").trim();
+        if (text) sources.push({ label: surface.label, url, text: text.slice(0, 6000) });
+        else failures.push({ label: surface.label, url, reason: "No readable text on the page." });
+      } catch (err) {
+        failures.push({ label: surface.label, url, reason: (err as Error).message });
+      }
+    }
+  };
+  await Promise.all([worker(), worker()]);
+
+  return { sources, failures };
+}

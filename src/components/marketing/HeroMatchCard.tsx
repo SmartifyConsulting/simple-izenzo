@@ -13,7 +13,7 @@ function useIllustrativeMatches(enabled: boolean) {
     enabled,
     queryFn: async () => {
       // Counted separately (head: true, no rows) so the card can say how many matches exist in
-      // total while still only ever rendering the top 5 as the teaser.
+      // total while still only ever rendering the top 5 in the card.
       const { data, error, count } = await supabase
         .from("counterparties")
         .select("id, name, sector, jurisdiction, rating_band, score", { count: "exact" })
@@ -207,7 +207,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
                 Real Responder records, sign up to unlock full contacts.
               </>
             ) : (
-              "A teaser of your top 5 — real Responder records, sign up to unlock full contacts."
+              "Your top 5 — real Responder records, sign up to unlock full contacts."
             )}
           </p>
 
@@ -238,7 +238,22 @@ export function HeroMatchCard({ className }: { className?: string }) {
                 </p>
               </div>
             ))}
+
+            {/* More than five found: the "…" opens the Live Workspace with the full list in its
+                panel. The route is authenticated, so a visitor is sent to sign up / sign in first
+                and lands back on the same results. */}
+            {!isLoading && total > 5 && (
+              <Link
+                to="/live-deal-engine"
+                search={{ panel: "matches" as const }}
+                aria-label="Show all matches"
+                className="mx-auto flex h-9 w-16 items-center justify-center rounded-full border border-border text-lg leading-none text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
+              >
+                …
+              </Link>
+            )}
           </div>
+
 
           <Link to="/auth" search={{ mode: "signup", next: undefined }} className="mt-5 block">
             <Button className="w-full rounded-full gap-1.5">

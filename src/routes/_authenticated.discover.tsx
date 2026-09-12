@@ -97,6 +97,7 @@ function Discover() {
             detail: [c.jurisdiction, c.sector].filter(Boolean).join(" · "),
             source: "ai" as const,
             matchPct: c.score,
+            url: c.sourceUrl,
           })),
         );
       }
@@ -108,6 +109,7 @@ function Discover() {
             detail: [c.jurisdiction, c.sector].filter(Boolean).join(" · "),
             source: "ai_plus" as const,
             matchPct: c.score,
+            url: c.sourceUrl,
           })),
         );
       }

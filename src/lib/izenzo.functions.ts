@@ -13,14 +13,22 @@ async function sha256(input: string) {
 
 const txInput = (data: unknown) => z.object({ transactionId: z.string().uuid() }).parse(data);
 
-/** Search tiers. AI is the fast everyday tier; AI+ is always GPT-6 Astra. */
-const AI_MODEL = "google/gemini-3.7-flash";
+/** All AI searching runs on GPT-6 Astra. The two tiers differ by how hard it thinks and how many
+ * scraped sources it reads — never by model quality. */
+const AI_MODEL = "openai/gpt-6-astra";
 const AI_PLUS_MODEL = "openai/gpt-6-astra";
 
 /** Astra requires an explicit reasoning effort and rejects temperature/top_p. */
-function aiPlusOptions(model: string) {
-  return model === AI_PLUS_MODEL ? { reasoning_effort: "medium" as const } : {};
+function aiPlusOptions(model: string, kind: "ai" | "ai_plus" = "ai_plus") {
+  if (model !== "openai/gpt-6-astra") return {};
+  return {
+    reasoning_effort: (kind === "ai" ? "low" : "high") as "low" | "high",
+    max_completion_tokens: kind === "ai" ? 2000 : 4000,
+  };
 }
+
+/** How many open-web surfaces each tier reads through Bright Data. */
+const SOURCE_LIMIT = { ai: 3, ai_plus: 6 } as const;
 
 /** Seal the Proof of Intent. Hard server-side gate: 1 token. */
 export const sealProofOfIntent = createServerFn({ method: "POST" })
@@ -193,7 +201,35 @@ type CandidateResult = {
   sector?: string | undefined;
   score?: number | undefined;
   rationale?: string | undefined;
+  sourceUrl?: string | undefined;
 };
+
+/** Scrapes the open web for one query and turns the pages into grounding context for the model.
+ * Fails loudly when the live web connection is missing — an ungrounded answer would be invented
+ * names, which is worse than no answer. */
+async function groundOnWeb(query: string, kind: "ai" | "ai_plus") {
+  const { brightDataConfigured, fetchSearchResults } = await import("@/lib/brightdata.server");
+  if (!brightDataConfigured()) {
+    throw new Error(
+      "Live web search is not connected, so this search cannot be grounded in real listings. Add the Bright Data connection in Admin → Integrations.",
+    );
+  }
+
+  const { sources, failures } = await fetchSearchResults(query, SOURCE_LIMIT[kind]);
+  if (sources.length === 0) {
+    const reason = failures[0]?.reason ? ` (${failures[0].reason})` : "";
+    throw new Error(`No sources could be read from the live web for this search${reason}.`);
+  }
+
+  const context = sources
+    .map((s, i) => `SOURCE ${i + 1} — ${s.label} — ${s.url}\n${s.text}`)
+    .join("\n\n");
+
+  return { sources, failures, context };
+}
+
+const GROUNDING_RULES =
+  "You are given the visible text of real web and marketplace search pages. Only return organisations that actually appear in that text. Never invent a company. For each one, set sourceUrl to the URL of the SOURCE block it came from.";
 
 function parseCandidates(raw: string): CandidateResult[] {
   const match = raw.match(/\[[\s\S]*\]/);
@@ -209,6 +245,10 @@ function parseCandidates(raw: string): CandidateResult[] {
         sector: c["sector"] ? String(c["sector"]).slice(0, 200) : undefined,
         score: typeof c["score"] === "number" ? c["score"] : undefined,
         rationale: c["rationale"] ? String(c["rationale"]).slice(0, 500) : undefined,
+        sourceUrl:
+          typeof c["sourceUrl"] === "string" && /^https?:\/\//.test(c["sourceUrl"])
+            ? c["sourceUrl"].slice(0, 500)
+            : undefined,
       }))
       .filter((c) => c.name.length > 0)
       .slice(0, 8);
@@ -249,10 +289,21 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       .limit(1);
     const latestBid = bids?.[0];
 
+    // Search the real web first — the model only ranks what was actually found.
+    const wantedSide = (latestBid?.direction ?? "bid") === "bid" ? "suppliers" : "buyers";
+    const searchQuery = [
+      tx.commodity ?? tx.title,
+      wantedSide,
+      data.region ?? tx.jurisdiction ?? "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+    const { sources, failures, context: grounding } = await groundOnWeb(searchQuery, data.kind);
+
     const system =
       data.kind === "ai"
-        ? "You are the Izenzo counterparty search assistant. Given a bid or offer, propose plausible counterparty organisations that could plausibly transact on these terms. You never decide and never contact anyone — you only propose candidates for a person to review. Respond with ONLY a JSON array, each item: {\"name\":string,\"jurisdiction\":string,\"sector\":string,\"score\":number 0-100,\"rationale\":string under 40 words}. No prose outside the array."
-        : "You are Izenzo AI+, a deeper counterparty search. Given a bid or offer, propose well-matched counterparty organisations, weighing jurisdiction fit, sector fit and deal size. You never decide and never contact anyone. Respond with ONLY a JSON array, each item: {\"name\":string,\"jurisdiction\":string,\"sector\":string,\"score\":number 0-100,\"rationale\":string under 40 words covering fit and any risk notes}. No prose outside the array.";
+        ? `You are the Izenzo counterparty search assistant. ${GROUNDING_RULES} Given a bid or offer, pick the organisations in the sources that could transact on these terms. You never decide and never contact anyone — you only propose candidates for a person to review. Respond with ONLY a JSON array, each item: {"name":string,"jurisdiction":string,"sector":string,"score":number 0-100,"rationale":string under 40 words,"sourceUrl":string}. No prose outside the array.`
+        : `You are Izenzo AI+, a deeper counterparty search. ${GROUNDING_RULES} Pick the best-matched organisations in the sources, weighing jurisdiction fit, sector fit and deal size. You never decide and never contact anyone. Respond with ONLY a JSON array, each item: {"name":string,"jurisdiction":string,"sector":string,"score":number 0-100,"rationale":string under 40 words covering fit and any risk notes,"sourceUrl":string}. No prose outside the array.`;
 
     const prompt = [
       `Commodity: ${tx.commodity ?? "n/a"}`,
@@ -264,7 +315,9 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       latestBid
         ? `Latest ${latestBid.direction}: ${latestBid.price ?? "n/a"} ${latestBid.currency} for ${latestBid.quantity ?? "n/a"} ${latestBid.unit ?? ""}. Terms: ${latestBid.terms ?? "n/a"}`
         : "",
-      "Propose 4-6 candidates.",
+      "Propose 4-6 candidates, all from the sources below.",
+      "",
+      grounding,
     ]
       .filter(Boolean)
       .join("\n");
@@ -275,7 +328,7 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
-        ...aiPlusOptions(model),
+        ...aiPlusOptions(model, data.kind),
         messages: [
           { role: "system", content: system },
           { role: "user", content: prompt },
@@ -288,7 +341,8 @@ export const searchCounterparties = createServerFn({ method: "POST" })
     const json = (await res.json()) as { choices: { message: { content: string } }[] };
     const output = json.choices?.[0]?.message?.content ?? "";
     const candidates = parseCandidates(output);
-    if (candidates.length === 0) throw new Error("AI did not return any candidates. Try again.");
+    if (candidates.length === 0)
+      throw new Error("No matching organisations were found in the sources that were read. Try again.");
 
     const source = data.kind === "ai" ? "ai_search" : "ai_plus_search";
     const rows = candidates.map((c) => ({
@@ -300,11 +354,18 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       source,
       rationale: c.rationale ?? null,
       status: "surfaced",
+      // Evidence lives in media_flags so the source page can be opened next to the name.
+      media_flags: c.sourceUrl ? { evidence: [{ url: c.sourceUrl, source: "web_search" }] } : null,
     }));
     const { data: inserted, error } = await supabase.from("counterparties").insert(rows).select();
     if (error) throw error;
 
-    return { candidates: inserted ?? [], model };
+    return {
+      candidates: inserted ?? [],
+      model,
+      sourcesRead: sources.map((s) => ({ label: s.label, url: s.url })),
+      sourcesSkipped: failures.map((f) => ({ label: f.label, reason: f.reason })),
+    };
   });
 
 /** Marks/unmarks a discovered counterparty as shortlisted — a non-committal "interested" flag a
@@ -349,12 +410,17 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
     if (!apiKey) throw new Error("AI is not configured");
 
     const counterpart = data.role === "buyer" ? "suppliers/sellers" : "buyers";
+    const { sources, failures, context: grounding } = await groundOnWeb(
+      `${data.query} ${counterpart}`,
+      data.kind,
+    );
+
     const system =
       data.kind === "ai"
-        ? `You are the Izenzo counterparty search assistant. The user is a ${data.role} searching for ${counterpart}. Propose plausible counterparty organisations matching their search. You never decide and never contact anyone — you only propose candidates for a person to review. Respond with ONLY a JSON array, each item: {"name":string,"jurisdiction":string,"sector":string,"score":number 0-100,"rationale":string under 40 words}. No prose outside the array.`
-        : `You are Izenzo AI+, a deeper counterparty search. The user is a ${data.role} searching for ${counterpart}. Propose well-matched counterparty organisations, weighing jurisdiction fit, sector fit and plausibility. You never decide and never contact anyone. Respond with ONLY a JSON array, each item: {"name":string,"jurisdiction":string,"sector":string,"score":number 0-100,"rationale":string under 40 words covering fit and any risk notes}. No prose outside the array.`;
+        ? `You are the Izenzo counterparty search assistant. ${GROUNDING_RULES} The user is a ${data.role} searching for ${counterpart}. Pick the organisations in the sources that match their search. You never decide and never contact anyone — you only propose candidates for a person to review. Respond with ONLY a JSON array, each item: {"name":string,"jurisdiction":string,"sector":string,"score":number 0-100,"rationale":string under 40 words,"sourceUrl":string}. No prose outside the array.`
+        : `You are Izenzo AI+, a deeper counterparty search. ${GROUNDING_RULES} The user is a ${data.role} searching for ${counterpart}. Pick the best-matched organisations in the sources, weighing jurisdiction fit, sector fit and plausibility. You never decide and never contact anyone. Respond with ONLY a JSON array, each item: {"name":string,"jurisdiction":string,"sector":string,"score":number 0-100,"rationale":string under 40 words covering fit and any risk notes,"sourceUrl":string}. No prose outside the array.`;
 
-    const prompt = `Search: "${data.query}"\nRole: ${data.role}\nPropose 4-6 candidates.`;
+    const prompt = `Search: "${data.query}"\nRole: ${data.role}\nPropose 4-6 candidates, all from the sources below.\n\n${grounding}`;
 
     const model = data.kind === "ai" ? AI_MODEL : AI_PLUS_MODEL;
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -362,7 +428,7 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
-        ...aiPlusOptions(model),
+        ...aiPlusOptions(model, data.kind),
         messages: [
           { role: "system", content: system },
           { role: "user", content: prompt },
@@ -376,7 +442,13 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
     const output = json.choices?.[0]?.message?.content ?? "";
     const candidates = parseCandidates(output);
 
-    return { candidates, model, kind: data.kind };
+    return {
+      candidates,
+      model,
+      kind: data.kind,
+      sourcesRead: sources.map((s) => ({ label: s.label, url: s.url })),
+      sourcesSkipped: failures.map((f) => ({ label: f.label, reason: f.reason })),
+    };
   });
 
 const STOPWORDS = new Set([
@@ -501,7 +573,7 @@ export const runAiProposal = createServerFn({ method: "POST" })
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
-        ...aiPlusOptions(model),
+        ...aiPlusOptions(model, data.kind),
         messages: [
           { role: "system", content: system },
           { role: "user", content: prompt },
