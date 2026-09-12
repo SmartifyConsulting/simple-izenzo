@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Logo } from "@/components/Logo";
-import { SearchButton } from "@/components/layout/SearchButton";
+
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
 import { ThemeToggle } from "@/components/guided/ThemeToggle";
 import { SignInModal } from "@/components/auth/SignInModal";
@@ -97,7 +97,7 @@ export function MainHeader() {
         <div className="ml-6 flex shrink-0 items-center gap-3 lg:ml-3">
           {user ? (
             <>
-              <SearchButton />
+              
               <Link
                 to="/inbox"
                 title="Inbox"

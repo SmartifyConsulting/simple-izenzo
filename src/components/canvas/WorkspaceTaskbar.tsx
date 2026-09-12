@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { useDealWindows } from "@/lib/dealWindows";
 import { cn } from "@/lib/utils";
 
@@ -21,9 +21,7 @@ export function WorkspaceTaskbar() {
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
 
-  // A single open workspace is just the canvas, not a "tab" — the taskbar only earns its place
-  // once there's a second one to switch between.
-  if (windows.length <= 1 || isMarketingPath(pathname)) return null;
+  if (isMarketingPath(pathname)) return null;
 
   function activate(id: string, mode: string) {
     if (mode === "minimized") setMode(id, "maximized");
@@ -32,9 +30,22 @@ export function WorkspaceTaskbar() {
     void navigate({ to: "/live-deal-engine", search: id === "new" ? { fresh: true } : { tx: id } });
   }
 
+  // The blank template tab is permanent and always leftmost: recorded deals get their own tab, and
+  // this one stays an empty workspace to start the next bid or offer in.
+  const deals = windows.filter((w) => w.id !== "new");
+
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 flex items-end gap-1 overflow-x-auto border-t border-border bg-muted/60 px-2 pt-1.5 backdrop-blur">
-      {windows.map((w) => {
+      <button
+        type="button"
+        onClick={() => activate("new", "maximized")}
+        title="New live workspace"
+        className="flex w-[4.5rem] shrink-0 items-center justify-center gap-1 rounded-t-md border border-foreground border-b-transparent bg-foreground px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-background"
+      >
+        <Plus className="h-3 w-3" />
+        New
+      </button>
+      {deals.map((w) => {
         const active = w.mode !== "minimized";
         return (
           <div
