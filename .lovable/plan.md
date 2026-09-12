@@ -48,3 +48,25 @@ one pop-up.
   centred positioning (`left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2`),
   `max-w-xl`, `max-h-[85vh] overflow-y-auto`, and keep the existing animation
   classes. No change to `HeroMatchCard` behaviour.
+
+## 4. Fix: uploading files in the pop-up returns no results
+
+Confirmed cause: the upload card asks for rows from the private counterparty
+table, which holds no rows and is not readable by signed-out visitors — so the
+list comes back empty every time, whatever is uploaded.
+
+Fix: point the preview at the public directory that now has content (the same
+source the Responders page reads), showing the top 5 with the total count and
+the ellipsis to see all. If that directory is ever empty too, the card says so
+plainly instead of showing a blank result.
+
+Technical notes for this section:
+
+- `src/components/marketing/HeroMatchCard.tsx` — `useIllustrativeMatches`
+  switches from `counterparties` to `responder_listings` filtered on
+  `published = true`, selecting `id, name, sector, jurisdiction, source,
+  is_example, verified_at`, ordered newest first, `limit(5)` with
+  `{ count: "exact" }`.
+- Band/label mapping moves off `rating_band` onto the directory's own
+  verified / registered / unclaimed derivation used by `ResponderDirectory`.
+- Add an explicit empty state when `total === 0`.
