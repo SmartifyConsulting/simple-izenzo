@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import {
+  CanvasStart,
   CounterpartyRecord,
   InlineFrame,
   FLOWCHART_PREVIEW_TX,
@@ -1040,6 +1041,39 @@ function LiveDealEngine() {
                 {draftReference ?? "Live workspace"}
               </p>
             )}
+
+          {/* No deal yet: shows the upload/search starting card. If a `seed` came from the
+              homepage's search bar, CanvasStart auto-creates the deal on mount instead of
+              waiting for another click — so a visitor who already searched on the homepage lands
+              straight on the summary panel below, never back on this same picker. */}
+          {!activity && (
+            <div className="mt-4">
+              <CanvasStart
+                initialDirection={pendingDirection}
+                initialPrompt={seed}
+                onDraftReference={setDraftReference}
+                onCreated={(tx, recorded, seed) => {
+                  setPicking(false);
+                  setDirection(null);
+                  setPendingDirection(null);
+                  setDraftReference(null);
+                  setActivity(recorded);
+                  setDealTx(tx);
+                  setSeedPrompt(seed.prompt);
+                  setSeedFiles(seed.files);
+                  try {
+                    localStorage.setItem(ACTIVE_DEAL_KEY, JSON.stringify({ txId: tx.id, activity: recorded }));
+                  } catch {
+                    // Best-effort — resuming later just won't work if storage is unavailable.
+                  }
+                  // Stays on "documents" so the caller (this page) still treats it as such —
+                  // the workspace header above now owns showing the upload frame.
+                }}
+                onPickingChange={setPicking}
+                onDirectionChange={setDirection}
+              />
+            </div>
+          )}
 
           {/* Bidder details + AI summary come first, right under the header — before anything
               else in the workspace — so what was actually submitted is never buried behind the
