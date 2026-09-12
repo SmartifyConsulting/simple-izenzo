@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { applyCurrentStylePreset } from "@/lib/stylePreset";
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
 import { ThemeToggle } from "@/components/guided/ThemeToggle";
+import { SignInModal } from "@/components/auth/SignInModal";
 import { Logo } from "@/components/Logo";
 
 const NAV = [
