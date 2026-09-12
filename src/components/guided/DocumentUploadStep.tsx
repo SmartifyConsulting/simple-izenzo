@@ -4,6 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { FileCheck2, Loader2, UploadCloud, IdCard, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { classifyDocument } from "@/lib/izenzo.functions";
 import { summarizeBidDocuments } from "@/lib/docSummary.functions";
@@ -48,6 +50,18 @@ export function DocumentUploadStep({
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [reading, setReading] = useState(false);
+  const [prompt, setPrompt] = useState("");
+
+  /** Keeps the typed description on the deal so the search reads it alongside the documents. */
+  const savePrompt = useCallback(async () => {
+    const value = prompt.trim();
+    const { error } = await supabase
+      .from("transactions")
+      .update({ search_prompt: value.length > 0 ? value : null })
+      .eq("id", transactionId);
+    if (error) toast.error(`Your description could not be saved: ${error.message}`);
+    else await qc.invalidateQueries({ queryKey: ["transaction", transactionId] });
+  }, [prompt, transactionId, qc]);
 
   const { data: docs = [] } = useQuery({
     queryKey: ["documents", transactionId],
@@ -83,6 +97,7 @@ export function DocumentUploadStep({
       }
 
       setUploading(true);
+      await savePrompt();
       const isFirstEver = docs.length === 0;
       try {
         for (const [i, file] of list.entries()) {
@@ -140,7 +155,7 @@ export function DocumentUploadStep({
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [classify, summarize, transactionId, qc, autoAdvance, docs],
+    [classify, summarize, transactionId, qc, autoAdvance, docs, savePrompt],
   );
 
   async function next() {
@@ -150,6 +165,24 @@ export function DocumentUploadStep({
 
   return (
     <div className="space-y-4">
+      <div className="space-y-1.5">
+        <Label htmlFor="deal-search-prompt" className="text-xs font-medium">
+          Search Prompt
+        </Label>
+        <Textarea
+          id="deal-search-prompt"
+          rows={3}
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          onBlur={savePrompt}
+          placeholder="Describe what you're looking for — product, quantity, location, terms"
+          className="resize-none text-sm"
+        />
+        <p className="text-xs text-muted-foreground">
+          Used together with your attached documents to find matches.
+        </p>
+      </div>
+
       <div
         onDragOver={(e) => {
           e.preventDefault();

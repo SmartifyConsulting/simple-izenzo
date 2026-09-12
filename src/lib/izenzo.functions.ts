@@ -313,7 +313,9 @@ export const searchCounterparties = createServerFn({ method: "POST" })
     // uploaded documents said. The bid's own title ("New Bid") is never a search term — searching on
     // it is what used to return nothing.
     const docSummary = (tx.document_summary as string | null) ?? "";
-    const subject = tx.commodity?.trim() || keywordsFromSummary(docSummary);
+    const typedPrompt = ((tx as { search_prompt?: string | null }).search_prompt ?? "").trim();
+    const subject =
+      tx.commodity?.trim() || typedPrompt.slice(0, 160) || keywordsFromSummary(docSummary);
     if (!subject) {
       throw new Error(
         "There is nothing to search on yet — add the commodity, or attach a document that says what is being traded.",
@@ -336,6 +338,7 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       `Incoterms: ${tx.incoterms ?? "n/a"}`,
       `Jurisdiction: ${tx.jurisdiction ?? "n/a"}`,
       data.region ? `Preferred counterparty region: ${data.region}` : "",
+      typedPrompt ? `What the submitter is looking for (their own words):\n${typedPrompt.slice(0, 2000)}` : "",
       docSummary ? `What the attached documents say:\n${docSummary.slice(0, 4000)}` : "",
       latestBid
         ? `Latest ${latestBid.direction}: ${latestBid.price ?? "n/a"} ${latestBid.currency} for ${latestBid.quantity ?? "n/a"} ${latestBid.unit ?? ""}. Terms: ${latestBid.terms ?? "n/a"}`

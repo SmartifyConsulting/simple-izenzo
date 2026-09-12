@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Lock, ShieldCheck, UploadCloud, FileCheck2, Loader2, RotateCcw, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { SignInModal } from "@/components/auth/SignInModal";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -10,19 +12,34 @@ import { cn } from "@/lib/utils";
 /** Reads the same public directory the Responders page reads, so a signed-out visitor actually
  * sees rows. The private counterparty table this used to query is per-transaction and unreadable
  * when signed out, which made the preview come back empty every time. */
-function useIllustrativeMatches(enabled: boolean) {
+function useIllustrativeMatches(enabled: boolean, prompt: string) {
+  const terms = prompt
+    .toLowerCase()
+    .split(/[^a-z0-9]+/i)
+    .filter((w) => w.length > 3)
+    .slice(0, 6);
+
   return useQuery({
-    queryKey: ["hero-illustrative-matches"],
+    queryKey: ["hero-illustrative-matches", terms.join(",")],
     enabled,
     queryFn: async () => {
-      const { data, error, count } = await supabase
+      let q = supabase
         .from("responder_listings")
         .select("id, org_id, name, sector, jurisdiction, source, is_example, verified_at", {
           count: "exact",
         })
-        .eq("published", true)
-        .order("created_at", { ascending: false })
-        .limit(5);
+        .eq("published", true);
+
+      // What was typed narrows the directory; with nothing typed the newest listings are shown.
+      if (terms.length > 0) {
+        q = q.or(
+          terms
+            .flatMap((t) => [`name.ilike.%${t}%`, `sector.ilike.%${t}%`, `jurisdiction.ilike.%${t}%`])
+            .join(","),
+        );
+      }
+
+      const { data, error, count } = await q.order("created_at", { ascending: false }).limit(5);
       if (error) throw error;
       return { matches: data, total: count ?? data?.length ?? 0 };
     },
@@ -47,12 +64,13 @@ function bandOf(l: { verified_at: string | null; org_id: string | null }) {
  * Selecting a match is gated behind sign-up/sign-in — this is a preview, not a live workspace. */
 export function HeroMatchCard({ className }: { className?: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [prompt, setPrompt] = useState("");
   const [fileNames, setFileNames] = useState<string[]>([]);
   const [searched, setSearched] = useState(false);
   const [searching, setSearching] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
-  const { data: matchData, isLoading } = useIllustrativeMatches(searched);
+  const { data: matchData, isLoading } = useIllustrativeMatches(searched, prompt);
   const matches = matchData?.matches;
   const total = matchData?.total ?? 0;
   const searchTimer = useRef<number | null>(null);
@@ -72,6 +90,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
 
   function reset() {
     if (searchTimer.current) window.clearTimeout(searchTimer.current);
+    setPrompt("");
     setFileNames([]);
     setSearched(false);
     setSearching(false);
@@ -89,7 +108,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
     setFileNames((prev) => prev.filter((n) => n !== name));
   }
 
-  const canSearch = fileNames.length > 0;
+  const canSearch = prompt.trim().length > 0 || fileNames.length > 0;
   const canReset = canSearch || searching || searched;
 
   return (
@@ -120,6 +139,23 @@ export function HeroMatchCard({ className }: { className?: string }) {
 
       {!searched && !searching && (
         <>
+          <div className="mt-4 space-y-1.5">
+            <Label htmlFor="hero-search-prompt" className="text-xs font-medium text-foreground">
+              Search Prompt
+            </Label>
+            <Textarea
+              id="hero-search-prompt"
+              rows={3}
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="Describe what you're looking for — product, quantity, location, terms"
+              className="resize-none text-sm"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              What you type here is used together with any files you add.
+            </p>
+          </div>
+
           <div
             onClick={() => inputRef.current?.click()}
             onDragOver={(e) => {
@@ -133,7 +169,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
               if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
             }}
             className={cn(
-              "mt-4 flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed p-6 text-center transition-colors",
+              "mt-3 flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed p-6 text-center transition-colors",
               dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
             )}
           >
