@@ -162,22 +162,6 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
     testable: true,
   },
   {
-    id: "twilio",
-    name: "Twilio",
-    group: "Email & Notifications",
-    summary: "SMS alerts for high-value trade events.",
-    usedAt: "Throughout — SMS alerts for gate events on higher-value deals.",
-    fields: [
-      { key: "account_sid", label: "Account SID", secret: false, placeholder: "AC…" },
-      { key: "auth_token", label: "Auth token", secret: true },
-      { key: "from_number", label: "From number", secret: false, placeholder: "+2771…" },
-      { key: "dev_center_url", label: "Dev center login URL", secret: false, placeholder: "https://…" },
-      { key: "portal_username", label: "Username", secret: false },
-      { key: "portal_credentials", label: "Credentials", secret: true, help: "Password or API secret used to sign in to the provider portal." },
-    ],
-    testable: true,
-  },
-  {
     id: "complyadvantage",
     name: "ComplyAdvantage",
     group: "Sanctions & Fraud",

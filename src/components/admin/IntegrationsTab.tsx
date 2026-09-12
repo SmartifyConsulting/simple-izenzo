@@ -9,12 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { PasswordInput } from "@/components/PasswordInput";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import {
-  INTEGRATION_GROUPS,
-  INTEGRATION_PROVIDERS,
-  type IntegrationProvider,
-} from "@/lib/integrations.catalog";
+import { INTEGRATION_PROVIDERS, type IntegrationProvider } from "@/lib/integrations.catalog";
 import {
   deleteIntegration,
   listIntegrations,
@@ -53,6 +48,12 @@ export function IntegrationsTab() {
   );
   const isArchived = (id: string) => (byProvider[id]?.config as Record<string, string> | undefined)?.["archived"] === "true";
   const archivedCount = INTEGRATION_PROVIDERS.filter((p) => isArchived(p.id)).length;
+  const activeProviders = INTEGRATION_PROVIDERS.filter(
+    (p) => byProvider[p.id]?.enabled && (showArchived || !isArchived(p.id)),
+  );
+  const inactiveProviders = INTEGRATION_PROVIDERS.filter(
+    (p) => !byProvider[p.id]?.enabled && (showArchived || !isArchived(p.id)),
+  );
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["integrations"] });
 
@@ -103,34 +104,39 @@ export function IntegrationsTab() {
       {guided ? (
         <GuidedSetup byProvider={byProvider} onChanged={refresh} />
       ) : (
-        <Accordion type="multiple">
-          {INTEGRATION_GROUPS.map((group) => {
-            const providers = INTEGRATION_PROVIDERS.filter(
-              (p) => p.group === group && (showArchived || !isArchived(p.id)),
-            );
-            if (providers.length === 0) return null;
-            const configuredCount = providers.filter((p) => byProvider[p.id]).length;
-            return (
-              <AccordionItem key={group} value={group}>
-                <AccordionTrigger className="text-sm font-semibold">
-                  <span className="flex items-center gap-2">
-                    {group}
-                    <Badge variant="outline" className="font-normal text-muted-foreground">
-                      {configuredCount}/{providers.length} set up
-                    </Badge>
-                  </span>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="grid gap-2 xl:grid-cols-2">
-                    {providers.map((p) => (
-                      <ProviderCard key={p.id} provider={p} row={byProvider[p.id]} onChanged={refresh} />
-                    ))}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            );
-          })}
-        </Accordion>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="space-y-2">
+            <h3 className="flex items-center gap-2 text-sm font-semibold">
+              Active
+              <Badge variant="outline" className="font-normal text-muted-foreground">
+                {activeProviders.length}
+              </Badge>
+            </h3>
+            {activeProviders.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Nothing turned on yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {activeProviders.map((p) => (
+                  <ProviderCard key={p.id} provider={p} row={byProvider[p.id]} onChanged={refresh} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="flex items-center gap-2 text-sm font-semibold">
+              Inactive
+              <Badge variant="outline" className="font-normal text-muted-foreground">
+                {inactiveProviders.length}
+              </Badge>
+            </h3>
+            <div className="space-y-2">
+              {inactiveProviders.map((p) => (
+                <ProviderCard key={p.id} provider={p} row={byProvider[p.id]} onChanged={refresh} />
+              ))}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
