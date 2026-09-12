@@ -396,9 +396,25 @@ function ProviderCard({
           </div>
         )}
 
-        {provider.fields.map((field) => (
+        {provider.fields.map((field) => {
+          const saved = field.secret
+            ? Boolean(row?.maskedSecrets[field.key])
+            : Boolean((config[field.key] ?? "").trim());
+          const pending = field.secret && Boolean((secrets[field.key] ?? "").trim());
+          return (
           <div key={field.key} className="space-y-1.5">
-            <Label htmlFor={`${provider.id}-${field.key}`}>{field.label}</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor={`${provider.id}-${field.key}`}>{field.label}</Label>
+              <span
+                className={
+                  saved || pending
+                    ? "text-[10px] font-medium text-emerald-600"
+                    : "text-[10px] text-muted-foreground"
+                }
+              >
+                {pending ? "Unsaved change" : saved ? "Saved" : "Not set"}
+              </span>
+            </div>
             {field.secret ? (
               <PasswordInput
                 id={`${provider.id}-${field.key}`}
