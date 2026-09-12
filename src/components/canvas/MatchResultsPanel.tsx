@@ -72,7 +72,22 @@ export function MatchResultsPanel({ query, className }: { query?: string | undef
               {m.jurisdiction ?? "Jurisdiction pending"}
               {m.score != null ? ` · Score: ${m.score}` : ""}
             </p>
+            {/* What the search found about this match, plus the page it came from. */}
+            {m.rationale && (
+              <p className="mt-1.5 text-xs leading-relaxed text-foreground/80">{m.rationale}</p>
+            )}
+            {evidenceUrl(m.media_flags) && (
+              <a
+                href={evidenceUrl(m.media_flags)!}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+              >
+                <ExternalLink className="h-3 w-3" /> Where it was found
+              </a>
+            )}
           </li>
+
         ))}
       </ul>
     </div>
