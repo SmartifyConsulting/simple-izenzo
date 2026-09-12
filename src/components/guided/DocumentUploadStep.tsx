@@ -44,11 +44,15 @@ export function DocumentUploadStep({
    * Used where there's nothing else to review on this screen (e.g. going straight into search),
    * as opposed to a guided wizard step someone might want a beat to check before continuing. */
   autoAdvance?: boolean;
+  /** The bid/offer reference these files are being attached to — named on the panel so a document
+   * can't be added to the wrong workspace tab unnoticed. */
+  reference?: string | null;
   /** Whatever was already typed/dropped before this transaction existed — applied once, on
    * mount, so the caller doesn't have to make someone repeat themselves. */
   initialPrompt?: string;
   initialFiles?: File[];
 }) {
+
   const qc = useQueryClient();
   const classify = useServerFn(classifyDocument);
   const summarize = useServerFn(summarizeBidDocuments);
