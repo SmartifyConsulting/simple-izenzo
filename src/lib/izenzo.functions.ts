@@ -13,6 +13,15 @@ async function sha256(input: string) {
 
 const txInput = (data: unknown) => z.object({ transactionId: z.string().uuid() }).parse(data);
 
+/** Search tiers. AI is the fast everyday tier; AI+ is always GPT-6 Astra. */
+const AI_MODEL = "google/gemini-3.7-flash";
+const AI_PLUS_MODEL = "openai/gpt-6-astra";
+
+/** Astra requires an explicit reasoning effort and rejects temperature/top_p. */
+function aiPlusOptions(model: string) {
+  return model === AI_PLUS_MODEL ? { reasoning_effort: "medium" as const } : {};
+}
+
 /** Seal the Proof of Intent. Hard server-side gate: 1 token. */
 export const sealProofOfIntent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
