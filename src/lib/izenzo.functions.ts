@@ -245,6 +245,10 @@ function parseCandidates(raw: string): CandidateResult[] {
         sector: c["sector"] ? String(c["sector"]).slice(0, 200) : undefined,
         score: typeof c["score"] === "number" ? c["score"] : undefined,
         rationale: c["rationale"] ? String(c["rationale"]).slice(0, 500) : undefined,
+        sourceUrl:
+          typeof c["sourceUrl"] === "string" && /^https?:\/\//.test(c["sourceUrl"])
+            ? c["sourceUrl"].slice(0, 500)
+            : undefined,
       }))
       .filter((c) => c.name.length > 0)
       .slice(0, 8);
