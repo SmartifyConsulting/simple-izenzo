@@ -108,7 +108,7 @@ export function AppShell({
           </Link>
           <a
             href="/alpha-bravo"
-            className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            className="label-caps flex shrink-0 items-center gap-1.5 transition-colors hover:text-foreground"
           >
             <ArrowLeft className="h-3.5 w-3.5" /> Home
           </a>
