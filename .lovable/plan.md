@@ -43,5 +43,6 @@ The current bid never reached the search step: no commodity was typed and no doc
 - `verified_at` is set from a passed `identity_verifications` row for that org — never defaulted, so the Verified badge cannot be self-awarded.
 - Publishing web-found names happens in a server function alongside `searchCounterparties`, writing unclaimed listings with the source URL kept as evidence. Private per-bid rows in `counterparties` stay exactly as they are.
 - `ResponderDirectory.tsx` and `useResponderFacets` switch to `responder_listings`; the sector and location routes inherit it unchanged.
-- Opt-in toggle added to the organisation profile screen, writing a `registered` listing for that org.
+- `published` defaults to `true`; a `registered` listing is written for the org, with an opt-out toggle on the organisation profile screen.
+- Badge text updated in `HeroMatchCard.tsx`, `LiveCounterpartyCard.tsx` and `LiveDealCard.tsx`.
 - Example rows are literal `INSERT` statements in the same migration with `is_example = true`.
