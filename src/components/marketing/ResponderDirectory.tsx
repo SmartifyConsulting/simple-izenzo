@@ -1,18 +1,40 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ShieldCheck } from "lucide-react";
+import { BadgeCheck, ExternalLink, ShieldCheck, Globe } from "lucide-react";
 import { SubmitBidButton } from "@/components/marketing/SubmitBidButton";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
-const RATING_BANDS = ["All", "trusted", "neutral", "flagged"] as const;
+const FILTERS = ["All", "verified", "registered", "unclaimed"] as const;
 
-const RATING_LABEL: Record<string, string> = {
-  trusted: "Verified",
-  neutral: "Under review",
-  flagged: "Flagged",
+const FILTER_LABEL: Record<string, string> = {
+  verified: "Verified",
+  registered: "On Izenzo",
+  unclaimed: "Unclaimed",
 };
+
+type Listing = {
+  id: string;
+  org_id: string | null;
+  name: string;
+  sector: string | null;
+  jurisdiction: string | null;
+  summary: string | null;
+  source: string;
+  source_url: string | null;
+  verified_at: string | null;
+  is_example: boolean;
+};
+
+/** Which of the three audiences a listing belongs to. Verified is only ever earned from a passed
+ * identity check, never assumed. */
+function bandOf(l: Listing): "verified" | "registered" | "unclaimed" {
+  if (l.verified_at) return "verified";
+  return l.org_id ? "registered" : "unclaimed";
+}
+
+const BAND_ORDER = { verified: 0, registered: 1, unclaimed: 2 } as const;
 
 /** Distinct real sector/jurisdiction values on file, for building "browse by" links without
  * fabricating combinations that don't exist in the data. */
@@ -20,7 +42,10 @@ export function useResponderFacets() {
   return useQuery({
     queryKey: ["alpha-bravo-responder-facets"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("counterparties").select("sector, jurisdiction");
+      const { data, error } = await supabase
+        .from("responder_listings")
+        .select("sector, jurisdiction")
+        .eq("published", true);
       if (error) throw error;
       const sectors = Array.from(new Set(data.map((c) => c.sector).filter(Boolean))).sort();
       const jurisdictions = Array.from(
@@ -46,15 +71,18 @@ function useResponders({
     queryKey: ["alpha-bravo-responders", sector ?? null, jurisdiction ?? null],
     queryFn: async () => {
       let query = supabase
-        .from("counterparties")
-        .select("id, name, sector, jurisdiction, status, rating_band, score, rationale")
-        .order("rating_computed_at", { ascending: false })
+        .from("responder_listings")
+        .select(
+          "id, org_id, name, sector, jurisdiction, summary, source, source_url, verified_at, is_example",
+        )
+        .eq("published", true)
+        .order("created_at", { ascending: false })
         .limit(60);
       if (sector) query = query.ilike("sector", sector);
       if (jurisdiction) query = query.ilike("jurisdiction", jurisdiction);
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+      return data as Listing[];
     },
   });
 }
@@ -69,60 +97,120 @@ export function ResponderDirectory({
   jurisdiction?: string;
 }) {
   const { data, isLoading } = useResponders({ sector, jurisdiction });
-  const [ratingFilter, setRatingFilter] = useState<(typeof RATING_BANDS)[number]>("All");
+  const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
 
-  const visible = (data ?? []).filter(
-    (c) => ratingFilter === "All" || c.rating_band === ratingFilter,
-  );
+  const visible = (data ?? [])
+    .filter((l) => filter === "All" || bandOf(l) === filter)
+    .sort((a, b) => BAND_ORDER[bandOf(a)] - BAND_ORDER[bandOf(b)]);
 
   return (
     <>
       <div className="mt-8 flex flex-wrap gap-2">
-        {RATING_BANDS.map((r) => (
+        {FILTERS.map((r) => (
           <button
             key={r}
             type="button"
-            onClick={() => setRatingFilter(r)}
+            onClick={() => setFilter(r)}
             className={cn(
-              "rounded-full border px-3.5 py-1.5 text-xs font-medium capitalize transition-colors",
-              ratingFilter === r
+              "rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors",
+              filter === r
                 ? "border-primary bg-primary text-primary-foreground"
                 : "border-border text-muted-foreground hover:text-foreground",
             )}
           >
-            {r === "All" ? "All" : RATING_LABEL[r]}
+            {r === "All" ? "All" : FILTER_LABEL[r]}
           </button>
         ))}
       </div>
 
-      {isLoading && <p className="mt-10 text-sm text-muted-foreground">Loading live Responders…</p>}
+      {isLoading && <p className="mt-10 text-sm text-muted-foreground">Loading Responders…</p>}
 
       {!isLoading && visible.length === 0 && (
-        <p className="mt-10 text-sm text-muted-foreground">
-          No Responders on file yet for this filter.
-        </p>
+        <div className="mt-10 rounded-2xl border border-border bg-card p-6">
+          <p className="text-sm text-foreground">
+            No Responders listed here yet
+            {sector ? ` in ${sector}` : ""}
+            {jurisdiction ? ` in ${jurisdiction}` : ""}.
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Businesses appear here as they join Izenzo, or as they are found while searching for a
+            live bid.
+          </p>
+          <Link
+            to="/auth"
+            search={{ mode: "signup", next: undefined }}
+            className="mt-4 inline-block text-sm font-medium text-primary hover:underline"
+          >
+            List your business
+          </Link>
+        </div>
       )}
 
       <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {visible.map((c) => (
-          <div key={c.id} className="rounded-2xl border border-border bg-card p-5">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-primary">
-                {c.rating_band ? RATING_LABEL[c.rating_band] : "Unrated"}
-                {c.sector ? ` · ${c.sector}` : ""}
+        {visible.map((l) => {
+          const band = bandOf(l);
+          return (
+            <div key={l.id} className="rounded-2xl border border-border bg-card p-5">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-primary">
+                  {FILTER_LABEL[band]}
+                  {l.sector ? ` · ${l.sector}` : ""}
+                </p>
+                {band === "verified" ? (
+                  <BadgeCheck
+                    className="h-3.5 w-3.5 shrink-0 text-success"
+                    aria-label="Verified through Izenzo"
+                  />
+                ) : band === "registered" ? (
+                  <ShieldCheck
+                    className="h-3.5 w-3.5 shrink-0 text-primary"
+                    aria-label="Registered on Izenzo"
+                  />
+                ) : (
+                  <Globe
+                    className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
+                    aria-label="Found on the web, not yet on Izenzo"
+                  />
+                )}
+              </div>
+              <h3 className="mt-2 text-base font-medium tracking-tight text-foreground">
+                {l.name}
+                {l.is_example && (
+                  <span className="ml-2 rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                    Example
+                  </span>
+                )}
+              </h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {l.jurisdiction ?? "Location not stated"}
               </p>
-              <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-success" />
+              {l.summary && (
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{l.summary}</p>
+              )}
+              <div className="mt-4 flex flex-wrap items-center gap-3 text-xs">
+                {l.source_url && (
+                  <a
+                    href={l.source_url}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                  >
+                    <ExternalLink className="h-3 w-3" /> Where this was found
+                  </a>
+                )}
+                {band === "unclaimed" && (
+                  <Link
+                    to="/auth"
+                    search={{ mode: "signup", next: undefined }}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    This is my business
+                  </Link>
+                )}
+              </div>
             </div>
-            <h3 className="mt-2 text-base font-medium tracking-tight text-foreground">{c.name}</h3>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {c.jurisdiction ?? "Jurisdiction pending"}
-              {c.score != null ? ` · Score: ${c.score}` : ""}
-            </p>
-            {c.rationale && (
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{c.rationale}</p>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="mt-16 rounded-2xl border border-border bg-card p-8 text-center">
