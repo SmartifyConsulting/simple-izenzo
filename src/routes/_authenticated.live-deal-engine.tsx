@@ -27,6 +27,7 @@ import {
 import { TradeSummary } from "@/components/canvas/TradeSummary";
 
 import { ClassicView } from "@/components/canvas/ClassicView";
+import { DocumentUploadStep } from "@/components/guided/DocumentUploadStep";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -857,15 +858,24 @@ function LiveDealEngine() {
               without the page itself needing to scroll — the Map scales its diagram to fit, the
               Workspace scrolls its own content internally if it runs long. */}
           <div className="ink-grid flex h-[calc(100vh-190px)] w-full flex-col overflow-hidden rounded-3xl border border-border bg-card p-3 shadow-2xl sm:p-5">
-            <p className="label-caps shrink-0 text-foreground">Izenzo Engine Map</p>
-            <div className="mt-3 min-h-0 flex-1">
-              <ClassicView
-                tx={dealTx ?? FLOWCHART_PREVIEW_TX}
-                reload={() => void reloadDeal()}
-                readOnly={!dealTx}
-                onRegister={startNewDeal}
-                onOpenStep={openMapStep}
-              />
+            <p className="label-caps shrink-0 text-foreground">
+              {dealTx && flowStep === "documents" ? "Upload deal documents" : "Izenzo Engine Map"}
+            </p>
+            <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
+              {dealTx && flowStep === "documents" ? (
+                <DocumentUploadStep
+                  transactionId={dealTx.id}
+                  onNext={() => void runSearch(dealTx.id)}
+                />
+              ) : (
+                <ClassicView
+                  tx={dealTx ?? FLOWCHART_PREVIEW_TX}
+                  reload={() => void reloadDeal()}
+                  readOnly={!dealTx}
+                  onRegister={startNewDeal}
+                  onOpenStep={openMapStep}
+                />
+              )}
             </div>
           </div>
 
@@ -888,9 +898,8 @@ function LiveDealEngine() {
                   } catch {
                     // Best-effort — resuming later just won't work if storage is unavailable.
                   }
-                  // ID/documents are collected at signup now, not per-deal — go straight to
-                  // matching instead of asking for an upload here.
-                  void runSearch(tx.id);
+                  // Stays on "documents" — the Engine Map panel picks this up and swaps in the
+                  // upload frame until the user attaches something and moves on.
                 }}
                 onPickingChange={setPicking}
                 onDirectionChange={setDirection}
