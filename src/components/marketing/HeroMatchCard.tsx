@@ -207,7 +207,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
                 Real Responder records, sign up to unlock full contacts.
               </>
             ) : (
-              "A teaser of your top 5 — real Responder records, sign up to unlock full contacts."
+              "Your top 5 — real Responder records, sign up to unlock full contacts."
             )}
           </p>
 
