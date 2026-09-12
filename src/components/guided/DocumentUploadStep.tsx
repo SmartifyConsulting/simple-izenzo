@@ -155,7 +155,7 @@ export function DocumentUploadStep({
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [classify, summarize, transactionId, qc, autoAdvance, docs],
+    [classify, summarize, transactionId, qc, autoAdvance, docs, savePrompt],
   );
 
   async function next() {
