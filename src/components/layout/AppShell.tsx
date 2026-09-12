@@ -1,7 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, BarChart3, ChevronDown, Coins, DollarSign, Mail, Plug } from "lucide-react";
+import { ArrowLeft, BarChart3, ChevronDown, Coins, DollarSign, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";

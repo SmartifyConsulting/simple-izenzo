@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, BarChart3, ChevronDown, Mail, Tag, TerminalSquare } from "lucide-react";
+import { ArrowLeft, BarChart3, ChevronDown, Mail, Tag } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { SearchButton } from "@/components/layout/SearchButton";
