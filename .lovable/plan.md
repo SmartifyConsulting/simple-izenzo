@@ -21,6 +21,22 @@
    - Both start at the same time when a submission goes in, and both show as in progress at once rather than one waiting for the other.
    - When the result list appears, both are ticked and Choice becomes the pulsing item, so the next thing to do is obvious.
 
+6. Fix "Uploaded, but the documents could not be read: AI is not configured for this workspace"
+   - Cause found: the AI key does exist for this project, but the running app process was started without it, so every read of an uploaded document fails with that message. Nothing is wrong with your upload or your documents.
+   - The app process is restarted so it picks the key up, and the document reading is then run again on the bid you are on, so its summary appears.
+   - The message itself becomes honest: if the key ever really is missing, it says the workspace owner needs to enable AI, and offers "Try again" instead of leaving the upload looking broken.
+
+7. Reading the uploaded files with OCR and AI
+   - Photos and scanned pages are read by sight (OCR); PDF, Word, Excel, CSV and plain text are read as text.
+   - Everything read is summarised into the bullet list of the trade's material aspects at the top of the workspace, and any ID number stays backend-only.
+   - Files that genuinely cannot be read are named individually, so one bad file no longer blocks the rest.
+
+8. Completed steps read as ticked labels
+   - In the workflow list, a step that is finished shows its tick and label only — the task rows inside it are replaced by that single ticked line rather than repeating the tasks.
+   - Ticked items sit on the left with their label, not pushed to the right-hand edge.
+
+9. "Bid creation" is renamed "Bid Registration" everywhere it appears.
+
 ## Unchanged
 
 - Gates, tokens, certificates and all business rules.
@@ -29,8 +45,10 @@
 
 ## Technical notes
 
-- `src/routes/_authenticated.live-deal-engine.tsx`: drop the `draftReference ?? "Live workspace"` fallback heading (around line 1128) so only the panel's own `label-caps` heading remains; when a draft reference exists it still renders, larger.
-- `OpenDealsPicker` trigger: `w-[280px]` → `w-[140px]`, reference text to `text-base font-bold` (popover content keeps its own width).
-- `src/components/guided/DocumentUploadStep.tsx`: render the action button in `autoAdvance` mode too, labelled "Submit", calling the same `next()`; disabled while `uploading || reading` or with no docs and an empty prompt.
-- Concurrency: where the page currently chains the media checks after `runSearch`, kick both off with `Promise.allSettled` from one submit handler, tracking two independent flags (`searchRunning`, `mediaRunning`).
-- Pulsing: replace the matches-only `overrideStates` with a single derived map computed from the page's flow state for every phase — `documents` → `bidOffer` active; submitted → `bidOffer` done and `search` + `onlineMedia` active; results present → both done and `choice` active; after a choice → `choice` done and `poi` active. `ClassicView` already renders `active` with `animate-throb-aqua` and `done` with a tick, so no styling change is needed there.
+- `src/routes/_authenticated.live-deal-engine.tsx`: drop the `draftReference ?? "Live workspace"` fallback heading (around line 1128); rename the "Bid Creation" checklist line (line ~1183) to "Bid Registration" and update any other occurrence found by search.
+- `OpenDealsPicker` trigger: `w-[280px]` → `w-[140px]`, reference text to `text-base font-bold`.
+- `src/components/guided/DocumentUploadStep.tsx`: render the action button in `autoAdvance` mode too, labelled "Submit", calling the same `next()`; disabled while `uploading || reading` or with no docs and an empty prompt. Its catch branch (line ~151) surfaces per-file failures and a clearer "AI not enabled" message with a retry that re-calls `summarizeBidDocuments`.
+- Root cause of the error, verified: `LOVABLE_API_KEY` is present in the project secrets and the sandbox shell, but absent from the running dev-server process environment (`/proc/<vite pid>/environ` has no such entry), so `docSummary.functions.ts:31` reads `undefined` and throws at line 32. Fix = restart the dev server so the injected env is picked up, then re-run `summarizeBidDocuments` for the current transaction. No code change is needed for the key itself.
+- OCR/AI reading already exists in `src/lib/docSummary.functions.ts` (image parts by signed URL, PDF/Word/Excel/CSV as text); keep it, and make the per-file `unreadable[]` list surface in the UI instead of a single blanket toast.
+- Concurrency: kick `runSearch` and the media checks off together with `Promise.allSettled` from one submit handler, tracking `searchRunning` and `mediaRunning` independently.
+- Pulsing + ticked collapse in `src/components/canvas/ClassicView.tsx`: a derived override map from the page's flow state for every phase — `documents` → `bidOffer` active; submitted → `bidOffer` done and `search` + `onlineMedia` active; results present → both done and `choice` active; after a choice → `choice` done and `poi` active. A step whose items are all `done` renders as one left-aligned ticked label row (tick + step label, `justify-start`) instead of its item list.
