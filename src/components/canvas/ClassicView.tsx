@@ -251,7 +251,8 @@ export function ClassicView({
         {STEPS.map((s, i) => {
           const stepCollapsed = Boolean(collapsed[s.step]);
           const stepIsActive = s.step === activeStep;
-          const stepIsDone = s.step < activeStep;
+          const allDone = s.items.every((item) => stateOf(item) === "done");
+          const stepIsDone = s.step < activeStep || allDone;
           return (
             <div key={s.step} className="flex gap-4">
               <div className="flex flex-col items-center">
