@@ -58,8 +58,24 @@ export function DocumentUploadStep({
 
   const handleFiles = useCallback(
     async (files: FileList | File[]) => {
-      const list = Array.from(files);
+      let list = Array.from(files);
       if (list.length === 0) return;
+
+      // One ID photo only — written documents (PDF, Word, Excel, CSV, text) have no limit.
+      const alreadyHasImage = docs.some((d) => IMAGE_NAME.test(String(d.name)));
+      const images = list.filter((f) => IMAGE_NAME.test(f.name));
+      if (images.length > 0 && (alreadyHasImage || images.length > 1)) {
+        const keep = alreadyHasImage ? null : images[0];
+        const dropped = images.filter((f) => f !== keep).map((f) => f.name);
+        list = list.filter((f) => !dropped.includes(f.name));
+        toast.info(
+          alreadyHasImage
+            ? "Only one photo can be attached — the extra photo was not added."
+            : "Only one photo can be attached — the first one was kept.",
+        );
+        if (list.length === 0) return;
+      }
+
       setUploading(true);
       const isFirstEver = docs.length === 0;
       try {
@@ -95,6 +111,21 @@ export function DocumentUploadStep({
         }
         await qc.invalidateQueries({ queryKey: ["documents", transactionId] });
         toast.success(list.length === 1 ? "Document uploaded" : `${list.length} documents uploaded`);
+
+        // Read what the files actually say — the photo by sight, written documents by their text —
+        // so the ask is summarised and the search has real details to work from.
+        setReading(true);
+        try {
+          await summarize({ data: { transactionId } });
+          await qc.invalidateQueries({ queryKey: ["transaction", transactionId] });
+          await qc.invalidateQueries({ queryKey: ["tx", transactionId] });
+          toast.success("Documents read — summary ready");
+        } catch (err) {
+          toast.error(`Uploaded, but the documents could not be read: ${(err as Error).message}`);
+        } finally {
+          setReading(false);
+        }
+
         if (autoAdvance) await next();
       } catch (err) {
         toast.error((err as Error).message);
@@ -103,7 +134,7 @@ export function DocumentUploadStep({
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [classify, transactionId, qc, autoAdvance],
+    [classify, summarize, transactionId, qc, autoAdvance, docs],
   );
 
   async function next() {
