@@ -51,7 +51,7 @@ function About() {
           </div>
         </div>
 
-        <div className="space-y-6 lg:pl-8">
+        <div className="space-y-6 lg:pl-8 lg:pt-24">
           <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
             From our writing
           </p>
