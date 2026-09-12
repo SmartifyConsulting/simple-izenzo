@@ -267,17 +267,12 @@ export function HeroMatchCard({ className }: { className?: string }) {
 
             {matches?.map((m) => (
               <div key={m.id} className="rounded-xl border border-border p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-primary">
-                    {BAND_LABEL[bandOf(m)]}
-                    {m.sector ? ` · ${m.sector}` : ""}
-                    {m.is_example ? " · Example" : ""}
-                  </p>
-                  <Lock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                </div>
-                <p className="mt-1 text-sm font-medium text-foreground blur-[3px] select-none">
-                  {m.name}
+                <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-primary">
+                  {BAND_LABEL[bandOf(m)]}
+                  {m.sector ? ` · ${m.sector}` : ""}
+                  {m.is_example ? " · Example" : ""}
                 </p>
+                <p className="mt-1 text-sm font-medium text-foreground">{m.name}</p>
                 <p className="text-xs text-muted-foreground">
                   {m.jurisdiction ?? "Jurisdiction pending"}
                   {m.source === "web_search" ? " · Found on the web" : ""}
@@ -285,19 +280,19 @@ export function HeroMatchCard({ className }: { className?: string }) {
               </div>
             ))}
 
-            {/* More than five found: the "…" opens the Live Workspace with the full list in its
-                panel. The route is authenticated, so a visitor is sent to sign up / sign in first
-                and lands back on the same results. */}
+            {/* More than five found: "See more" opens the Live Workspace with the full list in its
+                panel, carrying the typed description so the panel filters on the same search. */}
             {!isLoading && total > 5 && (
               <Link
                 to="/live-deal-engine"
-                search={{ panel: "matches" as const }}
-                aria-label="Show all matches"
-                className="mx-auto flex h-9 w-16 items-center justify-center rounded-full border border-border text-lg leading-none text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
+                search={{ panel: "matches" as const, ...(prompt.trim() ? { q: prompt.trim() } : {}) }}
+                aria-label="See more matches"
+                className="mx-auto flex h-9 w-fit items-center justify-center rounded-full border border-border px-4 text-xs font-medium text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
               >
-                …
+                See more
               </Link>
             )}
+
           </div>
 
 
