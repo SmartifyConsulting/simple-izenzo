@@ -1,11 +1,15 @@
 import { useEffect, type ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { Coins, DollarSign, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 import { applyCurrentStylePreset } from "@/lib/stylePreset";
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
 import { ThemeToggle } from "@/components/guided/ThemeToggle";
+import { SearchButton } from "@/components/layout/SearchButton";
 import { SignInModal } from "@/components/auth/SignInModal";
 import { Logo } from "@/components/Logo";
 import { HeroSearchProvider, seedNext, useHeroSearch } from "@/lib/heroSearchContext";
@@ -34,7 +38,7 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
 }
 
 function AlphaBravoShellInner({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, org } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   // The home page shows a Sign In/Sign Up toggle instead of the plain "Sign in" button used
   // everywhere else, so a visitor sees both options are open to them right away.
@@ -43,6 +47,20 @@ function AlphaBravoShellInner({ children }: { children: ReactNode }) {
   // in/up destination so it isn't lost the moment they authenticate.
   const { prompt } = useHeroSearch();
   const next = isHome ? seedNext(prompt) : undefined;
+
+  // Same unread Inbox count the Trade Desk header shows.
+  const { data: unread = 0 } = useQuery({
+    queryKey: ["notifications-unread", org?.id],
+    enabled: Boolean(org?.id) && Boolean(user),
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("read", false);
+      return count ?? 0;
+    },
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -75,11 +93,43 @@ function AlphaBravoShellInner({ children }: { children: ReactNode }) {
           <div className="ml-6 flex shrink-0 items-center gap-3 lg:ml-3">
             {user ? (
               <>
+                <SearchButton />
+                <a
+                  href="/pricing"
+                  className="flex items-center transition-colors hover:text-primary"
+                  title="Pricing"
+                  aria-label="Pricing"
+                >
+                  <DollarSign className="h-5 w-5" strokeWidth={2.25} />
+                </a>
+                <Link
+                  to="/inbox"
+                  title="Inbox"
+                  className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-foreground/80 transition-colors hover:text-primary"
+                >
+                  <Mail className="h-5 w-5" strokeWidth={2.25} />
+                  {unread > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                      {unread}
+                    </span>
+                  )}
+                </Link>
                 <Link to="/live-deal-engine">
                   <Button size="sm" className="rounded-full">
                     Live workspace
                   </Button>
                 </Link>
+                {org && (
+                  <Link
+                    to="/credits"
+                    search={{ returnTo: undefined }}
+                    aria-label={`${org.credits} token${org.credits === 1 ? "" : "s"} — Token Management`}
+                    className="flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-primary/40 bg-primary/12 px-2.5 text-xs font-semibold text-foreground"
+                  >
+                    <Coins className="h-4 w-4 text-primary" strokeWidth={2.25} />
+                    {org.credits}
+                  </Link>
+                )}
                 <ProfileAvatarMenu />
               </>
             ) : isHome ? (

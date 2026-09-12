@@ -118,18 +118,6 @@ export function AppShell({
           </a>
 
           <div className="min-w-0 flex-1" />
-          {org && (
-            <Link
-              to="/credits"
-              search={{ returnTo: undefined }}
-
-              aria-label={`${org.credits} token${org.credits === 1 ? "" : "s"} — Token Management`}
-              className="flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-primary/40 bg-primary/12 px-2.5 text-xs font-semibold text-foreground"
-            >
-              <Coins className="h-4 w-4 text-primary" strokeWidth={2.25} />
-              {org.credits}
-            </Link>
-          )}
           <nav className="flex shrink-0 items-center gap-3 text-sm font-medium text-foreground/80 sm:gap-5">
             <SearchButton />
             <a
@@ -177,6 +165,18 @@ export function AppShell({
           </Link>
 
           <ThemeToggle />
+
+          {org && (
+            <Link
+              to="/credits"
+              search={{ returnTo: undefined }}
+              aria-label={`${org.credits} token${org.credits === 1 ? "" : "s"} — Token Management`}
+              className="flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-primary/40 bg-primary/12 px-2.5 text-xs font-semibold text-foreground"
+            >
+              <Coins className="h-4 w-4 text-primary" strokeWidth={2.25} />
+              {org.credits}
+            </Link>
+          )}
 
           <ProfileAvatarMenu />
         </div>

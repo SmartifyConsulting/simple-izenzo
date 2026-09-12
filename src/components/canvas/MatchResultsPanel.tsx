@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 const BAND_LABEL = {
@@ -45,13 +47,33 @@ export function MatchResultsPanel({ query, className }: { query?: string | undef
     },
   });
 
+  // Narrows what's already been fetched — refining within these results is instant, without
+  // re-running the original search each keystroke.
+  const [filter, setFilter] = useState("");
+  const f = filter.trim().toLowerCase();
+  const visible = f
+    ? data.filter((m) =>
+        [m.name, m.sector, m.jurisdiction].some((v) => (v ?? "").toLowerCase().includes(f)),
+      )
+    : data;
+
   return (
     <div className={cn("rounded-2xl border border-border bg-card/60 p-3 sm:p-4", className)}>
       <div className="flex items-center justify-between gap-2">
         <p className="label-caps text-foreground">All matches</p>
         <Badge variant="secondary" className="font-normal">
-          {data.length}
+          {visible.length}
         </Badge>
+      </div>
+
+      <div className="relative mt-3">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          placeholder="Search these matches by name, sector, or jurisdiction…"
+          className="pl-9"
+        />
       </div>
 
       {q && (
@@ -71,8 +93,12 @@ export function MatchResultsPanel({ query, className }: { query?: string | undef
         </p>
       )}
 
+      {!isLoading && data.length > 0 && visible.length === 0 && (
+        <p className="mt-3 text-sm text-muted-foreground">No matches for "{filter}".</p>
+      )}
+
       <ul className="mt-3 space-y-2">
-        {data.map((m) => (
+        {visible.map((m) => (
           <li key={m.id} className="rounded-xl border border-border p-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-primary">
               {BAND_LABEL[bandOf(m)]}
