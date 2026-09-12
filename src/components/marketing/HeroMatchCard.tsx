@@ -238,7 +238,22 @@ export function HeroMatchCard({ className }: { className?: string }) {
                 </p>
               </div>
             ))}
+
+            {/* More than five found: the "…" opens the Live Workspace with the full list in its
+                panel. The route is authenticated, so a visitor is sent to sign up / sign in first
+                and lands back on the same results. */}
+            {!isLoading && total > 5 && (
+              <Link
+                to="/live-deal-engine"
+                search={{ panel: "matches" as const }}
+                aria-label="Show all matches"
+                className="mx-auto flex h-9 w-16 items-center justify-center rounded-full border border-border text-lg leading-none text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
+              >
+                …
+              </Link>
+            )}
           </div>
+
 
           <Link to="/auth" search={{ mode: "signup", next: undefined }} className="mt-5 block">
             <Button className="w-full rounded-full gap-1.5">
