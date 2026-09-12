@@ -162,20 +162,6 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
     testable: true,
   },
   {
-    id: "complyadvantage",
-    name: "ComplyAdvantage",
-    group: "Sanctions & Fraud",
-    summary: "AML, sanctions and PEP screening with FICA-compatible record keeping.",
-    usedAt: "Trading Gate → Background screening (sanctions/PEP check) and Compliance Gate → Without a Doubt.",
-    fields: [
-      { key: "api_key", label: "API key", secret: true },
-      { key: "dev_center_url", label: "Dev center login URL", secret: false, placeholder: "https://…" },
-      { key: "portal_username", label: "Username", secret: false },
-      { key: "portal_credentials", label: "Credentials", secret: true, help: "Password or API secret used to sign in to the provider portal." },
-    ],
-    testable: true,
-  },
-  {
     id: "open_exchange_rates",
     name: "Open Exchange Rates",
     group: "Currency",
