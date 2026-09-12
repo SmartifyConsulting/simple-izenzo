@@ -220,6 +220,11 @@ function LiveDealEngine() {
   // The BID/OFF id shown on the tab/title bar before anything is actually saved — set the moment
   // someone starts a new bid/offer, so the workspace never sits unlabeled.
   const [draftReference, setDraftReference] = useState<string | null>(null);
+  // Whatever was already typed/dropped on the starting card, carried over so the real upload
+  // step (which owns the actual saving/uploading) can pick up from there instead of the user
+  // having to repeat themselves the moment the deal exists.
+  const [seedPrompt, setSeedPrompt] = useState("");
+  const [seedFiles, setSeedFiles] = useState<File[]>([]);
   const [flowStep, setFlowStep] = useState<FlowStep>("documents");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -969,6 +974,8 @@ function LiveDealEngine() {
                       onNext={() => void runSearch(dealTx.id)}
                       onFirstClassified={({ directionGuess }) => void applyDirectionGuess(directionGuess)}
                       autoAdvance
+                      initialPrompt={seedPrompt}
+                      initialFiles={seedFiles}
                     />
                   ) : (
                     <div className="space-y-1.5 rounded-xl border border-border bg-muted/30 p-3">
@@ -995,13 +1002,15 @@ function LiveDealEngine() {
               <CanvasStart
                 initialDirection={pendingDirection}
                 onDraftReference={setDraftReference}
-                onCreated={(tx, recorded) => {
+                onCreated={(tx, recorded, seed) => {
                   setPicking(false);
                   setDirection(null);
                   setPendingDirection(null);
                   setDraftReference(null);
                   setActivity(recorded);
                   setDealTx(tx);
+                  setSeedPrompt(seed.prompt);
+                  setSeedFiles(seed.files);
                   try {
                     localStorage.setItem(ACTIVE_DEAL_KEY, JSON.stringify({ txId: tx.id, activity: recorded }));
                   } catch {

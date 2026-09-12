@@ -21,23 +21,26 @@ function About() {
             Izenzo means "actions" in isiZulu.
           </h1>
           <p className="mt-6 leading-relaxed text-muted-foreground">
-            Because intent is only the beginning. We follow through:{" "}
+            Great deals shouldn't get stuck in compliance paperwork. Named after the Zulu word
+            for actions, Izenzo turns intent into execution without the friction. From initial
+            search to final agreement, the platform builds a permanent, verified audit
+            trail—giving you pre-vetted options so you can close trade deals faster with
+            complete trust.{" "}
             <span className="font-medium text-foreground">
-              trade should be driven by what should be there, not just what already is.
+              You make the call; Izenzo makes it happen.
             </span>
           </p>
 
           <p className="mt-6 leading-relaxed text-muted-foreground">
-            At its core is <span className="font-medium text-foreground">AI+</span>, our patented
-            algorithm. Every search runs two models in parallel: AI finds what is there; AI+
-            looks beyond it, then tests whether it's real, plausible and compliant.{" "}
-            <span className="font-medium text-foreground">The models propose. You decide.</span>
-          </p>
-
-          <p className="mt-6 leading-relaxed text-muted-foreground">
-            From verification to execution to the permanent memory of what was proven, Izenzo
-            closes the gap between "we agree" and "it's done" — not by cutting corners, but
-            because the trust behind the trade can be proven.
+            Behind that speed is <span className="font-medium text-foreground">Izenzo AI+</span>,
+            our patented dual-model engine. While standard trade tools only search what's
+            already visible on the market, AI+ looks beyond the status quo to predict hidden
+            trade opportunities—automatically testing them for real-world viability, legality,
+            and compliance in real time.{" "}
+            <span className="font-medium text-foreground">
+              Standard AI just finds data; Izenzo AI+ proves it,
+            </span>{" "}
+            delivering fully actionable, compliant deals straight to your desk.
           </p>
 
           <p className="mt-10 text-sm font-medium uppercase tracking-[0.1em] text-muted-foreground">

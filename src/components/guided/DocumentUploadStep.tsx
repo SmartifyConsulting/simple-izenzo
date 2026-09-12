@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -31,6 +31,8 @@ export function DocumentUploadStep({
   onNext,
   onFirstClassified,
   autoAdvance = false,
+  initialPrompt,
+  initialFiles,
 }: {
   transactionId: string;
   onNext: () => void;
@@ -42,6 +44,10 @@ export function DocumentUploadStep({
    * Used where there's nothing else to review on this screen (e.g. going straight into search),
    * as opposed to a guided wizard step someone might want a beat to check before continuing. */
   autoAdvance?: boolean;
+  /** Whatever was already typed/dropped before this transaction existed — applied once, on
+   * mount, so the caller doesn't have to make someone repeat themselves. */
+  initialPrompt?: string;
+  initialFiles?: File[];
 }) {
   const qc = useQueryClient();
   const classify = useServerFn(classifyDocument);
@@ -50,7 +56,7 @@ export function DocumentUploadStep({
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [reading, setReading] = useState(false);
-  const [prompt, setPrompt] = useState("");
+  const [prompt, setPrompt] = useState(initialPrompt ?? "");
 
   /** Keeps the typed description on the deal so the search reads it alongside the documents. */
   const savePrompt = useCallback(async () => {
@@ -162,6 +168,21 @@ export function DocumentUploadStep({
     await advance(transactionId, "trading", "search");
     onNext();
   }
+
+  // Applies whatever was already typed/dropped before this deal existed — once, on mount, so
+  // reloading or re-rendering this step never re-uploads the same files a second time.
+  const appliedSeed = useRef(false);
+  useEffect(() => {
+    if (appliedSeed.current) return;
+    appliedSeed.current = true;
+    if (initialFiles && initialFiles.length > 0) {
+      // handleFiles saves the prompt itself before uploading, so both land together.
+      void handleFiles(initialFiles);
+    } else if (initialPrompt && initialPrompt.trim()) {
+      void savePrompt();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="space-y-4">

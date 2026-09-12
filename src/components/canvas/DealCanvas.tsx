@@ -1774,7 +1774,13 @@ export function CanvasStart({
   onDraftReference,
   initialDirection,
 }: {
-  onCreated: (tx: Transaction, activity: RecordedActivity) => void;
+  /** `seed` carries whatever the visitor already typed/dropped on the starting card, so the
+   * caller can hand it straight to the real upload step instead of making them repeat it. */
+  onCreated: (
+    tx: Transaction,
+    activity: RecordedActivity,
+    seed: { prompt: string; files: File[] },
+  ) => void;
   /** Fires whenever picking starts/stops, so the caller can hide anything that would look like a
    * duplicate of this card (e.g. the read-only flowchart preview) while it's active. */
   onPickingChange?: (picking: boolean) => void;
@@ -1898,7 +1904,11 @@ export function CanvasStart({
         reference,
       };
       setDirection(null);
-      onCreated({ ...newTx, stage: "trading", step: "documents" } as Transaction, activity);
+      onCreated(
+        { ...newTx, stage: "trading", step: "documents" } as Transaction,
+        activity,
+        { prompt, files: pendingFiles },
+      );
     } catch (err) {
       toast.error((err as Error).message);
       setPicking(false);
@@ -1907,10 +1917,11 @@ export function CanvasStart({
     }
   }
 
-  // Dropping/selecting a file goes straight to creating the deal — there's nothing left to ask
-  // first (identity is on file from sign-up, and direction is inferred from the document itself
-  // once it's uploaded), so a confirmation screen in between would just be a click for its own
-  // sake.
+  // Dropping/selecting a file (or typing a description and pressing Enter) goes straight to
+  // creating the deal — there's nothing left to ask first (identity is on file from sign-up, and
+  // direction is inferred from the document itself once it's uploaded), so a confirmation screen
+  // in between would just be a click for its own sake. Whatever was already typed/dropped rides
+  // along via onCreated's `seed` so the real upload step can pick up exactly where this left off.
   function beginPicking() {
     const ref = draftReference ?? nextReference("bid");
     if (!draftReference) {
@@ -1923,32 +1934,72 @@ export function CanvasStart({
   }
 
   const [dragOver, setDragOver] = useState(false);
+  const [prompt, setPrompt] = useState("");
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Same look as the marketing hero's upload card, so starting a deal here reads as "drop your
-  // document" rather than a separate "pick a side" step — no arrow icon, no direction language.
+  // Same look as the marketing hero's search bar — a description on the left, a drop zone on the
+  // right — so capturing what someone's after starts here instead of asking them to repeat it
+  // once the deal already exists.
   const startNode = (
-    <div className="mx-auto max-w-md">
+    <div className="mx-auto w-full max-w-lg space-y-1.5">
       <div
-        onClick={beginPicking}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragOver(true);
-        }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragOver(false);
-          beginPicking();
-        }}
         className={cn(
-          "flex animate-node-rise cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed p-6 text-center transition-colors",
-          dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
+          "flex items-stretch gap-2 rounded-2xl border-2 bg-background p-2 transition-colors focus-within:border-primary",
+          dragOver ? "border-primary bg-primary/5" : "border-border",
         )}
       >
-        <UploadCloud className="h-5 w-5 text-muted-foreground" />
-        <span className="text-sm font-medium text-foreground">Drop files here</span>
-        <span className="text-xs text-muted-foreground">Pitch deck, proposal, or any file — multiple OK</span>
+        <textarea
+          rows={3}
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey && prompt.trim()) {
+              e.preventDefault();
+              beginPicking();
+            }
+          }}
+          placeholder="Describe what you're looking for — product, quantity, location, terms"
+          className="min-w-0 flex-1 basis-1/2 resize-none border-0 bg-transparent p-1 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+        />
+        <div
+          onClick={() => fileInputRef.current?.click()}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOver(false);
+            const files = Array.from(e.dataTransfer.files);
+            if (files.length === 0) return;
+            setPendingFiles(files);
+            beginPicking();
+          }}
+          className="flex min-w-0 flex-1 basis-1/2 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-border p-3 text-center transition-colors hover:border-primary/40"
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              const files = e.target.files ? Array.from(e.target.files) : [];
+              e.target.value = "";
+              if (files.length === 0) return;
+              setPendingFiles(files);
+              beginPicking();
+            }}
+          />
+          <UploadCloud className="h-5 w-5 text-muted-foreground" />
+          <span className="text-xs font-medium text-foreground">Drop files here or click to browse</span>
+          <span className="text-[11px] text-muted-foreground">Pitch deck, proposal, or any file — multiple OK</span>
+        </div>
       </div>
+      <p className="text-center text-[11px] text-muted-foreground">
+        Press Enter, or drop a file, to open your workspace.
+      </p>
     </div>
   );
 

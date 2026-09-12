@@ -62,7 +62,11 @@ function HowItWorks() {
           {SPINE.map((stage, i) => {
             const copy = STAGE_COPY[stage.key];
             return (
-              <li key={stage.key} className="flex gap-5">
+              <li
+                key={stage.key}
+                className="flex animate-in fade-in slide-in-from-left-6 gap-5 fill-mode-both duration-1000"
+                style={{ animationDelay: `${i * 450}ms` }}
+              >
                 <span className="text-sm font-semibold text-primary">
                   {String(i + 1).padStart(2, "0")}
                 </span>
