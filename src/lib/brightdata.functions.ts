@@ -19,7 +19,7 @@ export const lookupCompanySite = createServerFn({ method: "POST" })
       "@/lib/brightdata.server"
     );
 
-    if (!brightDataConfigured()) {
+    if (!(await brightDataConfigured())) {
       return {
         ok: false as const,
         excerpt: "",

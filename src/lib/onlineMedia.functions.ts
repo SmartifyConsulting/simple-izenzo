@@ -96,7 +96,7 @@ export const runOnlineMediaChecks = createServerFn({ method: "POST" })
     }
 
     const { brightDataConfigured, fetchPageText } = await import("@/lib/brightdata.server");
-    const connected = brightDataConfigured();
+    const connected = await brightDataConfigured();
 
     const results: MediaCheckResult[] = [];
 

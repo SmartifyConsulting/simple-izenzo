@@ -209,7 +209,7 @@ type CandidateResult = {
  * names, which is worse than no answer. */
 async function groundOnWeb(query: string, kind: "ai" | "ai_plus") {
   const { brightDataConfigured, fetchSearchResults } = await import("@/lib/brightdata.server");
-  if (!brightDataConfigured()) {
+  if (!(await brightDataConfigured())) {
     throw new Error(
       "Live web search is not connected, so this search cannot be grounded in real listings. Add the Bright Data connection in Admin → Integrations.",
     );
@@ -545,7 +545,7 @@ export const checkCandidateProducts = createServerFn({ method: "POST" })
 
     // Preferred path: Bright Data's remote browser, which renders JavaScript-only sites.
     const { brightDataConfigured, fetchPageText } = await import("@/lib/brightdata.server");
-    if (brightDataConfigured()) {
+    if (await brightDataConfigured()) {
       try {
         text = await fetchPageText(data.url);
       } catch (err) {

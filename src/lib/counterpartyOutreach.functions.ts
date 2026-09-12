@@ -23,7 +23,7 @@ export const findCounterpartyContact = createServerFn({ method: "POST" })
     if (!cp) throw new Error("Counterparty not found, or you don't have access to it.");
 
     const { brightDataConfigured, fetchPageText } = await import("@/lib/brightdata.server");
-    if (!brightDataConfigured()) {
+    if (!(await brightDataConfigured())) {
       throw new Error("Bright Data is not connected yet. Add it under Admin → Integrations.");
     }
     const pageText = await fetchPageText(data.website);
@@ -112,7 +112,7 @@ export const enrichCounterparty = createServerFn({ method: "POST" })
     // must never fail because enrichment couldn't run).
     const { brightDataConfigured, fetchPageText } = await import("@/lib/brightdata.server");
     const apiKey = process.env["LOVABLE_API_KEY"];
-    if (!brightDataConfigured() || !apiKey) return { source: "unavailable" as const };
+    if (!(await brightDataConfigured()) || !apiKey) return { source: "unavailable" as const };
 
     try {
       const searchText = await fetchPageText(
