@@ -573,7 +573,7 @@ export const runAiProposal = createServerFn({ method: "POST" })
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
-        ...aiPlusOptions(model),
+        ...aiPlusOptions(model, data.kind),
         messages: [
           { role: "system", content: system },
           { role: "user", content: prompt },
