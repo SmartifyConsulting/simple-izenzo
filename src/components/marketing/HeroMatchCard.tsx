@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Lock, ShieldCheck, UploadCloud, FileCheck2, Loader2, Sparkles } from "lucide-react";
+import { Lock, ShieldCheck, UploadCloud, FileCheck2, Loader2, Sparkles, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -63,25 +63,37 @@ export function HeroMatchCard({ className }: { className?: string }) {
     setSearching(false);
   }
 
-  /** Clears just the results, back to an empty upload prompt, for running the illustration
-   * again with a different file — unlike Cancel, which is meant to abandon the flow. */
-  function newSearch() {
-    if (searchTimer.current) window.clearTimeout(searchTimer.current);
-    setFileName(null);
-    setSearched(false);
-    setSearching(false);
-  }
-
   const canSearch = Boolean(fileName);
+  const canReset = Boolean(fileName) || searching || searched;
 
   return (
     <div className={cn("w-full rounded-2xl border border-border bg-card p-6 shadow-sm", className)}>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-base font-medium tracking-tight text-foreground">
+          {searched ? "Top 5 matches" : "Upload Bid Proposal"}
+        </h2>
+        <div className="flex items-center gap-2">
+          {searched && (
+            <span className="flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
+              <ShieldCheck className="h-3 w-3" /> Live from database
+            </span>
+          )}
+          {canReset && (
+            <button
+              type="button"
+              onClick={reset}
+              title="Start over"
+              aria-label="Start over"
+              className="rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
       {!searched && !searching && (
         <>
-          <h2 className="text-base font-medium tracking-tight text-foreground">
-            Upload Bid Proposal
-          </h2>
-
           <div
             onClick={() => inputRef.current?.click()}
             onDragOver={(e) => {
@@ -121,16 +133,9 @@ export function HeroMatchCard({ className }: { className?: string }) {
             />
           </div>
 
-          <div className="mt-5 flex gap-2">
-            {fileName && (
-              <Button variant="outline" className="rounded-full" onClick={reset}>
-                Cancel
-              </Button>
-            )}
-            <Button className="flex-1 rounded-full" disabled={!canSearch} onClick={onFindMatches}>
-              Find Matches
-            </Button>
-          </div>
+          <Button className="mt-5 w-full rounded-full" disabled={!canSearch} onClick={onFindMatches}>
+            Find Matches
+          </Button>
           <p className="mt-3 text-center text-[11px] text-muted-foreground">
             See how matching works — no account needed to preview.
           </p>
@@ -142,22 +147,11 @@ export function HeroMatchCard({ className }: { className?: string }) {
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
           <p className="text-sm font-medium text-foreground">Searching for matches…</p>
           <p className="text-xs text-muted-foreground">Cross-referencing verified Responders</p>
-          <Button variant="outline" className="mt-2 rounded-full" onClick={reset}>
-            Cancel
-          </Button>
         </div>
       )}
 
       {searched && (
         <>
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="text-base font-medium tracking-tight text-foreground">
-              Top 5 matches
-            </h2>
-            <span className="flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
-              <ShieldCheck className="h-3 w-3" /> Live from database
-            </span>
-          </div>
           <p className="mt-1 text-xs text-muted-foreground">
             A teaser of your top 5 — real Responder records, sign up to unlock full contacts.
           </p>
@@ -196,14 +190,6 @@ export function HeroMatchCard({ className }: { className?: string }) {
               <Sparkles className="h-4 w-4" /> Sign up to unlock matches
             </Button>
           </Link>
-          <div className="mt-2 flex gap-2">
-            <Button variant="outline" className="flex-1 rounded-full" onClick={newSearch}>
-              New Search
-            </Button>
-            <Button variant="ghost" className="flex-1 rounded-full" onClick={reset}>
-              Cancel
-            </Button>
-          </div>
           <p className="mt-3 text-center text-[11px] text-muted-foreground">
             Already have an account?{" "}
             <Link
