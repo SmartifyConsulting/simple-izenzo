@@ -11,6 +11,10 @@
    - Later steps stay as they are today
 4. **Naming.** The workflow panel is titled "IZENZO TRADE WORKFLOW", and any remaining "Engine Map" wording is changed to match.
 5. **The media screening actually runs** on the saved matches where the scraping connection is available; the bar fills as each one is checked and the results appear underneath. If the scraping service is unavailable, the bar completes and a plain note says the screening could not be completed, rather than pretending it passed.
+6. **Summary of the Proposal.** Above the results, a bulleted summary of the material aspects of the trade read from the uploaded document and prompt — what is offered or wanted, quantity and units, price and currency, delivery/location, terms and dates — only the facts actually present, nothing invented or padded.
+7. **Who submitted it.** The submitting business or individual name is shown at the top of that summary, with the Verified badge next to it when their identity checks have passed (no badge otherwise).
+8. **Results are selectable.** Each result row carries a radio button so exactly one party can be chosen, which is what carries forward into the next step.
+
 
 ## Technical notes
 
