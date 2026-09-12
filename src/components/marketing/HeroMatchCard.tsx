@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Lock, ShieldCheck, UploadCloud, FileCheck2, Loader2, Sparkles } from "lucide-react";
@@ -15,7 +15,7 @@ function useIllustrativeMatches(enabled: boolean) {
         .from("counterparties")
         .select("id, name, sector, jurisdiction, rating_band, score")
         .order("rating_computed_at", { ascending: false })
-        .limit(3);
+        .limit(5);
       if (error) throw error;
       return data;
     },
@@ -41,14 +41,35 @@ export function HeroMatchCard({ className }: { className?: string }) {
   const [dragOver, setDragOver] = useState(false);
 
   const { data: matches, isLoading } = useIllustrativeMatches(searched);
+  const searchTimer = useRef<number | null>(null);
+
+  useEffect(() => () => {
+    if (searchTimer.current) window.clearTimeout(searchTimer.current);
+  }, []);
 
   function onFindMatches() {
     setSearching(true);
     setSearched(false);
-    window.setTimeout(() => {
+    searchTimer.current = window.setTimeout(() => {
       setSearching(false);
       setSearched(true);
     }, 900);
+  }
+
+  function reset() {
+    if (searchTimer.current) window.clearTimeout(searchTimer.current);
+    setFileName(null);
+    setSearched(false);
+    setSearching(false);
+  }
+
+  /** Clears just the results, back to an empty upload prompt, for running the illustration
+   * again with a different file — unlike Cancel, which is meant to abandon the flow. */
+  function newSearch() {
+    if (searchTimer.current) window.clearTimeout(searchTimer.current);
+    setFileName(null);
+    setSearched(false);
+    setSearching(false);
   }
 
   const canSearch = Boolean(fileName);
@@ -100,9 +121,16 @@ export function HeroMatchCard({ className }: { className?: string }) {
             />
           </div>
 
-          <Button className="mt-5 w-full rounded-full" disabled={!canSearch} onClick={onFindMatches}>
-            Find Matches
-          </Button>
+          <div className="mt-5 flex gap-2">
+            {fileName && (
+              <Button variant="outline" className="rounded-full" onClick={reset}>
+                Cancel
+              </Button>
+            )}
+            <Button className="flex-1 rounded-full" disabled={!canSearch} onClick={onFindMatches}>
+              Find Matches
+            </Button>
+          </div>
           <p className="mt-3 text-center text-[11px] text-muted-foreground">
             See how matching works — no account needed to preview.
           </p>
@@ -114,6 +142,9 @@ export function HeroMatchCard({ className }: { className?: string }) {
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
           <p className="text-sm font-medium text-foreground">Searching for matches…</p>
           <p className="text-xs text-muted-foreground">Cross-referencing verified Responders</p>
+          <Button variant="outline" className="mt-2 rounded-full" onClick={reset}>
+            Cancel
+          </Button>
         </div>
       )}
 
@@ -121,14 +152,14 @@ export function HeroMatchCard({ className }: { className?: string }) {
         <>
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-base font-medium tracking-tight text-foreground">
-              Illustrative matches
+              Top 5 matches
             </h2>
             <span className="flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
               <ShieldCheck className="h-3 w-3" /> Live from database
             </span>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Real Responder records — sign up to run this against your own opportunity.
+            A teaser of your top 5 — real Responder records, sign up to unlock full contacts.
           </p>
 
           <div className="mt-4 space-y-3">
@@ -165,6 +196,14 @@ export function HeroMatchCard({ className }: { className?: string }) {
               <Sparkles className="h-4 w-4" /> Sign up to unlock matches
             </Button>
           </Link>
+          <div className="mt-2 flex gap-2">
+            <Button variant="outline" className="flex-1 rounded-full" onClick={newSearch}>
+              New Search
+            </Button>
+            <Button variant="ghost" className="flex-1 rounded-full" onClick={reset}>
+              Cancel
+            </Button>
+          </div>
           <p className="mt-3 text-center text-[11px] text-muted-foreground">
             Already have an account?{" "}
             <Link

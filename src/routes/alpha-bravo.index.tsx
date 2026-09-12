@@ -53,15 +53,16 @@ const STAGES = [
 function AlphaBravoHome() {
   return (
     <section className="mx-auto max-w-6xl px-5 py-12 sm:py-16">
-      <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+        <Sparkles className="h-3.5 w-3.5" /> AI-Powered Trade Matching
+      </span>
+      <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+        Pre-vetted · Governed marketplace
+      </p>
+
+      <div className="mt-6 grid gap-12 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
         <div className="min-w-0">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-            <Sparkles className="h-3.5 w-3.5" /> AI-Powered Trade Matching
-          </span>
-          <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-            Pre-vetted · Governed marketplace
-          </p>
-          <h1 className="mt-6 max-w-3xl text-5xl leading-[1.05] tracking-tight text-foreground sm:text-6xl">
+          <h1 className="max-w-3xl text-5xl leading-[1.05] tracking-tight text-foreground sm:text-6xl">
             Find the right Trade
             <br />
             in ~5 minutes.
