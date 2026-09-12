@@ -13,7 +13,7 @@ So the page needs its own public list, not the private one.
 
 **A public responder directory, drawn from both sources**
 
-- Businesses registered on Izenzo can switch on "show us in the public directory" from their organisation profile. Off by default — nothing appears without consent.
+- Registered businesses appear in the public directory by default, and can switch it off from their organisation profile at any time.
 - Names found by the web search get published as *unclaimed* listings, each carrying a link to the page it was found on, and each marked as not yet on Izenzo.
 - Registered, verified businesses sort first; then registered; then unclaimed listings.
 - Each row shows name, sector, region, a short line about them, and one of three badges: **Verified** (identity checked through Izenzo), **On Izenzo** (registered, not yet verified), **Unclaimed** (found on the web).
