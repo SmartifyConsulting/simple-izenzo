@@ -1041,6 +1041,42 @@ function LiveDealEngine() {
               </p>
             )}
 
+          {/* Bidder details + AI summary come first, right under the header — before anything
+              else in the workspace — so what was actually submitted is never buried behind the
+              progress ribbon or the workflow ticks below it. */}
+          {activity && dealTx && (
+            <div className="glass-node mt-4 space-y-2 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="label-caps text-muted-foreground">Bidder details &amp; AI summary</p>
+                <SubmitterIdentity orgId={dealTx.org_id} createdBy={(dealTx as unknown as { created_by?: string | null }).created_by ?? null} />
+              </div>
+              {dealTx.created_at && (
+                <p className="text-xs text-muted-foreground">
+                  Registered {new Date(dealTx.created_at).toLocaleDateString(undefined, {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </p>
+              )}
+              {documentSummary ? (
+                <ul className="mt-1 list-disc space-y-1 pl-4 text-sm leading-relaxed text-foreground">
+                  {documentSummary
+                    .split("\n")
+                    .map((line) => line.replace(/^[-•*]\s*/, "").trim())
+                    .filter(Boolean)
+                    .map((line, i) => <li key={i}>{highlightKeyTerms(line)}</li>)}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {workspaceDocs.length === 0
+                    ? "The AI summary appears here once a document is uploaded."
+                    : "Reading the uploaded document…"}
+                </p>
+              )}
+            </div>
+          )}
+
           {panel === "matches" && (
             <MatchResultsPanel query={matchQuery} className="mt-4" />
           )}
@@ -1081,29 +1117,6 @@ function LiveDealEngine() {
 
           {activity ? (
             <div className="mt-4 space-y-3">
-              {documentSummary && (
-                <div className="glass-node space-y-2 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="label-caps text-muted-foreground">What was submitted</p>
-                    {dealTx && (
-                      <SubmitterIdentity orgId={dealTx.org_id} createdBy={(dealTx as unknown as { created_by?: string | null }).created_by ?? null} />
-                    )}
-                  </div>
-                  {dealTx?.created_at && (
-                    <p className="text-xs text-muted-foreground">
-                      Registered {new Date(dealTx.created_at).toLocaleDateString(undefined, {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </p>
-                  )}
-                  <p className="text-sm leading-relaxed text-foreground">
-                    {highlightKeyTerms(documentSummary)}
-                  </p>
-                </div>
-              )}
-
                 <div className="flex flex-wrap gap-1.5">
                   {activity.commodity && (
                     <span className="rounded-full border border-primary/40 bg-primary/12 px-2.5 py-1 text-[11px] font-semibold text-primary">
