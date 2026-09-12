@@ -246,7 +246,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {m.jurisdiction ?? "Jurisdiction pending"}
-                  {m.score != null ? ` · Score: ${m.score}` : ""}
+                  {m.source === "web_search" ? " · Found on the web" : ""}
                 </p>
               </div>
             ))}
