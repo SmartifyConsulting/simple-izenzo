@@ -211,3 +211,53 @@ export const refreshVerification = createServerFn({ method: "POST" })
     return updated as VerificationRow;
   });
 
+
+/** Called by the public completion page the provider returns people to. It is deliberately
+ * unauthenticated: the returning tab (or popup) often carries no session. Safe because the only
+ * input is an opaque verification uuid and the only output is the status — no PII, no provider
+ * payload. It pulls the decision straight from the provider, so a missing or misconfigured
+ * webhook can't leave a passed check unrecorded. */
+export const finaliseVerificationPublic = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ vid: z.string().uuid() }).parse(d))
+  .handler(async ({ data }): Promise<{ status: VerificationRow["status"]; checkType: VerificationRow["check_type"] | null }> => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: row } = await supabaseAdmin
+      .from("identity_verifications")
+      .select("id, status, check_type, provider_session_id, subject_counterparty_id")
+      .eq("id", data.vid)
+      .maybeSingle();
+    if (!row) throw new Error("We could not find that verification.");
+
+    const checkType = row.check_type as VerificationRow["check_type"];
+    const current = row.status as VerificationRow["status"];
+    const sessionId = row.provider_session_id as string | null;
+
+    // Already settled, or never opened with the provider — nothing to pull.
+    if (current === "passed" || current === "failed" || !sessionId) {
+      return { status: current, checkType };
+    }
+
+    const { loadDiditCreds, fetchDiditDecision, mapDiditStatus } = await import("@/lib/didit.server");
+    const creds = await loadDiditCreds();
+    const decision = await fetchDiditDecision(creds, sessionId);
+    const status = mapDiditStatus(decision?.status);
+
+    await supabaseAdmin
+      .from("identity_verifications")
+      .update({
+        status,
+        decision: decision?.status ?? null,
+        result: decision ?? {},
+        completed_at: status === "passed" || status === "failed" ? new Date().toISOString() : null,
+      })
+      .eq("id", row.id);
+
+    const counterpartyId = row.subject_counterparty_id as string | null;
+    if (status === "passed" && counterpartyId) {
+      const { notifyIfFullyMatched } = await import("@/lib/matchNotify.server");
+      await notifyIfFullyMatched(counterpartyId);
+    }
+
+    return { status, checkType };
+  });
