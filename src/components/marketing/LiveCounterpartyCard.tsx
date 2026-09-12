@@ -26,7 +26,7 @@ export function LiveCounterpartyCard() {
           Izenzo · Compliance Engine
         </p>
         <span className="flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
-          <ShieldCheck className="h-3 w-3" /> Live from database
+          <ShieldCheck className="h-3 w-3" /> Live listings
         </span>
       </div>
 
