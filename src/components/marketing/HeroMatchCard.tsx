@@ -109,13 +109,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
   const canReset = canSearch || searching || searched;
 
   return (
-    <div
-      className={cn(
-        "w-full overflow-hidden rounded-2xl bg-gradient-to-r from-primary via-fuchsia-400 to-cyan-400 p-[1.5px] shadow-sm",
-        className,
-      )}
-    >
-    <div className="rounded-[14.5px] bg-card p-6">
+    <div className={cn("w-full", className)}>
       {(searched || canReset) && (
         <div className="flex items-center justify-end gap-2">
           {searched && (
@@ -186,7 +180,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
               onKeyDown={(e) => {
                 if (e.key === "Enter" && canSearch) onFindMatches();
               }}
-              placeholder="Ask anything"
+              placeholder="Describe what you're looking for — product, quantity, location, terms…"
               className="min-w-0 flex-1 bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground"
             />
             <button
@@ -304,7 +298,6 @@ export function HeroMatchCard({ className }: { className?: string }) {
           </Link>
         </>
       )}
-    </div>
     </div>
   );
 }

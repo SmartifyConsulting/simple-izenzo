@@ -70,8 +70,8 @@ function AlphaBravoHome() {
           Post your opportunity brief and get matched with verified Responders — fit scores,
           verified contacts, and ready-to-send outreach, all under one cryptographic record.
         </p>
-        <p className="mt-6 text-sm text-muted-foreground">No subscriptions, pay as you go.</p>
-        <div className="mt-8">
+        <div className="mt-8 flex flex-wrap items-center gap-4">
+          <p className="text-sm text-muted-foreground">No subscriptions, pay as you go.</p>
           <Link to="/alpha-bravo/trades">
             <Button size="lg" variant="outline" className="gap-1.5 rounded-full">
               See how matching works <ArrowRight className="h-4 w-4" />
