@@ -4,7 +4,7 @@ export type InsightArticle = {
   slug: string;
   date: string;
   title: string;
-  teaser: string;
+  summary: string;
   body: string[];
 };
 
@@ -13,7 +13,7 @@ export const INSIGHT_ARTICLES: InsightArticle[] = [
     slug: "compliance-gate-cant-be-a-checkbox",
     date: "September 2026",
     title: "Why the Compliance Gate Can't Be a Checkbox",
-    teaser:
+    summary:
       "A non-waivable gate only means something if it's actually non-waivable. What that looks like in practice, and why most platforms fake it.",
     body: [
       "Every marketplace that touches real money says some version of \"we verify our users.\" Almost none of them mean it in a way that would survive a regulator asking hard questions.",
@@ -28,7 +28,7 @@ export const INSIGHT_ARTICLES: InsightArticle[] = [
     slug: "matching-is-a-trust-problem",
     date: "August 2026",
     title: "Matching Is a Trust Problem Before It's a Trading Problem",
-    teaser:
+    summary:
       "Speed doesn't fix a bad match. Notes on why we verify before we introduce, not after.",
     body: [
       "Most matching platforms optimise for one thing: get two parties talking as fast as possible. Fewer clicks to an introduction reads as a win on every dashboard that measures engagement. It's also, in our experience, the wrong thing to optimise first.",
@@ -42,7 +42,7 @@ export const INSIGHT_ARTICLES: InsightArticle[] = [
     slug: "what-a-hash-sealed-record-buys-you",
     date: "July 2026",
     title: "What a Hash-Sealed Record Actually Buys You",
-    teaser:
+    summary:
       "Tamper-evident isn't a buzzword — it's a specific set of guarantees. Here's what they are and what they aren't.",
     body: [
       "\"Hash-sealed\" gets thrown around a lot, usually as a way of saying \"trust us\" in more technical-sounding language. It's worth being precise about what it actually guarantees, because the precision is the entire value.",
@@ -56,7 +56,7 @@ export const INSIGHT_ARTICLES: InsightArticle[] = [
     slug: "anatomy-of-a-match-that-falls-apart-at-finality",
     date: "June 2026",
     title: "Anatomy of a Match That Falls Apart at Finality",
-    teaser:
+    summary:
       "Most failed matches don't fail at introduction — they fail at settlement. A look at where the real risk hides.",
     body: [
       "Ask most operators where deals fall apart and they'll point at sourcing: bad matches, wasted introductions, counterparties who ghost. That's real, but it's not where the money is lost. The expensive failures happen at Finality — after both sides have already invested weeks of work, after Execution is substantially complete, when a change or value event surfaces that nobody structured for.",
@@ -70,7 +70,7 @@ export const INSIGHT_ARTICLES: InsightArticle[] = [
     slug: "cost-of-re-verifying-the-same-counterparty-twice",
     date: "May 2026",
     title: "The Cost of Re-verifying the Same Counterparty Twice",
-    teaser:
+    summary:
       "Every re-verification is friction someone pays for. Why a shared, portable verification record changes the economics.",
     body: [
       "A Responder who's cleared WaD once — identity, ownership, sanctions and PEP screening, all verified — should not have to pay for that verification again every time a new Bidder wants to transact with them. And yet on most platforms, and in most offline trade relationships, that's exactly what happens: verification is scoped to a single relationship, not to the counterparty.",
@@ -84,7 +84,7 @@ export const INSIGHT_ARTICLES: InsightArticle[] = [
     slug: "why-memory-is-a-stage-not-a-log",
     date: "April 2026",
     title: "Why We Built Memory as a Stage, Not a Log",
-    teaser:
+    summary:
       "A completed match that teaches you nothing is a wasted match. How the Memory stage turns outcomes into reusable intelligence.",
     body: [
       "Most platforms treat a completed transaction as an archival event: the deal's done, so write it to a table somewhere and move on. That's a log. It's useful for audits and largely useless for anything else — nobody's mining a log for insight, because a log wasn't designed to be read forward.",
