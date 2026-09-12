@@ -47,7 +47,7 @@ function IntelligenceFabric() {
   return (
     <>
       {/* Hero */}
-      <section className="border-b border-border bg-gradient-to-b from-primary/[0.04] to-transparent">
+      <section className="bg-gradient-to-b from-primary/[0.04] to-transparent">
         <div className="mx-auto max-w-5xl px-5 py-20 sm:py-28">
           <div className="flex items-start justify-between gap-4">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">

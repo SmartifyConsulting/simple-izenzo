@@ -114,11 +114,6 @@ function AlphaBravoShellInner({ children }: { children: ReactNode }) {
                     </span>
                   )}
                 </Link>
-                <Link to="/live-deal-engine">
-                  <Button size="sm" className="rounded-full">
-                    Live workspace
-                  </Button>
-                </Link>
                 {org && (
                   <Link
                     to="/credits"
