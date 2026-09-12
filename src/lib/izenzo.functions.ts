@@ -13,6 +13,15 @@ async function sha256(input: string) {
 
 const txInput = (data: unknown) => z.object({ transactionId: z.string().uuid() }).parse(data);
 
+/** Search tiers. AI is the fast everyday tier; AI+ is always GPT-6 Astra. */
+const AI_MODEL = "google/gemini-3.7-flash";
+const AI_PLUS_MODEL = "openai/gpt-6-astra";
+
+/** Astra requires an explicit reasoning effort and rejects temperature/top_p. */
+function aiPlusOptions(model: string) {
+  return model === AI_PLUS_MODEL ? { reasoning_effort: "medium" as const } : {};
+}
+
 /** Seal the Proof of Intent. Hard server-side gate: 1 token. */
 export const sealProofOfIntent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -260,12 +269,13 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       .filter(Boolean)
       .join("\n");
 
-    const model = data.kind === "ai" ? "google/gemini-3.7-flash" : "openai/gpt-5.4";
+    const model = data.kind === "ai" ? AI_MODEL : AI_PLUS_MODEL;
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
+        ...aiPlusOptions(model),
         messages: [
           { role: "system", content: system },
           { role: "user", content: prompt },
@@ -346,12 +356,13 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
 
     const prompt = `Search: "${data.query}"\nRole: ${data.role}\nPropose 4-6 candidates.`;
 
-    const model = data.kind === "ai" ? "google/gemini-3.7-flash" : "openai/gpt-5.4";
+    const model = data.kind === "ai" ? AI_MODEL : AI_PLUS_MODEL;
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
+        ...aiPlusOptions(model),
         messages: [
           { role: "system", content: system },
           { role: "user", content: prompt },
@@ -484,12 +495,13 @@ export const runAiProposal = createServerFn({ method: "POST" })
       .filter(Boolean)
       .join("\n");
 
-    const model = data.kind === "ai" ? "google/gemini-3.7-flash" : "openai/gpt-5.4";
+    const model = data.kind === "ai" ? AI_MODEL : AI_PLUS_MODEL;
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
+        ...aiPlusOptions(model),
         messages: [
           { role: "system", content: system },
           { role: "user", content: prompt },
