@@ -99,9 +99,11 @@ export function HeroMatchCard({ className }: { className?: string }) {
             <button
               type="button"
               onClick={reset}
-              className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+              title="Start again"
+              aria-label="Start again"
+              className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
-              Cancel
+              <RotateCcw className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
