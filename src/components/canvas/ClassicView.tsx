@@ -237,7 +237,12 @@ export function ClassicView({
 
   const toggleStep = (step: number) => setCollapsed((c) => ({ ...c, [step]: !c[step] }));
 
-  const st = (stage: StageKey, step: string) => nodeState(stage, step, tx);
+  const stateOf = (item: SubItem): NodeState => {
+    const override = overrideStates?.[item.key];
+    if (override) return override;
+    if (item.isEntry && readOnly) return "open";
+    return nodeState(item.stage, item.step, tx);
+  };
   const active = panel && !readOnly ? panel : null;
 
   return (
@@ -269,27 +274,28 @@ export function ClassicView({
                   {stepCollapsed ? "+ " : "− "}Step {s.step} · {s.label}
                 </button>
 
-                {!stepCollapsed && (
-                  <div className="mt-2 space-y-1.5">
-                    {s.items.map((item) => {
-                      const state = item.isEntry
-                        ? readOnly
-                          ? "open"
-                          : st(item.stage, item.step)
-                        : st(item.stage, item.step);
-                      return (
+                {!stepCollapsed &&
+                  (allDone ? (
+                    /* A finished step reads as one ticked label on the left, rather than
+                       repeating every task it already completed. */
+                    <div className="mt-2 flex w-1/2 items-center justify-start gap-2 rounded-lg border border-primary/50 bg-primary/12 px-3 py-2 font-sans text-[13px] font-medium text-primary">
+                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                      <span className="min-w-0 flex-1 truncate">{s.label}</span>
+                    </div>
+                  ) : (
+                    <div className="mt-2 space-y-1.5">
+                      {s.items.map((item) => (
                         <SubRow
                           key={item.key}
                           item={item}
-                          state={state}
+                          state={stateOf(item)}
                           onClick={
                             item.isEntry ? () => onRegister?.() : () => open(item.stage, item.step)
                           }
                         />
-                      );
-                    })}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  ))}
               </div>
             </div>
           );
