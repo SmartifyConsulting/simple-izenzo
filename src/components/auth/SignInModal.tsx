@@ -20,7 +20,7 @@ export function SignInModal({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-xl">
         <DialogTitle className="sr-only">{defaultTab === "signup" ? "Create account" : "Sign in"}</DialogTitle>
         <AuthTabs next={next} defaultTab={defaultTab} />
       </DialogContent>

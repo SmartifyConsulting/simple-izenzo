@@ -66,7 +66,7 @@ const ADMIN_TABS: AdminTab[] = [
 ];
 
 function AdminPage() {
-  const { roles, loading, refresh, profile } = useAuth();
+  const { roles, loading, refresh } = useAuth();
   const isAdmin = roles.includes("admin");
   const search = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
@@ -106,7 +106,9 @@ function AdminPage() {
     );
   }
 
-  const isSuperuser = (profile?.email ?? "").toLowerCase() === SUPERUSER_EMAIL;
+  // Previously gated behind one hardcoded email — any account with the admin role now sees
+  // these too, since that's the same bar the rest of this page is already gated behind.
+  const isSuperuser = isAdmin;
   const tabs = ADMIN_TABS.filter((t) => !t.superuserOnly || isSuperuser);
   const activeTab = search.tab ? tabs.find((t) => t.value === search.tab) : undefined;
 
