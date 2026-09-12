@@ -5,7 +5,7 @@ import {
   useNavigate,
   useRouterState,
 } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -75,8 +75,16 @@ function RequireEmailVerified() {
     },
   });
   const isIdVerified = (verificationRows ?? []).some((r) => r.status === "passed");
+
+  // Asked for, not enforced here: the hosted provider page cannot render inside the app's frame,
+  // so a hard block would leave people with nowhere to go. Dismissing it lasts for this browser
+  // session only, and the real compliance gates still require a passed check.
+  const [idDismissed, setIdDismissed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.sessionStorage.getItem("izenzo:identity-later") === "1";
+  });
   const needsIdentity =
-    !loading && !!profile && !needsOrg && !verificationLoading && !isIdVerified;
+    !loading && !!profile && !needsOrg && !verificationLoading && !isIdVerified && !idDismissed;
 
   useEffect(() => {
     if (!mustVerify && needsOrg && !onOrgSetup) navigate({ to: "/account/settings", replace: true });
@@ -88,7 +96,14 @@ function RequireEmailVerified() {
       <ActivityTracker />
       <Outlet />
       <VerifyEmailDialog open={mustVerify} />
-      <VerifyIdentityDialog open={!mustVerify && needsIdentity} verified={isIdVerified} />
+      <VerifyIdentityDialog
+        open={!mustVerify && needsIdentity}
+        verified={isIdVerified}
+        onDismiss={() => {
+          if (typeof window !== "undefined") window.sessionStorage.setItem("izenzo:identity-later", "1");
+          setIdDismissed(true);
+        }}
+      />
     </>
   );
 }
