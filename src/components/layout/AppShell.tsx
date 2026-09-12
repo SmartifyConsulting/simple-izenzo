@@ -67,7 +67,6 @@ export function AppShell({
   }, [profile?.id]);
   const width = wide ? "max-w-[1680px]" : "max-w-7xl";
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const onEngine = pathname === "/live-deal-engine";
 
   // Unread Inbox notifications — e.g. "this counterparty matched on all checks".
   const { data: unread = 0 } = useQuery({
@@ -199,15 +198,6 @@ export function AppShell({
               >
                 {greeting()}, {firstName}
               </p>
-            )}
-            {!onEngine && (
-              <Link
-                to="/live-deal-engine"
-                className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
-              >
-                <ArrowLeft className="h-3.5 w-3.5" />
-                Return to Engine
-              </Link>
             )}
             {title && (
               <h1 className="mt-2 truncate text-sm font-semibold tracking-tight text-muted-foreground">
