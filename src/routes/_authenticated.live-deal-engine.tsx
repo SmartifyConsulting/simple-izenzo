@@ -1006,7 +1006,12 @@ function LiveDealEngine() {
                 </div>
               </div>
             ) : (
-              <p className="label-caps font-mono text-base font-bold uppercase tracking-wide text-foreground">
+              <p
+                className={cn(
+                  "label-caps text-foreground",
+                  draftReference && "font-mono text-base font-bold uppercase tracking-wide",
+                )}
+              >
                 {draftReference ?? "Live workspace"}
               </p>
             )}
