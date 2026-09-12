@@ -16,8 +16,51 @@ type CdpMessage = {
   sessionId?: string;
 };
 
-export function brightDataConfigured() {
-  return Boolean(process.env["BRIGHTDATA_BROWSER_URL"]);
+export type BrightDataCreds = {
+  browserUrl: string | null;
+  apiKey: string | null;
+  serpZone: string | null;
+  unlockerZone: string | null;
+};
+
+let credsCache: { at: number; creds: BrightDataCreds } | null = null;
+
+/** One source of truth for the Bright Data connection: whatever an administrator saved in
+ * Admin → Integrations wins, with the server secrets as the fallback so nothing breaks while the
+ * screen is still empty. Cached briefly so a burst of scrapes doesn't re-read and re-decrypt. */
+export async function brightDataCredentials(): Promise<BrightDataCreds> {
+  if (credsCache && Date.now() - credsCache.at < 60_000) return credsCache.creds;
+
+  let saved: Record<string, string> = {};
+  let config: Record<string, string> = {};
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { decryptSecrets } = await import("@/lib/integrationCrypto.server");
+    const { data } = await supabaseAdmin
+      .from("integration_credentials")
+      .select("secrets_encrypted, config")
+      .eq("provider", "brightdata")
+      .maybeSingle();
+    if (data) {
+      saved = await decryptSecrets((data.secrets_encrypted as string | null) ?? null);
+      config = ((data.config ?? {}) as Record<string, string>) ?? {};
+    }
+  } catch {
+    // No saved entry (or no key to read it with) — the server secrets below still work.
+  }
+
+  const creds: BrightDataCreds = {
+    browserUrl: saved["browser_url"] || process.env["BRIGHTDATA_BROWSER_URL"] || null,
+    apiKey: saved["api_key"] || process.env["BRIGHTDATA_API_KEY"] || null,
+    serpZone: config["serp_zone"] || null,
+    unlockerZone: config["unlocker_zone"] || null,
+  };
+  credsCache = { at: Date.now(), creds };
+  return creds;
+}
+
+export async function brightDataConfigured() {
+  return Boolean((await brightDataCredentials()).browserUrl);
 }
 
 /** Opens the socket. Serverless runtimes only allow the fetch-upgrade form; Node (dev) needs the
@@ -25,7 +68,7 @@ export function brightDataConfigured() {
  * WebSocket constructor silently drops user:pass from the URL. Try both so the same code works in
  * preview and in production. */
 async function openSocket(): Promise<WebSocket> {
-  const raw = process.env["BRIGHTDATA_BROWSER_URL"];
+  const raw = (await brightDataCredentials()).browserUrl;
   if (!raw) throw new Error("Bright Data is not connected yet.");
 
   const url = new URL(raw);
