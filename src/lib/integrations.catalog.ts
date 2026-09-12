@@ -36,7 +36,8 @@ export const INTEGRATION_GROUPS = [
   "Currency",
   "Web Scraping",
   "Archival Storage",
-  "AI+ Engine",
+  "Izenzo AI+",
+
 
 ] as const;
 
