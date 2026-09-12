@@ -38,6 +38,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
   const [fileName, setFileName] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
   const [searching, setSearching] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
 
   const { data: matches, isLoading } = useIllustrativeMatches(searched);
 
@@ -62,7 +63,21 @@ export function HeroMatchCard({ className }: { className?: string }) {
 
           <div
             onClick={() => inputRef.current?.click()}
-            className="mt-4 flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-border p-6 text-center transition-colors hover:border-primary/40"
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              const file = e.dataTransfer.files?.[0];
+              if (file) setFileName(file.name);
+            }}
+            className={cn(
+              "mt-4 flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed p-6 text-center transition-colors",
+              dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
+            )}
           >
             {fileName ? (
               <>
