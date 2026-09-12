@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { when, type Transaction } from "@/lib/tx";
@@ -108,51 +109,26 @@ function AdminPage() {
   // Previously gated behind one hardcoded email — any account with the admin role now sees
   // these too, since that's the same bar the rest of this page is already gated behind.
   const isSuperuser = isAdmin;
-  const tabs = ADMIN_TABS.filter((t) => !t.superuserOnly || isSuperuser);
-  const activeTab = search.tab ? tabs.find((t) => t.value === search.tab) : undefined;
-
-  // No card selected yet — one flat grid of green-edged cards, each with its own icon.
-  if (!activeTab) {
-    return (
-      <AppShell title="Admin" description="Users, tokens and reporting for the whole book">
-        <div className="grid gap-4 sm:grid-cols-2">
-          {tabs
-            .filter((t) => !t.hidden)
-            .map((t) => (
-              <button
-                key={t.value}
-                type="button"
-                onClick={() => navigate({ search: { tab: t.value } })}
-                className="rounded-md border border-success/55 p-5 text-left transition-colors hover:border-success hover:bg-accent/40"
-              >
-                <t.Icon className="h-6 w-6 text-success" strokeWidth={1.9} />
-                <p className="mt-3 text-sm font-semibold">{t.label}</p>
-              </button>
-            ))}
-        </div>
-      </AppShell>
-    );
-  }
+  const tabs = ADMIN_TABS.filter((t) => !t.superuserOnly || isSuperuser).filter((t) => !t.hidden);
+  const activeValue = search.tab && tabs.some((t) => t.value === search.tab) ? search.tab : (tabs[0]?.value ?? "users");
 
   return (
     <AppShell title="Admin" description="Users, tokens and reporting for the whole book">
-      <button
-        type="button"
-        onClick={() => navigate({ search: {} })}
-        className="mb-4 flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
-      >
-        ← All admin sections
-      </button>
-      <div className="rounded-md border border-border p-5">
-        <h2 className="text-sm font-semibold">{activeTab.label}</h2>
-        <div className="mt-4">
-          {activeTab.value === "activity-log" ? (
-            <AuditLogTab initialUserId={search.activityUser} />
-          ) : (
-            <activeTab.Component />
-          )}
-        </div>
-      </div>
+      <Tabs value={activeValue} onValueChange={(value) => navigate({ search: { tab: value } })}>
+        <TabsList>
+          {tabs.map((t) => (
+            <TabsTrigger key={t.value} value={t.value} className="gap-1.5">
+              <t.Icon className="h-4 w-4" strokeWidth={1.9} />
+              {t.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        {tabs.map((t) => (
+          <TabsContent key={t.value} value={t.value} className="rounded-md border border-border p-5">
+            {t.value === "activity-log" ? <AuditLogTab initialUserId={search.activityUser} /> : <t.Component />}
+          </TabsContent>
+        ))}
+      </Tabs>
     </AppShell>
   );
 }
