@@ -361,6 +361,9 @@ function ProviderCard({
             ) : (
               <Badge variant="outline" className="text-[10px]">Not set up</Badge>
             )}
+            {configured && !enabled && (
+              <Badge variant="outline" className="text-[10px] text-amber-600">Not connected</Badge>
+            )}
             {archived && (
               <Badge variant="outline" className="text-[10px] text-muted-foreground">Archived</Badge>
             )}
@@ -433,7 +436,8 @@ function ProviderCard({
             )}
             {field.help && <p className="text-xs text-muted-foreground">{field.help}</p>}
           </div>
-        ))}
+          );
+        })}
 
       {row?.lastTestedAt && (
         <p className="mt-3 flex items-start gap-1.5 text-xs text-muted-foreground">
