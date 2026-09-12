@@ -1,7 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { LogOut, Moon, Settings, ShieldCheck, Sun } from "lucide-react";
+import { LogOut, Settings, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { useStylePreset } from "@/lib/stylePreset";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,14 +10,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-/** The app's one profile menu — Settings, then the light/dark switch, then sign out, then the
- * legal footer links. Pricing/API's/Support live in the top nav instead. */
+/** The app's one profile menu — Settings, then sign out, then the legal footer links. The
+ * light/dark switch now sits beside the avatar (see ThemeToggle). */
 export function ProfileAvatarMenu() {
   const { profile, signOut, roles } = useAuth();
   const navigate = useNavigate();
-  const [preset, setPreset] = useStylePreset();
-  const theme = preset === "cream" ? "light" : "dark";
-  const toggleTheme = () => setPreset(theme === "dark" ? "cream" : "black");
+
 
   const name = profile?.full_name ?? profile?.email ?? "";
   const initials = (name || "?").slice(0, 2).toUpperCase();
@@ -52,14 +49,6 @@ export function ProfileAvatarMenu() {
             <Link to="/account/settings" className="flex items-center">
               <Settings className="mr-2 h-3.5 w-3.5" /> Settings
             </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={toggleTheme}>
-            {theme === "dark" ? (
-              <Sun className="mr-2 h-3.5 w-3.5" />
-            ) : (
-              <Moon className="mr-2 h-3.5 w-3.5" />
-            )}
-            {theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
