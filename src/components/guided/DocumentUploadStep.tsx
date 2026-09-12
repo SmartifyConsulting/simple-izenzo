@@ -150,6 +150,24 @@ export function DocumentUploadStep({
 
   return (
     <div className="space-y-4">
+      <div className="space-y-1.5">
+        <Label htmlFor="deal-search-prompt" className="text-xs font-medium">
+          Search Prompt
+        </Label>
+        <Textarea
+          id="deal-search-prompt"
+          rows={3}
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          onBlur={savePrompt}
+          placeholder="Describe what you're looking for — product, quantity, location, terms"
+          className="resize-none text-sm"
+        />
+        <p className="text-xs text-muted-foreground">
+          Used together with your attached documents to find matches.
+        </p>
+      </div>
+
       <div
         onDragOver={(e) => {
           e.preventDefault();

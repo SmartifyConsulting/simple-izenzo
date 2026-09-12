@@ -169,7 +169,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
               if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
             }}
             className={cn(
-              "mt-4 flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed p-6 text-center transition-colors",
+              "mt-3 flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed p-6 text-center transition-colors",
               dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
             )}
           >
