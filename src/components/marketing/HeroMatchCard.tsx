@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowUp, Lock, Plus, ShieldCheck, FileCheck2, Loader2, RotateCcw, Sparkles, X } from "lucide-react";
+import { ArrowUp, ShieldCheck, FileCheck2, Loader2, RotateCcw, Sparkles, UploadCloud, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -139,31 +139,48 @@ export function HeroMatchCard({ className }: { className?: string }) {
         <>
           <p className="mb-4 text-center text-lg font-medium text-foreground">Ready when you are.</p>
 
-          <div
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragOver(true);
-            }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragOver(false);
-              if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
-            }}
-            className={cn(
-              "flex items-center gap-1 rounded-full border-2 bg-background p-2 shadow-sm transition-colors focus-within:border-primary",
-              dragOver ? "border-primary bg-primary/5" : "border-border",
-            )}
-          >
+          <div className="flex items-stretch gap-2 rounded-2xl border-2 border-border bg-background p-2 shadow-sm transition-colors focus-within:border-primary">
+            {/* Left half: the typed description. */}
+            <input
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && canSearch) onFindMatches();
+              }}
+              placeholder="Describe what you're looking for — product, quantity, location, terms…"
+              className="min-w-0 flex-1 basis-1/2 bg-transparent px-2 text-base text-foreground outline-none placeholder:text-muted-foreground"
+            />
+
+            {/* Right half: the same strip doubles as the drop zone, so no + button is needed. */}
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
-              title="Attach files"
-              aria-label="Attach files"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOver(true);
+              }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOver(false);
+                if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
+              }}
+              aria-label="Drop files here or click to browse"
+              className={cn(
+                "flex min-w-0 flex-1 basis-1/2 items-center justify-center gap-2 rounded-xl border border-dashed px-2 text-xs transition-colors",
+                dragOver
+                  ? "border-primary bg-primary/5 text-foreground"
+                  : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground",
+              )}
             >
-              <Plus className="h-5 w-5" />
+              <UploadCloud className="h-4 w-4 shrink-0" />
+              <span className="truncate">
+                {fileNames.length > 0
+                  ? `${fileNames.length} file${fileNames.length === 1 ? "" : "s"} attached`
+                  : "Drop files here or click to browse"}
+              </span>
             </button>
+
             <input
               ref={inputRef}
               type="file"
@@ -174,25 +191,18 @@ export function HeroMatchCard({ className }: { className?: string }) {
                 e.target.value = "";
               }}
             />
-            <input
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && canSearch) onFindMatches();
-              }}
-              placeholder="Describe what you're looking for — product, quantity, location, terms…"
-              className="min-w-0 flex-1 bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground"
-            />
+
             <button
               type="button"
               onClick={onFindMatches}
               disabled={!canSearch}
               aria-label="Find matches"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex h-10 w-10 shrink-0 items-center justify-center self-center rounded-full bg-primary text-primary-foreground transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
             >
               <ArrowUp className="h-4 w-4" />
             </button>
           </div>
+
 
           {fileNames.length > 0 && (
             <ul className="mt-3 space-y-1.5">
@@ -257,17 +267,12 @@ export function HeroMatchCard({ className }: { className?: string }) {
 
             {matches?.map((m) => (
               <div key={m.id} className="rounded-xl border border-border p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-primary">
-                    {BAND_LABEL[bandOf(m)]}
-                    {m.sector ? ` · ${m.sector}` : ""}
-                    {m.is_example ? " · Example" : ""}
-                  </p>
-                  <Lock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                </div>
-                <p className="mt-1 text-sm font-medium text-foreground blur-[3px] select-none">
-                  {m.name}
+                <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-primary">
+                  {BAND_LABEL[bandOf(m)]}
+                  {m.sector ? ` · ${m.sector}` : ""}
+                  {m.is_example ? " · Example" : ""}
                 </p>
+                <p className="mt-1 text-sm font-medium text-foreground">{m.name}</p>
                 <p className="text-xs text-muted-foreground">
                   {m.jurisdiction ?? "Jurisdiction pending"}
                   {m.source === "web_search" ? " · Found on the web" : ""}
@@ -275,19 +280,19 @@ export function HeroMatchCard({ className }: { className?: string }) {
               </div>
             ))}
 
-            {/* More than five found: the "…" opens the Live Workspace with the full list in its
-                panel. The route is authenticated, so a visitor is sent to sign up / sign in first
-                and lands back on the same results. */}
+            {/* More than five found: "See more" opens the Live Workspace with the full list in its
+                panel, carrying the typed description so the panel filters on the same search. */}
             {!isLoading && total > 5 && (
               <Link
                 to="/live-deal-engine"
-                search={{ panel: "matches" as const }}
-                aria-label="Show all matches"
-                className="mx-auto flex h-9 w-16 items-center justify-center rounded-full border border-border text-lg leading-none text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
+                search={{ panel: "matches" as const, ...(prompt.trim() ? { q: prompt.trim() } : {}) }}
+                aria-label="See more matches"
+                className="mx-auto flex h-9 w-fit items-center justify-center rounded-full border border-border px-4 text-xs font-medium text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
               >
-                …
+                See more
               </Link>
             )}
+
           </div>
 
 

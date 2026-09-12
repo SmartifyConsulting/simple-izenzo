@@ -169,61 +169,66 @@ export function DocumentUploadStep({
         <Label htmlFor="deal-search-prompt" className="text-xs font-medium">
           Search Prompt
         </Label>
-        <Textarea
-          id="deal-search-prompt"
-          rows={3}
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          onBlur={savePrompt}
-          placeholder="Describe what you're looking for — product, quantity, location, terms"
-          className="resize-none text-sm"
-        />
+        {/* One strip, split down the middle: description on the left, drop zone on the right. */}
+        <div className="flex items-stretch gap-2 rounded-2xl border-2 border-border bg-background p-2 transition-colors focus-within:border-primary">
+          <Textarea
+            id="deal-search-prompt"
+            rows={3}
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onBlur={savePrompt}
+            placeholder="Describe what you're looking for — product, quantity, location, terms"
+            className="min-w-0 flex-1 basis-1/2 resize-none border-0 bg-transparent text-sm shadow-none focus-visible:ring-0"
+          />
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              if (e.dataTransfer.files.length) void handleFiles(e.dataTransfer.files);
+            }}
+            aria-label="Drop files here or click to browse"
+            className={cn(
+              "flex min-w-0 flex-1 basis-1/2 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed p-3 text-center transition-colors",
+              dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
+            )}
+          >
+            {uploading || reading ? (
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            ) : (
+              <UploadCloud className="h-5 w-5 text-muted-foreground" />
+            )}
+            <span className="text-xs font-medium">
+              {reading ? "Reading your documents…" : "Drop files here or click to browse"}
+            </span>
+            <span className="text-[11px] text-muted-foreground">
+              {reading
+                ? "Pulling out the ask, quantities, prices and terms"
+                : "One photo of your ID, plus any written documents"}
+            </span>
+          </button>
+          <input
+            ref={inputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files) void handleFiles(e.target.files);
+              e.target.value = "";
+            }}
+          />
+        </div>
         <p className="text-xs text-muted-foreground">
           Used together with your attached documents to find matches.
         </p>
       </div>
 
-      <div
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragOver(true);
-        }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragOver(false);
-          if (e.dataTransfer.files.length) void handleFiles(e.dataTransfer.files);
-        }}
-        onClick={() => inputRef.current?.click()}
-        className={cn(
-          "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-8 text-center transition-colors",
-          dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
-        )}
-      >
-        {uploading || reading ? (
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        ) : (
-          <UploadCloud className="h-6 w-6 text-muted-foreground" />
-        )}
-        <p className="text-sm font-medium">
-          {reading ? "Reading your documents…" : "Drag and drop ID or deal documents here"}
-        </p>
-        <p className="text-xs text-muted-foreground">
-          {reading
-            ? "Pulling out the ask, quantities, prices and terms"
-            : "One photo of your ID, plus any written documents (PDF, Word, Excel, CSV, text)"}
-        </p>
-        <input
-          ref={inputRef}
-          type="file"
-          multiple
-          className="hidden"
-          onChange={(e) => {
-            if (e.target.files) void handleFiles(e.target.files);
-            e.target.value = "";
-          }}
-        />
-      </div>
 
       {docs.length > 0 && (
         <ul className="space-y-2">
