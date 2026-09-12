@@ -130,6 +130,11 @@
   --glass-shadow: 0 24px 60px -28px oklch(0 0 0 / 85%), inset 0 1px 0 oklch(1 0 0 / 10%);
   --signal: oklch(0.78 0.12 178);
 
+  /* The attention glow around the step the user should look at next. Bright aqua reads well on
+   * the dark canvas; the light and cream skins override it with their own signal colour, since a
+   * neon halo looks wrong on a pale ground. */
+  --throb-accent: oklch(0.78 0.12 178);
+
   /* Simple Mode trading board: buy = terracotta, sell = teal. */
   --terracotta: hsl(14 62% 50%);
   --terracotta-foreground: hsl(0 0% 100%);
@@ -191,6 +196,7 @@
   --glass-border: hsl(220 13% 91%);
   --glass-shadow: 0 20px 50px -24px hsl(220 30% 20% / 18%), inset 0 1px 0 hsl(0 0% 100% / 60%);
   --signal: hsl(160 84% 39%);
+  --throb-accent: hsl(155 35% 28%);
 }
 
 
@@ -242,6 +248,7 @@
   --glass-border: oklch(0.9 0.008 90);
   --glass-shadow: 0 1px 2px oklch(0.2 0.01 260 / 6%);
   --signal: oklch(0.51 0.24 265);
+  --throb-accent: oklch(0.51 0.24 265);
 }
 
 [data-app="alpha-bravo"] h1,
@@ -479,18 +486,19 @@
 @keyframes throb-aqua {
   0%,
   100% {
-    box-shadow: 0 0 0 0 color-mix(in oklab, #00e5ff 55%, transparent);
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--throb-accent) 45%, transparent);
   }
   50% {
-    box-shadow: 0 0 0 8px color-mix(in oklab, #00e5ff 0%, transparent);
+    box-shadow: 0 0 0 8px color-mix(in oklab, var(--throb-accent) 0%, transparent);
   }
 }
 
-/** Same attention pulse as animate-throb, in a bright aqua and a touch slower — used on the
+/** Same attention pulse as animate-throb, a touch slower and in whichever signal colour the
+ * current skin uses (aqua on the dark canvas, royal blue on the cream ground) — used on the
  * Classic view's active-step nodes, which needed to stand out more clearly than the default. */
 @utility animate-throb-aqua {
   animation: throb-aqua 2.1s ease-in-out infinite;
-  border-color: color-mix(in oklab, #00e5ff 80%, transparent);
+  border-color: color-mix(in oklab, var(--throb-accent) 75%, transparent);
 }
 
 

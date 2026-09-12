@@ -6,8 +6,12 @@ import { FileCheck2, Loader2, UploadCloud, IdCard, FileText } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { classifyDocument } from "@/lib/izenzo.functions";
+import { summarizeBidDocuments } from "@/lib/docSummary.functions";
 import { advance, fingerprintOf, recordEvent, shortHash } from "@/lib/tx";
 import { cn } from "@/lib/utils";
+
+/** Photos are the ID capture — only one is allowed per deal. */
+const IMAGE_NAME = /\.(jpe?g|png|webp|gif|heic|heif)$/i;
 
 const DOC_TYPE_LABEL: Record<string, string> = {
   identity: "ID document",
@@ -39,9 +43,11 @@ export function DocumentUploadStep({
 }) {
   const qc = useQueryClient();
   const classify = useServerFn(classifyDocument);
+  const summarize = useServerFn(summarizeBidDocuments);
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [reading, setReading] = useState(false);
 
   const { data: docs = [] } = useQuery({
     queryKey: ["documents", transactionId],
@@ -58,8 +64,24 @@ export function DocumentUploadStep({
 
   const handleFiles = useCallback(
     async (files: FileList | File[]) => {
-      const list = Array.from(files);
+      let list = Array.from(files);
       if (list.length === 0) return;
+
+      // One ID photo only — written documents (PDF, Word, Excel, CSV, text) have no limit.
+      const alreadyHasImage = docs.some((d) => IMAGE_NAME.test(String(d.name)));
+      const images = list.filter((f) => IMAGE_NAME.test(f.name));
+      if (images.length > 0 && (alreadyHasImage || images.length > 1)) {
+        const keep = alreadyHasImage ? null : images[0];
+        const dropped = images.filter((f) => f !== keep).map((f) => f.name);
+        list = list.filter((f) => !dropped.includes(f.name));
+        toast.info(
+          alreadyHasImage
+            ? "Only one photo can be attached — the extra photo was not added."
+            : "Only one photo can be attached — the first one was kept.",
+        );
+        if (list.length === 0) return;
+      }
+
       setUploading(true);
       const isFirstEver = docs.length === 0;
       try {
@@ -95,6 +117,21 @@ export function DocumentUploadStep({
         }
         await qc.invalidateQueries({ queryKey: ["documents", transactionId] });
         toast.success(list.length === 1 ? "Document uploaded" : `${list.length} documents uploaded`);
+
+        // Read what the files actually say — the photo by sight, written documents by their text —
+        // so the ask is summarised and the search has real details to work from.
+        setReading(true);
+        try {
+          await summarize({ data: { transactionId } });
+          await qc.invalidateQueries({ queryKey: ["transaction", transactionId] });
+          await qc.invalidateQueries({ queryKey: ["tx", transactionId] });
+          toast.success("Documents read — summary ready");
+        } catch (err) {
+          toast.error(`Uploaded, but the documents could not be read: ${(err as Error).message}`);
+        } finally {
+          setReading(false);
+        }
+
         if (autoAdvance) await next();
       } catch (err) {
         toast.error((err as Error).message);
@@ -103,7 +140,7 @@ export function DocumentUploadStep({
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [classify, transactionId, qc, autoAdvance],
+    [classify, summarize, transactionId, qc, autoAdvance, docs],
   );
 
   async function next() {
@@ -130,13 +167,19 @@ export function DocumentUploadStep({
           dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
         )}
       >
-        {uploading ? (
+        {uploading || reading ? (
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
         ) : (
           <UploadCloud className="h-6 w-6 text-muted-foreground" />
         )}
-        <p className="text-sm font-medium">Drag and drop ID or deal documents here</p>
-        <p className="text-xs text-muted-foreground">or click to browse — AI determines the document type</p>
+        <p className="text-sm font-medium">
+          {reading ? "Reading your documents…" : "Drag and drop ID or deal documents here"}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {reading
+            ? "Pulling out the ask, quantities, prices and terms"
+            : "One photo of your ID, plus any written documents (PDF, Word, Excel, CSV, text)"}
+        </p>
         <input
           ref={inputRef}
           type="file"
@@ -171,7 +214,7 @@ export function DocumentUploadStep({
       )}
 
       {!autoAdvance && (
-        <Button className="w-full" disabled={docs.length === 0 || uploading} onClick={next}>
+        <Button className="w-full" disabled={docs.length === 0 || uploading || reading} onClick={next}>
           Next
         </Button>
       )}

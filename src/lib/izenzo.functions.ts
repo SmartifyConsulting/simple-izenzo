@@ -257,6 +257,24 @@ function parseCandidates(raw: string): CandidateResult[] {
   }
 }
 
+/** Pulls the searchable subject out of a document summary when nobody typed a commodity — the
+ * first substantial line of the bullet summary, stripped of bullet marks and filler, capped so the
+ * web query stays a query rather than a paragraph. */
+function keywordsFromSummary(summary: string): string {
+  const line = summary
+    .split(/\n+/)
+    .map((l) => l.replace(/^[-•*]\s*/, "").trim())
+    .find((l) => l.length > 8 && !/^not stated/i.test(l));
+  if (!line) return "";
+  return line
+    .replace(/[.,;:]/g, " ")
+    .split(/\s+/)
+    .slice(0, 12)
+    .join(" ")
+    .slice(0, 160)
+    .trim();
+}
+
 /** AI-driven counterparty search. AI/AI+ propose candidates from the bid's terms; a person still chooses. */
 export const searchCounterparties = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -291,11 +309,17 @@ export const searchCounterparties = createServerFn({ method: "POST" })
 
     // Search the real web first — the model only ranks what was actually found.
     const wantedSide = (latestBid?.direction ?? "bid") === "bid" ? "suppliers" : "buyers";
-    const searchQuery = [
-      tx.commodity ?? tx.title,
-      wantedSide,
-      data.region ?? tx.jurisdiction ?? "",
-    ]
+    // What is actually being traded: the typed commodity when there is one, otherwise whatever the
+    // uploaded documents said. The bid's own title ("New Bid") is never a search term — searching on
+    // it is what used to return nothing.
+    const docSummary = (tx.document_summary as string | null) ?? "";
+    const subject = tx.commodity?.trim() || keywordsFromSummary(docSummary);
+    if (!subject) {
+      throw new Error(
+        "There is nothing to search on yet — add the commodity, or attach a document that says what is being traded.",
+      );
+    }
+    const searchQuery = [subject, wantedSide, data.region ?? tx.jurisdiction ?? ""]
       .filter(Boolean)
       .join(" ");
     const { sources, failures, context: grounding } = await groundOnWeb(searchQuery, data.kind);
@@ -312,6 +336,7 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       `Incoterms: ${tx.incoterms ?? "n/a"}`,
       `Jurisdiction: ${tx.jurisdiction ?? "n/a"}`,
       data.region ? `Preferred counterparty region: ${data.region}` : "",
+      docSummary ? `What the attached documents say:\n${docSummary.slice(0, 4000)}` : "",
       latestBid
         ? `Latest ${latestBid.direction}: ${latestBid.price ?? "n/a"} ${latestBid.currency} for ${latestBid.quantity ?? "n/a"} ${latestBid.unit ?? ""}. Terms: ${latestBid.terms ?? "n/a"}`
         : "",

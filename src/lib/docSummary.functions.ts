@@ -14,7 +14,7 @@ export const summarizeBidDocuments = createServerFn({ method: "POST" })
 
     const { data: tx, error: txErr } = await supabase
       .from("transactions")
-      .select("id, title")
+      .select("id, title, commodity, quantity, unit, price, currency, incoterms, jurisdiction")
       .eq("id", data.transactionId)
       .maybeSingle();
     if (txErr) throw new Error(txErr.message);
@@ -104,17 +104,22 @@ export const summarizeBidDocuments = createServerFn({ method: "POST" })
 
     const instruction =
       "These are the ID and supporting documents attached to a trade bid/offer. Read every one of them " +
-      "(photos by sight, documents by their text) and extract:\n" +
-      "- the commodity or asset being traded\n" +
-      "- quantity and unit, if stated\n" +
-      "- price and currency, if stated\n" +
-      "- delivery/incoterms or timing, if stated\n" +
-      "- the party's identity as shown on the ID document\n" +
-      'Reply with JSON only: {"summary_bullets": string[], "id_number": string|null}. ' +
-      "summary_bullets is 5-10 short bullet points covering the above, each a complete statement without " +
-      "a leading dash. Never put any identity/passport number inside the bullets — put it only in id_number " +
-      "(null when no ID number is visible). Only state what the documents actually show; say plainly when " +
-      "something isn't stated." +
+      "(photos by sight, documents by their text) and write out the party's ask in their own terms.\n" +
+      'Reply with JSON only: {"summary_bullets": string[], "id_number": string|null, "facts": ' +
+      '{"commodity": string|null, "quantity": number|null, "unit": string|null, "price": number|null, ' +
+      '"currency": string|null, "incoterms": string|null, "jurisdiction": string|null, "side": "buy"|"sell"|null}}.\n' +
+      "summary_bullets is 5-12 short bullet points, each a complete statement without a leading dash, covering " +
+      "everything material to the exchange that the documents actually state: what is wanted or offered, " +
+      "quantities and units, prices and currency, grades/specifications, delivery terms, timing, payment terms, " +
+      "conditions, and who the party is. Do not force the documents into a fixed shape — if a document states " +
+      "something material that none of these words cover, say it anyway. Only state what the documents show, " +
+      "and say plainly when something isn't stated.\n" +
+      "facts repeats just the few details needed to search for a counterparty, in machine form: commodity as a " +
+      "short plain name, numbers as numbers, currency as a 3-letter code, jurisdiction as a country or region " +
+      "name, side as buy when the party wants to acquire and sell when they want to dispose. Use null for " +
+      "anything the documents do not state — never guess.\n" +
+      "Never put any identity/passport number inside the bullets or facts — put it only in id_number " +
+      "(null when no ID number is visible)." +
       (unreadable.length > 0
         ? ` Note: ${unreadable.join(", ")} could not be read — mention ${unreadable.length === 1 ? "it was" : "they were"} not reviewed rather than guessing.`
         : "");
@@ -160,17 +165,29 @@ export const summarizeBidDocuments = createServerFn({ method: "POST" })
       }
     }
 
+    // The documents only fill blanks — anything the user typed themselves stays as they typed it.
+    const facts = parsed.facts;
+    const filled: Record<string, unknown> = {};
+    if (!tx.commodity && facts.commodity) filled["commodity"] = facts.commodity;
+    if (tx.quantity == null && facts.quantity != null) filled["quantity"] = facts.quantity;
+    if (!tx.unit && facts.unit) filled["unit"] = facts.unit;
+    if (tx.price == null && facts.price != null) filled["price"] = facts.price;
+    if (facts.currency && (!tx.currency || tx.currency === "USD")) filled["currency"] = facts.currency;
+    if (!tx.incoterms && facts.incoterms) filled["incoterms"] = facts.incoterms;
+    if (!tx.jurisdiction && facts.jurisdiction) filled["jurisdiction"] = facts.jurisdiction;
+
     const { error: upErr } = await supabase
       .from("transactions")
       .update({
         document_summary: summary,
         document_summary_generated_at: new Date().toISOString(),
+        ...filled,
         ...(idCipher ? { id_number_encrypted: idCipher } : {}),
       } as never)
       .eq("id", tx.id);
     if (upErr) throw new Error(upErr.message);
 
-    return { summary };
+    return { summary, facts, unreadable };
   });
 
 function toBase64(bytes: Uint8Array) {
@@ -231,11 +248,59 @@ function xmlToText(xml: string) {
     .trim();
 }
 
+/** The few machine-readable details the counterparty search needs, all optional. */
+export type DocumentFacts = {
+  commodity: string | null;
+  quantity: number | null;
+  unit: string | null;
+  price: number | null;
+  currency: string | null;
+  incoterms: string | null;
+  jurisdiction: string | null;
+  side: "buy" | "sell" | null;
+};
+
+const EMPTY_FACTS: DocumentFacts = {
+  commodity: null,
+  quantity: null,
+  unit: null,
+  price: null,
+  currency: null,
+  incoterms: null,
+  jurisdiction: null,
+  side: null,
+};
+
+function str(v: unknown): string | null {
+  return typeof v === "string" && v.trim() ? v.trim().slice(0, 120) : null;
+}
+
+function num(v: unknown): number | null {
+  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v.replace(/[, ]/g, "")) : NaN;
+  return Number.isFinite(n) ? n : null;
+}
+
+function readFacts(v: unknown): DocumentFacts {
+  if (!v || typeof v !== "object") return EMPTY_FACTS;
+  const f = v as Record<string, unknown>;
+  const side = str(f["side"])?.toLowerCase();
+  return {
+    commodity: str(f["commodity"]),
+    quantity: num(f["quantity"]),
+    unit: str(f["unit"]),
+    price: num(f["price"]),
+    currency: str(f["currency"])?.toUpperCase().slice(0, 3) ?? null,
+    incoterms: str(f["incoterms"]),
+    jurisdiction: str(f["jurisdiction"]),
+    side: side === "buy" || side === "sell" ? side : null,
+  };
+}
+
 /** The model is asked for raw JSON, but tolerate fenced JSON or a plain-prose fallback. */
-function parseReply(raw: string): { bullets: string[]; idNumber: string | null } {
+function parseReply(raw: string): { bullets: string[]; idNumber: string | null; facts: DocumentFacts } {
   const body = raw.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
   try {
-    const obj = JSON.parse(body) as { summary_bullets?: unknown; id_number?: unknown };
+    const obj = JSON.parse(body) as { summary_bullets?: unknown; id_number?: unknown; facts?: unknown };
     const bullets = Array.isArray(obj.summary_bullets)
       ? obj.summary_bullets.map((b) => String(b).replace(/^[-•*]\s*/, "").trim()).filter(Boolean)
       : [];
@@ -243,6 +308,7 @@ function parseReply(raw: string): { bullets: string[]; idNumber: string | null }
       return {
         bullets,
         idNumber: typeof obj.id_number === "string" && obj.id_number.trim() ? obj.id_number.trim() : null,
+        facts: readFacts(obj.facts),
       };
     }
   } catch {
@@ -252,5 +318,5 @@ function parseReply(raw: string): { bullets: string[]; idNumber: string | null }
     .split(/\n+/)
     .map((line) => line.replace(/^[-•*]\s*/, "").trim())
     .filter(Boolean);
-  return { bullets, idNumber: null };
+  return { bullets, idNumber: null, facts: EMPTY_FACTS };
 }

@@ -1,7 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, BarChart3, ChevronDown, Coins, DollarSign, Mail, Plug } from "lucide-react";
+import { ArrowLeft, BarChart3, ChevronDown, Coins, DollarSign, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -137,14 +137,8 @@ export function AppShell({
             >
               <DollarSign className="h-5 w-5" strokeWidth={2.25} />
             </a>
-            <Link
-              to="/docs"
-              className="flex items-center transition-colors hover:text-primary"
-              title="API's"
-              aria-label="API's"
-            >
-              <Plug className="h-5 w-5" strokeWidth={2.25} />
-            </Link>
+            {/* Developer/API surfaces are hidden from the interface for now — the pages live in
+             * .hidden-surfaces/developer and can be restored later. */}
             <DropdownMenu>
               <DropdownMenuTrigger
                 className="flex items-center gap-1 outline-none transition-colors hover:text-primary"

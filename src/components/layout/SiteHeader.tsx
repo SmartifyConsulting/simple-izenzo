@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, BarChart3, ChevronDown, Mail, Tag, TerminalSquare } from "lucide-react";
+import { ArrowLeft, BarChart3, ChevronDown, Mail, Tag } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { SearchButton } from "@/components/layout/SearchButton";
@@ -52,10 +52,7 @@ export function SiteHeader({
                 <Tag className="h-3.5 w-3.5" />
                 Pricing
               </a>
-              <Link to="/docs" className="flex items-center gap-1.5 hover:text-foreground">
-                <TerminalSquare className="h-3.5 w-3.5" />
-                API's
-              </Link>
+              {/* Developer/API surfaces hidden for now — see .hidden-surfaces/developer. */}
               <DropdownMenu>
                 <DropdownMenuTrigger className="flex items-center gap-1.5 outline-none hover:text-foreground">
                   <BarChart3 className="h-3.5 w-3.5" />
