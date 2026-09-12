@@ -19,6 +19,20 @@ function evidenceUrl(flags: unknown): string | null {
   return typeof first?.url === "string" ? first.url : null;
 }
 
+type ScoreComponent = { label: string; points: number; max: number; note: string };
+
+/** The reasons behind the match percentage, when the search recorded them. */
+function scoreComponents(flags: unknown): ScoreComponent[] {
+  if (!flags || typeof flags !== "object") return [];
+  const scoring = (flags as { scoring?: { components?: unknown } }).scoring;
+  const parts = scoring?.components;
+  if (!Array.isArray(parts)) return [];
+  return parts.filter(
+    (p): p is ScoreComponent =>
+      typeof p === "object" && p !== null && typeof (p as ScoreComponent).label === "string",
+  );
+}
+
 
 /** The full match list, opened from the homepage's "…" once the visitor is signed in. Same
  * Responder records the homepage previews, only unblurred and complete rather than the top five. */
@@ -80,11 +94,32 @@ export function MatchResultsPanel({ query, className }: { query?: string | undef
             <p className="mt-1 text-sm font-medium text-foreground">{m.name}</p>
             <p className="text-xs text-muted-foreground">
               {m.jurisdiction ?? "Jurisdiction pending"}
-              {m.score != null ? ` · Score: ${m.score}` : ""}
+              {m.score != null ? ` · ${m.score}% match` : ""}
             </p>
             {/* What the search found about this match, plus the page it came from. */}
             {m.rationale && (
               <p className="mt-1.5 text-xs leading-relaxed text-foreground/80">{m.rationale}</p>
+            )}
+            {/* Why the percentage is what it is — every match is explainable. */}
+            {scoreComponents(m.media_flags).length > 0 && (
+              <ul className="mt-2 space-y-1">
+                {scoreComponents(m.media_flags).map((c) => (
+                  <li key={c.label} className="flex items-start gap-2 text-[11px]">
+                    <span className="mt-1 h-1 w-8 shrink-0 rounded-full bg-muted">
+                      <span
+                        className="block h-1 rounded-full bg-primary"
+                        style={{ width: `${Math.max(0, Math.min(100, (c.points / c.max) * 100))}%` }}
+                      />
+                    </span>
+                    <span className="text-muted-foreground">
+                      <span className="font-medium text-foreground">
+                        {c.label} {c.points}/{c.max}
+                      </span>
+                      {c.note ? ` — ${c.note}` : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             )}
             {evidenceUrl(m.media_flags) && (
               <a
