@@ -2363,6 +2363,65 @@ export type Database = {
           },
         ]
       }
+      responder_listings: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_example: boolean
+          jurisdiction: string | null
+          name: string
+          org_id: string | null
+          published: boolean
+          sector: string | null
+          source: string
+          source_url: string | null
+          summary: string | null
+          updated_at: string
+          verified_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_example?: boolean
+          jurisdiction?: string | null
+          name: string
+          org_id?: string | null
+          published?: boolean
+          sector?: string | null
+          source?: string
+          source_url?: string | null
+          summary?: string | null
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_example?: boolean
+          jurisdiction?: string | null
+          name?: string
+          org_id?: string | null
+          published?: boolean
+          sector?: string | null
+          source?: string
+          source_url?: string | null
+          summary?: string | null
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "responder_listings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       settlement_mismatches: {
         Row: {
           assigned_to: string | null
