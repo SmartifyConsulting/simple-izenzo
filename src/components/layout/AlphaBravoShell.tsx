@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { applyCurrentStylePreset } from "@/lib/stylePreset";
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
+import { ThemeToggle } from "@/components/guided/ThemeToggle";
 import { Logo } from "@/components/Logo";
 
 const NAV = [
@@ -45,6 +46,7 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
           </nav>
 
           <div className="ml-auto flex shrink-0 items-center gap-3">
+            <ThemeToggle />
             {user && (
               <>
                 <Link to="/live-deal-engine">

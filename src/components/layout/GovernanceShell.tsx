@@ -4,6 +4,7 @@ import { Inbox, FileSearch, ShieldCheck, Activity, Bell, ArrowLeftRight } from "
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/Logo";
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
+import { ThemeToggle } from "@/components/guided/ThemeToggle";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 
 const NAV = [
@@ -78,8 +79,9 @@ export function GovernanceShell({
           </button>
         </nav>
 
-        <div className="border-t border-border px-4 py-3">
+        <div className="flex items-center gap-3 border-t border-border px-4 py-3">
           <ProfileAvatarMenu />
+          <ThemeToggle />
         </div>
       </aside>
 

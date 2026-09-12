@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
 import { SearchButton } from "@/components/layout/SearchButton";
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
+import { ThemeToggle } from "@/components/guided/ThemeToggle";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import {
   DropdownMenu,
@@ -177,6 +178,8 @@ export function AppShell({
               </span>
             )}
           </Link>
+
+          <ThemeToggle />
 
           <ProfileAvatarMenu />
         </div>

@@ -13,6 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
+import { ThemeToggle } from "@/components/guided/ThemeToggle";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 
 const NAV = [
@@ -88,8 +89,9 @@ export function DeveloperShell({
           </button>
         </nav>
 
-        <div className="border-t border-slate-800 px-4 py-3">
+        <div className="flex items-center gap-3 border-t border-slate-800 px-4 py-3">
           <ProfileAvatarMenu />
+          <ThemeToggle />
         </div>
       </aside>
 

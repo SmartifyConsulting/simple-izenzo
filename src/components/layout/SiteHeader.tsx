@@ -5,6 +5,7 @@ import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { SearchButton } from "@/components/layout/SearchButton";
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
+import { ThemeToggle } from "@/components/guided/ThemeToggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -80,6 +81,7 @@ export function SiteHeader({
             >
               <Mail className="h-4 w-4" />
             </Link>
+            <ThemeToggle className="h-8 w-8" />
             <ProfileAvatarMenu />
           </div>
         ) : (
