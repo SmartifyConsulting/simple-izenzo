@@ -37,6 +37,10 @@
 
 9. "Bid creation" is renamed "Bid Registration" everywhere it appears.
 
+10. Breathing room and the value in the summary
+   - Space is added under the "Live Workspace" heading so the content below it no longer sits tight against it.
+   - The bid/offer amount or value moves into the Summary frame, listed with the other material aspects of the trade instead of sitting apart from them.
+
 ## Unchanged
 
 - Gates, tokens, certificates and all business rules.
@@ -52,3 +56,5 @@
 - OCR/AI reading already exists in `src/lib/docSummary.functions.ts` (image parts by signed URL, PDF/Word/Excel/CSV as text); keep it, and make the per-file `unreadable[]` list surface in the UI instead of a single blanket toast.
 - Concurrency: kick `runSearch` and the media checks off together with `Promise.allSettled` from one submit handler, tracking `searchRunning` and `mediaRunning` independently.
 - Pulsing + ticked collapse in `src/components/canvas/ClassicView.tsx`: a derived override map from the page's flow state for every phase — `documents` → `bidOffer` active; submitted → `bidOffer` done and `search` + `onlineMedia` active; results present → both done and `choice` active; after a choice → `choice` done and `poi` active. A step whose items are all `done` renders as one left-aligned ticked label row (tick + step label, `justify-start`) instead of its item list.
+- Spacing: the workspace panel's `label-caps` "Live Workspace" heading gains bottom margin (`mb-3`) so the summary block below it is not flush against it.
+- Value in the summary: the summary block renders a value line from the transaction's `price`/`currency`/`quantity`/`unit` (formatted with the existing currency helper) as the first bullet, and it is removed from wherever it currently sits outside the frame.
