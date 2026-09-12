@@ -145,7 +145,7 @@ function SubRow({
       onClick={onClick}
       disabled={!onClick}
       className={cn(
-        "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-[13px] font-medium leading-tight transition-colors disabled:cursor-not-allowed",
+        "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left font-sans text-[13px] font-medium leading-tight transition-colors disabled:cursor-not-allowed",
         itemClasses(state, item.isEntry),
       )}
     >
@@ -255,7 +255,7 @@ export function ClassicView({
                 <button
                   type="button"
                   onClick={() => toggleStep(s.step)}
-                  className="flex h-11 items-center gap-1.5 text-left text-[11px] font-semibold uppercase tracking-wide text-foreground transition-colors hover:text-primary"
+                  className="flex h-11 items-center gap-1.5 text-left font-sans text-[11px] font-semibold uppercase tracking-wide text-foreground transition-colors hover:text-primary"
                   aria-expanded={!stepCollapsed}
                 >
                   {stepCollapsed ? "+ " : "− "}Step {s.step} · {s.label}
