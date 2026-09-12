@@ -1023,7 +1023,8 @@ function LiveDealEngine() {
               is the bid/offer ID on the left; the top right is either the real upload frame
               (before any document is attached) or a bulleted list of what's been classified from
               the documents already uploaded. */}
-          <div className="h-[calc(100vh-190px)] w-full overflow-y-auto p-3 sm:p-5">
+          <div className="h-[calc(100vh-190px)] w-full overflow-y-auto rounded-3xl border border-border bg-card p-3 shadow-sm sm:p-5">
+          <p className="label-caps shrink-0 text-foreground">Live Workspace</p>
           {/* Bidder details + AI summary come first — the very top of the workspace, before the
               reference header and anything else — so what was actually submitted is never buried
               behind the progress ribbon or the workflow ticks below it. The attachment(s), with a
@@ -1085,10 +1086,7 @@ function LiveDealEngine() {
           )}
 
             {dealTx ? (
-              <div className="mt-4 flex items-start justify-between gap-4">
-                <p className="label-caps shrink-0 font-mono text-base font-bold uppercase tracking-wide text-foreground">
-                  {dealTx.reference || activity?.reference || fallbackReference(dealTx.id, activity?.direction ?? "bid")}
-                </p>
+              <div className="mt-4 flex items-start justify-end gap-4">
                 <div className="w-1/2 max-w-[260px] shrink-0">
                   {workspaceDocs.length === 0 ? (
                     <DocumentUploadStep
