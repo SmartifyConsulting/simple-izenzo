@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -61,6 +61,7 @@ export function VerificationPanel({ transactionId, checks, title, description }:
   // over the link itself as well — if the new tab is blocked, the person can still open it.
   const [sessionUrl, setSessionUrl] = useState<string | null>(null);
   const [blocked, setBlocked] = useState(false);
+  const popupRef = useRef<Window | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const { data: rows = [], isLoading, refetch } = useQuery({
