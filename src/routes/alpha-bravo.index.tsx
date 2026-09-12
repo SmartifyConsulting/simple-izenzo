@@ -71,7 +71,7 @@ function AlphaBravoHome() {
           verified contacts, and ready-to-send outreach, all under one cryptographic record.
         </p>
         <div className="mt-4">
-          <Link to="/alpha-bravo/trades">
+          <Link to="/alpha-bravo/how-it-works">
             <Button size="lg" className="gap-1.5 rounded-full">
               See how matching works <ArrowRight className="h-4 w-4" />
             </Button>
