@@ -1062,7 +1062,7 @@ function LiveDealEngine() {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="label-caps text-muted-foreground">What was submitted</p>
                     {dealTx && (
-                      <SubmitterIdentity orgId={dealTx.org_id} createdBy={dealTx.created_by} />
+                      <SubmitterIdentity orgId={dealTx.org_id} createdBy={(dealTx as unknown as { created_by?: string | null }).created_by ?? null} />
                     )}
                   </div>
                   <p className="text-sm leading-relaxed text-foreground">

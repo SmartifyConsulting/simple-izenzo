@@ -23,13 +23,12 @@ export function SubmitterIdentity({ orgId, createdBy }: { orgId: string; created
       if (!live) return;
       setName(org?.name || person || null);
 
-      let query = supabase
+      const { data: checks } = await supabase
         .from("identity_verifications")
         .select("decision, status")
         .eq("subject_org_id", orgId)
-        .eq("status", "completed")
+        .eq("status", "passed")
         .limit(5);
-      const { data: checks } = await query;
       if (!live) return;
       setVerified((checks ?? []).some((c) => ["approved", "pass", "clear"].includes(String(c.decision))));
     })();
