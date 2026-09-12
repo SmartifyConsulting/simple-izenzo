@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Lock } from "lucide-react";
+import { ExternalLink, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,16 @@ const RATING_LABEL: Record<string, string> = {
   neutral: "Under review",
   flagged: "Flagged",
 };
+
+/** The web page a candidate was found on, when the search recorded one. */
+function evidenceUrl(flags: unknown): string | null {
+  if (!flags || typeof flags !== "object") return null;
+  const evidence = (flags as { evidence?: unknown }).evidence;
+  if (!Array.isArray(evidence)) return null;
+  const first = evidence[0] as { url?: unknown } | undefined;
+  return typeof first?.url === "string" ? first.url : null;
+}
+
 
 /** The full match list, opened from the homepage's "…" once the visitor is signed in. Same
  * Responder records the homepage previews, only unblurred and complete rather than the top five. */
@@ -20,7 +30,7 @@ export function MatchResultsPanel({ query, className }: { query?: string | undef
     queryFn: async () => {
       let builder = supabase
         .from("counterparties")
-        .select("id, name, sector, jurisdiction, rating_band, score")
+        .select("id, name, sector, jurisdiction, rating_band, score, rationale, media_flags")
         .order("rating_computed_at", { ascending: false })
         .limit(50);
       if (q) builder = builder.or(`name.ilike.%${q}%,sector.ilike.%${q}%`);
@@ -72,7 +82,22 @@ export function MatchResultsPanel({ query, className }: { query?: string | undef
               {m.jurisdiction ?? "Jurisdiction pending"}
               {m.score != null ? ` · Score: ${m.score}` : ""}
             </p>
+            {/* What the search found about this match, plus the page it came from. */}
+            {m.rationale && (
+              <p className="mt-1.5 text-xs leading-relaxed text-foreground/80">{m.rationale}</p>
+            )}
+            {evidenceUrl(m.media_flags) && (
+              <a
+                href={evidenceUrl(m.media_flags)!}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+              >
+                <ExternalLink className="h-3 w-3" /> Where it was found
+              </a>
+            )}
           </li>
+
         ))}
       </ul>
     </div>
