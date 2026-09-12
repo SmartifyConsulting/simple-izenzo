@@ -71,24 +71,61 @@ export function VerificationPanel({ transactionId, checks, title, description }:
 
   const latest = (type: CheckType) => rows.find((r) => r.check_type === type);
 
+  function isNarrow() {
+    return typeof window !== "undefined" && window.matchMedia("(max-width: 640px)").matches;
+  }
+
+  /** Open the provider in its own window, launched inside the click so no popup blocker fires:
+   * the window is opened blank first, then pointed at the session URL once it comes back. The
+   * provider refuses to be displayed inside another site, so an in-page frame is impossible. */
+  function openProviderWindow(url: string) {
+    if (isNarrow()) {
+      const tab = window.open(url, "_blank", "noopener,noreferrer");
+      setBlocked(!tab);
+      return;
+    }
+    const existing = popupRef.current;
+    if (existing && !existing.closed) {
+      existing.location.href = url;
+      existing.focus();
+      setBlocked(false);
+      return;
+    }
+    const win = window.open(url, "izenzo-verify", "popup,width=520,height=800");
+    popupRef.current = win;
+    setBlocked(!win);
+    if (win) win.focus();
+  }
+
   async function onStart(type: CheckType) {
     setBusy(type);
     setError(null);
+    // Opened synchronously with the click; only the destination waits on the server.
+    const pending = isNarrow()
+      ? null
+      : window.open("", "izenzo-verify", "popup,width=520,height=800");
+    if (pending) {
+      popupRef.current = pending;
+      try {
+        pending.document.write(
+          "<title>Opening verification…</title><body style='font:14px system-ui;padding:24px'>Opening your identity check…</body>",
+        );
+      } catch {
+        // Some browsers disallow writing into the blank popup — harmless.
+      }
+    }
     try {
       const origin = typeof window !== "undefined" ? window.location.origin : undefined;
       const res = await start({
         data: { checkType: type, ...(transactionId ? { transactionId } : {}), ...(origin ? { origin } : {}) },
       });
       setSessionUrl(res.url);
-      const win = window.open(res.url, "_blank", "noopener,noreferrer");
-      if (win) {
-        setBlocked(false);
-        toast.success("Verification opened in a new tab. The result lands here on its own.");
-      } else {
-        setBlocked(true);
-      }
+      openProviderWindow(res.url);
+      toast.success("Verification opened in its own window. The result lands here on its own.");
       void refetch();
     } catch (err) {
+      pending?.close();
+      popupRef.current = null;
       setError((err as Error).message);
       toast.error((err as Error).message);
     } finally {

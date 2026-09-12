@@ -52,6 +52,7 @@ import { Route as ProductsTradeDeskRouteImport } from './routes/products.trade-d
 import { Route as SolutionsFinanceRouteImport } from './routes/solutions.finance'
 import { Route as SolutionsSovereignsRouteImport } from './routes/solutions.sovereigns'
 import { Route as SolutionsTradersRouteImport } from './routes/solutions.traders'
+import { Route as VerifyCompleteRouteImport } from './routes/verify.complete'
 import { Route as AuthenticatedAccountBillingRouteImport } from './routes/_authenticated.account.billing'
 import { Route as AuthenticatedAccountSettingsRouteImport } from './routes/_authenticated.account.settings'
 import { Route as AuthenticatedDealIdRouteImport } from './routes/_authenticated.deal.$id'
@@ -287,6 +288,11 @@ const SolutionsTradersRoute = SolutionsTradersRouteImport.update({
   path: '/solutions/traders',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VerifyCompleteRoute = VerifyCompleteRouteImport.update({
+  id: '/verify/complete',
+  path: '/verify/complete',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAccountBillingRoute =
   AuthenticatedAccountBillingRouteImport.update({
     id: '/account/billing',
@@ -422,6 +428,7 @@ export interface FileRoutesByFullPath {
   '/solutions/finance': typeof SolutionsFinanceRoute
   '/solutions/sovereigns': typeof SolutionsSovereignsRoute
   '/solutions/traders': typeof SolutionsTradersRoute
+  '/verify/complete': typeof VerifyCompleteRoute
   '/alpha-bravo/': typeof AlphaBravoIndexRoute
   '/account/billing': typeof AuthenticatedAccountBillingRoute
   '/account/settings': typeof AuthenticatedAccountSettingsRoute
@@ -479,6 +486,7 @@ export interface FileRoutesByTo {
   '/solutions/finance': typeof SolutionsFinanceRoute
   '/solutions/sovereigns': typeof SolutionsSovereignsRoute
   '/solutions/traders': typeof SolutionsTradersRoute
+  '/verify/complete': typeof VerifyCompleteRoute
   '/alpha-bravo': typeof AlphaBravoIndexRoute
   '/account/billing': typeof AuthenticatedAccountBillingRoute
   '/account/settings': typeof AuthenticatedAccountSettingsRoute
@@ -541,6 +549,7 @@ export interface FileRoutesById {
   '/solutions/finance': typeof SolutionsFinanceRoute
   '/solutions/sovereigns': typeof SolutionsSovereignsRoute
   '/solutions/traders': typeof SolutionsTradersRoute
+  '/verify/complete': typeof VerifyCompleteRoute
   '/alpha-bravo/': typeof AlphaBravoIndexRoute
   '/_authenticated/account/billing': typeof AuthenticatedAccountBillingRoute
   '/_authenticated/account/settings': typeof AuthenticatedAccountSettingsRoute
@@ -603,6 +612,7 @@ export interface FileRouteTypes {
     | '/solutions/finance'
     | '/solutions/sovereigns'
     | '/solutions/traders'
+    | '/verify/complete'
     | '/alpha-bravo/'
     | '/account/billing'
     | '/account/settings'
@@ -660,6 +670,7 @@ export interface FileRouteTypes {
     | '/solutions/finance'
     | '/solutions/sovereigns'
     | '/solutions/traders'
+    | '/verify/complete'
     | '/alpha-bravo'
     | '/account/billing'
     | '/account/settings'
@@ -721,6 +732,7 @@ export interface FileRouteTypes {
     | '/solutions/finance'
     | '/solutions/sovereigns'
     | '/solutions/traders'
+    | '/verify/complete'
     | '/alpha-bravo/'
     | '/_authenticated/account/billing'
     | '/_authenticated/account/settings'
@@ -761,6 +773,7 @@ export interface RootRouteChildren {
   SolutionsFinanceRoute: typeof SolutionsFinanceRoute
   SolutionsSovereignsRoute: typeof SolutionsSovereignsRoute
   SolutionsTradersRoute: typeof SolutionsTradersRoute
+  VerifyCompleteRoute: typeof VerifyCompleteRoute
   ApiPublicWebhooksDiditRoute: typeof ApiPublicWebhooksDiditRoute
 }
 
@@ -1067,6 +1080,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SolutionsTradersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/verify/complete': {
+      id: '/verify/complete'
+      path: '/verify/complete'
+      fullPath: '/verify/complete'
+      preLoaderRoute: typeof VerifyCompleteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/account/billing': {
       id: '/_authenticated/account/billing'
       path: '/account/billing'
@@ -1320,6 +1340,7 @@ const rootRouteChildren: RootRouteChildren = {
   SolutionsFinanceRoute: SolutionsFinanceRoute,
   SolutionsSovereignsRoute: SolutionsSovereignsRoute,
   SolutionsTradersRoute: SolutionsTradersRoute,
+  VerifyCompleteRoute: VerifyCompleteRoute,
   ApiPublicWebhooksDiditRoute: ApiPublicWebhooksDiditRoute,
 }
 export const routeTree = rootRouteImport
