@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowUp, ShieldCheck, FileCheck2, Loader2, RotateCcw, Sparkles, UploadCloud, X } from "lucide-react";
+import { ArrowUp, ExternalLink, ShieldCheck, FileCheck2, Loader2, RotateCcw, Sparkles, UploadCloud, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -22,7 +22,7 @@ function useIllustrativeMatches(enabled: boolean, prompt: string) {
     queryFn: async () => {
       let q = supabase
         .from("responder_listings")
-        .select("id, org_id, name, sector, jurisdiction, source, is_example, verified_at", {
+        .select("id, org_id, name, sector, jurisdiction, source, is_example, verified_at, summary, source_url", {
           count: "exact",
         })
         .eq("published", true);
@@ -148,7 +148,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
                 if (e.key === "Enter" && canSearch) onFindMatches();
               }}
               placeholder="Describe what you're looking for — product, quantity, location, terms…"
-              className="min-w-0 flex-1 basis-1/2 bg-transparent px-2 text-base text-foreground outline-none placeholder:text-muted-foreground"
+              className="min-w-0 flex-1 basis-1/2 bg-transparent px-2 text-sm text-foreground outline-none placeholder:text-muted-foreground"
             />
 
             {/* Right half: the same strip doubles as the drop zone, so no + button is needed. */}
@@ -277,7 +277,22 @@ export function HeroMatchCard({ className }: { className?: string }) {
                   {m.jurisdiction ?? "Jurisdiction pending"}
                   {m.source === "web_search" ? " · Found on the web" : ""}
                 </p>
+                {/* What was found about this match — omitted when nothing was recorded. */}
+                {m.summary && (
+                  <p className="mt-1.5 text-xs leading-relaxed text-foreground/80">{m.summary}</p>
+                )}
+                {m.source_url && (
+                  <a
+                    href={m.source_url}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+                  >
+                    <ExternalLink className="h-3 w-3" /> Where it was found
+                  </a>
+                )}
               </div>
+
             ))}
 
             {/* More than five found: "See more" opens the Live Workspace with the full list in its

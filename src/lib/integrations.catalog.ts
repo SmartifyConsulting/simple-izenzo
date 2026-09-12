@@ -36,6 +36,8 @@ export const INTEGRATION_GROUPS = [
   "Currency",
   "Web Scraping",
   "Archival Storage",
+  "AI+ Engine",
+
 ] as const;
 
 
@@ -235,7 +237,32 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
     testable: false,
     testNote: "Bucket access is confirmed on the first archival upload.",
   },
+  {
+    id: "izenzo_ai_plus",
+    name: "Izenzo AI+",
+    group: "AI+ Engine",
+    summary:
+      "The protected AI+ decision service. It proposes candidates, pricing, risk flags, structure and timing for a person to adopt or reject — it never records an outcome itself.",
+    usedAt:
+      "Five moments: after a counterparty is chosen, at Intent confirmation, after Proof of Intent is sealed, when a Without a Doubt case changes, and after Finality is recorded.",
+    environments: ["sandbox", "production"],
+    fields: [
+      {
+        key: "private_url",
+        label: "Private service address",
+        secret: true,
+        placeholder: "https://…",
+        help: "Stored server-side only as AI_PLUS_PRIVATE_URL. Sandbox and production must stay separate.",
+      },
+      { key: "hmac_key_id", label: "Signing key ID", secret: true, help: "AI_PLUS_HMAC_KEY_ID." },
+      { key: "hmac_secret", label: "Signing secret", secret: true, help: "AI_PLUS_HMAC_SECRET. Never exposed to the browser." },
+    ],
+    testable: false,
+    testNote:
+      "AI+ only proposes. It never records a Choice, Intent, Proof of Intent, Without a Doubt, Execution or Finality outcome — every proposal still needs a person to accept or reject it.",
+  },
 ];
+
 
 export function providerById(id: string) {
   return INTEGRATION_PROVIDERS.find((p) => p.id === id);
