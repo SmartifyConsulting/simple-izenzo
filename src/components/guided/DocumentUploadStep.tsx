@@ -24,6 +24,7 @@ export function DocumentUploadStep({
   transactionId,
   onNext,
   onFirstClassified,
+  autoAdvance = false,
 }: {
   transactionId: string;
   onNext: () => void;
@@ -31,6 +32,10 @@ export function DocumentUploadStep({
    * caller correct a bid/offer's direction from what the document actually looks like, rather
    * than a side picked before any document existed. */
   onFirstClassified?: (info: { docType: string; directionGuess: "bid" | "offer" | null }) => void;
+  /** Skips the manual "Next" button — the moment the first upload succeeds, moves on by itself.
+   * Used where there's nothing else to review on this screen (e.g. going straight into search),
+   * as opposed to a guided wizard step someone might want a beat to check before continuing. */
+  autoAdvance?: boolean;
 }) {
   const qc = useQueryClient();
   const classify = useServerFn(classifyDocument);
@@ -90,13 +95,15 @@ export function DocumentUploadStep({
         }
         await qc.invalidateQueries({ queryKey: ["documents", transactionId] });
         toast.success(list.length === 1 ? "Document uploaded" : `${list.length} documents uploaded`);
+        if (autoAdvance) await next();
       } catch (err) {
         toast.error((err as Error).message);
       } finally {
         setUploading(false);
       }
     },
-    [classify, transactionId, qc],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [classify, transactionId, qc, autoAdvance],
   );
 
   async function next() {
@@ -163,9 +170,11 @@ export function DocumentUploadStep({
         </ul>
       )}
 
-      <Button className="w-full" disabled={docs.length === 0 || uploading} onClick={next}>
-        Next
-      </Button>
+      {!autoAdvance && (
+        <Button className="w-full" disabled={docs.length === 0 || uploading} onClick={next}>
+          Next
+        </Button>
+      )}
     </div>
   );
 }

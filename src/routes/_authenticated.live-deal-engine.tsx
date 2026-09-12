@@ -961,6 +961,7 @@ function LiveDealEngine() {
                       transactionId={dealTx.id}
                       onNext={() => void runSearch(dealTx.id)}
                       onFirstClassified={({ directionGuess }) => void applyDirectionGuess(directionGuess)}
+                      autoAdvance
                     />
                   ) : (
                     <div className="space-y-1.5 rounded-xl border border-border bg-muted/30 p-3">

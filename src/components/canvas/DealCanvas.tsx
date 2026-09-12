@@ -1819,11 +1819,10 @@ export function CanvasStart({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!direction) return;
+  async function createDeal(direction: "bid" | "offer", reference: string) {
     if (!user) {
       toast.error("Sign in to record a bid or offer");
+      setPicking(false);
       return;
     }
     setBusy(true);
@@ -1837,10 +1836,6 @@ export function CanvasStart({
         org ??
         (await ensureOrg(user.id, profile?.full_name ?? user.email ?? "My account"));
       if (!org) void refresh();
-
-      // Reuses whatever id was already shown on the workspace tab while picking — generating a
-      // fresh one here would silently swap the ID the user's already seen.
-      const reference = draftReference ?? nextReference(direction);
 
       const baseRow = {
         org_id: activeOrg.id,
@@ -1906,22 +1901,25 @@ export function CanvasStart({
       onCreated({ ...newTx, stage: "trading", step: "documents" } as Transaction, activity);
     } catch (err) {
       toast.error((err as Error).message);
+      setPicking(false);
     } finally {
       setBusy(false);
     }
   }
 
+  // Dropping/selecting a file goes straight to creating the deal — there's nothing left to ask
+  // first (identity is on file from sign-up, and direction is inferred from the document itself
+  // once it's uploaded), so a confirmation screen in between would just be a click for its own
+  // sake.
   function beginPicking() {
+    const ref = draftReference ?? nextReference("bid");
     if (!draftReference) {
-      const ref = nextReference("bid");
       setDraftReference(ref);
       onDraftReference?.(ref);
     }
     setPicking(true);
-    // Direction is no longer picked here — it's inferred once a document is uploaded (a bid
-    // proposal vs. a response to a bid read differently to the classifier). "bid" is just the
-    // starting default until that classification comes back.
     setDirection("bid");
+    void createDeal("bid", ref);
   }
 
   const [dragOver, setDragOver] = useState(false);
@@ -1967,52 +1965,14 @@ export function CanvasStart({
     );
   }
 
-  const form_ = (
-    <form onSubmit={submit} className="mt-2 space-y-3">
-      {orgs.length > 1 && activeCompanyId && (
-        <div className="space-y-1.5">
-          <Label htmlFor="cs-company">Trading as</Label>
-          <Select value={activeCompanyId} onValueChange={setCompanyId}>
-            <SelectTrigger id="cs-company">
-              <SelectValue placeholder="Select a company" />
-            </SelectTrigger>
-            <SelectContent>
-              {orgs.map((o) => (
-                <SelectItem key={o.id} value={o.id}>
-                  {o.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-      <p className="text-xs text-muted-foreground">
-        Identity is already on file from sign-up — next, you'll upload supporting documents and AI
-        reads them to fill in the deal details.
-      </p>
-      <Button type="submit" disabled={busy} className="w-full">
-        {busy ? "Recording…" : "Continue to documents"}
-      </Button>
-    </form>
-  );
-
+  // Creating the deal is near-instant, so this is just a brief in-between state on the way to the
+  // real document-upload step — not a screen anyone needs to act on.
   return (
-    <div className="relative rounded-3xl p-3 sm:p-5">
-      <div className="glass-node animate-node-rise p-5 sm:p-6">
-        <div className="mb-4 flex items-start justify-between gap-4">
-          <p className="text-base font-semibold tracking-tight">New bid or offer</p>
-          <button
-            type="button"
-            onClick={() => {
-              setPicking(false);
-              setDirection(null);
-            }}
-            className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        {form_}
+    <div className="ink-grid relative rounded-3xl border border-border p-4 sm:p-6">
+      <p className="label-caps text-center">Live deal engine</p>
+      <div className="mt-6 flex flex-col items-center justify-center gap-2 py-6 text-center">
+        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Setting up your workspace…</p>
       </div>
     </div>
   );
