@@ -878,15 +878,18 @@ function LiveDealEngine() {
   const windowId = dealTx?.id ?? "new";
   const windowLabel = dealTx
     ? dealTx.reference || activity?.reference || fallbackReference(dealTx.id, activity?.direction ?? "bid")
-    : (draftReference ?? "New workspace");
+    : (draftReference ?? "+ New");
   const { windows, register: registerWindow, setMode, move, close: closeWindow, isPoppedElsewhere } = useDealWindows();
   const win = windows.find((w) => w.id === windowId);
   const windowMode = popout ? "docked" : (win?.mode ?? "docked");
   const poppedElsewhere = !popout && isPoppedElsewhere(windowId);
-  // With nothing else open, this isn't really a "window" among several — it's just the canvas.
-  // The floating card, title bar, and drag/minimize/maximize controls only start to matter once
-  // there's a second workspace to juggle against.
-  const soloWorkspace = windows.length <= 1;
+  // With nothing else open (or with everything else minimized to the taskbar — only one window
+  // is ever non-minimized now), this isn't really a "window" among several competing for the same
+  // space — it's just the canvas. Counting minimized windows here used to make this false as soon
+  // as a second deal existed anywhere, even minimized, which routed the page into the fixed/
+  // floating "maximized" layout — positioned to clear a taskbar of several visible windows, not
+  // the sticky header, so its title bar rendered partly behind the header.
+  const soloWorkspace = windows.filter((w) => w.mode !== "minimized").length <= 1;
 
   useEffect(() => {
     if (popout) return;
@@ -995,7 +998,7 @@ function LiveDealEngine() {
       <div className="relative">
         <div
           className={cn(
-            "relative grid grid-cols-1 items-stretch gap-4 rounded-3xl lg:grid-cols-2",
+            "relative grid grid-cols-1 items-stretch gap-4 rounded-3xl lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]",
           )}
         >
           {/* Engine Map — always visible on the left. Clicking a node opens that step inline in

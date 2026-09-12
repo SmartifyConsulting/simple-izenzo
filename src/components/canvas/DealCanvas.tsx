@@ -1966,19 +1966,19 @@ export function CanvasStart({
   // right — so capturing what someone's after starts here instead of asking them to repeat it
   // once the deal already exists.
   const startNode = (
-    <div className="mx-auto w-full max-w-lg space-y-2">
-      <textarea
-        rows={2}
+    <div className="mx-auto w-full max-w-2xl space-y-2">
+      <input
+        type="text"
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey && prompt.trim()) {
+          if (e.key === "Enter" && prompt.trim()) {
             e.preventDefault();
             beginPicking();
           }
         }}
         placeholder="Describe what you're looking for — product, quantity, location, terms"
-        className="w-full resize-none rounded-2xl border-2 border-border bg-white p-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+        className="h-10 w-full rounded-full border border-border bg-white px-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
       />
       <div
         onClick={() => fileInputRef.current?.click()}
@@ -2017,9 +2017,6 @@ export function CanvasStart({
         <span className="text-xs font-medium text-foreground">Drop files here or click to browse</span>
         <span className="text-[11px] text-muted-foreground">— Pitch deck, proposal, or any file, multiple OK</span>
       </div>
-      <p className="text-center text-[11px] text-muted-foreground">
-        Press Enter, or drop a file, to open your workspace.
-      </p>
     </div>
   );
 
@@ -2028,10 +2025,6 @@ export function CanvasStart({
       <div className="ink-grid relative rounded-3xl border border-border p-4 sm:p-6">
         <p className="label-caps text-center">Live deal engine</p>
         <div className="mt-6">{startNode}</div>
-        <Connector />
-        <p className="text-center text-[11.5px] text-muted-foreground">
-          Matching · Proof of Intent · Without a Doubt · Execution · Finality
-        </p>
       </div>
     );
   }

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { X } from "lucide-react";
 import { useDealWindows } from "@/lib/dealWindows";
@@ -14,9 +15,11 @@ function isMarketingPath(pathname: string) {
  * of pill buttons. Rendered once from the root so it persists across every authenticated page,
  * not just Live Deal Engine — but never shows on the marketing site itself. */
 export function WorkspaceTaskbar() {
-  const { windows, setMode, close } = useDealWindows();
+  const { windows, setMode, close, reorder } = useDealWindows();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
 
   // A single open workspace is just the canvas, not a "tab" — the taskbar only earns its place
   // once there's a second one to switch between.
@@ -36,16 +39,39 @@ export function WorkspaceTaskbar() {
         return (
           <div
             key={w.id}
+            draggable
+            onDragStart={(e) => {
+              setDraggedId(w.id);
+              e.dataTransfer.effectAllowed = "move";
+            }}
+            onDragEnd={() => {
+              setDraggedId(null);
+              setOverId(null);
+            }}
+            onDragOver={(e) => {
+              if (!draggedId || draggedId === w.id) return;
+              e.preventDefault();
+              setOverId(w.id);
+            }}
+            onDragLeave={() => setOverId((id) => (id === w.id ? null : id))}
+            onDrop={(e) => {
+              e.preventDefault();
+              if (draggedId && draggedId !== w.id) reorder(draggedId, w.id);
+              setDraggedId(null);
+              setOverId(null);
+            }}
             className={cn(
-              "group flex shrink-0 items-center gap-2 rounded-t-md border px-3 py-1.5 text-xs font-medium transition-colors",
+              "group flex w-36 shrink-0 cursor-grab items-center gap-2 rounded-t-md border px-3 py-1.5 text-xs font-medium transition-colors active:cursor-grabbing",
               active
                 ? "border-[#F59E0B] border-b-transparent bg-[#F59E0B]/15 text-foreground"
                 : "border-border border-b-transparent bg-transparent text-muted-foreground hover:bg-card/50 hover:text-foreground",
+              draggedId === w.id && "opacity-40",
+              overId === w.id && draggedId !== w.id && "border-l-2 border-l-primary",
             )}
           >
             <button
               type="button"
-              className="max-w-[180px] truncate font-sans text-sm font-bold uppercase tracking-wide"
+              className="min-w-0 flex-1 truncate text-center font-sans text-[12px] font-bold uppercase tracking-wide"
               onClick={() => activate(w.id, w.mode)}
               title={w.label}
             >

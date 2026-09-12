@@ -46,6 +46,8 @@ type DealWindowsValue = {
   /** True once this transaction's window has been popped into its own real browser window —
    * the docked/main-window copy should render nothing for it while that's the case. */
   isPoppedElsewhere: (id: string) => boolean;
+  /** Reorders the taskbar by moving `draggedId` to sit right before `targetId`. */
+  reorder: (draggedId: string, targetId: string) => void;
 };
 
 const DealWindowsContext = createContext<DealWindowsValue | null>(null);
@@ -169,8 +171,27 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
     [windows],
   );
 
+  /** Moves one tab to sit right before another — drag-and-drop reordering in the taskbar. Purely
+   * cosmetic (which order the tabs read left-to-right); doesn't touch mode/position. */
+  const reorder = useCallback(
+    (draggedId: string, targetId: string) => {
+      if (draggedId === targetId) return;
+      const current = readAll();
+      const dragged = current.find((w) => w.id === draggedId);
+      if (!dragged) return;
+      const withoutDragged = current.filter((w) => w.id !== draggedId);
+      const targetIndex = withoutDragged.findIndex((w) => w.id === targetId);
+      if (targetIndex === -1) return;
+      withoutDragged.splice(targetIndex, 0, dragged);
+      persist(withoutDragged);
+    },
+    [persist],
+  );
+
   return (
-    <DealWindowsContext.Provider value={{ windows, open, register, setMode, move, close, isPoppedElsewhere }}>
+    <DealWindowsContext.Provider
+      value={{ windows, open, register, setMode, move, close, isPoppedElsewhere, reorder }}
+    >
       {children}
     </DealWindowsContext.Provider>
   );

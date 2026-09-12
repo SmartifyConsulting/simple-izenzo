@@ -145,7 +145,7 @@ function SubRow({
       onClick={onClick}
       disabled={!onClick}
       className={cn(
-        "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left font-sans text-[13px] font-medium leading-tight transition-colors disabled:cursor-not-allowed",
+        "flex w-1/2 items-center gap-2 rounded-lg border px-3 py-2 text-left font-sans text-[13px] font-medium leading-tight transition-colors disabled:cursor-not-allowed",
         itemClasses(state, item.isEntry),
       )}
     >
