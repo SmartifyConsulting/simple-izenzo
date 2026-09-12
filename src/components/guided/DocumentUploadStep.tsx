@@ -97,6 +97,7 @@ export function DocumentUploadStep({
       }
 
       setUploading(true);
+      await savePrompt();
       const isFirstEver = docs.length === 0;
       try {
         for (const [i, file] of list.entries()) {
