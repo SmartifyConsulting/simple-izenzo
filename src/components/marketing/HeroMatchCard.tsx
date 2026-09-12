@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Lock, ShieldCheck, UploadCloud, FileCheck2, Loader2, RotateCcw, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { SignInModal } from "@/components/auth/SignInModal";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -137,6 +139,23 @@ export function HeroMatchCard({ className }: { className?: string }) {
 
       {!searched && !searching && (
         <>
+          <div className="mt-4 space-y-1.5">
+            <Label htmlFor="hero-search-prompt" className="text-xs font-medium text-foreground">
+              Search Prompt
+            </Label>
+            <Textarea
+              id="hero-search-prompt"
+              rows={3}
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="Describe what you're looking for — product, quantity, location, terms"
+              className="resize-none text-sm"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              What you type here is used together with any files you add.
+            </p>
+          </div>
+
           <div
             onClick={() => inputRef.current?.click()}
             onDragOver={(e) => {
