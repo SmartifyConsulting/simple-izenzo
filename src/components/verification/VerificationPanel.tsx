@@ -194,6 +194,33 @@ export function VerificationPanel({ transactionId, checks, title, description }:
           );
         })}
 
+        {error && (
+          <p className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
+            {error}
+          </p>
+        )}
+
+        {sessionUrl && (
+          <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
+            <p className="text-xs text-muted-foreground">
+              {blocked
+                ? "Your browser blocked the new tab. The verification page cannot be shown inside this window, so open it in its own tab:"
+                : "Verification page not showing? It cannot be displayed inside this window — open it in its own tab:"}
+            </p>
+            <p className="break-all text-[11px] text-muted-foreground">{sessionUrl}</p>
+            <div className="flex flex-wrap gap-2">
+              <a href={sessionUrl} target="_blank" rel="noopener noreferrer">
+                <Button size="sm" variant="outline">
+                  Open in a new tab
+                </Button>
+              </a>
+              <Button size="sm" variant="ghost" onClick={() => void copyLink(sessionUrl)}>
+                Copy link
+              </Button>
+            </div>
+          </div>
+        )}
+
         <p className="text-xs text-muted-foreground">
           A result that is not an outright pass is routed to manual review — it never clears a gate
           on its own.
