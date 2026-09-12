@@ -15,13 +15,15 @@ import {
  * then the legal footer links. The light/dark switch lives only here once signed in; ThemeToggle
  * next to the avatar is for signed-out visitors. */
 export function ProfileAvatarMenu() {
-  const { profile, signOut, roles } = useAuth();
+  const { user, profile, signOut, roles } = useAuth();
   const navigate = useNavigate();
   const [preset, setPreset] = useStylePreset();
   const isLight = preset === "cream";
 
-
-  const name = profile?.full_name ?? profile?.email ?? "";
+  // Falls back to the auth user's own email when the profiles row hasn't got a name/email of its
+  // own yet (e.g. a freshly created or admin-inserted account) — otherwise the avatar shows a
+  // bare "?" even though we know exactly who's signed in.
+  const name = profile?.full_name ?? profile?.email ?? user?.email ?? "";
   const initials = (name || "?").slice(0, 2).toUpperCase();
 
   return (
@@ -39,7 +41,7 @@ export function ProfileAvatarMenu() {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-            {profile?.email}
+            {profile?.email ?? user?.email}
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           {roles.includes("admin") && (
