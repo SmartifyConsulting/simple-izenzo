@@ -12,7 +12,7 @@ const RATING_LABEL: Record<string, string> = {
 
 /** The full match list, opened from the homepage's "…" once the visitor is signed in. Same
  * Responder records the homepage previews, only unblurred and complete rather than the top five. */
-export function MatchResultsPanel({ query, className }: { query?: string; className?: string }) {
+export function MatchResultsPanel({ query, className }: { query?: string | undefined; className?: string | undefined }) {
   const q = (query ?? "").trim();
 
   const { data = [], isLoading } = useQuery({
