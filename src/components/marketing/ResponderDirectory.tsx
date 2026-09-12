@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ShieldCheck } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { SubmitBidButton } from "@/components/marketing/SubmitBidButton";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -130,9 +130,9 @@ export function ResponderDirectory({
         <p className="mt-2 text-sm text-muted-foreground">
           Post an opportunity and we'll screen your counterparties automatically.
         </p>
-        <Link to="/auth" search={{ mode: "signup", next: undefined }} className="mt-5 inline-block">
-          <Button className="rounded-full">Submit a Bid</Button>
-        </Link>
+        <div className="mt-5 inline-block">
+          <SubmitBidButton />
+        </div>
       </div>
     </>
   );

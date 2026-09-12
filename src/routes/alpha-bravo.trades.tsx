@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SubmitBidButton } from "@/components/marketing/SubmitBidButton";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/alpha-bravo/trades")({
@@ -48,9 +48,12 @@ function Trades() {
 
   return (
     <section className="mx-auto max-w-6xl px-5 py-14 sm:py-16">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-        Trades
-      </p>
+      <div className="flex items-start justify-between gap-4">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+          Trades
+        </p>
+        <SubmitBidButton size="sm" className="shrink-0" />
+      </div>
       <h1 className="mt-3 max-w-2xl text-3xl tracking-tight text-foreground sm:text-4xl">
         Bidders and Responders we've matched.
       </h1>
@@ -109,11 +112,9 @@ function Trades() {
         <p className="mt-1.5 text-sm text-muted-foreground">
           Post an opportunity and get verified Responders.
         </p>
-        <Link to="/auth" search={{ mode: "signup", next: undefined }} className="mt-4 inline-block">
-          <Button size="sm" className="rounded-full">
-            Submit a Bid
-          </Button>
-        </Link>
+        <div className="mt-4 inline-block">
+          <SubmitBidButton size="sm" />
+        </div>
       </div>
     </section>
   );

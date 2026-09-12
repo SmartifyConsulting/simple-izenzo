@@ -27,7 +27,7 @@ function safeNext(next: string | undefined) {
 }
 
 function AuthPage() {
-  const { mode, next } = Route.useSearch();
+  const { next } = Route.useSearch();
   const navigate = useNavigate();
   const { session, loading } = useAuth();
 
@@ -37,7 +37,7 @@ function AuthPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 px-5 py-12">
-      <AuthTabs next={next} defaultTab={mode} className="w-full max-w-sm rounded-2xl border border-border bg-background p-8 shadow-sm" />
+      <AuthTabs next={next} defaultTab="signin" className="w-full max-w-sm rounded-2xl border border-border bg-background p-8 shadow-sm" />
     </div>
   );
 }

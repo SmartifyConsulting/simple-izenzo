@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { Button } from "@/components/ui/button";
+import { createFileRoute } from "@tanstack/react-router";
+import { SubmitBidButton } from "@/components/marketing/SubmitBidButton";
 import { SPINE } from "@/lib/spine";
 
 export const Route = createFileRoute("/alpha-bravo/how-it-works")({
@@ -50,9 +50,12 @@ function HowItWorks() {
       <h1 className="mt-4 max-w-2xl text-4xl tracking-tight text-foreground sm:text-5xl">
         From opportunity to outcome, fully governed.
       </h1>
-      <p className="mt-6 max-w-2xl leading-relaxed text-muted-foreground">
-        Every match runs through the same five stages — no shortcuts, no skipped checks.
-      </p>
+      <div className="mt-6 flex flex-wrap items-start justify-between gap-4">
+        <p className="max-w-2xl leading-relaxed text-muted-foreground">
+          Every match runs through the same five stages — no shortcuts, no skipped checks.
+        </p>
+        <SubmitBidButton size="sm" className="shrink-0" />
+      </div>
 
       <div className="mt-12 grid gap-12 lg:grid-cols-[minmax(0,1fr)_320px]">
         <ol className="space-y-10">
@@ -90,12 +93,6 @@ function HowItWorks() {
             Every step is recorded and independently verifiable. Verification can't be skipped or
             waived — so speed never comes at the cost of certainty.
           </p>
-
-          <Link to="/auth" search={{ mode: "signup", next: undefined }} className="inline-block">
-            <Button size="lg" className="rounded-full">
-              Submit a Bid
-            </Button>
-          </Link>
         </div>
       </div>
     </section>

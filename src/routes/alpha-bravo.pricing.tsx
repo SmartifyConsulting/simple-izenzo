@@ -1,6 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SubmitBidButton } from "@/components/marketing/SubmitBidButton";
 import { POI_COST, WAD_COST, TOKEN_PRICE_USD } from "@/lib/spine";
 
 export const Route = createFileRoute("/alpha-bravo/pricing")({
@@ -76,11 +77,7 @@ function Pricing() {
               ))}
             </div>
 
-            <Link to="/auth" search={{ mode: "signup", next: undefined }}>
-              <Button size="sm" className="mt-4 w-full rounded-full">
-                Submit a Bid
-              </Button>
-            </Link>
+            <SubmitBidButton size="sm" fullWidth className="mt-4" />
 
             <ul className="mt-4 space-y-1.5 text-xs">
               {PAY_AS_YOU_GO_FEATURES.map((f) => (
