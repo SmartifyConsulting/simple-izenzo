@@ -21,8 +21,7 @@ function About() {
             Izenzo means "actions" in isiZulu.
           </h1>
           <p className="mt-6 leading-relaxed text-muted-foreground">
-            Great deals shouldn't get stuck in compliance paperwork. Named after the Zulu word
-            for actions, Izenzo turns intent into execution without the friction. From initial
+            Izenzo turns intent into execution without the friction. From initial
             search to final agreement, the platform builds a permanent, verified audit
             trail—giving you pre-vetted options so you can close trade deals faster with
             complete trust.{" "}
@@ -52,7 +51,7 @@ function About() {
           </div>
         </div>
 
-        <div className="space-y-6 lg:border-l lg:border-border lg:pl-8">
+        <div className="space-y-6 lg:pl-8">
           <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
             From our writing
           </p>
