@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -61,6 +61,7 @@ export function VerificationPanel({ transactionId, checks, title, description }:
   // over the link itself as well — if the new tab is blocked, the person can still open it.
   const [sessionUrl, setSessionUrl] = useState<string | null>(null);
   const [blocked, setBlocked] = useState(false);
+  const popupRef = useRef<Window | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const { data: rows = [], isLoading, refetch } = useQuery({
@@ -71,24 +72,61 @@ export function VerificationPanel({ transactionId, checks, title, description }:
 
   const latest = (type: CheckType) => rows.find((r) => r.check_type === type);
 
+  function isNarrow() {
+    return typeof window !== "undefined" && window.matchMedia("(max-width: 640px)").matches;
+  }
+
+  /** Open the provider in its own window, launched inside the click so no popup blocker fires:
+   * the window is opened blank first, then pointed at the session URL once it comes back. The
+   * provider refuses to be displayed inside another site, so an in-page frame is impossible. */
+  function openProviderWindow(url: string) {
+    if (isNarrow()) {
+      const tab = window.open(url, "_blank", "noopener,noreferrer");
+      setBlocked(!tab);
+      return;
+    }
+    const existing = popupRef.current;
+    if (existing && !existing.closed) {
+      existing.location.href = url;
+      existing.focus();
+      setBlocked(false);
+      return;
+    }
+    const win = window.open(url, "izenzo-verify", "popup,width=520,height=800");
+    popupRef.current = win;
+    setBlocked(!win);
+    if (win) win.focus();
+  }
+
   async function onStart(type: CheckType) {
     setBusy(type);
     setError(null);
+    // Opened synchronously with the click; only the destination waits on the server.
+    const pending = isNarrow()
+      ? null
+      : window.open("", "izenzo-verify", "popup,width=520,height=800");
+    if (pending) {
+      popupRef.current = pending;
+      try {
+        pending.document.write(
+          "<title>Opening verification…</title><body style='font:14px system-ui;padding:24px'>Opening your identity check…</body>",
+        );
+      } catch {
+        // Some browsers disallow writing into the blank popup — harmless.
+      }
+    }
     try {
       const origin = typeof window !== "undefined" ? window.location.origin : undefined;
       const res = await start({
         data: { checkType: type, ...(transactionId ? { transactionId } : {}), ...(origin ? { origin } : {}) },
       });
       setSessionUrl(res.url);
-      const win = window.open(res.url, "_blank", "noopener,noreferrer");
-      if (win) {
-        setBlocked(false);
-        toast.success("Verification opened in a new tab. The result lands here on its own.");
-      } else {
-        setBlocked(true);
-      }
+      openProviderWindow(res.url);
+      toast.success("Verification opened in its own window. The result lands here on its own.");
       void refetch();
     } catch (err) {
+      pending?.close();
+      popupRef.current = null;
       setError((err as Error).message);
       toast.error((err as Error).message);
     } finally {
@@ -163,16 +201,16 @@ export function VerificationPanel({ transactionId, checks, title, description }:
                 </Badge>
 
                 {row && row.status === "in_progress" && row.provider_url && (
-                  <a
-                    href={row.provider_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => setSessionUrl(row.provider_url)}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setSessionUrl(row.provider_url);
+                      openProviderWindow(row.provider_url!);
+                    }}
                   >
-                    <Button size="sm" variant="outline">
-                      Continue
-                    </Button>
-                  </a>
+                    {popupRef.current && !popupRef.current.closed ? "Reopen window" : "Continue"}
+                  </Button>
                 )}
 
                 {row && (
@@ -209,11 +247,14 @@ export function VerificationPanel({ transactionId, checks, title, description }:
           <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
             <p className="text-xs text-muted-foreground">
               {blocked
-                ? "Your browser blocked the new tab. The verification page cannot be shown inside this window, so open it in its own tab:"
-                : "Verification page not showing? It cannot be displayed inside this window — open it in its own tab:"}
+                ? "Your browser blocked the verification window. It cannot be shown inside this page, so open it yourself:"
+                : "Verification in progress in its own window. Lost it? Reopen it here — it cannot be shown inside this page."}
             </p>
             <p className="break-all text-[11px] text-muted-foreground">{sessionUrl}</p>
             <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => openProviderWindow(sessionUrl)}>
+                Reopen window
+              </Button>
               <a href={sessionUrl} target="_blank" rel="noopener noreferrer">
                 <Button size="sm" variant="outline">
                   Open in a new tab
