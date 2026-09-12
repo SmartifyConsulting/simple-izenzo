@@ -148,7 +148,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
                 if (e.key === "Enter" && canSearch) onFindMatches();
               }}
               placeholder="Describe what you're looking for — product, quantity, location, terms…"
-              className="min-w-0 flex-1 basis-1/2 bg-transparent px-2 text-base text-foreground outline-none placeholder:text-muted-foreground"
+              className="min-w-0 flex-1 basis-1/2 bg-transparent px-2 text-sm text-foreground outline-none placeholder:text-muted-foreground"
             />
 
             {/* Right half: the same strip doubles as the drop zone, so no + button is needed. */}
