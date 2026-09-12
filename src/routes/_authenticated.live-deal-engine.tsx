@@ -1064,6 +1064,15 @@ function LiveDealEngine() {
                       <SubmitterIdentity orgId={dealTx.org_id} createdBy={(dealTx as unknown as { created_by?: string | null }).created_by ?? null} />
                     )}
                   </div>
+                  {dealTx?.created_at && (
+                    <p className="text-xs text-muted-foreground">
+                      Registered {new Date(dealTx.created_at).toLocaleDateString(undefined, {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </p>
+                  )}
                   <p className="text-sm leading-relaxed text-foreground">
                     {highlightKeyTerms(documentSummary)}
                   </p>
