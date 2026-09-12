@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
+import { cn } from "@/lib/utils";
 import { applyCurrentStylePreset } from "@/lib/stylePreset";
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
 import { ThemeToggle } from "@/components/guided/ThemeToggle";
@@ -39,22 +40,23 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
           </Link>
 
           <nav className="ml-auto hidden items-center gap-2 whitespace-nowrap text-sm text-muted-foreground lg:flex">
-            {NAV.map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                className="rounded-full border border-transparent px-3 py-1.5 transition-colors hover:border-border hover:text-foreground"
-              >
-                {item.label}
-              </Link>
-            ))}
-
-            <Link
-              to="/alpha-bravo/trades"
-              className="rounded-full border border-transparent px-3 py-1.5 transition-colors hover:border-border hover:text-foreground"
-            >
-              Trades
-            </Link>
+            {[...NAV, { to: "/alpha-bravo/trades", label: "Trades" } as const].map((item) => {
+              const active = pathname.startsWith(item.to);
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={cn(
+                    "rounded-full border border-transparent px-3 py-1.5 transition-colors",
+                    active
+                      ? "bg-foreground text-background"
+                      : "hover:bg-muted hover:text-foreground",
+                  )}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
           </nav>
 
           <div className="ml-6 flex shrink-0 items-center gap-3 lg:ml-3">

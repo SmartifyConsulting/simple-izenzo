@@ -1,10 +1,8 @@
 import { useRef, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Lock, Search, ShieldCheck, UploadCloud, FileCheck2, Loader2, RotateCcw, Sparkles, X } from "lucide-react";
+import { ArrowUp, Lock, Plus, ShieldCheck, FileCheck2, Loader2, RotateCcw, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -145,94 +143,85 @@ export function HeroMatchCard({ className }: { className?: string }) {
 
       {!searched && !searching && (
         <>
-          <div className="relative">
-            <Sparkles
-              className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 animate-pulse text-primary"
-              aria-hidden
+          <p className="mb-4 text-center text-lg font-medium text-foreground">Ready when you are.</p>
+
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
+            }}
+            className={cn(
+              "flex items-center gap-1 rounded-full border-2 bg-background p-2 shadow-sm transition-colors focus-within:border-primary",
+              dragOver ? "border-primary bg-primary/5" : "border-border",
+            )}
+          >
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              title="Attach files"
+              aria-label="Attach files"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <Plus className="h-5 w-5" />
+            </button>
+            <input
+              ref={inputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files?.length) addFiles(e.target.files);
+                e.target.value = "";
+              }}
             />
-            <Input
+            <input
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Describe what you're looking for — product, quantity, location, terms…"
-              className="h-14 w-full rounded-full border-2 pl-11 pr-5 text-base shadow-sm focus-visible:ring-2 focus-visible:ring-primary"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && canSearch) onFindMatches();
+              }}
+              placeholder="Ask anything"
+              className="min-w-0 flex-1 bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground"
             />
+            <button
+              type="button"
+              onClick={onFindMatches}
+              disabled={!canSearch}
+              aria-label="Find matches"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ArrowUp className="h-4 w-4" />
+            </button>
           </div>
 
-          <div className="mt-4 space-y-1.5">
-              <Label className="block text-xs font-medium text-foreground">Upload files</Label>
-              <div
-                onClick={() => inputRef.current?.click()}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setDragOver(true);
-                }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setDragOver(false);
-                  if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
-                }}
-                className={cn(
-                  "flex h-full min-h-[96px] cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed p-6 text-center transition-colors",
-                  dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
-                )}
-              >
-                {fileNames.length > 0 ? (
-                  <>
-                    <FileCheck2 className="h-5 w-5 text-success" />
-                    <p className="text-sm font-medium text-foreground">
-                      {fileNames.length} file{fileNames.length === 1 ? "" : "s"} added
-                    </p>
-                    <p className="text-xs text-muted-foreground">Click, or drop more, to add another</p>
-                  </>
-                ) : (
-                  <>
-                    <UploadCloud className="h-5 w-5 text-muted-foreground" />
-                    <p className="text-sm font-medium text-foreground">Drop files here</p>
-                    <p className="text-xs text-muted-foreground">Pitch deck, proposal, or any file — multiple OK</p>
-                  </>
-                )}
-                <input
-                  ref={inputRef}
-                  type="file"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => {
-                    if (e.target.files?.length) addFiles(e.target.files);
-                    e.target.value = "";
-                  }}
-                />
-              </div>
+          {fileNames.length > 0 && (
+            <ul className="mt-3 space-y-1.5">
+              {fileNames.map((name) => (
+                <li
+                  key={name}
+                  className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-1.5 text-xs"
+                >
+                  <FileCheck2 className="h-3.5 w-3.5 shrink-0 text-success" />
+                  <span className="min-w-0 flex-1 break-words text-foreground">{name}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeFile(name)}
+                    aria-label={`Remove ${name}`}
+                    className="shrink-0 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
 
-              {fileNames.length > 0 && (
-                <ul className="space-y-1.5">
-                  {fileNames.map((name) => (
-                    <li
-                      key={name}
-                      className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-1.5 text-xs"
-                    >
-                      <span className="min-w-0 flex-1 break-words text-foreground">{name}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeFile(name)}
-                        aria-label={`Remove ${name}`}
-                        className="shrink-0 text-muted-foreground hover:text-foreground"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-          </div>
-
-          <Button
-            className="mt-5 w-full rounded-full text-base font-bold"
-            disabled={!canSearch}
-            onClick={onFindMatches}
-          >
-            Find Matches
-          </Button>
           <p className="mt-3 text-center text-[11px] text-muted-foreground">
             See how matching works — no account needed to preview.
           </p>
