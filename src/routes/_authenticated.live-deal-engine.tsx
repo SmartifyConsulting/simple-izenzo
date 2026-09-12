@@ -59,12 +59,15 @@ export const Route = createFileRoute("/_authenticated/live-deal-engine")({
   // that specific deal, instead of only ever resuming whatever was last worked on here.
   validateSearch: (
     search: Record<string, unknown>,
-  ): { tx?: string; popout?: boolean; panel?: "matches"; q?: string } => ({
+  ): { tx?: string; popout?: boolean; panel?: "matches"; q?: string; seed?: string } => ({
     ...(typeof search["tx"] === "string" ? { tx: search["tx"] as string } : {}),
     popout: search["popout"] === "1",
     // Opened from the homepage's "…" — shows the full match list in the Live Workspace.
     ...(search["panel"] === "matches" ? { panel: "matches" as const } : {}),
     ...(typeof search["q"] === "string" ? { q: search["q"] as string } : {}),
+    // Carried over from the marketing homepage when signing in/up right after a search, so the
+    // workspace opens with that description already applied instead of landing empty.
+    ...(typeof search["seed"] === "string" ? { seed: search["seed"] as string } : {}),
   }),
   component: LiveDealEngine,
 });
@@ -208,7 +211,7 @@ function OpenDealsPicker({ currentId }: { currentId: string | null }) {
 /** The Live Deal Engine is the one screen users work from — the workflow canvas itself, never a
  * separate per-deal detail page. */
 function LiveDealEngine() {
-  const { tx: txParam, popout, panel, q: matchQuery } = Route.useSearch();
+  const { tx: txParam, popout, panel, q: matchQuery, seed } = Route.useSearch();
   const [picking, setPicking] = useState(false);
   const [direction, setDirection] = useState<"bid" | "offer" | null>(null);
   // Reserved for pre-selecting a bid/offer direction before the Workspace form opens; the
@@ -769,6 +772,17 @@ function LiveDealEngine() {
       // The candidates are written server-side, so the Record panel's cached (empty) list has to
       // be refreshed or it stays stuck on "Searching for counterparties…".
       await queryClient.invalidateQueries({ queryKey: ["counterparties", txId] });
+      // The moment matches are in, carry straight on into online media screening for all of
+      // them — a freshly-searched deal has no reason yet to exclude any candidate, so waiting on
+      // a tick-and-continue click here would just leave the workspace looking stalled right after
+      // the document/prompt that triggered this search.
+      try {
+        const { data: cps } = await supabase.from("counterparties").select("id").eq("transaction_id", txId);
+        const ids = (cps ?? []).map((c) => c.id as string);
+        if (ids.length > 0) void startMediaChecks(ids);
+      } catch {
+        // Best effort — the manual tick-and-continue flow in the Record panel still works.
+      }
     }
   }
 
@@ -940,7 +954,7 @@ function LiveDealEngine() {
               soloWorkspace ? "shadow-sm" : "shadow-2xl",
             )}
           >
-            <p className="label-caps shrink-0 text-foreground">Izenzo Engine Map</p>
+            <p className="label-caps shrink-0 text-foreground">Izenzo Trade Workflow</p>
             <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
               <ClassicView
                 tx={dealTx ?? FLOWCHART_PREVIEW_TX}
@@ -1001,6 +1015,7 @@ function LiveDealEngine() {
             <div className="mt-4">
               <CanvasStart
                 initialDirection={pendingDirection}
+                initialPrompt={seed}
                 onDraftReference={setDraftReference}
                 onCreated={(tx, recorded, seed) => {
                   setPicking(false);

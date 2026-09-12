@@ -5,6 +5,7 @@ import { ArrowUp, ExternalLink, ShieldCheck, FileCheck2, Loader2, RotateCcw, Spa
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { seedNext, useHeroSearch } from "@/lib/heroSearchContext";
 
 /** Reads the same public directory the Responders page reads, so a signed-out visitor actually
  * sees rows. The private counterparty table this used to query is per-transaction and unreadable
@@ -72,6 +73,10 @@ export function HeroMatchCard({ className }: { className?: string }) {
   const total = matchData?.total ?? 0;
   const searchTimer = useRef<number | null>(null);
 
+  // Shares what was typed with the header, so clicking Sign In/Sign Up there carries it into the
+  // Live Workspace instead of leaving the visitor to repeat themselves after they've authenticated.
+  const { setPrompt: setHeroPrompt } = useHeroSearch();
+
   useEffect(() => () => {
     if (searchTimer.current) window.clearTimeout(searchTimer.current);
   }, []);
@@ -79,6 +84,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
   function onFindMatches() {
     setSearching(true);
     setSearched(false);
+    setHeroPrompt(prompt);
     searchTimer.current = window.setTimeout(() => {
       setSearching(false);
       setSearched(true);
@@ -91,6 +97,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
     setFileNames([]);
     setSearched(false);
     setSearching(false);
+    setHeroPrompt("");
   }
 
   function addFiles(files: FileList | File[]) {
@@ -320,7 +327,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
           </div>
 
 
-          <Link to="/auth" search={{ mode: "signup", next: undefined }} className="mt-5 block">
+          <Link to="/auth" search={{ mode: "signup", next: seedNext(prompt) }} className="mt-5 block">
             <Button className="w-full rounded-full gap-1.5">
               <Sparkles className="h-4 w-4" /> Sign up to unlock matches
             </Button>

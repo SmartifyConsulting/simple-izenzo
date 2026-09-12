@@ -8,6 +8,7 @@ import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
 import { ThemeToggle } from "@/components/guided/ThemeToggle";
 import { SignInModal } from "@/components/auth/SignInModal";
 import { Logo } from "@/components/Logo";
+import { HeroSearchProvider, seedNext, useHeroSearch } from "@/lib/heroSearchContext";
 
 const NAV = [
   { to: "/alpha-bravo/about", label: "About Izenzo" },
@@ -21,15 +22,27 @@ const NAV = [
  * Responder matching business. Same auth, same Supabase data, same business rules as the
  * Izenzo marketing site — this only changes what the pages look like and say. */
 export function AlphaBravoShell({ children }: { children: ReactNode }) {
+  useEffect(() => {
+    applyCurrentStylePreset();
+  }, []);
+
+  return (
+    <HeroSearchProvider>
+      <AlphaBravoShellInner>{children}</AlphaBravoShellInner>
+    </HeroSearchProvider>
+  );
+}
+
+function AlphaBravoShellInner({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   // The home page shows a Sign In/Sign Up toggle instead of the plain "Sign in" button used
   // everywhere else, so a visitor sees both options are open to them right away.
   const isHome = pathname === "/alpha-bravo" || pathname === "/alpha-bravo/";
-
-  useEffect(() => {
-    applyCurrentStylePreset();
-  }, []);
+  // Whatever the visitor already typed into the homepage's search bar — carried into the sign
+  // in/up destination so it isn't lost the moment they authenticate.
+  const { prompt } = useHeroSearch();
+  const next = isHome ? seedNext(prompt) : undefined;
 
   return (
     <div className="min-h-screen bg-background">
@@ -72,7 +85,7 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
             ) : isHome ? (
               <>
                 <div className="flex items-center gap-1 rounded-full border border-border p-1">
-                  <SignInModal defaultTab="signin">
+                  <SignInModal defaultTab="signin" next={next}>
                     <button
                       type="button"
                       className="rounded-full bg-foreground px-3 py-1 text-xs font-medium text-background transition-colors"
@@ -80,7 +93,7 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
                       Sign In
                     </button>
                   </SignInModal>
-                  <SignInModal defaultTab="signup">
+                  <SignInModal defaultTab="signup" next={next}>
                     <button
                       type="button"
                       className="rounded-full px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted"

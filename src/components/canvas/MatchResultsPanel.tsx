@@ -1,54 +1,45 @@
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLink, Lock } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-const RATING_LABEL: Record<string, string> = {
-  trusted: "Verified",
-  neutral: "Under review",
-  flagged: "Flagged",
-};
+const BAND_LABEL = {
+  verified: "Verified",
+  registered: "On Izenzo",
+  unclaimed: "Unclaimed",
+} as const;
 
-/** The web page a candidate was found on, when the search recorded one. */
-function evidenceUrl(flags: unknown): string | null {
-  if (!flags || typeof flags !== "object") return null;
-  const evidence = (flags as { evidence?: unknown }).evidence;
-  if (!Array.isArray(evidence)) return null;
-  const first = evidence[0] as { url?: unknown } | undefined;
-  return typeof first?.url === "string" ? first.url : null;
+function bandOf(l: { verified_at: string | null; org_id: string | null }) {
+  if (l.verified_at) return "verified" as const;
+  return l.org_id ? ("registered" as const) : ("unclaimed" as const);
 }
 
-type ScoreComponent = { label: string; points: number; max: number; note: string };
-
-/** The reasons behind the match percentage, when the search recorded them. */
-function scoreComponents(flags: unknown): ScoreComponent[] {
-  if (!flags || typeof flags !== "object") return [];
-  const scoring = (flags as { scoring?: { components?: unknown } }).scoring;
-  const parts = scoring?.components;
-  if (!Array.isArray(parts)) return [];
-  return parts.filter(
-    (p): p is ScoreComponent =>
-      typeof p === "object" && p !== null && typeof (p as ScoreComponent).label === "string",
-  );
-}
-
-
-/** The full match list, opened from the homepage's "…" once the visitor is signed in. Same
- * Responder records the homepage previews, only unblurred and complete rather than the top five. */
+/** The full match list, opened from the homepage's "See more" once the visitor is signed in. Reads
+ * the exact same public `responder_listings` table the homepage's preview card queries (and the
+ * Responder Directory), narrowed by the same typed-word matching, so "See more" shows the same
+ * top-5-and-beyond results the visitor already saw — not a different, unrelated dataset. */
 export function MatchResultsPanel({ query, className }: { query?: string | undefined; className?: string | undefined }) {
   const q = (query ?? "").trim();
+  const terms = q
+    .toLowerCase()
+    .split(/[^a-z0-9]+/i)
+    .filter((w) => w.length > 3)
+    .slice(0, 6);
 
   const { data = [], isLoading } = useQuery({
-    queryKey: ["all-matches", q],
+    queryKey: ["all-matches", terms.join(",")],
     queryFn: async () => {
       let builder = supabase
-        .from("counterparties")
-        .select("id, name, sector, jurisdiction, rating_band, score, rationale, media_flags")
-        .order("rating_computed_at", { ascending: false })
-        .limit(50);
-      if (q) builder = builder.or(`name.ilike.%${q}%,sector.ilike.%${q}%`);
-      const { data: rows, error } = await builder;
+        .from("responder_listings")
+        .select("id, org_id, name, sector, jurisdiction, source, is_example, verified_at, summary, source_url")
+        .eq("published", true);
+      if (terms.length > 0) {
+        builder = builder.or(
+          terms.flatMap((t) => [`name.ilike.%${t}%`, `sector.ilike.%${t}%`, `jurisdiction.ilike.%${t}%`]).join(","),
+        );
+      }
+      const { data: rows, error } = await builder.order("created_at", { ascending: false }).limit(50);
       if (error) throw error;
       return rows ?? [];
     },
@@ -72,7 +63,6 @@ export function MatchResultsPanel({ query, className }: { query?: string | undef
         </div>
       )}
 
-
       {isLoading && <p className="mt-3 text-sm text-muted-foreground">Loading matches…</p>}
 
       {!isLoading && data.length === 0 && (
@@ -84,46 +74,22 @@ export function MatchResultsPanel({ query, className }: { query?: string | undef
       <ul className="mt-3 space-y-2">
         {data.map((m) => (
           <li key={m.id} className="rounded-xl border border-border p-3">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-primary">
-                {m.rating_band ? RATING_LABEL[m.rating_band] : "Unrated"}
-                {m.sector ? ` · ${m.sector}` : ""}
-              </p>
-              {m.rating_band === "flagged" && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
-            </div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-primary">
+              {BAND_LABEL[bandOf(m)]}
+              {m.sector ? ` · ${m.sector}` : ""}
+              {m.is_example ? " · Example" : ""}
+            </p>
             <p className="mt-1 text-sm font-medium text-foreground">{m.name}</p>
             <p className="text-xs text-muted-foreground">
               {m.jurisdiction ?? "Jurisdiction pending"}
-              {m.score != null ? ` · ${m.score}% match` : ""}
+              {m.source === "web_search" ? " · Found on the web" : ""}
             </p>
-            {/* What the search found about this match, plus the page it came from. */}
-            {m.rationale && (
-              <p className="mt-1.5 text-xs leading-relaxed text-foreground/80">{m.rationale}</p>
+            {m.summary && (
+              <p className="mt-1.5 text-xs leading-relaxed text-foreground/80">{m.summary}</p>
             )}
-            {/* Why the percentage is what it is — every match is explainable. */}
-            {scoreComponents(m.media_flags).length > 0 && (
-              <ul className="mt-2 space-y-1">
-                {scoreComponents(m.media_flags).map((c) => (
-                  <li key={c.label} className="flex items-start gap-2 text-[11px]">
-                    <span className="mt-1 h-1 w-8 shrink-0 rounded-full bg-muted">
-                      <span
-                        className="block h-1 rounded-full bg-primary"
-                        style={{ width: `${Math.max(0, Math.min(100, (c.points / c.max) * 100))}%` }}
-                      />
-                    </span>
-                    <span className="text-muted-foreground">
-                      <span className="font-medium text-foreground">
-                        {c.label} {c.points}/{c.max}
-                      </span>
-                      {c.note ? ` — ${c.note}` : ""}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {evidenceUrl(m.media_flags) && (
+            {m.source_url && (
               <a
-                href={evidenceUrl(m.media_flags)!}
+                href={m.source_url}
                 target="_blank"
                 rel="noreferrer noopener"
                 className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
@@ -132,7 +98,6 @@ export function MatchResultsPanel({ query, className }: { query?: string | undef
               </a>
             )}
           </li>
-
         ))}
       </ul>
     </div>

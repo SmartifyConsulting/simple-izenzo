@@ -1773,6 +1773,7 @@ export function CanvasStart({
   onDirectionChange,
   onDraftReference,
   initialDirection,
+  initialPrompt,
 }: {
   /** `seed` carries whatever the visitor already typed/dropped on the starting card, so the
    * caller can hand it straight to the real upload step instead of making them repeat it. */
@@ -1792,6 +1793,10 @@ export function CanvasStart({
   /** Opens straight into the Bid or Offer form on mount instead of the picker — used when a
    * caller elsewhere on the page already decided which side the user wants. */
   initialDirection?: "bid" | "offer" | null;
+  /** Carries over whatever a visitor already typed on the marketing homepage before signing in
+   * (or signing up) — pre-fills the description and, if non-empty, opens the workspace on mount
+   * exactly as if they'd pressed Enter here, so signing in doesn't drop them on an empty card. */
+  initialPrompt?: string | undefined;
 }) {
   const { org, orgs, user, profile, refresh } = useAuth();
   // Which company this bid/offer is traded as — only shown as a choice when the user belongs to
@@ -1934,9 +1939,22 @@ export function CanvasStart({
   }
 
   const [dragOver, setDragOver] = useState(false);
-  const [prompt, setPrompt] = useState("");
+  const [prompt, setPrompt] = useState(initialPrompt ?? "");
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const appliedInitialPrompt = useRef(false);
+
+  // A prompt carried over from the marketing homepage opens the workspace immediately, the same
+  // as pressing Enter — otherwise signing in from a search the visitor already ran would just
+  // drop them on the same empty starting card, losing what they typed.
+  useEffect(() => {
+    if (appliedInitialPrompt.current) return;
+    appliedInitialPrompt.current = true;
+    if (initialPrompt && initialPrompt.trim() && !initialDirection) {
+      beginPicking();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Same look as the marketing hero's search bar — a description on the left, a drop zone on the
   // right — so capturing what someone's after starts here instead of asking them to repeat it

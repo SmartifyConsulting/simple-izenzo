@@ -12,7 +12,7 @@ export function SignInModal({
   defaultTab = "signin",
 }: {
   children: ReactNode;
-  next?: string;
+  next?: string | undefined;
   defaultTab?: "signin" | "signup";
 }) {
   const [open, setOpen] = useState(false);
