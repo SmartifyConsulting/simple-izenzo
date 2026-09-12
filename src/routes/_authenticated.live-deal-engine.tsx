@@ -3,7 +3,19 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { BadgeCheck, CheckCircle2, Download, Eye, Paperclip, Search } from "lucide-react";
+import {
+  BadgeCheck,
+  CheckCircle2,
+  Download,
+  Eye,
+  Maximize2,
+  Minimize2,
+  Minus,
+  Move,
+  Paperclip,
+  Search,
+  X as XIcon,
+} from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import {
   CanvasStart,
@@ -27,6 +39,7 @@ import { runBackgroundScreening, type ScreeningResult } from "@/lib/screening.fu
 import { runOnlineMediaChecks, type MediaCheckResult } from "@/lib/onlineMedia.functions";
 import { listVerificationsForTx } from "@/lib/didit.functions";
 import { pushRecentDeal } from "@/lib/recentDeals";
+import { useDealWindows } from "@/lib/dealWindows";
 
 import { cn } from "@/lib/utils";
 
@@ -41,10 +54,10 @@ export const Route = createFileRoute("/_authenticated/live-deal-engine")({
   }),
   // Lets a Bid/Offer ID elsewhere (e.g. the Report list) link straight into this workflow for
   // that specific deal, instead of only ever resuming whatever was last worked on here.
-  validateSearch: (search: Record<string, unknown>): { tx?: string } => {
-    const value = search["tx"];
-    return typeof value === "string" ? { tx: value } : {};
-  },
+  validateSearch: (search: Record<string, unknown>): { tx?: string; popout?: boolean } => ({
+    ...(typeof search["tx"] === "string" ? { tx: search["tx"] as string } : {}),
+    popout: search["popout"] === "1",
+  }),
   component: LiveDealEngine,
 });
 
@@ -187,7 +200,7 @@ function OpenDealsPicker({ currentId }: { currentId: string | null }) {
 /** The Live Deal Engine is the one screen users work from — the workflow canvas itself, never a
  * separate per-deal detail page. */
 function LiveDealEngine() {
-  const { tx: txParam } = Route.useSearch();
+  const { tx: txParam, popout } = Route.useSearch();
   const [picking, setPicking] = useState(false);
   const [direction, setDirection] = useState<"bid" | "offer" | null>(null);
   // Reserved for pre-selecting a bid/offer direction before the Workspace form opens; the
@@ -726,22 +739,117 @@ function LiveDealEngine() {
     link.click();
   }
 
-  return (
-    <AppShell wide>
+  // A deal that hasn't been created yet still needs a stable id so it can register as its own
+  // taskbar entry rather than being lost the moment the user starts filling in a bid/offer.
+  const windowId = dealTx?.id ?? "new";
+  const windowLabel = dealTx?.reference || dealTx?.title || "New workspace";
+  const { windows, open: openWindow, setMode, move, close: closeWindow, isPoppedElsewhere } = useDealWindows();
+  const win = windows.find((w) => w.id === windowId);
+  const windowMode = popout ? "docked" : (win?.mode ?? "docked");
+  const poppedElsewhere = !popout && isPoppedElsewhere(windowId);
+
+  useEffect(() => {
+    if (popout) return;
+    openWindow(windowId, windowLabel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [windowId, windowLabel, popout]);
+
+  const [dragging, setDragging] = useState<{ dx: number; dy: number } | null>(null);
+  const posX = win?.x ?? 80;
+  const posY = win?.y ?? 80;
+
+  function startDrag(e: React.PointerEvent) {
+    if (popout) return;
+    e.preventDefault();
+    setDragging({ dx: e.clientX - posX, dy: e.clientY - posY });
+  }
+  useEffect(() => {
+    if (!dragging) return;
+    const onMove = (e: PointerEvent) => move(windowId, e.clientX - dragging.dx, e.clientY - dragging.dy);
+    const onUp = () => setDragging(null);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, [dragging, move, windowId]);
+
+  if (!popout && windowMode === "minimized") {
+    return (
+      <AppShell wide>
+        <div className="flex min-h-[200px] items-center justify-center text-sm text-muted-foreground">
+          {windowLabel} is minimized — restore it from the taskbar below.
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (poppedElsewhere) {
+    return (
+      <AppShell wide>
+        <div className="flex min-h-[200px] items-center justify-center text-sm text-muted-foreground">
+          {windowLabel} is open in its own window — switch to it, or close it there to bring it back here.
+        </div>
+      </AppShell>
+    );
+  }
+
+  const workspaceContent = (
+    <>
+      {!popout && (
+        <div
+          onPointerDown={windowMode === "maximized" ? undefined : startDrag}
+          className={cn(
+            "mb-2 flex items-center justify-between rounded-t-2xl border border-b-0 border-border bg-card px-4 py-2",
+            windowMode !== "maximized" && "cursor-grab active:cursor-grabbing",
+          )}
+        >
+          <div className="flex min-w-0 items-center gap-2 text-sm font-medium text-foreground">
+            {windowMode !== "maximized" && <Move className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+            <span className="truncate">{windowLabel}</span>
+          </div>
+          <div className="flex shrink-0 items-center gap-3">
+            <Minus
+              className="h-4 w-4 cursor-pointer text-muted-foreground hover:text-foreground"
+              onClick={() => setMode(windowId, "minimized")}
+            />
+            {windowMode === "maximized" ? (
+              <Minimize2
+                className="h-4 w-4 cursor-pointer text-muted-foreground hover:text-foreground"
+                onClick={() => setMode(windowId, "docked")}
+              />
+            ) : (
+              <Maximize2
+                className="h-4 w-4 cursor-pointer text-muted-foreground hover:text-foreground"
+                onClick={() => setMode(windowId, "maximized")}
+              />
+            )}
+            <button
+              type="button"
+              title="Pop out to its own window — drag it to any monitor"
+              className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground"
+              onClick={() => setMode(windowId, "popped")}
+            >
+              Pop out
+            </button>
+            <XIcon
+              className="h-4 w-4 cursor-pointer text-muted-foreground hover:text-foreground"
+              onClick={() => closeWindow(windowId)}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="mb-3 flex items-center justify-end gap-3">
         <OpenDealsPicker currentId={dealTx?.id ?? null} />
       </div>
 
       {/* The whole two-panel pair reads as one floating card sitting above the page — a soft
           halo/backdrop layer behind it plus a strong shadow on the panels themselves — rather
-          than panels flush with the page background. It's a static visual treatment only: the
-          card doesn't move or drag, it just makes clear this is a workspace overlapping the app
-          underneath, not part of the page's own flow. */}
+          than panels flush with the page background. */}
       <div className="relative">
-        <div
-          aria-hidden
-          className="absolute -inset-3 rounded-[2rem] bg-card/60 blur-xl"
-        />
+        <div aria-hidden className="absolute -inset-3 rounded-[2rem] bg-card/60 blur-xl" />
         <div className="relative grid grid-cols-1 items-stretch gap-4 rounded-3xl lg:grid-cols-2">
           {/* Engine Map — always visible on the left. Clicking a node opens that step inline in
               the Live Workspace beside it, instead of navigating away from this screen. Both
@@ -986,6 +1094,31 @@ function LiveDealEngine() {
             ) : null}
         </div>
         </div>
+      </div>
+    </>
+  );
+
+  if (popout) {
+    return <div className="min-h-screen bg-background p-4">{workspaceContent}</div>;
+  }
+
+  if (windowMode === "maximized") {
+    return (
+      <AppShell wide>
+        <div className="fixed inset-4 z-50 overflow-y-auto rounded-2xl border border-border bg-background p-4 shadow-2xl">
+          {workspaceContent}
+        </div>
+      </AppShell>
+    );
+  }
+
+  return (
+    <AppShell wide>
+      <div
+        className="fixed z-40 w-[min(1040px,calc(100vw-2rem))] rounded-2xl"
+        style={{ left: posX, top: posY }}
+      >
+        {workspaceContent}
       </div>
     </AppShell>
   );
