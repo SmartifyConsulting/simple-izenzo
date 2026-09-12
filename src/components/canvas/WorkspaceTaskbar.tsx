@@ -24,20 +24,22 @@ export function WorkspaceTaskbar() {
 
   function activate(id: string, mode: string) {
     if (mode === "minimized") setMode(id, "maximized");
-    void navigate({ to: "/live-deal-engine", search: id === "new" ? {} : { tx: id } });
+    // `fresh: 1` tells the Live Workspace to show the empty upload/search template — otherwise a
+    // bare URL with no `tx` is indistinguishable from "just resume whatever was last worked on".
+    void navigate({ to: "/live-deal-engine", search: id === "new" ? { fresh: true } : { tx: id } });
   }
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 flex items-end gap-px overflow-x-auto border-t border-border bg-muted/60 px-2 pt-1.5 backdrop-blur">
+    <div className="fixed inset-x-0 bottom-0 z-40 flex items-end gap-1 overflow-x-auto border-t border-border bg-muted/60 px-2 pt-1.5 backdrop-blur">
       {windows.map((w) => {
         const active = w.mode !== "minimized";
         return (
           <div
             key={w.id}
             className={cn(
-              "group relative flex shrink-0 items-center gap-2 rounded-t-md border border-b-0 px-3 py-1.5 text-xs font-medium transition-colors",
+              "group flex shrink-0 items-center gap-2 rounded-t-md border px-3 py-1.5 text-xs font-medium transition-colors",
               active
-                ? "border-[#F59E0B] bg-[#F59E0B]/15 text-foreground shadow-[0_-1px_0_0_var(--card)_inset]"
+                ? "border-[#F59E0B] border-b-transparent bg-[#F59E0B]/15 text-foreground"
                 : "border-transparent bg-transparent text-muted-foreground hover:bg-card/50 hover:text-foreground",
             )}
           >
@@ -56,9 +58,6 @@ export function WorkspaceTaskbar() {
                 close(w.id);
               }}
             />
-            {active && (
-              <span className="absolute inset-x-0 -top-px h-0.5 rounded-t bg-[#F59E0B]" aria-hidden />
-            )}
           </div>
         );
       })}

@@ -59,7 +59,7 @@ export const Route = createFileRoute("/_authenticated/live-deal-engine")({
   // that specific deal, instead of only ever resuming whatever was last worked on here.
   validateSearch: (
     search: Record<string, unknown>,
-  ): { tx?: string; popout?: boolean; panel?: "matches"; q?: string; seed?: string } => ({
+  ): { tx?: string; popout?: boolean; panel?: "matches"; q?: string; seed?: string; fresh?: boolean } => ({
     ...(typeof search["tx"] === "string" ? { tx: search["tx"] as string } : {}),
     popout: search["popout"] === "1",
     // Opened from the homepage's "…" — shows the full match list in the Live Workspace.
@@ -68,6 +68,11 @@ export const Route = createFileRoute("/_authenticated/live-deal-engine")({
     // Carried over from the marketing homepage when signing in/up right after a search, so the
     // workspace opens with that description already applied instead of landing empty.
     ...(typeof search["seed"] === "string" ? { seed: search["seed"] as string } : {}),
+    // Set only by the "New workspace" taskbar tab — forces the empty upload/search template even
+    // when the bare URL (no `tx`) would otherwise resume whatever deal was last worked on.
+    ...(search["fresh"] === "1" || search["fresh"] === true || search["fresh"] === "true"
+      ? { fresh: true }
+      : {}),
   }),
   component: LiveDealEngine,
 });
@@ -211,7 +216,7 @@ function OpenDealsPicker({ currentId, hasAttachment }: { currentId: string | nul
 /** The Live Deal Engine is the one screen users work from — the workflow canvas itself, never a
  * separate per-deal detail page. */
 function LiveDealEngine() {
-  const { tx: txParam, popout, panel, q: matchQuery, seed } = Route.useSearch();
+  const { tx: txParam, popout, panel, q: matchQuery, seed, fresh } = Route.useSearch();
   // Whatever the visitor dropped on the homepage before signing in, if anything. Read via a
   // non-destructive peek (StrictMode double-invokes this initializer in dev, and a combined
   // read-and-clear would lose the files on the second call), then clear it once via the effect
@@ -690,7 +695,7 @@ function LiveDealEngine() {
   // Resume whatever bid/offer this user last recorded, so a refresh or a later visit doesn't
   // lose their place.
   useEffect(() => {
-    if (txParam) return;
+    if (txParam || fresh) return;
     let raw: string | null = null;
     try {
       raw = localStorage.getItem(ACTIVE_DEAL_KEY);
@@ -730,6 +735,26 @@ function LiveDealEngine() {
       }
     })();
   }, []);
+
+  // The "New workspace" taskbar tab navigates here with `?fresh=1` — an explicit, unambiguous
+  // signal to show the empty upload/search template, even though the bare URL (no `tx`) would
+  // otherwise be indistinguishable from "just resume whatever was last worked on".
+  useEffect(() => {
+    if (!fresh) return;
+    setActivity(null);
+    setDealTx(null);
+    setDraftReference(null);
+    setSeedPrompt("");
+    setSeedFiles([]);
+    setFlowStep("documents");
+    setAttachments([]);
+    setDocumentSummary(null);
+    try {
+      localStorage.removeItem(ACTIVE_DEAL_KEY);
+    } catch {
+      // Best-effort — worst case a later refresh resumes the old deal again.
+    }
+  }, [fresh]);
 
   // Keeps the Search dialog's "Recent" shortcuts up to date with whatever deal is actually on
   // screen, however it got there (resumed, opened from the trades list, or just recorded).
@@ -964,14 +989,10 @@ function LiveDealEngine() {
         <OpenDealsPicker currentId={dealTx?.id ?? null} hasAttachment={workspaceDocs.length > 0} />
       </div>
 
-      {/* When several workspaces are open, the pair reads as one floating card sitting above the
-          page — a soft halo/backdrop layer behind it plus a strong shadow on the panels
-          themselves. A single, solo workspace is just the page itself, so it skips all of that —
-          otherwise it reads as several overlapping panels stacked for no reason. */}
+      {/* Only one workspace is ever open at a time now (see dealWindows' setMode), so this is
+          always just the page itself — no halo/backdrop layer behind it, which used to read as a
+          second frame peeking out from underneath the real one. */}
       <div className="relative">
-        {!soloWorkspace && (
-          <div aria-hidden className="absolute -inset-3 rounded-[2rem] bg-card/60 blur-xl" />
-        )}
         <div
           className={cn(
             "relative grid grid-cols-1 items-stretch gap-4 rounded-3xl lg:grid-cols-2",
@@ -985,7 +1006,7 @@ function LiveDealEngine() {
           <div
             className={cn(
               "ink-grid flex h-[calc(100vh-190px)] w-full flex-col overflow-hidden rounded-3xl border border-border bg-card p-3 sm:p-5",
-              soloWorkspace ? "shadow-sm" : "shadow-2xl",
+              "shadow-sm",
             )}
           >
             <p className="label-caps shrink-0 text-foreground">Izenzo Trade Workflow</p>
@@ -1007,7 +1028,7 @@ function LiveDealEngine() {
           <div
             className={cn(
               "ink-grid h-[calc(100vh-190px)] w-full overflow-y-auto rounded-3xl border border-border bg-card p-3 sm:p-5",
-              soloWorkspace ? "shadow-sm" : "shadow-2xl",
+              "shadow-sm",
             )}
           >
           {/* Bidder details + AI summary come first — the very top of the workspace, before the
