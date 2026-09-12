@@ -31,8 +31,10 @@ export function DocumentUploadStep({
   onNext,
   onFirstClassified,
   autoAdvance = false,
+  reference,
   initialPrompt,
   initialFiles,
+
 }: {
   transactionId: string;
   onNext: () => void;
