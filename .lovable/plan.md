@@ -24,6 +24,10 @@ So the page needs its own public list, not the private one.
 
 A small set of sample businesses across the existing sectors, each visibly labelled **Example**, inserted with the change so the page has content on first load. They are flagged as examples and can be cleared in one action from Admin later.
 
+**Reword the "Live from database" label**
+
+The three cards carrying a "Live from database" badge get plain wording — **Live listings** — describing what the visitor is seeing rather than where it is stored.
+
 **Honest empty state**
 
 When a filter genuinely matches nothing, the page says so and offers the sign-up path, instead of rendering an empty grid.
