@@ -1966,60 +1966,56 @@ export function CanvasStart({
   // right — so capturing what someone's after starts here instead of asking them to repeat it
   // once the deal already exists.
   const startNode = (
-    <div className="mx-auto w-full max-w-lg space-y-1.5">
+    <div className="mx-auto w-full max-w-lg space-y-2">
+      <textarea
+        rows={2}
+        value={prompt}
+        onChange={(e) => setPrompt(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey && prompt.trim()) {
+            e.preventDefault();
+            beginPicking();
+          }
+        }}
+        placeholder="Describe what you're looking for — product, quantity, location, terms"
+        className="w-full resize-none rounded-2xl border-2 border-border bg-white p-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+      />
       <div
+        onClick={() => fileInputRef.current?.click()}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragOver(false);
+          const files = Array.from(e.dataTransfer.files);
+          if (files.length === 0) return;
+          setPendingFiles(files);
+          beginPicking();
+        }}
         className={cn(
-          "flex items-stretch gap-2 rounded-2xl border-2 bg-background p-2 transition-colors focus-within:border-primary",
-          dragOver ? "border-primary bg-primary/5" : "border-border",
+          "flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed p-4 text-center transition-colors hover:border-primary/40",
+          dragOver ? "border-primary bg-primary/5" : "border-border bg-background",
         )}
       >
-        <textarea
-          rows={3}
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey && prompt.trim()) {
-              e.preventDefault();
-              beginPicking();
-            }
-          }}
-          placeholder="Describe what you're looking for — product, quantity, location, terms"
-          className="min-w-0 flex-1 basis-1/2 resize-none border-0 bg-transparent p-1 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
-        />
-        <div
-          onClick={() => fileInputRef.current?.click()}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragOver(true);
-          }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDragOver(false);
-            const files = Array.from(e.dataTransfer.files);
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            const files = e.target.files ? Array.from(e.target.files) : [];
+            e.target.value = "";
             if (files.length === 0) return;
             setPendingFiles(files);
             beginPicking();
           }}
-          className="flex min-w-0 flex-1 basis-1/2 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-border p-3 text-center transition-colors hover:border-primary/40"
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            className="hidden"
-            onChange={(e) => {
-              const files = e.target.files ? Array.from(e.target.files) : [];
-              e.target.value = "";
-              if (files.length === 0) return;
-              setPendingFiles(files);
-              beginPicking();
-            }}
-          />
-          <UploadCloud className="h-5 w-5 text-muted-foreground" />
-          <span className="text-xs font-medium text-foreground">Drop files here or click to browse</span>
-          <span className="text-[11px] text-muted-foreground">Pitch deck, proposal, or any file — multiple OK</span>
-        </div>
+        />
+        <UploadCloud className="h-5 w-5 shrink-0 text-muted-foreground" />
+        <span className="text-xs font-medium text-foreground">Drop files here or click to browse</span>
+        <span className="text-[11px] text-muted-foreground">— Pitch deck, proposal, or any file, multiple OK</span>
       </div>
       <p className="text-center text-[11px] text-muted-foreground">
         Press Enter, or drop a file, to open your workspace.
