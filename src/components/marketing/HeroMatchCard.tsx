@@ -7,17 +7,21 @@ import { SignInModal } from "@/components/auth/SignInModal";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
+/** Reads the same public directory the Responders page reads, so a signed-out visitor actually
+ * sees rows. The private counterparty table this used to query is per-transaction and unreadable
+ * when signed out, which made the preview come back empty every time. */
 function useIllustrativeMatches(enabled: boolean) {
   return useQuery({
     queryKey: ["hero-illustrative-matches"],
     enabled,
     queryFn: async () => {
-      // Counted separately (head: true, no rows) so the card can say how many matches exist in
-      // total while still only ever rendering the top 5 in the card.
       const { data, error, count } = await supabase
-        .from("counterparties")
-        .select("id, name, sector, jurisdiction, rating_band, score", { count: "exact" })
-        .order("rating_computed_at", { ascending: false })
+        .from("responder_listings")
+        .select("id, org_id, name, sector, jurisdiction, source, is_example, verified_at", {
+          count: "exact",
+        })
+        .eq("published", true)
+        .order("created_at", { ascending: false })
         .limit(5);
       if (error) throw error;
       return { matches: data, total: count ?? data?.length ?? 0 };
@@ -25,11 +29,16 @@ function useIllustrativeMatches(enabled: boolean) {
   });
 }
 
-const RATING_LABEL: Record<string, string> = {
-  trusted: "Verified",
-  neutral: "Under review",
-  flagged: "Flagged",
-};
+const BAND_LABEL = {
+  verified: "Verified",
+  registered: "On Izenzo",
+  unclaimed: "Unclaimed",
+} as const;
+
+function bandOf(l: { verified_at: string | null; org_id: string | null }) {
+  if (l.verified_at) return "verified" as const;
+  return l.org_id ? ("registered" as const) : ("unclaimed" as const);
+}
 
 /** The homepage's upload-and-preview card. Uploading a file here does not run any real analysis
  * — there is no backend that can screen an unauthenticated visitor's document against Izenzo's
@@ -226,8 +235,9 @@ export function HeroMatchCard({ className }: { className?: string }) {
               <div key={m.id} className="rounded-xl border border-border p-3">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-primary">
-                    {m.rating_band ? RATING_LABEL[m.rating_band] : "Unrated"}
+                    {BAND_LABEL[bandOf(m)]}
                     {m.sector ? ` · ${m.sector}` : ""}
+                    {m.is_example ? " · Example" : ""}
                   </p>
                   <Lock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                 </div>
@@ -236,7 +246,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {m.jurisdiction ?? "Jurisdiction pending"}
-                  {m.score != null ? ` · Score: ${m.score}` : ""}
+                  {m.source === "web_search" ? " · Found on the web" : ""}
                 </p>
               </div>
             ))}

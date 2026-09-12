@@ -14,19 +14,19 @@ export const Route = createFileRoute("/alpha-bravo/how-it-works")({
  * audience so nothing exposes internal jargon like "gate", "WaD" or "tokens". */
 const STAGE_COPY: Record<(typeof SPINE)[number]["key"], { title: string; body: string }> = {
   trading: {
-    title: "Find & Match",
-    body: "Post your opportunity, get matched with the right Responder, and agree the terms — with AI-assisted counterparty search and background checks along the way.",
+    title: "Find, Match & Verify",
+    body: "Post your opportunity, get matched with the right Responder, and see each candidate checked for identity, ownership, and sanctions/watchlist exposure before you choose. Verification can't be skipped.",
   },
   compliance: {
-    title: "Verify",
-    body: "Every match clears identity, ownership, and sanctions/watchlist checks before anything is signed. This step can't be skipped.",
+    title: "Engage",
+    body: "Engage the party you've chosen, agree the terms, and sign off on what both sides have committed to — recorded as you go.",
   },
   execution: {
     title: "Deliver",
     body: "Turn the agreed match into a real project — plan it, resource it, and track who's involved as it happens.",
   },
   finality: {
-    title: "Settle",
+    title: "Finalize",
     body: "Close it out: confirm what happened, record any changes, and get sign-off from everyone involved.",
   },
   memory: {

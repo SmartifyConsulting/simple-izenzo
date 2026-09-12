@@ -8,6 +8,7 @@ import { ThemeToggle } from "@/components/guided/ThemeToggle";
 import { Logo } from "@/components/Logo";
 
 const NAV = [
+  { to: "/live-deal-engine", label: "Live Workspace" },
   { to: "/alpha-bravo/about", label: "About" },
   { to: "/alpha-bravo/how-it-works", label: "How It Works" },
   { to: "/alpha-bravo/intelligence-fabric", label: "The Intelligence Fabric" },
