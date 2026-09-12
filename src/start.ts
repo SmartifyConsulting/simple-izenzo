@@ -3,7 +3,7 @@ import { createStart, createCsrfMiddleware, createMiddleware } from "@tanstack/r
 import { renderErrorPage } from "./lib/error-page";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 
-const errorMiddleware = createMiddleware().server(async ({ next }) => {
+const errorMiddleware = createMiddleware().server(async ({ next, ...rest }) => {
   try {
     return await next();
   } catch (error) {
@@ -11,12 +11,18 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
       throw error;
     }
     console.error(error);
+    // Server-function calls expect a serialised error, not an HTML page — returning
+    // markup there leaves the caller with an unparseable response and a blank screen.
+    if ((rest as { handlerType?: string }).handlerType === "serverFn") {
+      throw error;
+    }
     return new Response(renderErrorPage(), {
       status: 500,
       headers: { "content-type": "text/html; charset=utf-8" },
     });
   }
 });
+
 
 // Start installs this automatically when src/start.ts is absent; defining the
 // file opts out, so re-add it explicitly to keep server functions protected
