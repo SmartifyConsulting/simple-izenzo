@@ -25,6 +25,7 @@ import {
   type RecordedActivity,
 } from "@/components/canvas/DealCanvas";
 import { TradeSummary } from "@/components/canvas/TradeSummary";
+import { SubmitterIdentity } from "@/components/canvas/SubmitterIdentity";
 import { MatchResultsPanel } from "@/components/canvas/MatchResultsPanel";
 
 import { ClassicView } from "@/components/canvas/ClassicView";
@@ -1058,7 +1059,12 @@ function LiveDealEngine() {
             <div className="mt-4 space-y-3">
               {documentSummary && (
                 <div className="glass-node space-y-2 p-4">
-                  <p className="label-caps text-muted-foreground">AI document summary</p>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="label-caps text-muted-foreground">What was submitted</p>
+                    {dealTx && (
+                      <SubmitterIdentity orgId={dealTx.org_id} createdBy={dealTx.created_by} />
+                    )}
+                  </div>
                   <p className="text-sm leading-relaxed text-foreground">
                     {highlightKeyTerms(documentSummary)}
                   </p>
