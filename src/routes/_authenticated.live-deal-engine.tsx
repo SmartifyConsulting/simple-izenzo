@@ -25,6 +25,7 @@ import {
   type RecordedActivity,
 } from "@/components/canvas/DealCanvas";
 import { TradeSummary } from "@/components/canvas/TradeSummary";
+import { MatchResultsPanel } from "@/components/canvas/MatchResultsPanel";
 
 import { ClassicView } from "@/components/canvas/ClassicView";
 import { DocumentUploadStep } from "@/components/guided/DocumentUploadStep";
