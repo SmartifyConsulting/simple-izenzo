@@ -148,7 +148,30 @@ export function DocumentUploadStep({
           await qc.invalidateQueries({ queryKey: ["tx", transactionId] });
           toast.success("Documents read — summary ready");
         } catch (err) {
-          toast.error(`Uploaded, but the documents could not be read: ${(err as Error).message}`);
+          const message = (err as Error).message;
+          const notEnabled = /not configured/i.test(message);
+          toast.error(
+            notEnabled
+              ? "Uploaded. Reading documents needs AI enabled for this workspace — ask the workspace owner to switch it on."
+              : `Uploaded, but the documents could not be read: ${message}`,
+            {
+              action: {
+                label: "Try again",
+                onClick: () => {
+                  void (async () => {
+                    try {
+                      await summarize({ data: { transactionId } });
+                      await qc.invalidateQueries({ queryKey: ["transaction", transactionId] });
+                      await qc.invalidateQueries({ queryKey: ["tx", transactionId] });
+                      toast.success("Documents read — summary ready");
+                    } catch (retryErr) {
+                      toast.error((retryErr as Error).message);
+                    }
+                  })();
+                },
+              },
+            },
+          );
         } finally {
           setReading(false);
         }
@@ -272,11 +295,20 @@ export function DocumentUploadStep({
         </ul>
       )}
 
-      {!autoAdvance && (
-        <Button className="w-full" disabled={docs.length === 0 || uploading || reading} onClick={next}>
-          Next
-        </Button>
-      )}
+      {/* Always offered, including where the upload advances by itself — someone who only typed a
+          description (no files) still needs a way to start the search on demand. */}
+      <Button
+        className="w-full"
+        disabled={uploading || reading || (docs.length === 0 && prompt.trim().length === 0)}
+        onClick={() => {
+          void (async () => {
+            await savePrompt();
+            await next();
+          })();
+        }}
+      >
+        {autoAdvance ? "Submit" : "Next"}
+      </Button>
     </div>
   );
 }
