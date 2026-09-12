@@ -13,7 +13,7 @@ function useIllustrativeMatches(enabled: boolean) {
     enabled,
     queryFn: async () => {
       // Counted separately (head: true, no rows) so the card can say how many matches exist in
-      // total while still only ever rendering the top 5 as the teaser.
+      // total while still only ever rendering the top 5 in the card.
       const { data, error, count } = await supabase
         .from("counterparties")
         .select("id, name, sector, jurisdiction, rating_band, score", { count: "exact" })
