@@ -10,19 +10,34 @@ import { cn } from "@/lib/utils";
 /** Reads the same public directory the Responders page reads, so a signed-out visitor actually
  * sees rows. The private counterparty table this used to query is per-transaction and unreadable
  * when signed out, which made the preview come back empty every time. */
-function useIllustrativeMatches(enabled: boolean) {
+function useIllustrativeMatches(enabled: boolean, prompt: string) {
+  const terms = prompt
+    .toLowerCase()
+    .split(/[^a-z0-9]+/i)
+    .filter((w) => w.length > 3)
+    .slice(0, 6);
+
   return useQuery({
-    queryKey: ["hero-illustrative-matches"],
+    queryKey: ["hero-illustrative-matches", terms.join(",")],
     enabled,
     queryFn: async () => {
-      const { data, error, count } = await supabase
+      let q = supabase
         .from("responder_listings")
         .select("id, org_id, name, sector, jurisdiction, source, is_example, verified_at", {
           count: "exact",
         })
-        .eq("published", true)
-        .order("created_at", { ascending: false })
-        .limit(5);
+        .eq("published", true);
+
+      // What was typed narrows the directory; with nothing typed the newest listings are shown.
+      if (terms.length > 0) {
+        q = q.or(
+          terms
+            .flatMap((t) => [`name.ilike.%${t}%`, `sector.ilike.%${t}%`, `jurisdiction.ilike.%${t}%`])
+            .join(","),
+        );
+      }
+
+      const { data, error, count } = await q.order("created_at", { ascending: false }).limit(5);
       if (error) throw error;
       return { matches: data, total: count ?? data?.length ?? 0 };
     },
