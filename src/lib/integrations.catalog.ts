@@ -241,7 +241,7 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
   {
     id: "izenzo_ai_plus",
     name: "Izenzo AI+",
-    group: "AI+ Engine",
+    group: "Izenzo AI+",
     summary:
       "The protected AI+ decision service. It proposes candidates, pricing, risk flags, structure and timing for a person to adopt or reject — it never records an outcome itself.",
     usedAt:
