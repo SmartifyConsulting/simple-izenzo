@@ -5,6 +5,7 @@ import { generateOrgBrief } from "@/lib/orgBrief.functions";
 import { toast } from "sonner";
 import { Check, Pencil, Plus, Trash2 } from "lucide-react";
 import { AvatarUpload } from "@/components/AvatarUpload";
+import { PublicListingToggle } from "@/components/account/PublicListingToggle";
 import {
   Accordion,
   AccordionContent,
