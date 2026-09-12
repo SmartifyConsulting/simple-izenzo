@@ -990,11 +990,6 @@ function LiveDealEngine() {
               </p>
             )}
 
-          {panel === "matches" && (
-            <MatchResultsPanel query={matchQuery} className="mt-4" />
-          )}
-
-
           {!activity && (
             <div className="mt-4">
               <CanvasStart
@@ -1019,6 +1014,10 @@ function LiveDealEngine() {
                 onDirectionChange={setDirection}
               />
             </div>
+          )}
+
+          {panel === "matches" && (
+            <MatchResultsPanel query={matchQuery} className="mt-4" />
           )}
 
           {activity && dealTx && flowStep === "searching" && (
