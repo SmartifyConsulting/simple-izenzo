@@ -140,7 +140,7 @@ export const startVerification = createServerFn({ method: "POST" })
           stage: "compliance",
           step: "wad",
           action: "didit_verification_started",
-          summary: `Didit ${data.checkType} check opened for ${subjectLabel ?? "counterparty"}`,
+          summary: `Verification (${data.checkType}) opened for ${subjectLabel ?? "counterparty"}`,
           payload: { verification_id: row.id, check_type: data.checkType },
         });
       }

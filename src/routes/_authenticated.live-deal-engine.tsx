@@ -1092,7 +1092,7 @@ function LiveDealEngine() {
                       </p>
                       {idCheck?.status === "passed" && (
                         <span
-                          title={`Verified via Didit${idCheck.completed_at ? ` — ${new Date(idCheck.completed_at).toLocaleString()}` : ""}`}
+                          title={`Verified${idCheck.completed_at ? ` — ${new Date(idCheck.completed_at).toLocaleString()}` : ""}`}
                           className="flex shrink-0 items-center gap-1 rounded-full border border-success/40 bg-success/10 px-2 py-0.5 text-[10px] font-semibold text-success"
                         >
                           <BadgeCheck className="h-3 w-3" />

@@ -72,11 +72,11 @@ export const Route = createFileRoute("/api/public/webhooks/didit")({
           await supabaseAdmin.from("transaction_events").insert({
             transaction_id: row.transaction_id,
             actor_id: "00000000-0000-0000-0000-000000000000",
-            actor_name: "Didit",
+            actor_name: "Verification",
             stage: "compliance",
             step: "wad",
             action: "didit_verification_result",
-            summary: `Didit ${row.check_type} result: ${status}`,
+            summary: `Verification (${row.check_type}) result: ${status}`,
             payload: { verification_id: row.id, status, provider_status: payload?.status ?? null },
           });
         }

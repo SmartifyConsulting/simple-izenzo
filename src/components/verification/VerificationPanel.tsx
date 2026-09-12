@@ -102,7 +102,6 @@ export function VerificationPanel({ transactionId, checks, title, description }:
           <ShieldCheck className="h-4 w-4 text-primary" />
           <h2 className="text-sm font-semibold">{title ?? "Identity verification"}</h2>
         </div>
-        <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Didit</span>
       </div>
 
       {description && (

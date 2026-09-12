@@ -38,7 +38,6 @@ import { Route as AuthenticatedLiveDealEngineRouteImport } from './routes/_authe
 import { Route as AuthenticatedRegistryRouteImport } from './routes/_authenticated.registry'
 import { Route as AuthenticatedSupportRouteImport } from './routes/_authenticated.support'
 import { Route as AuthenticatedTradesRouteImport } from './routes/_authenticated.trades'
-import { Route as AuthenticatedVerifyIdentityRouteImport } from './routes/_authenticated.verify-identity'
 import { Route as AlphaBravoIndexRouteImport } from './routes/alpha-bravo.index'
 import { Route as AlphaBravoAboutRouteImport } from './routes/alpha-bravo.about'
 import { Route as AlphaBravoBiddersRouteImport } from './routes/alpha-bravo.bidders'
@@ -226,12 +225,6 @@ const AuthenticatedTradesRoute = AuthenticatedTradesRouteImport.update({
   path: '/trades',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedVerifyIdentityRoute =
-  AuthenticatedVerifyIdentityRouteImport.update({
-    id: '/verify-identity',
-    path: '/verify-identity',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AlphaBravoIndexRoute = AlphaBravoIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -483,7 +476,6 @@ export interface FileRoutesByFullPath {
   '/registry': typeof AuthenticatedRegistryRoute
   '/support': typeof AuthenticatedSupportRoute
   '/trades': typeof AuthenticatedTradesRoute
-  '/verify-identity': typeof AuthenticatedVerifyIdentityRoute
   '/alpha-bravo/about': typeof AlphaBravoAboutRouteWithChildren
   '/alpha-bravo/bidders': typeof AlphaBravoBiddersRoute
   '/alpha-bravo/how-it-works': typeof AlphaBravoHowItWorksRoute
@@ -553,7 +545,6 @@ export interface FileRoutesByTo {
   '/registry': typeof AuthenticatedRegistryRoute
   '/support': typeof AuthenticatedSupportRoute
   '/trades': typeof AuthenticatedTradesRoute
-  '/verify-identity': typeof AuthenticatedVerifyIdentityRoute
   '/alpha-bravo/bidders': typeof AlphaBravoBiddersRoute
   '/alpha-bravo/how-it-works': typeof AlphaBravoHowItWorksRoute
   '/alpha-bravo/intelligence-fabric': typeof AlphaBravoIntelligenceFabricRoute
@@ -624,7 +615,6 @@ export interface FileRoutesById {
   '/_authenticated/registry': typeof AuthenticatedRegistryRoute
   '/_authenticated/support': typeof AuthenticatedSupportRoute
   '/_authenticated/trades': typeof AuthenticatedTradesRoute
-  '/_authenticated/verify-identity': typeof AuthenticatedVerifyIdentityRoute
   '/alpha-bravo/about': typeof AlphaBravoAboutRouteWithChildren
   '/alpha-bravo/bidders': typeof AlphaBravoBiddersRoute
   '/alpha-bravo/how-it-works': typeof AlphaBravoHowItWorksRoute
@@ -697,7 +687,6 @@ export interface FileRouteTypes {
     | '/registry'
     | '/support'
     | '/trades'
-    | '/verify-identity'
     | '/alpha-bravo/about'
     | '/alpha-bravo/bidders'
     | '/alpha-bravo/how-it-works'
@@ -767,7 +756,6 @@ export interface FileRouteTypes {
     | '/registry'
     | '/support'
     | '/trades'
-    | '/verify-identity'
     | '/alpha-bravo/bidders'
     | '/alpha-bravo/how-it-works'
     | '/alpha-bravo/intelligence-fabric'
@@ -837,7 +825,6 @@ export interface FileRouteTypes {
     | '/_authenticated/registry'
     | '/_authenticated/support'
     | '/_authenticated/trades'
-    | '/_authenticated/verify-identity'
     | '/alpha-bravo/about'
     | '/alpha-bravo/bidders'
     | '/alpha-bravo/how-it-works'
@@ -1108,13 +1095,6 @@ declare module '@tanstack/react-router' {
       path: '/trades'
       fullPath: '/trades'
       preLoaderRoute: typeof AuthenticatedTradesRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/verify-identity': {
-      id: '/_authenticated/verify-identity'
-      path: '/verify-identity'
-      fullPath: '/verify-identity'
-      preLoaderRoute: typeof AuthenticatedVerifyIdentityRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/alpha-bravo/': {
@@ -1415,7 +1395,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedRegistryRoute: typeof AuthenticatedRegistryRoute
   AuthenticatedSupportRoute: typeof AuthenticatedSupportRoute
   AuthenticatedTradesRoute: typeof AuthenticatedTradesRoute
-  AuthenticatedVerifyIdentityRoute: typeof AuthenticatedVerifyIdentityRoute
   AuthenticatedAccountBillingRoute: typeof AuthenticatedAccountBillingRoute
   AuthenticatedAccountSettingsRoute: typeof AuthenticatedAccountSettingsRoute
   AuthenticatedDealIdRoute: typeof AuthenticatedDealIdRoute
@@ -1450,7 +1429,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedRegistryRoute: AuthenticatedRegistryRoute,
   AuthenticatedSupportRoute: AuthenticatedSupportRoute,
   AuthenticatedTradesRoute: AuthenticatedTradesRoute,
-  AuthenticatedVerifyIdentityRoute: AuthenticatedVerifyIdentityRoute,
   AuthenticatedAccountBillingRoute: AuthenticatedAccountBillingRoute,
   AuthenticatedAccountSettingsRoute: AuthenticatedAccountSettingsRoute,
   AuthenticatedDealIdRoute: AuthenticatedDealIdRoute,

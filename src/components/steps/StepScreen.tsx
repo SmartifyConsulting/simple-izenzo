@@ -1885,7 +1885,7 @@ function WadStep({ tx, reload }: Props) {
         <VerificationPanel
           transactionId={tx.id}
           checks={["id_document", "kyb", "aml"]}
-          title="Didit verification"
+          title="Identity verification"
           description="Run the live checks against the chosen counterparty. Results are recorded on the deal as they land; they inform the WaD decision but never make it."
         />
       </div>

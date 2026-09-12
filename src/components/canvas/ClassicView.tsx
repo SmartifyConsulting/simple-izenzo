@@ -61,7 +61,7 @@ const STEPS: StepDef[] = [
     step: 1,
     label: "Trading",
     items: [
-      { key: "bidOffer", label: "Create a bid or an offer", stage: "trading", step: "bid-offer", isEntry: true },
+      { key: "bidOffer", label: "Upload documents", stage: "trading", step: "bid-offer", isEntry: true },
       { key: "search", label: "Search AI + AI+", stage: "trading", step: "search", icon: Search },
       { key: "onlineMedia", label: "Online Media Screening", stage: "trading", step: "online-media", icon: Globe },
       { key: "choice", label: "Choice", stage: "trading", step: "choice", icon: ListChecks },

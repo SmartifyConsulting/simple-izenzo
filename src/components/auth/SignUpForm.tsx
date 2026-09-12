@@ -148,7 +148,9 @@ export function SignUpForm({
       }
 
       toast.success("Account created");
-      navigate({ to: "/verify-identity", search: { next: safeNext(next) }, replace: true });
+      // Identity verification is now a modal gate the authenticated layout shows over whatever
+      // page needs it, not a separate route — heading straight to the destination is enough.
+      navigate({ to: safeNext(next), replace: true });
     } catch (err) {
       const msg = mapAuthError((err as Error).message);
       setMessage(msg);

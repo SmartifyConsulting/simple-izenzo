@@ -10,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { VerifyEmailDialog } from "@/components/auth/VerifyEmailDialog";
+import { VerifyIdentityDialog } from "@/components/verification/VerifyIdentityDialog";
 import { ActivityTracker } from "@/components/ActivityTracker";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -60,6 +61,9 @@ function RequireEmailVerified() {
   const { data: verificationRows, isLoading: verificationLoading } = useQuery({
     queryKey: ["identity-verifications", "me", user?.id],
     enabled: !loading && !!user && !needsOrg,
+    // Polled the same way the old standalone /verify-identity page was, so a passed check (Didit
+    // reports it asynchronously) closes this dialog on its own rather than needing a reload.
+    refetchInterval: 4000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("identity_verifications")
@@ -73,25 +77,18 @@ function RequireEmailVerified() {
   const isIdVerified = (verificationRows ?? []).some((r) => r.status === "passed");
   const needsIdentity =
     !loading && !!profile && !needsOrg && !verificationLoading && !isIdVerified;
-  const onVerifyIdentity = pathname.startsWith("/verify-identity");
 
   useEffect(() => {
     if (!mustVerify && needsOrg && !onOrgSetup) navigate({ to: "/account/settings", replace: true });
   }, [mustVerify, needsOrg, onOrgSetup, navigate]);
 
-  useEffect(() => {
-    if (!mustVerify && !needsOrg && needsIdentity && !onVerifyIdentity) {
-      navigate({ to: "/verify-identity", search: { next: pathname }, replace: true });
-    }
-  }, [mustVerify, needsOrg, needsIdentity, onVerifyIdentity, pathname, navigate]);
-
   if (needsOrg && !onOrgSetup && !mustVerify) return null;
-  if (needsIdentity && !onVerifyIdentity && !mustVerify) return null;
   return (
     <>
       <ActivityTracker />
       <Outlet />
       <VerifyEmailDialog open={mustVerify} />
+      <VerifyIdentityDialog open={!mustVerify && needsIdentity} verified={isIdVerified} />
     </>
   );
 }
