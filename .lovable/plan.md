@@ -6,8 +6,13 @@
    - One outer frame wraps both the Izenzo Trade Workflow and the Live Workspace, so they read as a single working surface instead of two loose boxes. The Live Workspace keeps its own inner frame; the workflow side loses its floating look and sits inside the shared frame.
 
 2. Shorter and wider
-   - The pair's height is reduced so the whole thing fits inside the screen without the page scrolling, and the working area is widened by about 20% (it uses the full-width page shell rather than the narrower one).
+   - The Live Workspace frame becomes 10% shorter so the whole pair fits inside the screen without the page scrolling, and 25% wider.
    - The workflow diagram keeps scaling to fit; the Live Workspace still scrolls its own content when it runs long.
+
+6. The Search Prompt disappears once a document is attached
+   - As soon as a document is uploaded, the description box and drop strip give way to the attached files list and one button, "Find Matching Interest", which starts the search.
+   - With nothing attached yet, the prompt and drop strip look exactly as they do today.
+
 
 3. Bid/Offer ID inline with the heading
    - "Live Workspace" and the bid reference sit on the same line — heading on the left, reference on the right — and the reference badge becomes longer (roughly double its current width) so a full reference never crowds. It stays bold monospace.
