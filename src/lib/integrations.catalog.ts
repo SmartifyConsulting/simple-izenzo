@@ -319,8 +319,50 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
     testable: true,
   },
   {
+    id: "brightdata",
+    name: "Bright Data",
+    group: "Web Scraping",
+    summary:
+      "Live web, marketplace, directory and news scraping. Powers counterparty matching and the online media checks.",
+    usedAt:
+      "Trading Gate → Counterparties (AI / AI+ web matching) and Online Media Checks (social, marketplace and news scraping).",
+    docsUrl: "https://docs.brightdata.com",
+    fields: [
+      {
+        key: "api_key",
+        label: "API token",
+        secret: true,
+        help: "Bright Data → Account settings → API tokens. Used for the SERP and Web Unlocker zones.",
+      },
+      {
+        key: "browser_url",
+        label: "Browser API address",
+        secret: true,
+        placeholder: "wss://brd-customer-…:password@brd.superproxy.io:9222",
+        help: "From the Scraping Browser zone's access parameters. Also stored as a server secret (BRIGHTDATA_BROWSER_URL).",
+      },
+      {
+        key: "serp_zone",
+        label: "SERP zone name",
+        secret: false,
+        placeholder: "serp_api1",
+      },
+      {
+        key: "unlocker_zone",
+        label: "Web Unlocker zone name",
+        secret: false,
+        placeholder: "unlocker_api1",
+      },
+      { key: "dev_center_url", label: "Dev center login URL", secret: false, placeholder: "https://brightdata.com/cp" },
+      { key: "portal_username", label: "Username", secret: false },
+      { key: "portal_credentials", label: "Credentials", secret: true, help: "Password or API secret used to sign in to the provider portal." },
+    ],
+    testable: true,
+  },
+  {
     id: "aws_s3_glacier",
     name: "AWS S3 / Glacier",
+
     group: "Archival Storage",
     summary: "Cold storage for long-term legal retention of evidence packs.",
     usedAt: "Memory Gate (long-term retention of evidence packs and the transaction record).",
