@@ -14,6 +14,7 @@ import { Logo } from "@/components/Logo";
 import { HeroSearchProvider, seedNext, useHeroSearch } from "@/lib/heroSearchContext";
 
 const NAV = [
+  { to: "/alpha-bravo", label: "Home" },
   { to: "/alpha-bravo/about", label: "About Izenzo" },
   { to: "/alpha-bravo/how-it-works", label: "How It Works" },
   { to: "/alpha-bravo/intelligence-fabric", label: "The Intelligence Fabric" },
@@ -71,7 +72,10 @@ function AlphaBravoShellInner({ children }: { children: ReactNode }) {
 
           <nav className="ml-auto hidden items-center gap-2 whitespace-nowrap text-sm text-muted-foreground lg:flex">
             {[...NAV, { to: "/alpha-bravo/trades", label: "Trades" } as const].map((item) => {
-              const active = pathname.startsWith(item.to);
+              const active =
+                item.to === "/alpha-bravo"
+                  ? pathname === "/alpha-bravo" || pathname === "/alpha-bravo/"
+                  : pathname.startsWith(item.to);
               return (
                 <Link
                   key={item.to}
