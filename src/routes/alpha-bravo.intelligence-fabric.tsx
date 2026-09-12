@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Compass, EyeOff, Wrench, ShieldCheck, UserCheck, Sparkles } from "lucide-react";
+import { Compass, EyeOff, Wrench, ShieldCheck, UserCheck } from "lucide-react";
 import { SubmitBidButton } from "@/components/marketing/SubmitBidButton";
 
 export const Route = createFileRoute("/alpha-bravo/intelligence-fabric")({
@@ -50,12 +50,12 @@ function IntelligenceFabric() {
       <section className="bg-gradient-to-b from-primary/[0.04] to-transparent">
         <div className="mx-auto max-w-5xl px-5 py-10 sm:py-14">
           <div className="flex items-start justify-between gap-4">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-              <Sparkles className="h-3.5 w-3.5" /> The Intelligence Fabric
-            </span>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+              The Intelligence Fabric
+            </p>
             <SubmitBidButton size="sm" className="hidden shrink-0 sm:inline-flex" />
           </div>
-          <h1 className="mt-4 max-w-3xl text-4xl leading-[1.05] tracking-tight text-foreground sm:text-6xl">
+          <h1 className="mt-4 max-w-3xl text-4xl tracking-tight text-foreground sm:text-5xl">
             The engine that finds what should be there—before you even hit search.
           </h1>
           <p className="mt-4 max-w-2xl text-lg leading-relaxed text-muted-foreground">
@@ -84,8 +84,12 @@ function IntelligenceFabric() {
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-6">
-            {TRANSFORMS.map((t) => (
-              <div key={t.title} className="flex gap-4">
+            {TRANSFORMS.map((t, i) => (
+              <div
+                key={t.title}
+                className="flex animate-in fade-in slide-in-from-left-6 gap-4 fill-mode-both duration-1000"
+                style={{ animationDelay: `${i * 450}ms` }}
+              >
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary/25 bg-primary/10 text-primary">
                   <t.icon className="h-4.5 w-4.5" />
                 </span>
