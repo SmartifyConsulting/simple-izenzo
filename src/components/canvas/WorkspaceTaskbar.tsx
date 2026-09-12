@@ -40,7 +40,7 @@ export function WorkspaceTaskbar() {
               "group flex shrink-0 items-center gap-2 rounded-t-md border px-3 py-1.5 text-xs font-medium transition-colors",
               active
                 ? "border-[#F59E0B] border-b-transparent bg-[#F59E0B]/15 text-foreground"
-                : "border-transparent bg-transparent text-muted-foreground hover:bg-card/50 hover:text-foreground",
+                : "border-border border-b-transparent bg-transparent text-muted-foreground hover:bg-card/50 hover:text-foreground",
             )}
           >
             <button
