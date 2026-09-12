@@ -1043,6 +1043,14 @@ function LiveDealEngine() {
                   })}
                 </p>
               )}
+              {/* The value of the trade belongs with the rest of its material aspects, inside this
+                  frame, rather than sitting on its own outside it. */}
+              {(activity.price || activity.quantity) && (
+                <p className="text-sm font-semibold text-foreground">
+                  {activity.price ? `${activity.currency ?? ""} ${activity.price}`.trim() : "Value not stated"}
+                  {activity.quantity ? ` · ${activity.quantity} ${activity.unit ?? ""}`.trimEnd() : ""}
+                </p>
+              )}
               {documentSummary ? (
                 <ul className="mt-1 list-disc space-y-1 pl-4 text-sm leading-relaxed text-foreground">
                   {documentSummary
