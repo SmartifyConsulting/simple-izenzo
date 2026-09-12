@@ -1003,12 +1003,7 @@ function LiveDealEngine() {
               panels share the same fixed viewport-relative height so the pair fits on screen
               without the page itself needing to scroll — the Map scales its diagram to fit, the
               Workspace scrolls its own content internally if it runs long. */}
-          <div
-            className={cn(
-              "ink-grid flex h-[calc(100vh-190px)] w-full flex-col overflow-hidden rounded-3xl border border-border bg-card p-3 sm:p-5",
-              "shadow-sm",
-            )}
-          >
+          <div className="flex h-[calc(100vh-190px)] w-full flex-col overflow-hidden p-3 sm:p-5">
             <p className="label-caps shrink-0 text-foreground">Izenzo Trade Workflow</p>
             <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
               <ClassicView
@@ -1025,12 +1020,7 @@ function LiveDealEngine() {
               is the bid/offer ID on the left; the top right is either the real upload frame
               (before any document is attached) or a bulleted list of what's been classified from
               the documents already uploaded. */}
-          <div
-            className={cn(
-              "ink-grid h-[calc(100vh-190px)] w-full overflow-y-auto rounded-3xl border border-border bg-card p-3 sm:p-5",
-              "shadow-sm",
-            )}
-          >
+          <div className="h-[calc(100vh-190px)] w-full overflow-y-auto p-3 sm:p-5">
           {/* Bidder details + AI summary come first — the very top of the workspace, before the
               reference header and anything else — so what was actually submitted is never buried
               behind the progress ribbon or the workflow ticks below it. The attachment(s), with a
