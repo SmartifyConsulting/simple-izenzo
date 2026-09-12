@@ -904,18 +904,30 @@ function LiveDealEngine() {
         <OpenDealsPicker currentId={dealTx?.id ?? null} />
       </div>
 
-      {/* The whole two-panel pair reads as one floating card sitting above the page — a soft
-          halo/backdrop layer behind it plus a strong shadow on the panels themselves — rather
-          than panels flush with the page background. */}
+      {/* When several workspaces are open, the pair reads as one floating card sitting above the
+          page — a soft halo/backdrop layer behind it plus a strong shadow on the panels
+          themselves. A single, solo workspace is just the page itself, so it skips all of that —
+          otherwise it reads as several overlapping panels stacked for no reason. */}
       <div className="relative">
-        <div aria-hidden className="absolute -inset-3 rounded-[2rem] bg-card/60 blur-xl" />
-        <div className="relative grid grid-cols-1 items-stretch gap-4 rounded-3xl lg:grid-cols-2">
+        {!soloWorkspace && (
+          <div aria-hidden className="absolute -inset-3 rounded-[2rem] bg-card/60 blur-xl" />
+        )}
+        <div
+          className={cn(
+            "relative grid grid-cols-1 items-stretch gap-4 rounded-3xl lg:grid-cols-2",
+          )}
+        >
           {/* Engine Map — always visible on the left. Clicking a node opens that step inline in
               the Live Workspace beside it, instead of navigating away from this screen. Both
               panels share the same fixed viewport-relative height so the pair fits on screen
               without the page itself needing to scroll — the Map scales its diagram to fit, the
               Workspace scrolls its own content internally if it runs long. */}
-          <div className="ink-grid flex h-[calc(100vh-190px)] w-full flex-col overflow-hidden rounded-3xl border border-border bg-card p-3 shadow-2xl sm:p-5">
+          <div
+            className={cn(
+              "ink-grid flex h-[calc(100vh-190px)] w-full flex-col overflow-hidden rounded-3xl border border-border bg-card p-3 sm:p-5",
+              soloWorkspace ? "shadow-sm" : "shadow-2xl",
+            )}
+          >
             <p className="label-caps shrink-0 text-foreground">Izenzo Engine Map</p>
             <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
               <ClassicView
@@ -932,7 +944,12 @@ function LiveDealEngine() {
               is the bid/offer ID on the left; the top right is either the real upload frame
               (before any document is attached) or a bulleted list of what's been classified from
               the documents already uploaded. */}
-          <div className="ink-grid h-[calc(100vh-190px)] w-full overflow-y-auto rounded-3xl border border-border bg-card p-3 shadow-2xl sm:p-5">
+          <div
+            className={cn(
+              "ink-grid h-[calc(100vh-190px)] w-full overflow-y-auto rounded-3xl border border-border bg-card p-3 sm:p-5",
+              soloWorkspace ? "shadow-sm" : "shadow-2xl",
+            )}
+          >
             {dealTx ? (
               <div className="flex items-start justify-between gap-4">
                 <p className="label-caps shrink-0 font-mono text-base font-bold uppercase tracking-wide text-foreground">
