@@ -56,7 +56,7 @@ function IntelligenceFabric() {
             <SubmitBidButton size="sm" className="hidden shrink-0 sm:inline-flex" />
           </div>
           <h1 className="mt-6 max-w-3xl text-4xl leading-[1.05] tracking-tight text-foreground sm:text-6xl">
-            The engine that finds your match before you ever see a name.
+            The engine that finds what should be there—before you even think to search for it.
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
             Izenzo AI+ is an advanced decision engine that works behind the scenes to create
