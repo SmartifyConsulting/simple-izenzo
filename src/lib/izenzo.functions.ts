@@ -201,7 +201,35 @@ type CandidateResult = {
   sector?: string | undefined;
   score?: number | undefined;
   rationale?: string | undefined;
+  sourceUrl?: string | undefined;
 };
+
+/** Scrapes the open web for one query and turns the pages into grounding context for the model.
+ * Fails loudly when the live web connection is missing — an ungrounded answer would be invented
+ * names, which is worse than no answer. */
+async function groundOnWeb(query: string, kind: "ai" | "ai_plus") {
+  const { brightDataConfigured, fetchSearchResults } = await import("@/lib/brightdata.server");
+  if (!brightDataConfigured()) {
+    throw new Error(
+      "Live web search is not connected, so this search cannot be grounded in real listings. Add the Bright Data connection in Admin → Integrations.",
+    );
+  }
+
+  const { sources, failures } = await fetchSearchResults(query, SOURCE_LIMIT[kind]);
+  if (sources.length === 0) {
+    const reason = failures[0]?.reason ? ` (${failures[0].reason})` : "";
+    throw new Error(`No sources could be read from the live web for this search${reason}.`);
+  }
+
+  const context = sources
+    .map((s, i) => `SOURCE ${i + 1} — ${s.label} — ${s.url}\n${s.text}`)
+    .join("\n\n");
+
+  return { sources, failures, context };
+}
+
+const GROUNDING_RULES =
+  "You are given the visible text of real web and marketplace search pages. Only return organisations that actually appear in that text. Never invent a company. For each one, set sourceUrl to the URL of the SOURCE block it came from.";
 
 function parseCandidates(raw: string): CandidateResult[] {
   const match = raw.match(/\[[\s\S]*\]/);
