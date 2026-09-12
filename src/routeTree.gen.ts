@@ -14,7 +14,6 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AlphaBravoRouteImport } from './routes/alpha-bravo'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ContactRouteImport } from './routes/contact'
-import { Route as DocsRouteImport } from './routes/docs'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as GlossaryRouteImport } from './routes/glossary'
 import { Route as PricingRouteImport } from './routes/pricing'
@@ -47,8 +46,6 @@ import { Route as AlphaBravoPricingRouteImport } from './routes/alpha-bravo.pric
 import { Route as AlphaBravoRespondersRouteImport } from './routes/alpha-bravo.responders'
 import { Route as AlphaBravoTradesRouteImport } from './routes/alpha-bravo.trades'
 import { Route as AlphaBravoTrustCenterRouteImport } from './routes/alpha-bravo.trust-center'
-import { Route as DocsApiRouteImport } from './routes/docs.api'
-import { Route as DocsWebhooksRouteImport } from './routes/docs.webhooks'
 import { Route as ProductsAuditLedgerRouteImport } from './routes/products.audit-ledger'
 import { Route as ProductsComplianceEngineRouteImport } from './routes/products.compliance-engine'
 import { Route as ProductsTradeDeskRouteImport } from './routes/products.trade-desk'
@@ -58,13 +55,6 @@ import { Route as SolutionsTradersRouteImport } from './routes/solutions.traders
 import { Route as AuthenticatedAccountBillingRouteImport } from './routes/_authenticated.account.billing'
 import { Route as AuthenticatedAccountSettingsRouteImport } from './routes/_authenticated.account.settings'
 import { Route as AuthenticatedDealIdRouteImport } from './routes/_authenticated.deal.$id'
-import { Route as AuthenticatedDeveloperDocsRouteImport } from './routes/_authenticated.developer.docs'
-import { Route as AuthenticatedDeveloperKeysRouteImport } from './routes/_authenticated.developer.keys'
-import { Route as AuthenticatedDeveloperNotificationsRouteImport } from './routes/_authenticated.developer.notifications'
-import { Route as AuthenticatedDeveloperSchemaRouteImport } from './routes/_authenticated.developer.schema'
-import { Route as AuthenticatedDeveloperSupportRouteImport } from './routes/_authenticated.developer.support'
-import { Route as AuthenticatedDeveloperUsageRouteImport } from './routes/_authenticated.developer.usage'
-import { Route as AuthenticatedDeveloperWebhooksRouteImport } from './routes/_authenticated.developer.webhooks'
 import { Route as AuthenticatedGovernanceAuditsRouteImport } from './routes/_authenticated.governance.audits'
 import { Route as AuthenticatedGovernanceEntitiesRouteImport } from './routes/_authenticated.governance.entities'
 import { Route as AuthenticatedGovernanceHealthRouteImport } from './routes/_authenticated.governance.health'
@@ -101,11 +91,6 @@ const AuthRoute = AuthRouteImport.update({
 const ContactRoute = ContactRouteImport.update({
   id: '/contact',
   path: '/contact',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DocsRoute = DocsRouteImport.update({
-  id: '/docs',
-  path: '/docs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
@@ -271,16 +256,6 @@ const AlphaBravoTrustCenterRoute = AlphaBravoTrustCenterRouteImport.update({
   path: '/trust-center',
   getParentRoute: () => AlphaBravoRoute,
 } as any)
-const DocsApiRoute = DocsApiRouteImport.update({
-  id: '/api',
-  path: '/api',
-  getParentRoute: () => DocsRoute,
-} as any)
-const DocsWebhooksRoute = DocsWebhooksRouteImport.update({
-  id: '/webhooks',
-  path: '/webhooks',
-  getParentRoute: () => DocsRoute,
-} as any)
 const ProductsAuditLedgerRoute = ProductsAuditLedgerRouteImport.update({
   id: '/products/audit-ledger',
   path: '/products/audit-ledger',
@@ -329,48 +304,6 @@ const AuthenticatedDealIdRoute = AuthenticatedDealIdRouteImport.update({
   path: '/deal/$id',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedDeveloperDocsRoute =
-  AuthenticatedDeveloperDocsRouteImport.update({
-    id: '/developer/docs',
-    path: '/developer/docs',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedDeveloperKeysRoute =
-  AuthenticatedDeveloperKeysRouteImport.update({
-    id: '/developer/keys',
-    path: '/developer/keys',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedDeveloperNotificationsRoute =
-  AuthenticatedDeveloperNotificationsRouteImport.update({
-    id: '/developer/notifications',
-    path: '/developer/notifications',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedDeveloperSchemaRoute =
-  AuthenticatedDeveloperSchemaRouteImport.update({
-    id: '/developer/schema',
-    path: '/developer/schema',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedDeveloperSupportRoute =
-  AuthenticatedDeveloperSupportRouteImport.update({
-    id: '/developer/support',
-    path: '/developer/support',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedDeveloperUsageRoute =
-  AuthenticatedDeveloperUsageRouteImport.update({
-    id: '/developer/usage',
-    path: '/developer/usage',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedDeveloperWebhooksRoute =
-  AuthenticatedDeveloperWebhooksRouteImport.update({
-    id: '/developer/webhooks',
-    path: '/developer/webhooks',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedGovernanceAuditsRoute =
   AuthenticatedGovernanceAuditsRouteImport.update({
     id: '/governance/audits',
@@ -452,7 +385,6 @@ export interface FileRoutesByFullPath {
   '/alpha-bravo': typeof AlphaBravoRouteWithChildren
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
-  '/docs': typeof DocsRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/glossary': typeof GlossaryRoute
   '/pricing': typeof PricingRoute
@@ -484,8 +416,6 @@ export interface FileRoutesByFullPath {
   '/alpha-bravo/responders': typeof AlphaBravoRespondersRouteWithChildren
   '/alpha-bravo/trades': typeof AlphaBravoTradesRoute
   '/alpha-bravo/trust-center': typeof AlphaBravoTrustCenterRoute
-  '/docs/api': typeof DocsApiRoute
-  '/docs/webhooks': typeof DocsWebhooksRoute
   '/products/audit-ledger': typeof ProductsAuditLedgerRoute
   '/products/compliance-engine': typeof ProductsComplianceEngineRoute
   '/products/trade-desk': typeof ProductsTradeDeskRoute
@@ -496,13 +426,6 @@ export interface FileRoutesByFullPath {
   '/account/billing': typeof AuthenticatedAccountBillingRoute
   '/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/deal/$id': typeof AuthenticatedDealIdRoute
-  '/developer/docs': typeof AuthenticatedDeveloperDocsRoute
-  '/developer/keys': typeof AuthenticatedDeveloperKeysRoute
-  '/developer/notifications': typeof AuthenticatedDeveloperNotificationsRoute
-  '/developer/schema': typeof AuthenticatedDeveloperSchemaRoute
-  '/developer/support': typeof AuthenticatedDeveloperSupportRoute
-  '/developer/usage': typeof AuthenticatedDeveloperUsageRoute
-  '/developer/webhooks': typeof AuthenticatedDeveloperWebhooksRoute
   '/governance/audits': typeof AuthenticatedGovernanceAuditsRoute
   '/governance/entities': typeof AuthenticatedGovernanceEntitiesRoute
   '/governance/health': typeof AuthenticatedGovernanceHealthRoute
@@ -521,7 +444,6 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
-  '/docs': typeof DocsRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/glossary': typeof GlossaryRoute
   '/pricing': typeof PricingRoute
@@ -551,8 +473,6 @@ export interface FileRoutesByTo {
   '/alpha-bravo/pricing': typeof AlphaBravoPricingRoute
   '/alpha-bravo/trades': typeof AlphaBravoTradesRoute
   '/alpha-bravo/trust-center': typeof AlphaBravoTrustCenterRoute
-  '/docs/api': typeof DocsApiRoute
-  '/docs/webhooks': typeof DocsWebhooksRoute
   '/products/audit-ledger': typeof ProductsAuditLedgerRoute
   '/products/compliance-engine': typeof ProductsComplianceEngineRoute
   '/products/trade-desk': typeof ProductsTradeDeskRoute
@@ -563,13 +483,6 @@ export interface FileRoutesByTo {
   '/account/billing': typeof AuthenticatedAccountBillingRoute
   '/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/deal/$id': typeof AuthenticatedDealIdRoute
-  '/developer/docs': typeof AuthenticatedDeveloperDocsRoute
-  '/developer/keys': typeof AuthenticatedDeveloperKeysRoute
-  '/developer/notifications': typeof AuthenticatedDeveloperNotificationsRoute
-  '/developer/schema': typeof AuthenticatedDeveloperSchemaRoute
-  '/developer/support': typeof AuthenticatedDeveloperSupportRoute
-  '/developer/usage': typeof AuthenticatedDeveloperUsageRoute
-  '/developer/webhooks': typeof AuthenticatedDeveloperWebhooksRoute
   '/governance/audits': typeof AuthenticatedGovernanceAuditsRoute
   '/governance/entities': typeof AuthenticatedGovernanceEntitiesRoute
   '/governance/health': typeof AuthenticatedGovernanceHealthRoute
@@ -591,7 +504,6 @@ export interface FileRoutesById {
   '/alpha-bravo': typeof AlphaBravoRouteWithChildren
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
-  '/docs': typeof DocsRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/glossary': typeof GlossaryRoute
   '/pricing': typeof PricingRoute
@@ -623,8 +535,6 @@ export interface FileRoutesById {
   '/alpha-bravo/responders': typeof AlphaBravoRespondersRouteWithChildren
   '/alpha-bravo/trades': typeof AlphaBravoTradesRoute
   '/alpha-bravo/trust-center': typeof AlphaBravoTrustCenterRoute
-  '/docs/api': typeof DocsApiRoute
-  '/docs/webhooks': typeof DocsWebhooksRoute
   '/products/audit-ledger': typeof ProductsAuditLedgerRoute
   '/products/compliance-engine': typeof ProductsComplianceEngineRoute
   '/products/trade-desk': typeof ProductsTradeDeskRoute
@@ -635,13 +545,6 @@ export interface FileRoutesById {
   '/_authenticated/account/billing': typeof AuthenticatedAccountBillingRoute
   '/_authenticated/account/settings': typeof AuthenticatedAccountSettingsRoute
   '/_authenticated/deal/$id': typeof AuthenticatedDealIdRoute
-  '/_authenticated/developer/docs': typeof AuthenticatedDeveloperDocsRoute
-  '/_authenticated/developer/keys': typeof AuthenticatedDeveloperKeysRoute
-  '/_authenticated/developer/notifications': typeof AuthenticatedDeveloperNotificationsRoute
-  '/_authenticated/developer/schema': typeof AuthenticatedDeveloperSchemaRoute
-  '/_authenticated/developer/support': typeof AuthenticatedDeveloperSupportRoute
-  '/_authenticated/developer/usage': typeof AuthenticatedDeveloperUsageRoute
-  '/_authenticated/developer/webhooks': typeof AuthenticatedDeveloperWebhooksRoute
   '/_authenticated/governance/audits': typeof AuthenticatedGovernanceAuditsRoute
   '/_authenticated/governance/entities': typeof AuthenticatedGovernanceEntitiesRoute
   '/_authenticated/governance/health': typeof AuthenticatedGovernanceHealthRoute
@@ -663,7 +566,6 @@ export interface FileRouteTypes {
     | '/alpha-bravo'
     | '/auth'
     | '/contact'
-    | '/docs'
     | '/forgot-password'
     | '/glossary'
     | '/pricing'
@@ -695,8 +597,6 @@ export interface FileRouteTypes {
     | '/alpha-bravo/responders'
     | '/alpha-bravo/trades'
     | '/alpha-bravo/trust-center'
-    | '/docs/api'
-    | '/docs/webhooks'
     | '/products/audit-ledger'
     | '/products/compliance-engine'
     | '/products/trade-desk'
@@ -707,13 +607,6 @@ export interface FileRouteTypes {
     | '/account/billing'
     | '/account/settings'
     | '/deal/$id'
-    | '/developer/docs'
-    | '/developer/keys'
-    | '/developer/notifications'
-    | '/developer/schema'
-    | '/developer/support'
-    | '/developer/usage'
-    | '/developer/webhooks'
     | '/governance/audits'
     | '/governance/entities'
     | '/governance/health'
@@ -732,7 +625,6 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/contact'
-    | '/docs'
     | '/forgot-password'
     | '/glossary'
     | '/pricing'
@@ -762,8 +654,6 @@ export interface FileRouteTypes {
     | '/alpha-bravo/pricing'
     | '/alpha-bravo/trades'
     | '/alpha-bravo/trust-center'
-    | '/docs/api'
-    | '/docs/webhooks'
     | '/products/audit-ledger'
     | '/products/compliance-engine'
     | '/products/trade-desk'
@@ -774,13 +664,6 @@ export interface FileRouteTypes {
     | '/account/billing'
     | '/account/settings'
     | '/deal/$id'
-    | '/developer/docs'
-    | '/developer/keys'
-    | '/developer/notifications'
-    | '/developer/schema'
-    | '/developer/support'
-    | '/developer/usage'
-    | '/developer/webhooks'
     | '/governance/audits'
     | '/governance/entities'
     | '/governance/health'
@@ -801,7 +684,6 @@ export interface FileRouteTypes {
     | '/alpha-bravo'
     | '/auth'
     | '/contact'
-    | '/docs'
     | '/forgot-password'
     | '/glossary'
     | '/pricing'
@@ -833,8 +715,6 @@ export interface FileRouteTypes {
     | '/alpha-bravo/responders'
     | '/alpha-bravo/trades'
     | '/alpha-bravo/trust-center'
-    | '/docs/api'
-    | '/docs/webhooks'
     | '/products/audit-ledger'
     | '/products/compliance-engine'
     | '/products/trade-desk'
@@ -845,13 +725,6 @@ export interface FileRouteTypes {
     | '/_authenticated/account/billing'
     | '/_authenticated/account/settings'
     | '/_authenticated/deal/$id'
-    | '/_authenticated/developer/docs'
-    | '/_authenticated/developer/keys'
-    | '/_authenticated/developer/notifications'
-    | '/_authenticated/developer/schema'
-    | '/_authenticated/developer/support'
-    | '/_authenticated/developer/usage'
-    | '/_authenticated/developer/webhooks'
     | '/_authenticated/governance/audits'
     | '/_authenticated/governance/entities'
     | '/_authenticated/governance/health'
@@ -873,7 +746,6 @@ export interface RootRouteChildren {
   AlphaBravoRoute: typeof AlphaBravoRouteWithChildren
   AuthRoute: typeof AuthRoute
   ContactRoute: typeof ContactRoute
-  DocsRoute: typeof DocsRouteWithChildren
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   GlossaryRoute: typeof GlossaryRoute
   PricingRoute: typeof PricingRoute
@@ -927,13 +799,6 @@ declare module '@tanstack/react-router' {
       path: '/contact'
       fullPath: '/contact'
       preLoaderRoute: typeof ContactRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/docs': {
-      id: '/docs'
-      path: '/docs'
-      fullPath: '/docs'
-      preLoaderRoute: typeof DocsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forgot-password': {
@@ -1160,20 +1025,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AlphaBravoTrustCenterRouteImport
       parentRoute: typeof AlphaBravoRoute
     }
-    '/docs/api': {
-      id: '/docs/api'
-      path: '/api'
-      fullPath: '/docs/api'
-      preLoaderRoute: typeof DocsApiRouteImport
-      parentRoute: typeof DocsRoute
-    }
-    '/docs/webhooks': {
-      id: '/docs/webhooks'
-      path: '/webhooks'
-      fullPath: '/docs/webhooks'
-      preLoaderRoute: typeof DocsWebhooksRouteImport
-      parentRoute: typeof DocsRoute
-    }
     '/products/audit-ledger': {
       id: '/products/audit-ledger'
       path: '/products/audit-ledger'
@@ -1235,55 +1086,6 @@ declare module '@tanstack/react-router' {
       path: '/deal/$id'
       fullPath: '/deal/$id'
       preLoaderRoute: typeof AuthenticatedDealIdRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/developer/docs': {
-      id: '/_authenticated/developer/docs'
-      path: '/developer/docs'
-      fullPath: '/developer/docs'
-      preLoaderRoute: typeof AuthenticatedDeveloperDocsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/developer/keys': {
-      id: '/_authenticated/developer/keys'
-      path: '/developer/keys'
-      fullPath: '/developer/keys'
-      preLoaderRoute: typeof AuthenticatedDeveloperKeysRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/developer/notifications': {
-      id: '/_authenticated/developer/notifications'
-      path: '/developer/notifications'
-      fullPath: '/developer/notifications'
-      preLoaderRoute: typeof AuthenticatedDeveloperNotificationsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/developer/schema': {
-      id: '/_authenticated/developer/schema'
-      path: '/developer/schema'
-      fullPath: '/developer/schema'
-      preLoaderRoute: typeof AuthenticatedDeveloperSchemaRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/developer/support': {
-      id: '/_authenticated/developer/support'
-      path: '/developer/support'
-      fullPath: '/developer/support'
-      preLoaderRoute: typeof AuthenticatedDeveloperSupportRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/developer/usage': {
-      id: '/_authenticated/developer/usage'
-      path: '/developer/usage'
-      fullPath: '/developer/usage'
-      preLoaderRoute: typeof AuthenticatedDeveloperUsageRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/developer/webhooks': {
-      id: '/_authenticated/developer/webhooks'
-      path: '/developer/webhooks'
-      fullPath: '/developer/webhooks'
-      preLoaderRoute: typeof AuthenticatedDeveloperWebhooksRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/governance/audits': {
@@ -1398,13 +1200,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAccountBillingRoute: typeof AuthenticatedAccountBillingRoute
   AuthenticatedAccountSettingsRoute: typeof AuthenticatedAccountSettingsRoute
   AuthenticatedDealIdRoute: typeof AuthenticatedDealIdRoute
-  AuthenticatedDeveloperDocsRoute: typeof AuthenticatedDeveloperDocsRoute
-  AuthenticatedDeveloperKeysRoute: typeof AuthenticatedDeveloperKeysRoute
-  AuthenticatedDeveloperNotificationsRoute: typeof AuthenticatedDeveloperNotificationsRoute
-  AuthenticatedDeveloperSchemaRoute: typeof AuthenticatedDeveloperSchemaRoute
-  AuthenticatedDeveloperSupportRoute: typeof AuthenticatedDeveloperSupportRoute
-  AuthenticatedDeveloperUsageRoute: typeof AuthenticatedDeveloperUsageRoute
-  AuthenticatedDeveloperWebhooksRoute: typeof AuthenticatedDeveloperWebhooksRoute
   AuthenticatedGovernanceAuditsRoute: typeof AuthenticatedGovernanceAuditsRoute
   AuthenticatedGovernanceEntitiesRoute: typeof AuthenticatedGovernanceEntitiesRoute
   AuthenticatedGovernanceHealthRoute: typeof AuthenticatedGovernanceHealthRoute
@@ -1432,14 +1227,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAccountBillingRoute: AuthenticatedAccountBillingRoute,
   AuthenticatedAccountSettingsRoute: AuthenticatedAccountSettingsRoute,
   AuthenticatedDealIdRoute: AuthenticatedDealIdRoute,
-  AuthenticatedDeveloperDocsRoute: AuthenticatedDeveloperDocsRoute,
-  AuthenticatedDeveloperKeysRoute: AuthenticatedDeveloperKeysRoute,
-  AuthenticatedDeveloperNotificationsRoute:
-    AuthenticatedDeveloperNotificationsRoute,
-  AuthenticatedDeveloperSchemaRoute: AuthenticatedDeveloperSchemaRoute,
-  AuthenticatedDeveloperSupportRoute: AuthenticatedDeveloperSupportRoute,
-  AuthenticatedDeveloperUsageRoute: AuthenticatedDeveloperUsageRoute,
-  AuthenticatedDeveloperWebhooksRoute: AuthenticatedDeveloperWebhooksRoute,
   AuthenticatedGovernanceAuditsRoute: AuthenticatedGovernanceAuditsRoute,
   AuthenticatedGovernanceEntitiesRoute: AuthenticatedGovernanceEntitiesRoute,
   AuthenticatedGovernanceHealthRoute: AuthenticatedGovernanceHealthRoute,
@@ -1512,25 +1299,12 @@ const AlphaBravoRouteWithChildren = AlphaBravoRoute._addFileChildren(
   AlphaBravoRouteChildren,
 )
 
-interface DocsRouteChildren {
-  DocsApiRoute: typeof DocsApiRoute
-  DocsWebhooksRoute: typeof DocsWebhooksRoute
-}
-
-const DocsRouteChildren: DocsRouteChildren = {
-  DocsApiRoute: DocsApiRoute,
-  DocsWebhooksRoute: DocsWebhooksRoute,
-}
-
-const DocsRouteWithChildren = DocsRoute._addFileChildren(DocsRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AlphaBravoRoute: AlphaBravoRouteWithChildren,
   AuthRoute: AuthRoute,
   ContactRoute: ContactRoute,
-  DocsRoute: DocsRouteWithChildren,
   ForgotPasswordRoute: ForgotPasswordRoute,
   GlossaryRoute: GlossaryRoute,
   PricingRoute: PricingRoute,
