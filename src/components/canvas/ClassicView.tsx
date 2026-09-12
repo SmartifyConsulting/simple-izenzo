@@ -149,7 +149,11 @@ function SubRow({
         itemClasses(state, item.isEntry),
       )}
     >
-      {Icon && <Icon className="h-3.5 w-3.5 shrink-0" />}
+      {state === "done" ? (
+        <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+      ) : (
+        Icon && <Icon className="h-3.5 w-3.5 shrink-0" />
+      )}
       <span className="min-w-0 flex-1 truncate">{item.label}</span>
       {item.sub && (
         <span className="shrink-0 truncate text-[9px] font-semibold uppercase tracking-wide text-[#C1653D]">
@@ -199,10 +203,14 @@ export function ClassicView({
   readOnly,
   onRegister,
   onOpenStep,
+  overrideStates,
 }: {
   tx: Transaction;
   reload: () => void;
   readOnly?: boolean;
+  /** Lets the page say which item is genuinely current right now (keyed by SubItem.key) — the
+   * stored stage/step alone can't tell "searching" from "results are in". */
+  overrideStates?: Record<string, NodeState>;
   /** Fires when "Create a bid or an offer" is clicked, before any real deal exists — the caller
    * opens the form that actually records it, where the direction itself is picked. */
   onRegister?: () => void;
@@ -229,7 +237,12 @@ export function ClassicView({
 
   const toggleStep = (step: number) => setCollapsed((c) => ({ ...c, [step]: !c[step] }));
 
-  const st = (stage: StageKey, step: string) => nodeState(stage, step, tx);
+  const stateOf = (item: SubItem): NodeState => {
+    const override = overrideStates?.[item.key];
+    if (override) return override;
+    if (item.isEntry && readOnly) return "open";
+    return nodeState(item.stage, item.step, tx);
+  };
   const active = panel && !readOnly ? panel : null;
 
   return (
@@ -238,7 +251,8 @@ export function ClassicView({
         {STEPS.map((s, i) => {
           const stepCollapsed = Boolean(collapsed[s.step]);
           const stepIsActive = s.step === activeStep;
-          const stepIsDone = s.step < activeStep;
+          const allDone = s.items.every((item) => stateOf(item) === "done");
+          const stepIsDone = s.step < activeStep || allDone;
           return (
             <div key={s.step} className="flex gap-4">
               <div className="flex flex-col items-center">
@@ -261,27 +275,28 @@ export function ClassicView({
                   {stepCollapsed ? "+ " : "− "}Step {s.step} · {s.label}
                 </button>
 
-                {!stepCollapsed && (
-                  <div className="mt-2 space-y-1.5">
-                    {s.items.map((item) => {
-                      const state = item.isEntry
-                        ? readOnly
-                          ? "open"
-                          : st(item.stage, item.step)
-                        : st(item.stage, item.step);
-                      return (
+                {!stepCollapsed &&
+                  (allDone ? (
+                    /* A finished step reads as one ticked label on the left, rather than
+                       repeating every task it already completed. */
+                    <div className="mt-2 flex w-1/2 items-center justify-start gap-2 rounded-lg border border-primary/50 bg-primary/12 px-3 py-2 font-sans text-[13px] font-medium text-primary">
+                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                      <span className="min-w-0 flex-1 truncate">{s.label}</span>
+                    </div>
+                  ) : (
+                    <div className="mt-2 space-y-1.5">
+                      {s.items.map((item) => (
                         <SubRow
                           key={item.key}
                           item={item}
-                          state={state}
+                          state={stateOf(item)}
                           onClick={
                             item.isEntry ? () => onRegister?.() : () => open(item.stage, item.step)
                           }
                         />
-                      );
-                    })}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  ))}
               </div>
             </div>
           );

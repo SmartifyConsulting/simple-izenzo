@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -173,13 +173,12 @@ function OpenDealsPicker({ currentId, hasAttachment }: { currentId: string | nul
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="h-9 w-[280px] justify-start gap-2 text-[13px] font-normal"
+          className="h-9 w-[140px] justify-start gap-2 text-[13px] font-normal"
         >
           {hasAttachment && <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
           {selected ? (
             <span className="min-w-0 truncate">
-              <span className="font-mono font-semibold">{selected.reference}</span>
-              {selected.name && <span className="text-muted-foreground"> — {selected.name}</span>}
+              <span className="font-mono text-base font-bold">{selected.reference}</span>
             </span>
           ) : (
             <span className="text-muted-foreground">Search</span>
@@ -299,6 +298,34 @@ function LiveDealEngine() {
   >(null);
 
 
+
+  /** Which workflow item is genuinely current right now — the stored stage/step can't tell
+   * "searching" apart from "results are in", so the page says it outright. Search AI + AI+ and
+   * Online Media Screening run together, so both pulse at the same time. */
+  const stepOverrides = useMemo(() => {
+    const o: Record<string, "locked" | "open" | "active" | "done"> = {};
+    if (!dealTx) return o;
+    if (flowStep === "documents") {
+      o["bidOffer"] = "active";
+      return o;
+    }
+    o["bidOffer"] = "done";
+    if (flowStep === "searching" || screening || mediaRunning) {
+      o["search"] = "active";
+      o["onlineMedia"] = "active";
+      return o;
+    }
+    o["search"] = "done";
+    o["onlineMedia"] = "done";
+    if (hasChosen) {
+      o["choice"] = "done";
+      o["poi"] = dealTx.poi_sealed_at ? "done" : "active";
+      if (dealTx.poi_sealed_at) o["wad"] = dealTx.wad_completed_at ? "done" : "active";
+    } else {
+      o["choice"] = "active";
+    }
+    return o;
+  }, [dealTx, flowStep, screening, mediaRunning, hasChosen]);
 
   const [documentSummary, setDocumentSummary] = useState<string | null>(null);
   // The AI summary is written to the transaction row in the background, after the document
@@ -1015,6 +1042,7 @@ function LiveDealEngine() {
                 readOnly={!dealTx}
                 onRegister={startNewDeal}
                 onOpenStep={openMapStep}
+                overrideStates={stepOverrides}
               />
             </div>
           </div>
@@ -1024,7 +1052,7 @@ function LiveDealEngine() {
               (before any document is attached) or a bulleted list of what's been classified from
               the documents already uploaded. */}
           <div className="h-[calc(100vh-190px)] w-full overflow-y-auto rounded-3xl border border-border bg-card p-3 shadow-sm sm:p-5">
-          <p className="label-caps shrink-0 text-foreground">Live Workspace</p>
+          <p className="label-caps mb-3 shrink-0 text-foreground">Live Workspace</p>
           {/* Bidder details + AI summary come first — the very top of the workspace, before the
               reference header and anything else — so what was actually submitted is never buried
               behind the progress ribbon or the workflow ticks below it. The attachment(s), with a
@@ -1042,6 +1070,14 @@ function LiveDealEngine() {
                     month: "short",
                     day: "numeric",
                   })}
+                </p>
+              )}
+              {/* The value of the trade belongs with the rest of its material aspects, inside this
+                  frame, rather than sitting on its own outside it. */}
+              {(activity.price || activity.quantity) && (
+                <p className="text-sm font-semibold text-foreground">
+                  {activity.price ? `${activity.currency ?? ""} ${activity.price}`.trim() : "Value not stated"}
+                  {activity.quantity ? ` · ${activity.quantity} ${activity.unit ?? ""}`.trimEnd() : ""}
                 </p>
               )}
               {documentSummary ? (
@@ -1119,14 +1155,11 @@ function LiveDealEngine() {
                 </div>
               </div>
             ) : (
-              <p
-                className={cn(
-                  "label-caps text-foreground",
-                  draftReference && "font-mono text-base font-bold uppercase tracking-wide",
-                )}
-              >
-                {draftReference ?? "Live workspace"}
-              </p>
+              draftReference && (
+                <p className="label-caps font-mono text-base font-bold uppercase tracking-wide text-foreground">
+                  {draftReference}
+                </p>
+              )
             )}
 
           {/* No deal yet: shows the upload/search starting card. If a `seed` came from the
@@ -1180,7 +1213,7 @@ function LiveDealEngine() {
             <div className="mt-3 space-y-1.5">
               <div className="flex items-center gap-2 text-sm text-primary">
                 <CheckCircle2 className="h-4 w-4 shrink-0" />
-                Bid Creation
+                Bid Registration
               </div>
               <div className="flex items-center gap-2 text-sm text-primary">
                 <CheckCircle2 className="h-4 w-4 shrink-0" />
@@ -1209,16 +1242,7 @@ function LiveDealEngine() {
                       {activity.commodity}
                     </span>
                   )}
-                  {activity.quantity && (
-                    <span className="rounded-full border border-border bg-muted/40 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
-                      {activity.quantity} {activity.unit}
-                    </span>
-                  )}
-                  {activity.price && (
-                    <span className="rounded-full border border-border bg-muted/40 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
-                      {activity.currency} {activity.price}
-                    </span>
-                  )}
+                  {/* Quantity and value now live inside the summary frame above. */}
                 </div>
 
                 <div className="glass-node flex items-start gap-3 p-4">
