@@ -122,7 +122,9 @@ export const startVerification = createServerFn({ method: "POST" })
       const session = await createDiditSession(creds, {
         checkType: data.checkType,
         vendorData: row.id as string,
-        ...(data.origin ? { callbackUrl: `${data.origin}/account/settings` } : {}),
+        // Land back on a public page that works in a fresh tab/popup — a signed-in page would
+        // bounce an unauthenticated tab out to the marketing site.
+        ...(data.origin ? { callbackUrl: `${data.origin}/verify/complete?vid=${row.id}` } : {}),
       });
       await supabaseAdmin
         .from("identity_verifications")
