@@ -99,7 +99,7 @@ function IntelligenceFabric() {
             ))}
           </div>
 
-          <div className="space-y-8 lg:border-l lg:border-border lg:pl-8">
+          <div className="space-y-8">
             <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
               Why it matters
             </p>
@@ -109,13 +109,6 @@ function IntelligenceFabric() {
               </blockquote>
             ))}
           </div>
-        </div>
-
-        <div className="mt-16 flex flex-col items-start gap-4 rounded-2xl border border-primary/20 bg-muted/30 p-8 sm:flex-row sm:items-center sm:justify-between">
-          <p className="max-w-xl text-lg tracking-tight text-foreground">
-            See what AI+ finds for your next trade — no account needed to preview.
-          </p>
-          <SubmitBidButton size="lg" className="shrink-0" />
         </div>
       </section>
     </>
