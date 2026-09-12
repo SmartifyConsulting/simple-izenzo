@@ -48,7 +48,7 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
 
           <div className="ml-auto flex shrink-0 items-center gap-3">
             <ThemeToggle />
-            {user && (
+            {user ? (
               <>
                 <Link to="/live-deal-engine">
                   <Button size="sm" className="rounded-full">
@@ -57,6 +57,12 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
                 </Link>
                 <ProfileAvatarMenu />
               </>
+            ) : (
+              <SignInModal>
+                <Button size="sm" variant="outline" className="rounded-full">
+                  Sign in
+                </Button>
+              </SignInModal>
             )}
           </div>
         </div>
