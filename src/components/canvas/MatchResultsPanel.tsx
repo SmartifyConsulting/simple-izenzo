@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Lock } from "lucide-react";
+import { ExternalLink, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,16 @@ const RATING_LABEL: Record<string, string> = {
   neutral: "Under review",
   flagged: "Flagged",
 };
+
+/** The web page a candidate was found on, when the search recorded one. */
+function evidenceUrl(flags: unknown): string | null {
+  if (!flags || typeof flags !== "object") return null;
+  const evidence = (flags as { evidence?: unknown }).evidence;
+  if (!Array.isArray(evidence)) return null;
+  const first = evidence[0] as { url?: unknown } | undefined;
+  return typeof first?.url === "string" ? first.url : null;
+}
+
 
 /** The full match list, opened from the homepage's "…" once the visitor is signed in. Same
  * Responder records the homepage previews, only unblurred and complete rather than the top five. */
