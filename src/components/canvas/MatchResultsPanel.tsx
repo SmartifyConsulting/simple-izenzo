@@ -33,11 +33,21 @@ export function MatchResultsPanel({ query, className }: { query?: string | undef
   return (
     <div className={cn("rounded-2xl border border-border bg-card/60 p-3 sm:p-4", className)}>
       <div className="flex items-center justify-between gap-2">
-        <p className="label-caps text-foreground">All matches{q ? ` for “${q}”` : ""}</p>
+        <p className="label-caps text-foreground">All matches</p>
         <Badge variant="secondary" className="font-normal">
           {data.length}
         </Badge>
       </div>
+
+      {q && (
+        <div className="mt-2 rounded-xl border border-border bg-muted/40 p-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+            What you asked for
+          </p>
+          <p className="mt-1 text-sm text-foreground">{q}</p>
+        </div>
+      )}
+
 
       {isLoading && <p className="mt-3 text-sm text-muted-foreground">Loading matches…</p>}
 
