@@ -163,7 +163,12 @@ export function VerificationPanel({ transactionId, checks, title, description }:
                 </Badge>
 
                 {row && row.status === "in_progress" && row.provider_url && (
-                  <a href={row.provider_url} target="_blank" rel="noopener noreferrer">
+                  <a
+                    href={row.provider_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setSessionUrl(row.provider_url)}
+                  >
                     <Button size="sm" variant="outline">
                       Continue
                     </Button>
