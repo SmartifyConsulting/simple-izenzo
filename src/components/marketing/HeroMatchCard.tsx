@@ -143,17 +143,17 @@ export function HeroMatchCard({ className }: { className?: string }) {
             <Label htmlFor="hero-search-prompt" className="text-xs font-medium text-foreground">
               Search Prompt
             </Label>
+            <p className="text-[11px] text-muted-foreground">
+              Describe what you're looking for — product, quantity, location, terms. Used together
+              with any files you add.
+            </p>
             <Textarea
               id="hero-search-prompt"
               rows={3}
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Describe what you're looking for — product, quantity, location, terms"
               className="resize-none text-sm"
             />
-            <p className="text-[11px] text-muted-foreground">
-              What you type here is used together with any files you add.
-            </p>
           </div>
 
           <Label className="mt-4 block text-xs font-medium text-foreground">Upload files</Label>

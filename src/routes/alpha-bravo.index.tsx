@@ -2,6 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HeroMatchCard } from "@/components/marketing/HeroMatchCard";
+import { SignInModal } from "@/components/auth/SignInModal";
+import { ThemeToggle } from "@/components/guided/ThemeToggle";
+import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/alpha-bravo/")({
   head: () => ({
@@ -51,6 +54,8 @@ const STAGES = [
 ];
 
 function AlphaBravoHome() {
+  const { user } = useAuth();
+
   return (
     <section className="mx-auto max-w-6xl px-5 py-12 sm:py-16">
       <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
@@ -81,7 +86,32 @@ function AlphaBravoHome() {
           </div>
         </div>
 
-        <HeroMatchCard />
+        <div className="min-w-0">
+          {!user && (
+            <div className="mb-3 flex items-center justify-end gap-2">
+              <div className="flex items-center gap-1 rounded-full border border-border p-1">
+                <SignInModal defaultTab="signin">
+                  <button
+                    type="button"
+                    className="rounded-full px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                  >
+                    Sign In
+                  </button>
+                </SignInModal>
+                <SignInModal defaultTab="signup">
+                  <button
+                    type="button"
+                    className="rounded-full px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                  >
+                    Sign Up
+                  </button>
+                </SignInModal>
+              </div>
+              <ThemeToggle />
+            </div>
+          )}
+          <HeroMatchCard />
+        </div>
       </div>
 
       <p className="mt-10 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
