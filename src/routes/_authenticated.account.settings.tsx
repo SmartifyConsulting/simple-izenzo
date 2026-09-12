@@ -131,6 +131,11 @@ function SettingsPage() {
             </div>
 
             <div className="space-y-6">
+              <VerificationPanel
+                checks={["id_document"]}
+                description="Verify yourself once with a photo of your ID and a selfie. The result arrives on its own — there is nothing to fill in here."
+              />
+
               <div className="space-y-4 rounded-md border border-border p-5">
                 <h2 className="text-sm font-semibold">Notification rules</h2>
                 {[
@@ -148,11 +153,6 @@ function SettingsPage() {
                   </div>
                 ))}
               </div>
-
-              <VerificationPanel
-                checks={["id_document"]}
-                description="Verify yourself once with a photo of your ID and a selfie. The result arrives on its own — there is nothing to fill in here."
-              />
 
               <DangerZone />
             </div>

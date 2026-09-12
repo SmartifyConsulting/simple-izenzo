@@ -288,6 +288,26 @@ function LiveDealEngine() {
 
 
   const [documentSummary, setDocumentSummary] = useState<string | null>(null);
+  // The AI summary is written to the transaction row in the background, after the document
+  // upload effects above have already captured their one-time snapshot — without this poll,
+  // "What was submitted" would stay blank until the next full reload even once the summary was
+  // actually ready.
+  const { data: polledSummary } = useQuery({
+    queryKey: ["tx-document-summary", dealTx?.id],
+    enabled: Boolean(dealTx?.id) && !documentSummary,
+    refetchInterval: 4000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("transactions")
+        .select("document_summary")
+        .eq("id", dealTx!.id)
+        .maybeSingle();
+      return (data as { document_summary: string | null } | null)?.document_summary ?? null;
+    },
+  });
+  useEffect(() => {
+    if (polledSummary) setDocumentSummary(polledSummary);
+  }, [polledSummary]);
   const search = useServerFn(searchCounterparties);
   const runScreening = useServerFn(runBackgroundScreening);
   const runMediaChecks = useServerFn(runOnlineMediaChecks);
@@ -747,6 +767,12 @@ function LiveDealEngine() {
   async function runSearch(txId: string) {
     setFlowStep("searching");
     setSearchError(null);
+    // Marks Upload Documents done and moves the active step onto Search the moment the search
+    // actually starts — previously this only advanced once AI/AI+ succeeded, so a failed search
+    // (e.g. the counterparty provider being unreachable) left Documents stuck showing as still in
+    // progress even though it had genuinely finished.
+    await advance(txId, "trading", "search");
+    setDealTx((prev) => (prev ? { ...prev, stage: "trading", step: "search" } : prev));
     // Runs long enough to actually read as "AI and AI+ are searching" — otherwise, when both
     // calls happen to resolve fast, the step flashes past before anyone can see it.
     const minDuration = new Promise((resolve) => setTimeout(resolve, 3200));
@@ -862,7 +888,7 @@ function LiveDealEngine() {
 
   if (!popout && windowMode === "minimized") {
     return (
-      <AppShell wide>
+      <AppShell wide compactFooter>
         <div className="flex min-h-[200px] items-center justify-center text-sm text-muted-foreground">
           {windowLabel} is minimized — restore it from the taskbar below.
         </div>
@@ -872,7 +898,7 @@ function LiveDealEngine() {
 
   if (poppedElsewhere) {
     return (
-      <AppShell wide>
+      <AppShell wide compactFooter>
         <div className="flex min-h-[200px] items-center justify-center text-sm text-muted-foreground">
           {windowLabel} is open in its own window — switch to it, or close it there to bring it back here.
         </div>
@@ -1262,12 +1288,16 @@ function LiveDealEngine() {
   }
 
   if (soloWorkspace) {
-    return <AppShell wide>{workspaceContent}</AppShell>;
+    return (
+      <AppShell wide compactFooter>
+        {workspaceContent}
+      </AppShell>
+    );
   }
 
   if (windowMode === "maximized") {
     return (
-      <AppShell wide>
+      <AppShell wide compactFooter>
         <div className="fixed inset-4 z-50 overflow-y-auto rounded-2xl border border-border bg-background p-4 shadow-2xl">
           {workspaceContent}
         </div>
@@ -1276,7 +1306,7 @@ function LiveDealEngine() {
   }
 
   return (
-    <AppShell wide>
+    <AppShell wide compactFooter>
       <div
         className="fixed z-40 w-[min(1040px,calc(100vw-2rem))] rounded-2xl"
         style={{ left: posX, top: posY }}

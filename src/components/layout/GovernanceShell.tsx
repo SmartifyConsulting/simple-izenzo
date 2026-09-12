@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Inbox, FileSearch, ShieldCheck, Activity, Bell, ArrowLeftRight } from "lucide-react";
+import { ArrowLeft, Inbox, FileSearch, ShieldCheck, Activity, Bell, ArrowLeftRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/Logo";
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
@@ -40,6 +40,12 @@ export function GovernanceShell({
           <Link to="/live-deal-engine">
             <Logo className="h-6" />
           </Link>
+          <a
+            href="/alpha-bravo"
+            className="label-caps mt-2 flex items-center gap-1.5 normal-case text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> Home
+          </a>
         </div>
 
         <div className="border-b border-border px-4 py-3">
@@ -85,7 +91,7 @@ export function GovernanceShell({
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1 px-8 py-8">
+      <main className="min-w-0 flex-1 px-8 pb-24 pt-8">
         {(title || description || actions) && (
           <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div>

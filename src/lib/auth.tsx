@@ -92,9 +92,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRoles((r ?? []).map((x: { role: string }) => x.role));
 
     const orgIds = (memberships ?? []).map((m: { org_id: string }) => m.org_id);
+    let loadedOrgs: Org[] = [];
     if (orgIds.length > 0) {
-      const { data: os } = await supabase.from("organisations").select("*").in("id", orgIds);
-      setOrgs((os as Org[]) ?? []);
+      const { data: os } = await supabase
+        .from("organisations")
+        .select("*")
+        .in("id", orgIds)
+        .order("created_at", { ascending: true });
+      loadedOrgs = (os as Org[]) ?? [];
+      setOrgs(loadedOrgs);
     } else {
       setOrgs([]);
     }
@@ -106,6 +112,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq("id", p.org_id)
         .maybeSingle();
       setOrg((o as Org) ?? null);
+    } else if (loadedOrgs.length > 0) {
+      // No active org recorded yet (e.g. an account provisioned outside the normal sign-up flow) —
+      // default to the first organisation this seat belongs to rather than leaving every org
+      // showing as inactive, and persist the pick so it sticks from here on.
+      setOrg(loadedOrgs[0]!);
+      void supabase.from("profiles").update({ org_id: loadedOrgs[0]!.id }).eq("id", uid);
     } else {
       setOrg(null);
     }

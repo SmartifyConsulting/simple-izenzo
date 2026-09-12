@@ -35,6 +35,7 @@ export function AppShell({
   children,
   wide,
   pureBlack,
+  compactFooter,
 }: {
   title?: string;
   description?: string;
@@ -44,6 +45,9 @@ export function AppShell({
   /** Forces the page background to literal black instead of the theme's near-black
    * `--background`, for screens meant to sit flush with the header/nav's own black chrome. */
   pureBlack?: boolean;
+  /** Shows the shorter (30% reduced height) footer — used on the Live Workspace, where vertical
+   * space is at a premium. */
+  compactFooter?: boolean;
 }) {
   const { profile, org } = useAuth();
   const firstName = (profile?.full_name ?? profile?.email ?? "").split(/[\s@]/)[0];
@@ -178,7 +182,16 @@ export function AppShell({
         </div>
       </header>
 
-      <main className={cn("mx-auto w-full flex-1 px-4 pb-8 sm:px-6", width, wide ? "pt-3" : "pt-5")}>
+      <main
+        className={cn(
+          "mx-auto w-full flex-1 px-4 sm:px-6",
+          width,
+          wide ? "pt-3" : "pt-5",
+          // Bottom padding clears the now fixed-to-viewport footer so content never renders
+          // underneath it.
+          compactFooter ? "pb-16" : "pb-24",
+        )}
+      >
         <div
           className={cn(
             "grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4",
@@ -213,7 +226,7 @@ export function AppShell({
         {children}
       </main>
 
-      <SiteFooter />
+      <SiteFooter compact={compactFooter} />
     </div>
   );
 
