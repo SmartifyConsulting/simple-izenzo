@@ -113,11 +113,11 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
         }
         return;
       }
+      // A second (or later) workspace takes over the canvas, so whatever was showing before gets
+      // out of the way onto the taskbar instead of the two competing for the same space.
+      const others = current.map((w) => (w.mode === "minimized" ? w : { ...w, mode: "minimized" as WindowMode }));
       const offset = current.length * 24;
-      persist([
-        ...current,
-        { id, label, mode: "maximized", x: 80 + offset, y: 80 + offset },
-      ]);
+      persist([...others, { id, label, mode: "maximized", x: 80 + offset, y: 80 + offset }]);
     },
     [persist],
   );

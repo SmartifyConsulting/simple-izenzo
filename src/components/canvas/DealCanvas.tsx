@@ -27,6 +27,7 @@ import {
   ShieldAlert,
   ScrollText,
   X,
+  UploadCloud,
 } from "lucide-react";
 import { CanvasNode, Connector, GateBar, type NodeState } from "./CanvasNode";
 import { StepScreen } from "@/components/steps/StepScreen";
@@ -1770,6 +1771,7 @@ export function CanvasStart({
   onCreated,
   onPickingChange,
   onDirectionChange,
+  onDraftReference,
   initialDirection,
 }: {
   onCreated: (tx: Transaction, activity: RecordedActivity) => void;
@@ -1778,6 +1780,9 @@ export function CanvasStart({
   onPickingChange?: (picking: boolean) => void;
   /** Fires whenever the bid/offer side is picked or cleared. */
   onDirectionChange?: (direction: "bid" | "offer" | null) => void;
+  /** Fires once, the moment a not-yet-recorded bid/offer gets its placeholder BID/OFF reference —
+   * lets the caller show a real ID on the workspace tab/title bar even before anything is saved. */
+  onDraftReference?: (reference: string) => void;
   /** Opens straight into the Bid or Offer form on mount instead of the picker — used when a
    * caller elsewhere on the page already decided which side the user wants. */
   initialDirection?: "bid" | "offer" | null;
@@ -1786,6 +1791,10 @@ export function CanvasStart({
   // Which company this bid/offer is traded as — only shown as a choice when the user belongs to
   // more than one; otherwise the account's default org is used without asking.
   const [companyId, setCompanyId] = useState<string | null>(null);
+  // Generated the moment picking starts (not at final submit) so the workspace can show a real
+  // BID/OFF id immediately — reused as-is at submit time rather than generating a second,
+  // different-looking one.
+  const [draftReference, setDraftReference] = useState<string | null>(null);
   const activeCompanyId = companyId ?? org?.id ?? null;
   const [picking, setPickingState] = useState(Boolean(initialDirection));
   const setPicking = (v: boolean) => {
@@ -1797,9 +1806,8 @@ export function CanvasStart({
     setDirectionState(v);
     onDirectionChange?.(v);
   };
-  // Title/commodity/quantity/price used to be captured here — they're now read off the uploaded
-  // documents by AI instead, so the only thing this first screen still asks for is the ID Number.
-  const [form, setForm] = useState({ idNumber: "" });
+  // Title/commodity/quantity/price/identity used to be asked here — they're now read off the
+  // uploaded documents by AI, or already on file from sign-up, so this screen asks for nothing.
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -1830,9 +1838,9 @@ export function CanvasStart({
         (await ensureOrg(user.id, profile?.full_name ?? user.email ?? "My account"));
       if (!org) void refresh();
 
-      // Generated once, up front, so the same value goes onto the row (visible in Trades/reports)
-      // and into local `activity` (shown on this screen for the rest of the session).
-      const reference = nextReference(direction);
+      // Reuses whatever id was already shown on the workspace tab while picking — generating a
+      // fresh one here would silently swap the ID the user's already seen.
+      const reference = draftReference ?? nextReference(direction);
 
       const baseRow = {
         org_id: activeOrg.id,
@@ -1872,30 +1880,15 @@ export function CanvasStart({
         unit: "",
         currency: "USD",
         terms: "",
-        id_number: form.idNumber || null,
       };
       const { error: boError } = await supabase.from("bid_offers").insert(bidOfferRow as never);
-      // `id_number` is a brand new column — fall back to inserting without it rather than losing
-      // the whole bid/offer on an environment where the migration hasn't landed yet. PostgREST
-      // reports a missing column two different ways depending on where it's caught: "42703" from
-      // Postgres itself, or "PGRST204"/a "schema cache" message from PostgREST's own pre-check.
-      const missingColumn =
-        boError?.code === "42703" ||
-        boError?.code === "PGRST204" ||
-        Boolean(boError?.message?.includes("schema cache"));
-      if (missingColumn) {
-        const { id_number: _drop, ...withoutIdNumber } = bidOfferRow;
-        await supabase.from("bid_offers").insert(withoutIdNumber);
-      } else if (boError) {
-        throw boError;
-      }
+      if (boError) throw boError;
       await recordEvent({
         transactionId: newTx.id,
         stage: "trading",
         step: "bid-offer",
         action: direction === "bid" ? "bid_placed" : "offer_placed",
         summary: `${direction === "bid" ? "Bid" : "Offer"} placed`,
-        payload: { idNumber: form.idNumber },
       });
       await advance(newTx.id, "trading", "documents");
       const activity: RecordedActivity = {
@@ -1918,45 +1911,46 @@ export function CanvasStart({
     }
   }
 
+  function beginPicking() {
+    if (!draftReference) {
+      const ref = nextReference("bid");
+      setDraftReference(ref);
+      onDraftReference?.(ref);
+    }
+    setPicking(true);
+    // Direction is no longer picked here — it's inferred once a document is uploaded (a bid
+    // proposal vs. a response to a bid read differently to the classifier). "bid" is just the
+    // starting default until that classification comes back.
+    setDirection("bid");
+  }
+
+  const [dragOver, setDragOver] = useState(false);
+
+  // Same look as the marketing hero's upload card, so starting a deal here reads as "drop your
+  // document" rather than a separate "pick a side" step — no arrow icon, no direction language.
   const startNode = (
     <div className="mx-auto max-w-md">
-      <button
-        type="button"
-        onClick={() => {
-          if (picking) {
-            // Clicking the start node again resets back to the beginning.
-            setPicking(false);
-            setDirection(null);
-          } else {
-            setPicking(true);
-            // Direction is no longer picked here — it's inferred once a document is uploaded
-            // (a bid proposal vs. a response to a bid read differently to the classifier). "bid"
-            // is just the starting default until that classification comes back.
-            setDirection("bid");
-          }
+      <div
+        onClick={beginPicking}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
         }}
-        className="group block w-full animate-node-rise px-6 py-5 text-center"
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragOver(false);
+          beginPicking();
+        }}
+        className={cn(
+          "flex animate-node-rise cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed p-6 text-center transition-colors",
+          dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
+        )}
       >
-        <span
-          className={cn(
-            "mx-auto flex h-10 w-10 items-center justify-center rounded-full border border-primary text-primary transition-transform",
-            picking ? "bg-primary/20" : "bg-primary/20 group-hover:scale-105",
-          )}
-        >
-          <ArrowLeftRight className="h-4.5 w-4.5" />
-        </span>
-        <span
-          className={cn(
-            "mt-3 block text-[15px] font-semibold tracking-tight text-foreground transition-colors",
-            !picking && "group-hover:text-primary",
-          )}
-        >
-          Open a bid or an offer
-        </span>
-        <span className="mt-1 block text-[12.5px] font-medium text-muted-foreground">
-          Upload your document — we'll tell a bid proposal from a response automatically.
-        </span>
-      </button>
+        <UploadCloud className="h-5 w-5 text-muted-foreground" />
+        <span className="text-sm font-medium text-foreground">Drop files here</span>
+        <span className="text-xs text-muted-foreground">Pitch deck, proposal, or any file — multiple OK</span>
+      </div>
     </div>
   );
 
@@ -1992,19 +1986,10 @@ export function CanvasStart({
           </Select>
         </div>
       )}
-      <div className="space-y-1.5">
-        <Label htmlFor="cs-id-number">ID Number</Label>
-        <Input
-          id="cs-id-number"
-          autoFocus
-          placeholder="National ID, passport, or company registration number"
-          value={form.idNumber}
-          onChange={(e) => setForm({ ...form, idNumber: e.target.value })}
-        />
-        <p className="text-xs text-muted-foreground">
-          Next, you'll upload supporting documents — AI reads them and fills in the deal details.
-        </p>
-      </div>
+      <p className="text-xs text-muted-foreground">
+        Identity is already on file from sign-up — next, you'll upload supporting documents and AI
+        reads them to fill in the deal details.
+      </p>
       <Button type="submit" disabled={busy} className="w-full">
         {busy ? "Recording…" : "Continue to documents"}
       </Button>

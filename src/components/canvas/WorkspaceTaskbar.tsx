@@ -18,7 +18,9 @@ export function WorkspaceTaskbar() {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
-  if (windows.length === 0 || isMarketingPath(pathname)) return null;
+  // A single open workspace is just the canvas, not a "tab" — the taskbar only earns its place
+  // once there's a second one to switch between.
+  if (windows.length <= 1 || isMarketingPath(pathname)) return null;
 
   function activate(id: string, mode: string) {
     if (mode === "minimized") setMode(id, "maximized");

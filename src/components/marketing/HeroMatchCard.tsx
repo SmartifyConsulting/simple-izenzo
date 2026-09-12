@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Lock, ShieldCheck, UploadCloud, FileCheck2, Loader2, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SignInModal } from "@/components/auth/SignInModal";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -173,7 +174,11 @@ export function HeroMatchCard({ className }: { className?: string }) {
             </ul>
           )}
 
-          <Button className="mt-5 w-full rounded-full" disabled={!canSearch} onClick={onFindMatches}>
+          <Button
+            className="mt-5 w-full rounded-full text-base font-bold"
+            disabled={!canSearch}
+            onClick={onFindMatches}
+          >
             Find Matches
           </Button>
           <p className="mt-3 text-center text-[11px] text-muted-foreground">
@@ -242,13 +247,11 @@ export function HeroMatchCard({ className }: { className?: string }) {
           </Link>
           <p className="mt-3 text-center text-[11px] text-muted-foreground">
             Already have an account?{" "}
-            <Link
-              to="/auth"
-              search={{ mode: "signin", next: undefined }}
-              className="font-medium text-primary hover:underline"
-            >
-              Sign in with facial recognition
-            </Link>
+            <SignInModal>
+              <button type="button" className="font-medium text-primary hover:underline">
+                Sign in with facial recognition
+              </button>
+            </SignInModal>
           </p>
         </>
       )}

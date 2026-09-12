@@ -210,6 +210,9 @@ function LiveDealEngine() {
   const [pendingDirection, setPendingDirection] = useState<"bid" | "offer" | null>(null);
   const [activity, setActivity] = useState<RecordedActivity | null>(null);
   const [dealTx, setDealTx] = useState<Transaction | null>(null);
+  // The BID/OFF id shown on the tab/title bar before anything is actually saved — set the moment
+  // someone starts a new bid/offer, so the workspace never sits unlabeled.
+  const [draftReference, setDraftReference] = useState<string | null>(null);
   const [flowStep, setFlowStep] = useState<FlowStep>("documents");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -546,6 +549,7 @@ function LiveDealEngine() {
     setHasChosen(false);
     setMapPanel(null);
     setPendingDirection(null);
+    setDraftReference(null);
   }
 
   /** Clicking a node on the Engine Map that isn't already covered by the Workspace's own
@@ -789,11 +793,15 @@ function LiveDealEngine() {
   const windowId = dealTx?.id ?? "new";
   const windowLabel = dealTx
     ? dealTx.reference || activity?.reference || fallbackReference(dealTx.id, activity?.direction ?? "bid")
-    : "New workspace";
+    : (draftReference ?? "New workspace");
   const { windows, register: registerWindow, setMode, move, close: closeWindow, isPoppedElsewhere } = useDealWindows();
   const win = windows.find((w) => w.id === windowId);
   const windowMode = popout ? "docked" : (win?.mode ?? "docked");
   const poppedElsewhere = !popout && isPoppedElsewhere(windowId);
+  // With nothing else open, this isn't really a "window" among several — it's just the canvas.
+  // The floating card, title bar, and drag/minimize/maximize controls only start to matter once
+  // there's a second workspace to juggle against.
+  const soloWorkspace = windows.length <= 1;
 
   useEffect(() => {
     if (popout) return;
@@ -848,7 +856,7 @@ function LiveDealEngine() {
 
   const workspaceContent = (
     <>
-      {!popout && (
+      {!popout && !soloWorkspace && (
         <div
           onPointerDown={windowMode === "maximized" ? undefined : startDrag}
           className={cn(
@@ -952,17 +960,21 @@ function LiveDealEngine() {
                 </div>
               </div>
             ) : (
-              <p className="label-caps text-foreground">Live workspace</p>
+              <p className="label-caps font-mono text-base font-bold uppercase tracking-wide text-foreground">
+                {draftReference ?? "Live workspace"}
+              </p>
             )}
 
           {!activity && (
             <div className="mt-4">
               <CanvasStart
                 initialDirection={pendingDirection}
+                onDraftReference={setDraftReference}
                 onCreated={(tx, recorded) => {
                   setPicking(false);
                   setDirection(null);
                   setPendingDirection(null);
+                  setDraftReference(null);
                   setActivity(recorded);
                   setDealTx(tx);
                   try {
@@ -1175,6 +1187,10 @@ function LiveDealEngine() {
 
   if (popout) {
     return <div className="min-h-screen bg-background p-4">{workspaceContent}</div>;
+  }
+
+  if (soloWorkspace) {
+    return <AppShell wide>{workspaceContent}</AppShell>;
   }
 
   if (windowMode === "maximized") {

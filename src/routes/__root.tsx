@@ -97,10 +97,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   errorComponent: ErrorComponent,
 });
 
+// Applies the saved style preset (Cream/Black/Green Grid) to <html> before the stylesheet ever
+// paints anything — without this, the server-rendered page briefly shows the default dark skin
+// until React hydrates and the useEffect-driven switcher catches up, which reads as a broken
+// layout flash on every navigation for anyone who has Cream selected.
+const APPLY_STYLE_PRESET_SCRIPT = `(function(){try{var p=localStorage.getItem("izenzo:style-preset");var app=(p==="black"||p==="grid")?"izenzo":"alpha-bravo";var d=document.documentElement;d.setAttribute("data-app",app);d.setAttribute("data-theme","dark");}catch(e){}})();`;
+
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    // The inline script below intentionally sets data-app/data-theme on this element before React
+    // hydrates, so its attributes will legitimately differ from the server-rendered markup —
+    // expected for this pattern (same as next-themes' typical approach), not a real mismatch.
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: APPLY_STYLE_PRESET_SCRIPT }} />
         <HeadContent />
       </head>
       <body>
