@@ -155,39 +155,41 @@ function AlphaBravoShellInner({ children }: { children: ReactNode }) {
 
       <main>{children}</main>
 
-      <footer className="border-t border-border">
-        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-5">
-          <p className="whitespace-nowrap text-[11px] tracking-wide text-muted-foreground sm:text-xs">
+      {/* Bottom banner — a full-width, contrasting band that holds the footer, so it reads as a
+          deliberate close to the page rather than a thin line of fine print blending into it. */}
+      <div className="bg-foreground text-background">
+        <footer className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-5">
+          <p className="whitespace-nowrap text-[11px] tracking-wide text-background/70 sm:text-xs">
             Izenzo is the trading name of Starfair162 (Pty) Ltd Reg: 2018 / 331720 / 07.
           </p>
           <nav aria-label="Footer" className="flex items-center gap-6">
             <Link
               to="/alpha-bravo/trust-center"
-              className="text-[11px] tracking-wide text-muted-foreground transition-colors hover:text-foreground sm:text-xs"
+              className="text-[11px] tracking-wide text-background/70 transition-colors hover:text-background sm:text-xs"
             >
               Trust Center
             </Link>
             <a
               href="/privacy"
-              className="text-[11px] tracking-wide text-muted-foreground transition-colors hover:text-foreground sm:text-xs"
+              className="text-[11px] tracking-wide text-background/70 transition-colors hover:text-background sm:text-xs"
             >
               Privacy
             </a>
             <a
               href="/terms"
-              className="text-[11px] tracking-wide text-muted-foreground transition-colors hover:text-foreground sm:text-xs"
+              className="text-[11px] tracking-wide text-background/70 transition-colors hover:text-background sm:text-xs"
             >
               Terms &amp; Conditions
             </a>
             <a
               href="mailto:support@izenzo.co.za"
-              className="text-[11px] tracking-wide text-muted-foreground transition-colors hover:text-foreground sm:text-xs"
+              className="text-[11px] tracking-wide text-background/70 transition-colors hover:text-background sm:text-xs"
             >
               Support
             </a>
           </nav>
-        </div>
-      </footer>
+        </footer>
+      </div>
     </div>
   );
 }
