@@ -1,25 +1,8 @@
 import { useEffect, type ReactNode } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { Coins, Mail } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/lib/auth";
-import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
+import { Link } from "@tanstack/react-router";
 import { applyCurrentStylePreset } from "@/lib/stylePreset";
-import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
-import { ThemeToggle } from "@/components/guided/ThemeToggle";
-import { SignInModal } from "@/components/auth/SignInModal";
-import { Logo } from "@/components/Logo";
-import { HeroSearchProvider, seedNext, useHeroSearch } from "@/lib/heroSearchContext";
-
-const NAV = [
-  { to: "/alpha-bravo", label: "Home" },
-  { to: "/alpha-bravo/about", label: "About Izenzo" },
-  { to: "/alpha-bravo/how-it-works", label: "How It Works" },
-  { to: "/alpha-bravo/intelligence-fabric", label: "The Intelligence Fabric" },
-  { to: "/alpha-bravo/pricing", label: "Pricing" },
-] as const;
+import { MainHeader } from "@/components/layout/MainHeader";
+import { HeroSearchProvider } from "@/lib/heroSearchContext";
 
 /** Alpha-Bravo's own header/nav/footer — a demo re-skin of the Izenzo marketing site,
  * mirroring incisive.vc's page structure with content reframed to Izenzo's real Bidder/
