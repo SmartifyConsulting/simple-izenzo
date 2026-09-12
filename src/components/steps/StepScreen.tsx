@@ -903,6 +903,28 @@ const RATING_BADGE_CLASS: Record<string, string> = {
 const RATING_DISCLAIMER =
   "This rating is informational only. It does not replace KYC, KYB, sanctions/PEP screening or any WaD gate.";
 
+/** Shows the page a searched candidate was actually found on, so a name can be checked against
+ * its source rather than taken on trust. */
+function EvidenceLink({ flags }: { flags?: unknown }) {
+  const evidence =
+    flags && typeof flags === "object" && Array.isArray((flags as { evidence?: unknown }).evidence)
+      ? ((flags as { evidence: { url?: unknown }[] }).evidence.find(
+          (e) => typeof e?.url === "string",
+        )?.url as string | undefined)
+      : undefined;
+  if (!evidence) return null;
+  return (
+    <a
+      href={evidence}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-1 inline-block text-xs text-muted-foreground underline hover:text-foreground"
+    >
+      View source
+    </a>
+  );
+}
+
 function RatingBadge({ c }: { c: { rating_band: string | null; rating_override: string | null } }) {
   const effective = c.rating_override ?? c.rating_band;
   if (!effective) return null;
