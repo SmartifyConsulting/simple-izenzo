@@ -11,9 +11,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-/** The app's one profile menu — Settings, the light/dark switch (also available on its own next
- * to the avatar, see ThemeToggle — kept here too so it's easy to find either way), then sign out,
- * then the legal footer links. */
+/** The app's one profile menu — Settings, sign out, then the light/dark switch below that divider,
+ * then the legal footer links. The light/dark switch lives only here once signed in; ThemeToggle
+ * next to the avatar is for signed-out visitors. */
 export function ProfileAvatarMenu() {
   const { profile, signOut, roles } = useAuth();
   const navigate = useNavigate();
@@ -54,14 +54,6 @@ export function ProfileAvatarMenu() {
               <Settings className="mr-2 h-3.5 w-3.5" /> Settings
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setPreset(isLight ? "black" : "cream")}>
-            {isLight ? (
-              <Moon className="mr-2 h-3.5 w-3.5" />
-            ) : (
-              <Sun className="mr-2 h-3.5 w-3.5" />
-            )}
-            {isLight ? "Switch to dark mode" : "Switch to light mode"}
-          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={async () => {
@@ -70,6 +62,15 @@ export function ProfileAvatarMenu() {
             }}
           >
             <LogOut className="mr-2 h-3.5 w-3.5" /> Sign out
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setPreset(isLight ? "black" : "cream")}>
+            {isLight ? (
+              <Moon className="mr-2 h-3.5 w-3.5" />
+            ) : (
+              <Sun className="mr-2 h-3.5 w-3.5" />
+            )}
+            {isLight ? "Switch to dark mode" : "Switch to light mode"}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <div className="flex flex-col gap-1 px-2 py-1.5">

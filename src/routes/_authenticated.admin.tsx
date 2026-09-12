@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { Coins, CreditCard, History, KeyRound, Plug, Users, type LucideIcon } from "lucide-react";
+import { Coins, CreditCard, History, Plug, Users, type LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
@@ -58,7 +58,6 @@ type AdminTab = {
 // One flat list — no categories. Cards read as icon + name, green-edged like every other frame.
 const ADMIN_TABS: AdminTab[] = [
   { value: "users", label: "Users", Component: UsersTab, Icon: Users },
-  { value: "api-keys", label: "API Keys", Component: ApiKeysTab, Icon: KeyRound },
   { value: "payments", label: "Payments", Component: PaymentsTab, Icon: CreditCard },
   { value: "integrations", label: "Integrations", Component: IntegrationsTab, Icon: Plug, superuserOnly: true },
   { value: "activity-log", label: "Activity Log", Component: AuditLogTab, Icon: History, superuserOnly: true },

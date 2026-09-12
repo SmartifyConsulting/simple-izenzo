@@ -62,7 +62,6 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
           <div className="ml-6 flex shrink-0 items-center gap-3 lg:ml-3">
             {user ? (
               <>
-                <ThemeToggle />
                 <Link to="/live-deal-engine">
                   <Button size="sm" className="rounded-full">
                     Live workspace
