@@ -1,7 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ArrowLeftRight, BarChart3, ChevronDown, Coins, DollarSign, Mail, Plug } from "lucide-react";
+import { ArrowLeft, BarChart3, ChevronDown, Coins, DollarSign, Mail, Plug } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -108,15 +108,11 @@ export function AppShell({
           <Link to="/live-deal-engine" className="shrink-0" aria-label="Izenzo — workflow">
             <Logo onDark className="h-7 w-auto" />
           </Link>
-          <SearchButton />
           <a
             href="/alpha-bravo"
-            title="Switch App — demo the Alpha-Bravo look and feel"
-            aria-label="Switch App — demo the Alpha-Bravo look and feel"
-            className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
+            className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
-            <ArrowLeftRight className="h-4 w-4" strokeWidth={2.25} />
-            <span className="hidden sm:inline">Switch App</span>
+            <ArrowLeft className="h-3.5 w-3.5" /> Home
           </a>
 
           <div className="min-w-0 flex-1" />
@@ -133,6 +129,7 @@ export function AppShell({
             </Link>
           )}
           <nav className="flex shrink-0 items-center gap-3 text-sm font-medium text-foreground/80 sm:gap-5">
+            <SearchButton />
             <a
               href="/pricing"
               className="flex items-center transition-colors hover:text-primary"

@@ -116,12 +116,12 @@ type Collapsed = Record<number, boolean>;
 function itemClasses(state: NodeState, isEntry?: boolean) {
   if (isEntry) {
     return state === "open"
-      ? "border-[#00e5ff]/60 bg-[#00e5ff]/10 text-[#00e5ff] hover:border-[#00e5ff]"
+      ? "border-primary/60 bg-primary/10 text-primary hover:border-primary"
       : "border-primary/50 bg-primary/12 text-primary";
   }
   return cn(
     state === "done" && "border-primary/50 bg-primary/12 text-primary",
-    state === "active" && "border-[#00e5ff] bg-[#00e5ff]/15 text-[#00e5ff] animate-throb-aqua",
+    state === "active" && "border-primary bg-primary/15 text-primary animate-throb-aqua",
     state === "open" && "border-border bg-card text-foreground hover:border-primary/40",
     state === "locked" && "cursor-not-allowed border-border/60 bg-card/50 text-muted-foreground",
   );
@@ -180,7 +180,7 @@ function StepCog({
       aria-expanded={!collapsed}
       className={cn(
         "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
-        active && "border-[#00e5ff] bg-[#00e5ff]/15 text-[#00e5ff] animate-throb-aqua",
+        active && "border-primary bg-primary/15 text-primary animate-throb-aqua",
         done && !active && "border-primary/60 bg-primary/12 text-primary",
         !active && !done && "border-border bg-card text-muted-foreground hover:border-primary/40",
       )}
@@ -255,7 +255,7 @@ export function ClassicView({
                 <button
                   type="button"
                   onClick={() => toggleStep(s.step)}
-                  className="flex h-11 items-center gap-1.5 text-left text-[11px] font-semibold uppercase tracking-wide text-white transition-colors hover:text-primary"
+                  className="flex h-11 items-center gap-1.5 text-left text-[11px] font-semibold uppercase tracking-wide text-foreground transition-colors hover:text-primary"
                   aria-expanded={!stepCollapsed}
                 >
                   {stepCollapsed ? "+ " : "− "}Step {s.step} · {s.label}

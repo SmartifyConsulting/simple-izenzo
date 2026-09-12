@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeftRight, BarChart3, ChevronDown, Mail, Tag, TerminalSquare } from "lucide-react";
+import { ArrowLeft, BarChart3, ChevronDown, Mail, Tag, TerminalSquare } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { SearchButton } from "@/components/layout/SearchButton";
@@ -41,12 +41,9 @@ export function SiteHeader({
           <div className="ml-auto flex shrink-0 items-center gap-3">
             <a
               href="/alpha-bravo"
-              title="Switch App — demo the Alpha-Bravo look and feel"
-              aria-label="Switch App — demo the Alpha-Bravo look and feel"
-              className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
+              className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
             >
-              <ArrowLeftRight className="h-3.5 w-3.5" strokeWidth={2.25} />
-              <span className="hidden sm:inline">Switch App</span>
+              <ArrowLeft className="h-3.5 w-3.5" /> Home
             </a>
             <SearchButton />
             <nav className="flex shrink-0 items-center gap-4 text-sm font-medium text-muted-foreground">
@@ -89,12 +86,9 @@ export function SiteHeader({
           <div className="ml-auto flex shrink-0 items-center gap-4">
             <a
               href="/alpha-bravo"
-              title="Switch App — demo the Alpha-Bravo look and feel"
-              aria-label="Switch App — demo the Alpha-Bravo look and feel"
-              className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
+              className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
             >
-              <ArrowLeftRight className="h-3.5 w-3.5" strokeWidth={2.25} />
-              <span className="hidden sm:inline">Switch App</span>
+              <ArrowLeft className="h-3.5 w-3.5" /> Home
             </a>
             <Link
               to="/auth"

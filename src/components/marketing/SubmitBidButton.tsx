@@ -1,15 +1,18 @@
 import { useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HeroMatchCard } from "@/components/marketing/HeroMatchCard";
+import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
-/** The "Submit a Bid" CTA used across every Alpha-Bravo marketing page. Rather than sending
- * visitors straight to sign-up, it opens the same upload-and-preview flow shown on the
- * homepage hero, in a modal with a light/translucent backdrop — the page stays visible behind
- * it rather than being hidden behind an opaque scrim, keeping it feeling like a quick preview
- * rather than a context switch away from the page. */
+/** The "Submit a Bid" CTA used across every Alpha-Bravo marketing page. For a signed-out
+ * visitor it opens the upload-and-preview flow from the homepage hero, in a modal with a
+ * light/translucent backdrop — the page stays visible behind it rather than being hidden
+ * behind an opaque scrim, keeping it feeling like a quick preview rather than a context switch
+ * away from the page. Someone already signed in has no need for that preview — it sends them
+ * straight to their real workspace instead. */
 export function SubmitBidButton({
   size = "default",
   variant = "default",
@@ -21,6 +24,8 @@ export function SubmitBidButton({
   className?: string;
   fullWidth?: boolean;
 }) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
   return (
@@ -30,7 +35,10 @@ export function SubmitBidButton({
         size={size}
         variant={variant}
         className={cn("rounded-full", fullWidth && "w-full", className)}
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          if (user) navigate({ to: "/live-deal-engine" });
+          else setOpen(true);
+        }}
       >
         Submit a Bid
       </Button>

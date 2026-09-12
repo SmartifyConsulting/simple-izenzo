@@ -6,6 +6,7 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { VerifyEmailDialog } from "@/components/auth/VerifyEmailDialog";
@@ -56,11 +57,36 @@ function RequireEmailVerified() {
   const needsOrg = !loading && !!profile && !profile.org_id;
   const onOrgSetup = pathname.startsWith("/account/settings");
 
+  const { data: verificationRows, isLoading: verificationLoading } = useQuery({
+    queryKey: ["identity-verifications", "me", user?.id],
+    enabled: !loading && !!user && !needsOrg,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("identity_verifications")
+        .select("check_type, status")
+        .eq("subject_user_id", user!.id)
+        .eq("check_type", "id_document");
+      if (error) throw error;
+      return data;
+    },
+  });
+  const isIdVerified = (verificationRows ?? []).some((r) => r.status === "passed");
+  const needsIdentity =
+    !loading && !!profile && !needsOrg && !verificationLoading && !isIdVerified;
+  const onVerifyIdentity = pathname.startsWith("/verify-identity");
+
   useEffect(() => {
     if (!mustVerify && needsOrg && !onOrgSetup) navigate({ to: "/account/settings", replace: true });
   }, [mustVerify, needsOrg, onOrgSetup, navigate]);
 
+  useEffect(() => {
+    if (!mustVerify && !needsOrg && needsIdentity && !onVerifyIdentity) {
+      navigate({ to: "/verify-identity", search: { next: pathname }, replace: true });
+    }
+  }, [mustVerify, needsOrg, needsIdentity, onVerifyIdentity, pathname, navigate]);
+
   if (needsOrg && !onOrgSetup && !mustVerify) return null;
+  if (needsIdentity && !onVerifyIdentity && !mustVerify) return null;
   return (
     <>
       <ActivityTracker />

@@ -2,8 +2,9 @@ import { useEffect, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
-import { applyAppSkin } from "@/lib/appSkin";
+import { applyCurrentStylePreset } from "@/lib/stylePreset";
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
+import { StylePresetSwitcher } from "@/components/marketing/StylePresetSwitcher";
 import { Logo } from "@/components/Logo";
 
 const NAV = [
@@ -21,7 +22,7 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
   const { user } = useAuth();
 
   useEffect(() => {
-    applyAppSkin("alpha-bravo");
+    applyCurrentStylePreset();
   }, []);
 
   return (
@@ -49,12 +50,13 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
               <>
                 <Link to="/live-deal-engine">
                   <Button size="sm" className="rounded-full">
-                    Go to app
+                    View Live Workspace
                   </Button>
                 </Link>
                 <ProfileAvatarMenu />
               </>
             )}
+            <StylePresetSwitcher />
           </div>
         </div>
       </header>
