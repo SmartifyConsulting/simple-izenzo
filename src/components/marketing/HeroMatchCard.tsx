@@ -115,7 +115,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
     <div className={cn("w-full rounded-2xl border border-border bg-card p-6 shadow-sm", className)}>
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-base font-medium tracking-tight text-foreground">
-          {searched ? "Top 5 matches" : "Upload files"}
+          {searched ? "Top 5 matches" : "Find a match"}
         </h2>
         <div className="flex items-center gap-2">
           {searched && (
@@ -156,6 +156,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
             </p>
           </div>
 
+          <Label className="mt-4 block text-xs font-medium text-foreground">Upload files</Label>
           <div
             onClick={() => inputRef.current?.click()}
             onDragOver={(e) => {
@@ -169,7 +170,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
               if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
             }}
             className={cn(
-              "mt-3 flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed p-6 text-center transition-colors",
+              "mt-1.5 flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed p-6 text-center transition-colors",
               dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
             )}
           >
