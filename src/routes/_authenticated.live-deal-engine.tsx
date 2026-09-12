@@ -1015,17 +1015,14 @@ function LiveDealEngine() {
         </div>
       )}
 
-      <div className="mb-3 flex items-center justify-end gap-3">
-        <OpenDealsPicker currentId={dealTx?.id ?? null} hasAttachment={workspaceDocs.length > 0} />
-      </div>
-
       {/* Only one workspace is ever open at a time now (see dealWindows' setMode), so this is
           always just the page itself — no halo/backdrop layer behind it, which used to read as a
-          second frame peeking out from underneath the real one. */}
-      <div className="relative">
+          second frame peeking out from underneath the real one. One outer frame wraps the workflow
+          and the workspace so the pair reads as a single working surface. */}
+      <div className="relative rounded-3xl border border-border bg-card/40 p-3 shadow-sm">
         <div
           className={cn(
-            "relative grid grid-cols-1 items-stretch gap-4 rounded-3xl lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]",
+            "relative grid grid-cols-1 items-stretch gap-4 rounded-3xl lg:grid-cols-[minmax(0,1fr)_minmax(0,1.63fr)]",
           )}
         >
           {/* Engine Map — always visible on the left. Clicking a node opens that step inline in
@@ -1033,7 +1030,7 @@ function LiveDealEngine() {
               panels share the same fixed viewport-relative height so the pair fits on screen
               without the page itself needing to scroll — the Map scales its diagram to fit, the
               Workspace scrolls its own content internally if it runs long. */}
-          <div className="flex h-[calc(100vh-190px)] w-full flex-col overflow-hidden p-3 sm:p-5">
+          <div className="flex h-[calc((100vh-190px)*0.9)] w-full flex-col overflow-hidden p-3 sm:p-5">
             <p className="label-caps shrink-0 text-foreground">Izenzo Trade Workflow</p>
             <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
               <ClassicView
@@ -1047,12 +1044,16 @@ function LiveDealEngine() {
             </div>
           </div>
 
-          {/* Live Workspace — always visible on the right. Once a bid/offer exists, its header
-              is the bid/offer ID on the left; the top right is either the real upload frame
-              (before any document is attached) or a bulleted list of what's been classified from
-              the documents already uploaded. */}
-          <div className="h-[calc(100vh-190px)] w-full overflow-y-auto rounded-3xl border border-border bg-card p-3 shadow-sm sm:p-5">
-          <p className="label-caps mb-3 shrink-0 text-foreground">Live Workspace</p>
+          {/* Live Workspace — always visible on the right. Its heading line carries the bid/offer
+              reference on the same row; below it is either the real upload frame (before any
+              document is attached) or a bulleted list of what's been classified from the documents
+              already uploaded. */}
+          <div className="h-[calc((100vh-190px)*0.9)] w-full overflow-y-auto rounded-3xl border border-border bg-card p-3 shadow-sm sm:p-5">
+          <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
+            <p className="label-caps text-foreground">Live Workspace</p>
+            <OpenDealsPicker currentId={dealTx?.id ?? null} hasAttachment={workspaceDocs.length > 0} />
+          </div>
+
           {/* Bidder details + AI summary come first — the very top of the workspace, before the
               reference header and anything else — so what was actually submitted is never buried
               behind the progress ribbon or the workflow ticks below it. The attachment(s), with a
