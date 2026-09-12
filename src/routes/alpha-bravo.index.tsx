@@ -70,10 +70,9 @@ function AlphaBravoHome() {
           Post your opportunity brief and get matched with verified Responders — fit scores,
           verified contacts, and ready-to-send outreach, all under one cryptographic record.
         </p>
-        <div className="mt-8 flex flex-wrap items-center gap-4">
-          <p className="text-sm text-muted-foreground">No subscriptions, pay as you go.</p>
+        <div className="mt-8">
           <Link to="/alpha-bravo/trades">
-            <Button size="lg" variant="outline" className="gap-1.5 rounded-full">
+            <Button size="lg" className="gap-1.5 rounded-full">
               See how matching works <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>
@@ -87,9 +86,12 @@ function AlphaBravoHome() {
       <p className="mt-10 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
         How a match plays out
       </p>
-      <h2 className="mt-3 max-w-2xl text-3xl tracking-tight text-foreground sm:text-4xl">
-        Five stages, one governed flow.
-      </h2>
+      <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
+        <h2 className="max-w-2xl text-3xl tracking-tight text-foreground sm:text-4xl">
+          Five stages, one governed flow.
+        </h2>
+        <p className="text-sm text-muted-foreground">No subscriptions, pay as you go.</p>
+      </div>
       <div className="mt-6 grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
         {STAGES.map((s) => (
           <div key={s.n} className="rounded-2xl border border-border bg-card p-5">

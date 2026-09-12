@@ -50,7 +50,7 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
                     "rounded-full border border-transparent px-3 py-1.5 transition-colors",
                     active
                       ? "bg-foreground text-background"
-                      : "hover:bg-muted hover:text-foreground",
+                      : "hover:bg-foreground/10 hover:text-foreground",
                   )}
                 >
                   {item.label}
