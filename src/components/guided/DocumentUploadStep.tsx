@@ -276,6 +276,9 @@ export function DocumentUploadStep({
           Used together with your attached documents to find matches.
         </p>
       </div>
+      )}
+
+
 
 
       {docs.length > 0 && (
