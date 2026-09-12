@@ -81,7 +81,7 @@ function Responders() {
           search={{ mode: "signin", next: undefined }}
           className="font-medium text-primary hover:underline"
         >
-          Sign in with facial recognition
+          Sign in
         </Link>
       </p>
 

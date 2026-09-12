@@ -132,8 +132,8 @@ function SettingsPage() {
 
             <div className="space-y-6">
               <VerificationPanel
-                checks={["id_document"]}
-                description="Verify yourself once with a photo of your ID and a selfie. The result arrives on its own — there is nothing to fill in here."
+                checks={["id_document", "aml", "kyb"]}
+                description="Verify your identity (KYC), a sanctions/PEP screen (AML), and your company (KYB). Each result arrives on its own — there is nothing to fill in here."
               />
 
               <div className="space-y-4 rounded-md border border-border p-5">

@@ -232,10 +232,6 @@ export function HeroMatchCard({ className }: { className?: string }) {
               ))}
             </ul>
           )}
-
-          <p className="mt-3 text-center text-[11px] text-muted-foreground">
-            See how matching works — no account needed to preview.
-          </p>
         </>
       )}
 

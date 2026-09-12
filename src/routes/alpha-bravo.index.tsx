@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Sparkles } from "lucide-react";
 import { HeroMatchCard } from "@/components/marketing/HeroMatchCard";
 
 export const Route = createFileRoute("/alpha-bravo/")({
@@ -71,10 +70,11 @@ function AlphaBravoHome() {
           verified contacts, and ready-to-send outreach, all under one cryptographic record.
         </p>
         <div className="mt-4">
-          <Link to="/alpha-bravo/how-it-works">
-            <Button size="lg" className="gap-1.5 rounded-full">
-              See how matching works <ArrowRight className="h-4 w-4" />
-            </Button>
+          <Link
+            to="/alpha-bravo/how-it-works"
+            className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
+          >
+            No subscriptions, pay as you go.
           </Link>
         </div>
       </div>
@@ -90,7 +90,6 @@ function AlphaBravoHome() {
         <h2 className="max-w-2xl text-2xl tracking-tight text-foreground sm:text-3xl">
           Five stages, one governed flow.
         </h2>
-        <p className="text-sm text-muted-foreground">No subscriptions, pay as you go.</p>
       </div>
       <div className="mt-5 grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
         {STAGES.map((s) => (

@@ -58,6 +58,11 @@ function RequireEmailVerified() {
   const needsOrg = !loading && !!profile && !profile.org_id;
   const onOrgSetup = pathname.startsWith("/account/settings");
 
+  // A new account isn't fully verified until it clears all three checks — the individual
+  // KYC/AML identity check plus the KYB company check. Missing any one of them keeps the
+  // gate open.
+  const REQUIRED_CHECKS = ["id_document", "aml", "kyb"] as const;
+
   const { data: verificationRows, isLoading: verificationLoading } = useQuery({
     queryKey: ["identity-verifications", "me", user?.id],
     enabled: !loading && !!user && !needsOrg,
@@ -69,12 +74,15 @@ function RequireEmailVerified() {
         .from("identity_verifications")
         .select("check_type, status")
         .eq("subject_user_id", user!.id)
-        .eq("check_type", "id_document");
+        .in("check_type", REQUIRED_CHECKS);
       if (error) throw error;
       return data;
     },
   });
-  const isIdVerified = (verificationRows ?? []).some((r) => r.status === "passed");
+  const passedChecks = new Set(
+    (verificationRows ?? []).filter((r) => r.status === "passed").map((r) => r.check_type),
+  );
+  const isIdVerified = REQUIRED_CHECKS.every((c) => passedChecks.has(c));
 
   // Asked for, not enforced here: the hosted provider page cannot render inside the app's frame,
   // so a hard block would leave people with nowhere to go. Dismissing it lasts for this browser

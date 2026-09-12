@@ -20,17 +20,18 @@ export function VerifyIdentityDialog({
     <Dialog open={open} onOpenChange={(next) => { if (!next) onDismiss?.(); }}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Verify your identity</DialogTitle>
+          <DialogTitle>Verify your identity and company</DialogTitle>
           <DialogDescription>
-            One ID photo and a selfie — this unlocks your workspace and gives your profile a
-            verified badge.
+            Three checks unlock your workspace: your identity (KYC), a sanctions/PEP screen
+            (AML), and your company (KYB). Each opens a hosted verification session — the
+            result lands back here on its own.
           </DialogDescription>
         </DialogHeader>
 
         <VerificationPanel
-          checks={["id_document"]}
-          title="Identity verification"
-          description="Opens a hosted verification session in a new tab. The result lands back here on its own — there's nothing to fill in."
+          checks={["id_document", "aml", "kyb"]}
+          title="Identity, AML & KYB verification"
+          description="Opens a hosted verification session in a new tab for each check. The result lands back here on its own — there's nothing to fill in."
         />
 
         {verified && (

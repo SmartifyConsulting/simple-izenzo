@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/PasswordInput";
 import { mapAuthError } from "@/lib/auth";
-import { FaceSignIn } from "@/components/auth/FaceSignIn";
 
 function safeNext(next: string | undefined) {
   if (next && next.startsWith("/") && !next.startsWith("//")) return next;
@@ -121,8 +120,6 @@ export function SignInForm({
       <Button variant="outline" className="w-full" onClick={google} disabled={busy}>
         Continue with Google
       </Button>
-
-      <FaceSignIn next={next} />
 
       <p className="mt-3 text-center text-xs text-muted-foreground">
         Just checking on your bids? Sign in — there's nothing to upload.
