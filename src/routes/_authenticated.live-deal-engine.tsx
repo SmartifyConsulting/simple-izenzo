@@ -43,6 +43,7 @@ import { runOnlineMediaChecks, type MediaCheckResult } from "@/lib/onlineMedia.f
 import { listVerificationsForTx } from "@/lib/didit.functions";
 import { pushRecentDeal } from "@/lib/recentDeals";
 import { useDealWindows } from "@/lib/dealWindows";
+import { peekStashedHeroFiles, clearStashedHeroFiles } from "@/lib/heroSearchContext";
 
 import { cn } from "@/lib/utils";
 
@@ -212,6 +213,14 @@ function OpenDealsPicker({ currentId }: { currentId: string | null }) {
  * separate per-deal detail page. */
 function LiveDealEngine() {
   const { tx: txParam, popout, panel, q: matchQuery, seed } = Route.useSearch();
+  // Whatever the visitor dropped on the homepage before signing in, if anything. Read via a
+  // non-destructive peek (StrictMode double-invokes this initializer in dev, and a combined
+  // read-and-clear would lose the files on the second call), then clear it once via the effect
+  // below so it isn't picked up again by a later visit to this page.
+  const [seedFilesFromHome] = useState(() => peekStashedHeroFiles());
+  useEffect(() => {
+    clearStashedHeroFiles();
+  }, []);
   const [picking, setPicking] = useState(false);
   const [direction, setDirection] = useState<"bid" | "offer" | null>(null);
   // Reserved for pre-selecting a bid/offer direction before the Workspace form opens; the
@@ -1010,6 +1019,13 @@ function LiveDealEngine() {
                 <div className="w-1/2 max-w-[260px] shrink-0">
                   {workspaceDocs.length === 0 ? (
                     <DocumentUploadStep
+                      // A stale resumed deal (from the "keep working on your last bid"
+                      // localStorage effect) can mount this before the freshly-seeded one
+                      // replaces it — without a key tied to the transaction, the seed-once
+                      // effect below would fire for the wrong deal and never run again once the
+                      // real one arrives, silently dropping any prompt/files carried from the
+                      // homepage.
+                      key={dealTx.id}
                       transactionId={dealTx.id}
                       onNext={() => void runSearch(dealTx.id)}
                       onFirstClassified={({ directionGuess }) => void applyDirectionGuess(directionGuess)}
@@ -1051,6 +1067,7 @@ function LiveDealEngine() {
               <CanvasStart
                 initialDirection={pendingDirection}
                 initialPrompt={seed}
+                initialFiles={seedFilesFromHome}
                 onDraftReference={setDraftReference}
                 onCreated={(tx, recorded, seed) => {
                   setPicking(false);

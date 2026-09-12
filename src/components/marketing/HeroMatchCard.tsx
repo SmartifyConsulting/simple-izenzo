@@ -5,7 +5,7 @@ import { ArrowUp, ExternalLink, ShieldCheck, FileCheck2, Loader2, RotateCcw, Spa
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { seedNext, useHeroSearch } from "@/lib/heroSearchContext";
+import { seedNext, stashHeroFiles, useHeroSearch } from "@/lib/heroSearchContext";
 
 /** Reads the same public directory the Responders page reads, so a signed-out visitor actually
  * sees rows. The private counterparty table this used to query is per-transaction and unreadable
@@ -63,7 +63,10 @@ function bandOf(l: { verified_at: string | null; org_id: string | null }) {
 export function HeroMatchCard({ className }: { className?: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [prompt, setPrompt] = useState("");
-  const [fileNames, setFileNames] = useState<string[]>([]);
+  // Kept as real File objects (not just names) so they can actually ride along into the bid
+  // once the visitor signs in — see stashHeroFiles below.
+  const [files, setFiles] = useState<File[]>([]);
+  const fileNames = files.map((f) => f.name);
   const [searched, setSearched] = useState(false);
   const [searching, setSearching] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -85,6 +88,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
     setSearching(true);
     setSearched(false);
     setHeroPrompt(prompt);
+    stashHeroFiles(files);
     searchTimer.current = window.setTimeout(() => {
       setSearching(false);
       setSearched(true);
@@ -94,22 +98,33 @@ export function HeroMatchCard({ className }: { className?: string }) {
   function reset() {
     if (searchTimer.current) window.clearTimeout(searchTimer.current);
     setPrompt("");
-    setFileNames([]);
+    setFiles([]);
     setSearched(false);
     setSearching(false);
     setHeroPrompt("");
+    stashHeroFiles([]);
   }
 
-  function addFiles(files: FileList | File[]) {
-    const names = Array.from(files).map((f) => f.name);
-    if (names.length === 0) return;
+  function addFiles(incoming: FileList | File[]) {
+    const list = Array.from(incoming);
+    if (list.length === 0) return;
     // Dropping/selecting again adds to the pile rather than replacing it, so a visitor can
     // build up a small set of supporting documents before searching.
-    setFileNames((prev) => [...prev, ...names.filter((n) => !prev.includes(n))]);
+    setFiles((prev) => {
+      const next = [...prev, ...list.filter((f) => !prev.some((p) => p.name === f.name))];
+      // Kept in sync immediately (not just at search time) so signing in straight from the
+      // header — without ever pressing "Find matches" — still carries these files along.
+      stashHeroFiles(next);
+      return next;
+    });
   }
 
   function removeFile(name: string) {
-    setFileNames((prev) => prev.filter((n) => n !== name));
+    setFiles((prev) => {
+      const next = prev.filter((f) => f.name !== name);
+      stashHeroFiles(next);
+      return next;
+    });
   }
 
   const canSearch = prompt.trim().length > 0 || fileNames.length > 0;

@@ -1774,6 +1774,7 @@ export function CanvasStart({
   onDraftReference,
   initialDirection,
   initialPrompt,
+  initialFiles,
 }: {
   /** `seed` carries whatever the visitor already typed/dropped on the starting card, so the
    * caller can hand it straight to the real upload step instead of making them repeat it. */
@@ -1797,6 +1798,9 @@ export function CanvasStart({
    * (or signing up) — pre-fills the description and, if non-empty, opens the workspace on mount
    * exactly as if they'd pressed Enter here, so signing in doesn't drop them on an empty card. */
   initialPrompt?: string | undefined;
+  /** Files already dropped/selected on the marketing homepage before signing in — carried the
+   * same way `initialPrompt` is, so they aren't silently dropped on the floor. */
+  initialFiles?: File[] | undefined;
 }) {
   const { org, orgs, user, profile, refresh } = useAuth();
   // Which company this bid/offer is traded as — only shown as a choice when the user belongs to
@@ -1940,17 +1944,19 @@ export function CanvasStart({
 
   const [dragOver, setDragOver] = useState(false);
   const [prompt, setPrompt] = useState(initialPrompt ?? "");
-  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<File[]>(initialFiles ?? []);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const appliedInitialPrompt = useRef(false);
 
-  // A prompt carried over from the marketing homepage opens the workspace immediately, the same
-  // as pressing Enter — otherwise signing in from a search the visitor already ran would just
-  // drop them on the same empty starting card, losing what they typed.
+  // A prompt or files carried over from the marketing homepage open the workspace immediately,
+  // the same as pressing Enter or dropping a file here — otherwise signing in from a search the
+  // visitor already ran would just drop them on the same empty starting card, losing what they
+  // typed or attached.
   useEffect(() => {
     if (appliedInitialPrompt.current) return;
     appliedInitialPrompt.current = true;
-    if (initialPrompt && initialPrompt.trim() && !initialDirection) {
+    const hasSeed = (initialPrompt && initialPrompt.trim()) || (initialFiles && initialFiles.length > 0);
+    if (hasSeed && !initialDirection) {
       beginPicking();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

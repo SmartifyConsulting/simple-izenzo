@@ -34,3 +34,26 @@ export function seedNext(prompt: string): string | undefined {
   const trimmed = prompt.trim();
   return trimmed ? `/live-deal-engine?seed=${encodeURIComponent(trimmed)}` : undefined;
 }
+
+// Files dropped on the homepage can't ride along in a URL param the way the typed prompt does,
+// and signing in unmounts AlphaBravoShell's HeroSearchProvider entirely (a different layout takes
+// over), so a File[] held in React state there is lost the moment that happens. A plain
+// module-level variable survives instead, because signing in and landing on the Live Workspace is
+// still all one client-side session — nothing here needs to survive an actual page reload.
+let stashedHeroFiles: File[] = [];
+
+export function stashHeroFiles(files: File[]) {
+  stashedHeroFiles = files;
+}
+
+/** Non-destructive read — safe to call from a `useState` lazy initializer, which React's Strict
+ * Mode deliberately double-invokes in development. A combined read-and-clear there would lose the
+ * files on the second call before anything had a chance to use them; call `clearStashedHeroFiles`
+ * separately (e.g. from a `useEffect`) once they've actually been picked up. */
+export function peekStashedHeroFiles(): File[] {
+  return stashedHeroFiles;
+}
+
+export function clearStashedHeroFiles() {
+  stashedHeroFiles = [];
+}
