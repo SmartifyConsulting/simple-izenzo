@@ -277,7 +277,22 @@ export function HeroMatchCard({ className }: { className?: string }) {
                   {m.jurisdiction ?? "Jurisdiction pending"}
                   {m.source === "web_search" ? " · Found on the web" : ""}
                 </p>
+                {/* What was found about this match — omitted when nothing was recorded. */}
+                {m.summary && (
+                  <p className="mt-1.5 text-xs leading-relaxed text-foreground/80">{m.summary}</p>
+                )}
+                {m.source_url && (
+                  <a
+                    href={m.source_url}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+                  >
+                    <ExternalLink className="h-3 w-3" /> Where it was found
+                  </a>
+                )}
               </div>
+
             ))}
 
             {/* More than five found: "See more" opens the Live Workspace with the full list in its
