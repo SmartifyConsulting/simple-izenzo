@@ -19,6 +19,20 @@ function evidenceUrl(flags: unknown): string | null {
   return typeof first?.url === "string" ? first.url : null;
 }
 
+type ScoreComponent = { label: string; points: number; max: number; note: string };
+
+/** The reasons behind the match percentage, when the search recorded them. */
+function scoreComponents(flags: unknown): ScoreComponent[] {
+  if (!flags || typeof flags !== "object") return [];
+  const scoring = (flags as { scoring?: { components?: unknown } }).scoring;
+  const parts = scoring?.components;
+  if (!Array.isArray(parts)) return [];
+  return parts.filter(
+    (p): p is ScoreComponent =>
+      typeof p === "object" && p !== null && typeof (p as ScoreComponent).label === "string",
+  );
+}
+
 
 /** The full match list, opened from the homepage's "…" once the visitor is signed in. Same
  * Responder records the homepage previews, only unblurred and complete rather than the top five. */
