@@ -59,9 +59,9 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
           </nav>
 
           <div className="ml-6 flex shrink-0 items-center gap-3 lg:ml-3">
-            <ThemeToggle />
             {user ? (
               <>
+                <ThemeToggle />
                 <Link to="/live-deal-engine">
                   <Button size="sm" className="rounded-full">
                     Live workspace
@@ -70,30 +70,36 @@ export function AlphaBravoShell({ children }: { children: ReactNode }) {
                 <ProfileAvatarMenu />
               </>
             ) : isHome ? (
-              <div className="flex items-center gap-1 rounded-full border border-border p-1">
-                <SignInModal defaultTab="signin">
-                  <button
-                    type="button"
-                    className="rounded-full px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-                  >
-                    Sign In
-                  </button>
-                </SignInModal>
-                <SignInModal defaultTab="signup">
-                  <button
-                    type="button"
-                    className="rounded-full px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-                  >
-                    Sign Up
-                  </button>
-                </SignInModal>
-              </div>
+              <>
+                <div className="flex items-center gap-1 rounded-full border border-border p-1">
+                  <SignInModal defaultTab="signin">
+                    <button
+                      type="button"
+                      className="rounded-full bg-foreground px-3 py-1 text-xs font-medium text-background transition-colors"
+                    >
+                      Sign In
+                    </button>
+                  </SignInModal>
+                  <SignInModal defaultTab="signup">
+                    <button
+                      type="button"
+                      className="rounded-full px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                    >
+                      Sign Up
+                    </button>
+                  </SignInModal>
+                </div>
+                <ThemeToggle />
+              </>
             ) : (
-              <SignInModal>
-                <Button size="sm" variant="outline" className="rounded-full">
-                  Sign in
-                </Button>
-              </SignInModal>
+              <>
+                <ThemeToggle />
+                <SignInModal>
+                  <Button size="sm" variant="outline" className="rounded-full">
+                    Sign in
+                  </Button>
+                </SignInModal>
+              </>
             )}
           </div>
         </div>

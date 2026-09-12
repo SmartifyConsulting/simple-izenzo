@@ -1,10 +1,10 @@
 import { useRef, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Lock, ShieldCheck, UploadCloud, FileCheck2, Loader2, RotateCcw, Sparkles, X } from "lucide-react";
+import { Lock, Search, ShieldCheck, UploadCloud, FileCheck2, Loader2, RotateCcw, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -61,15 +61,7 @@ function bandOf(l: { verified_at: string | null; org_id: string | null }) {
  * actual matching engine. What it shows is real, live Responder data (same counterparties table
  * the Responder Directory reads), framed as an illustration of what a signed-in search returns.
  * Selecting a match is gated behind sign-up/sign-in — this is a preview, not a live workspace. */
-export function HeroMatchCard({
-  className,
-  horizontal = false,
-}: {
-  className?: string;
-  /** Lays the Search Prompt and Upload files sections side by side instead of stacked — used
-   * when the card spans the full page width instead of sitting in a narrow sidebar column. */
-  horizontal?: boolean;
-}) {
+export function HeroMatchCard({ className }: { className?: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [prompt, setPrompt] = useState("");
   const [fileNames, setFileNames] = useState<string[]>([]);
@@ -121,19 +113,13 @@ export function HeroMatchCard({
   return (
     <div
       className={cn(
-        "w-full rounded-2xl bg-gradient-to-r from-primary/50 via-fuchsia-400/40 to-cyan-400/50 p-px shadow-sm",
+        "w-full overflow-hidden rounded-2xl bg-gradient-to-r from-primary via-fuchsia-400 to-cyan-400 p-[1.5px] shadow-sm",
         className,
       )}
     >
-    <div className="rounded-[calc(1rem-1px)] bg-card p-6">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="flex items-center gap-1.5 text-base font-medium tracking-tight text-foreground">
-          {!searched && (
-            <Sparkles className="h-4 w-4 shrink-0 animate-pulse text-primary" aria-hidden />
-          )}
-          {searched ? "Top 5 matches" : "Find a match"}
-        </h2>
-        <div className="flex items-center gap-2">
+    <div className="rounded-[14.5px] bg-card p-6">
+      {(searched || canReset) && (
+        <div className="flex items-center justify-end gap-2">
           {searched && (
             <span className="flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
               <ShieldCheck className="h-3 w-3" /> Live listings
@@ -151,29 +137,28 @@ export function HeroMatchCard({
             </button>
           )}
         </div>
-      </div>
+      )}
+
+      {searched && (
+        <h2 className="mt-1 text-base font-medium tracking-tight text-foreground">Top 5 matches</h2>
+      )}
 
       {!searched && !searching && (
         <>
-          <div className={cn("mt-4", horizontal ? "grid grid-cols-1 gap-4 sm:grid-cols-2" : "space-y-4")}>
-            <div className="space-y-1.5">
-              <Label htmlFor="hero-search-prompt" className="text-xs font-medium text-foreground">
-                Search Prompt
-              </Label>
-              <p className="text-[11px] text-muted-foreground">
-                Describe what you're looking for — product, quantity, location, terms. Used
-                together with any files you add.
-              </p>
-              <Textarea
-                id="hero-search-prompt"
-                rows={horizontal ? 5 : 3}
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                className="resize-none text-sm"
-              />
-            </div>
+          <div className="relative">
+            <Sparkles
+              className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 animate-pulse text-primary"
+              aria-hidden
+            />
+            <Input
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="Describe what you're looking for — product, quantity, location, terms…"
+              className="h-14 w-full rounded-full border-2 pl-11 pr-5 text-base shadow-sm focus-visible:ring-2 focus-visible:ring-primary"
+            />
+          </div>
 
-            <div className="space-y-1.5">
+          <div className="mt-4 space-y-1.5">
               <Label className="block text-xs font-medium text-foreground">Upload files</Label>
               <div
                 onClick={() => inputRef.current?.click()}
@@ -239,7 +224,6 @@ export function HeroMatchCard({
                   ))}
                 </ul>
               )}
-            </div>
           </div>
 
           <Button

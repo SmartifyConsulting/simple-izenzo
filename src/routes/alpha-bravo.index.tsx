@@ -81,7 +81,7 @@ function AlphaBravoHome() {
       </div>
 
       <div className="mt-10 w-full">
-        <HeroMatchCard horizontal />
+        <HeroMatchCard />
       </div>
 
       <p className="mt-10 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
