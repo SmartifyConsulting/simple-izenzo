@@ -2726,6 +2726,7 @@ export type Database = {
           price: number | null
           quantity: number | null
           reference: string | null
+          search_prompt: string | null
           stage: Database["public"]["Enums"]["spine_stage"]
           status: string
           step: string
@@ -2754,6 +2755,7 @@ export type Database = {
           price?: number | null
           quantity?: number | null
           reference?: string | null
+          search_prompt?: string | null
           stage?: Database["public"]["Enums"]["spine_stage"]
           status?: string
           step?: string
@@ -2782,6 +2784,7 @@ export type Database = {
           price?: number | null
           quantity?: number | null
           reference?: string | null
+          search_prompt?: string | null
           stage?: Database["public"]["Enums"]["spine_stage"]
           status?: string
           step?: string
