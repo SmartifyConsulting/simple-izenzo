@@ -990,7 +990,13 @@ export function CounterpartyRecord({
         .order("score", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false });
       if (qErr) throw qErr;
-      return (data ?? []) as unknown as CounterpartyCandidate[];
+      const rows = (data ?? []) as unknown as CounterpartyCandidate[];
+      // The same organisation can be found on several pages (and by several sources) — it should
+      // read as one result, keeping the highest match percentage.
+      return dedupeOrgs(rows, (r) => {
+        const flags = (r as unknown as { media_flags?: { evidence?: { url?: string }[] } }).media_flags;
+        return r.website ?? flags?.evidence?.[0]?.url ?? null;
+      }) as CounterpartyCandidate[];
     },
   });
 
