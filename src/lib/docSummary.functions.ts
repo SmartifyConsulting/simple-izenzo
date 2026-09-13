@@ -149,35 +149,49 @@ async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
         ? ` Note: ${unreadable.join(", ")} could not be read — mention ${unreadable.length === 1 ? "it was" : "they were"} not reviewed rather than guessing.`
         : "");
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-3.8-flash",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You read trade documents (IDs, contracts, invoices, spec sheets, spreadsheets) and extract " +
-              "deal details precisely. Reply with raw JSON only — no markdown fences, no commentary.",
-          },
-          { role: "user", content: [{ type: "text", text: instruction }, ...parts] },
-        ],
-      }),
-    });
-    if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
-    if (res.status === 402) throw new Error("AI credits are exhausted for this workspace.");
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      throw new Error(`The documents could not be read just now (${res.status}). ${body.slice(0, 300)}`.trim());
+    // One retry with a stricter instruction, so a reply that came back in the wrong shape isn't
+    // treated as an unreadable document.
+    async function ask(extra: string) {
+      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "google/gemini-3.8-flash",
+          messages: [
+            {
+              role: "system",
+              content:
+                "You read trade documents (IDs, contracts, invoices, spec sheets, spreadsheets) and extract " +
+                "deal details precisely. Reply with raw JSON only — no markdown fences, no commentary." +
+                extra,
+            },
+            { role: "user", content: [{ type: "text", text: instruction + extra }, ...parts] },
+          ],
+        }),
+      });
+      if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
+      if (res.status === 402) throw new Error("AI credits are exhausted for this workspace.");
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(
+          `The documents could not be read just now (${res.status}). ${body.slice(0, 300)}`.trim(),
+        );
+      }
+      const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+      return (json.choices?.[0]?.message?.content ?? "").trim();
     }
-    const json = (await res.json()) as { choices: { message: { content: string } }[] };
-    const raw = (json.choices?.[0]?.message?.content ?? "").trim();
-    if (!raw) throw new Error("The document summary came back empty.");
 
-    const parsed = parseReply(raw);
+    let parsed = parseReply(await ask(""));
+    if (parsed.bullets.length === 0) {
+      parsed = parseReply(
+        await ask(
+          '\nReply with nothing but the JSON object, starting with { and ending with }. "summary_bullets" must contain at least three bullets.',
+        ),
+      );
+    }
     const summary = parsed.bullets.map((b) => `• ${b}`).join("\n");
     if (!summary) throw new Error("The document summary came back empty.");
+
 
     let idCipher: string | null = null;
     if (parsed.idNumber) {
