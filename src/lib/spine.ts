@@ -113,6 +113,10 @@ export function lockReason(
     if (!wad) return "WaD verification required";
   }
 
+  // A bid whose Proof of Intent is already sealed must never be stranded behind a lock: WaD is
+  // reachable on the strength of the seal, even if the bid's own marker still lags at Proof of Intent.
+  if (stage === "compliance" && poi) return null;
+
   const targetIdx = stepIndex(stage, step);
   const currentIdx = stepIndex(tx.stage, tx.step);
   if (targetIdx > currentIdx) return "Complete the earlier steps first";
