@@ -52,4 +52,5 @@ Specifics taken from the map:
 - Replace its vertical coordinate system with a wide fixed canvas (roughly 1600×1050) whose box table matches the attached map's positions; connectors keep the existing elbow/arrow helper, with endpoints touching box borders.
 - New group frames: trading (implicit), counterparty (cream, rounded), compliance (green), plus the memory circle rendered as an SVG/rounded div.
 - New route `src/routes/_authenticated.map.tsx` (`/map`) rendering `MapView` inside the existing shell, for the most recent deal (same deal selection the Live Workspace uses); `src/components/layout/MainHeader.tsx` nav list gains `{ to: "/map", label: "Map" }` as the first entry, before Home.
-- Presentation only — no database, server function, spine or gating changes.
+- State and gating come from the existing sources with no rule changes: the `transactions` row (via the same `supabase` query the deal canvas uses), `lockReason`/`stepIndex`/`SPINE` from `src/lib/spine.ts`, and `InlineFrame`'s `reload` callback to refetch after any action. No new tables, columns, policies or server functions.
+- Presentation and routing only — no database, server function, spine or gating changes.
