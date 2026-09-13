@@ -1746,23 +1746,30 @@ function WadStep({ tx, reload }: Props) {
         </div>
       )}
 
-      {(screening || screened || screenError) && (
-        <div className="mb-4 space-y-1">
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-            <div
-              className={cn(
-                "h-full rounded-full transition-all duration-500",
-                screenError ? "w-full bg-destructive" : screening ? "w-1/2 animate-ribbon-sweep bg-primary" : "bg-emerald-500",
-              )}
-              style={!screening && !screenError ? { width: `${Math.round((settled / totalChecks) * 100)}%` } : undefined}
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {screenError
-              ? `Screening could not finish: ${screenError}`
-              : screening
-                ? `Screening ${chosenCp?.name ?? "the counterparty"}…`
-                : `${settled} of ${totalChecks} checks returned`}
+      {priorChecks.length > 0 && (
+        <div className="mb-4 rounded-lg border border-border p-3">
+          <p className="label-caps font-sans">Already screened in Step 1</p>
+          <ul className="mt-2 space-y-1.5">
+            {priorChecks.map((r) => (
+              <li key={r.id} className="flex items-center justify-between gap-2 text-xs">
+                <span>{CHECK_TYPE_LABEL[r.check_type as string] ?? r.check_type}</span>
+                <span
+                  className={cn(
+                    "shrink-0 text-xs",
+                    r.status === "passed"
+                      ? "text-emerald-500"
+                      : r.status === "failed" || r.status === "review"
+                        ? "text-[#F97316]"
+                        : "text-muted-foreground",
+                  )}
+                >
+                  {PRIOR_STATUS_LABEL[r.status as string] ?? r.status}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-muted-foreground">
+            These results carry through from the background screening on {chosenCp?.name ?? "the chosen party"} — they are not run again here.
           </p>
         </div>
       )}
