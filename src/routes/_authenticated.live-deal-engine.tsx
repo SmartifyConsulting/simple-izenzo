@@ -1339,7 +1339,7 @@ function LiveDealEngine() {
           {/* Everything pinned to the top of the workspace sits inside one opaque, full-bleed
               surface — the heading row and the Bid Registration frame together — so nothing
               scrolling underneath can appear through it or in the gap above it. */}
-          <div className="sticky top-0 z-20 -mx-3 -mt-3 bg-card px-3 pt-3 sm:-mx-5 sm:-mt-5 sm:px-5 sm:pt-5">
+          <div className="sticky -top-3 z-20 -mx-3 -mt-3 bg-card px-3 pt-3 sm:-top-5 sm:-mx-5 sm:-mt-5 sm:px-5 sm:pt-5">
           <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
             <p className="label-caps text-foreground">Live Workspace</p>
             {dealTx && (
