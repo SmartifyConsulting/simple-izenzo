@@ -815,11 +815,14 @@ export type Database = {
       counterparties: {
         Row: {
           chosen_at: string | null
+          contact_email: string | null
           created_at: string
           id: string
+          invited_at: string | null
           jurisdiction: string | null
           media_flags: Json
           name: string
+          phone: string | null
           rating_band:
             | Database["public"]["Enums"]["counterparty_rating_band"]
             | null
@@ -839,14 +842,18 @@ export type Database = {
           source: string | null
           status: string
           transaction_id: string
+          website: string | null
         }
         Insert: {
           chosen_at?: string | null
+          contact_email?: string | null
           created_at?: string
           id?: string
+          invited_at?: string | null
           jurisdiction?: string | null
           media_flags?: Json
           name: string
+          phone?: string | null
           rating_band?:
             | Database["public"]["Enums"]["counterparty_rating_band"]
             | null
@@ -866,14 +873,18 @@ export type Database = {
           source?: string | null
           status?: string
           transaction_id: string
+          website?: string | null
         }
         Update: {
           chosen_at?: string | null
+          contact_email?: string | null
           created_at?: string
           id?: string
+          invited_at?: string | null
           jurisdiction?: string | null
           media_flags?: Json
           name?: string
+          phone?: string | null
           rating_band?:
             | Database["public"]["Enums"]["counterparty_rating_band"]
             | null
@@ -893,6 +904,7 @@ export type Database = {
           source?: string | null
           status?: string
           transaction_id?: string
+          website?: string | null
         }
         Relationships: [
           {
