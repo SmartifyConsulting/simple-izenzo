@@ -532,24 +532,60 @@ function LiveDealEngine() {
       return o;
     }
     o["search"] = "done";
-    if (mediaRunning) {
-      o["onlineMedia"] = "active";
-      o["choice"] = "open";
+
+    // Choice comes first now: nothing below it can start until a person has picked.
+    if (!hasChosen) {
+      o["choice"] = flowStep === "results" ? "active" : "open";
+      o["onlineMedia"] = "open";
+      o["backgroundScreening"] = "open";
+      o["intent"] = "open";
       return o;
     }
-    o["onlineMedia"] = mediaResults !== null || flowStep === "results" ? "done" : "open";
+    o["choice"] = "done";
 
-    if (flowStep === "results") {
-      if (hasChosen) {
-        o["choice"] = "done";
-        o["poi"] = dealTx.poi_sealed_at ? "done" : "active";
-        if (dealTx.poi_sealed_at) o["wad"] = dealTx.wad_completed_at ? "done" : "active";
-      } else {
-        o["choice"] = "active";
-      }
+    // Online media screening runs only once the choice has been made and continued.
+    if (mediaRunning) {
+      o["onlineMedia"] = "active";
+      o["backgroundScreening"] = "open";
+      o["intent"] = "open";
+      return o;
+    }
+    if (mediaResults === null) {
+      o["onlineMedia"] = "open";
+      o["backgroundScreening"] = "open";
+      o["intent"] = "open";
+      return o;
+    }
+    o["onlineMedia"] = "done";
+
+    if (screening) {
+      o["backgroundScreening"] = "active";
+      o["intent"] = "open";
+      return o;
+    }
+    if (screeningResults === null) {
+      o["backgroundScreening"] = "open";
+      o["intent"] = "open";
+      return o;
+    }
+    o["backgroundScreening"] = "done";
+
+    o["intent"] = dealTx.intent_confirmed_at ? "done" : "active";
+    if (dealTx.intent_confirmed_at) {
+      o["poi"] = dealTx.poi_sealed_at ? "done" : "active";
+      if (dealTx.poi_sealed_at) o["wad"] = dealTx.wad_completed_at ? "done" : "active";
     }
     return o;
-  }, [dealTx, flowStep, mediaRunning, mediaResults, hasChosen, workspaceDocs.length]);
+  }, [
+    dealTx,
+    flowStep,
+    mediaRunning,
+    mediaResults,
+    screening,
+    screeningResults,
+    hasChosen,
+    workspaceDocs.length,
+  ]);
 
 
 
