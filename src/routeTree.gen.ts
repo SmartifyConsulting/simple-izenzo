@@ -34,6 +34,7 @@ import { Route as AuthenticatedFunderRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedGuidedRouteImport } from './routes/_authenticated.guided'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated.inbox'
 import { Route as AuthenticatedLiveDealEngineRouteImport } from './routes/_authenticated.live-deal-engine'
+import { Route as AuthenticatedMapRouteImport } from './routes/_authenticated.map'
 import { Route as AuthenticatedRegistryRouteImport } from './routes/_authenticated.registry'
 import { Route as AuthenticatedSupportRouteImport } from './routes/_authenticated.support'
 import { Route as AuthenticatedTradesRouteImport } from './routes/_authenticated.trades'
@@ -196,6 +197,11 @@ const AuthenticatedLiveDealEngineRoute =
     path: '/live-deal-engine',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedMapRoute = AuthenticatedMapRouteImport.update({
+  id: '/map',
+  path: '/map',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedRegistryRoute = AuthenticatedRegistryRouteImport.update({
   id: '/registry',
   path: '/registry',
@@ -411,6 +417,7 @@ export interface FileRoutesByFullPath {
   '/guided': typeof AuthenticatedGuidedRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/live-deal-engine': typeof AuthenticatedLiveDealEngineRoute
+  '/map': typeof AuthenticatedMapRoute
   '/registry': typeof AuthenticatedRegistryRoute
   '/support': typeof AuthenticatedSupportRoute
   '/trades': typeof AuthenticatedTradesRoute
@@ -471,6 +478,7 @@ export interface FileRoutesByTo {
   '/guided': typeof AuthenticatedGuidedRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/live-deal-engine': typeof AuthenticatedLiveDealEngineRoute
+  '/map': typeof AuthenticatedMapRoute
   '/registry': typeof AuthenticatedRegistryRoute
   '/support': typeof AuthenticatedSupportRoute
   '/trades': typeof AuthenticatedTradesRoute
@@ -532,6 +540,7 @@ export interface FileRoutesById {
   '/_authenticated/guided': typeof AuthenticatedGuidedRoute
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
   '/_authenticated/live-deal-engine': typeof AuthenticatedLiveDealEngineRoute
+  '/_authenticated/map': typeof AuthenticatedMapRoute
   '/_authenticated/registry': typeof AuthenticatedRegistryRoute
   '/_authenticated/support': typeof AuthenticatedSupportRoute
   '/_authenticated/trades': typeof AuthenticatedTradesRoute
@@ -595,6 +604,7 @@ export interface FileRouteTypes {
     | '/guided'
     | '/inbox'
     | '/live-deal-engine'
+    | '/map'
     | '/registry'
     | '/support'
     | '/trades'
@@ -655,6 +665,7 @@ export interface FileRouteTypes {
     | '/guided'
     | '/inbox'
     | '/live-deal-engine'
+    | '/map'
     | '/registry'
     | '/support'
     | '/trades'
@@ -715,6 +726,7 @@ export interface FileRouteTypes {
     | '/_authenticated/guided'
     | '/_authenticated/inbox'
     | '/_authenticated/live-deal-engine'
+    | '/_authenticated/map'
     | '/_authenticated/registry'
     | '/_authenticated/support'
     | '/_authenticated/trades'
@@ -952,6 +964,13 @@ declare module '@tanstack/react-router' {
       path: '/live-deal-engine'
       fullPath: '/live-deal-engine'
       preLoaderRoute: typeof AuthenticatedLiveDealEngineRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/map': {
+      id: '/_authenticated/map'
+      path: '/map'
+      fullPath: '/map'
+      preLoaderRoute: typeof AuthenticatedMapRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/registry': {
@@ -1214,6 +1233,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedGuidedRoute: typeof AuthenticatedGuidedRoute
   AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
   AuthenticatedLiveDealEngineRoute: typeof AuthenticatedLiveDealEngineRoute
+  AuthenticatedMapRoute: typeof AuthenticatedMapRoute
   AuthenticatedRegistryRoute: typeof AuthenticatedRegistryRoute
   AuthenticatedSupportRoute: typeof AuthenticatedSupportRoute
   AuthenticatedTradesRoute: typeof AuthenticatedTradesRoute
@@ -1241,6 +1261,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedGuidedRoute: AuthenticatedGuidedRoute,
   AuthenticatedInboxRoute: AuthenticatedInboxRoute,
   AuthenticatedLiveDealEngineRoute: AuthenticatedLiveDealEngineRoute,
+  AuthenticatedMapRoute: AuthenticatedMapRoute,
   AuthenticatedRegistryRoute: AuthenticatedRegistryRoute,
   AuthenticatedSupportRoute: AuthenticatedSupportRoute,
   AuthenticatedTradesRoute: AuthenticatedTradesRoute,
