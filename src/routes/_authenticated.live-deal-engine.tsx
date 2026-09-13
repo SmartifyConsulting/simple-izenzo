@@ -40,6 +40,8 @@ import { searchCounterparties } from "@/lib/izenzo.functions";
 import { runBackgroundScreening, type ScreeningResult } from "@/lib/screening.functions";
 import { runOnlineMediaChecks, type MediaCheckResult } from "@/lib/onlineMedia.functions";
 import { listVerificationsForTx } from "@/lib/didit.functions";
+import { summarizeBidDocuments } from "@/lib/docSummary.functions";
+
 import { pushRecentDeal } from "@/lib/recentDeals";
 import { useDealWindows } from "@/lib/dealWindows";
 import { peekStashedHeroFiles, clearStashedHeroFiles } from "@/lib/heroSearchContext";
@@ -173,7 +175,7 @@ function OpenDealsPicker({ currentId, hasAttachment }: { currentId: string | nul
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="h-9 w-[140px] justify-start gap-2 text-[13px] font-normal"
+          className="h-9 w-[280px] justify-start gap-2 text-[13px] font-normal"
         >
           {hasAttachment && <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
           {selected ? (
@@ -352,7 +354,25 @@ function LiveDealEngine() {
   const runScreening = useServerFn(runBackgroundScreening);
   const runMediaChecks = useServerFn(runOnlineMediaChecks);
   const listIdChecks = useServerFn(listVerificationsForTx);
+  const summarizeDocs = useServerFn(summarizeBidDocuments);
+  const [rereading, setRereading] = useState(false);
   const queryClient = useQueryClient();
+
+  /** Reads the attached documents again — offered wherever files exist but no summary does, so a
+   * read that failed earlier isn't a dead end. */
+  async function rereadDocuments(transactionId: string) {
+    setRereading(true);
+    try {
+      const { summary } = await summarizeDocs({ data: { transactionId } });
+      setDocumentSummary(summary);
+      toast.success("Documents read — summary ready");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setRereading(false);
+    }
+  }
+
 
   // The bidder/responder's own ID front/back, run through Didit the moment they're uploaded —
   // shown as a small "ID Verified" badge once it comes back passed, without making them visit
