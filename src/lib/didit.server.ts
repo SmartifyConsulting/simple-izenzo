@@ -38,7 +38,9 @@ export async function loadDiditCreds(): Promise<DiditCreds> {
   return {
     apiKey,
     webhookSecret: secrets["webhook_secret"] ?? "",
-    baseUrl: (config["base_url"] || DEFAULT_BASE).replace(/\/+$/, ""),
+    // Session paths already carry their own version (/v2/session/), so a saved base that
+// includes an API version (or the wrong host) would produce /v1/v2/... and 404.
+    baseUrl: normaliseBase(config["base_url"]),
     environment: (row.environment as string) || "sandbox",
     enabled: Boolean(row.enabled),
     workflows: {
