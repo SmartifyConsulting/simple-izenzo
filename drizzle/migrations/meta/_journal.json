@@ -43,6 +43,13 @@
       "when": 1789260674568,
       "tag": "0005_add_document_summary_error",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789332737769,
+      "tag": "0006_add_counterparty_contact_columns",
+      "breakpoints": true
     }
   ]
 }
