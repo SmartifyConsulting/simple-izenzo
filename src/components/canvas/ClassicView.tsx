@@ -115,13 +115,14 @@ const STEPS: StepDef[] = [
 type Collapsed = Record<number, boolean>;
 
 function itemClasses(state: NodeState, isEntry?: boolean) {
+  // Finished work reads as a plain ticked line — no pill frame around it.
+  if (state === "done") return "border-transparent bg-transparent text-primary";
   if (isEntry) {
     return state === "open"
       ? "border-primary/60 bg-primary/10 text-primary hover:border-primary"
       : "border-primary/50 bg-primary/12 text-primary";
   }
   return cn(
-    state === "done" && "border-primary/50 bg-primary/12 text-primary",
     state === "active" && "border-primary bg-primary/15 text-primary animate-throb-aqua",
     state === "open" && "border-border bg-card text-foreground hover:border-primary/40",
     state === "locked" && "cursor-not-allowed border-border/60 bg-card/50 text-muted-foreground",
