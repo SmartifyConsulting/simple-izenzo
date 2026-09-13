@@ -61,7 +61,8 @@ const STEPS: StepDef[] = [
     step: 1,
     label: "Trading",
     items: [
-      { key: "bidOffer", label: "Upload documents", stage: "trading", step: "bid-offer", isEntry: true },
+      { key: "bidRegistration", label: "Bid Registration", stage: "trading", step: "bid-offer", isEntry: true },
+      { key: "docSubmission", label: "Submission of Documents", stage: "trading", step: "bid-offer" },
       { key: "search", label: "Search AI + AI+", stage: "trading", step: "search", icon: Search },
       { key: "onlineMedia", label: "Online Media Screening", stage: "trading", step: "online-media", icon: Globe },
       { key: "choice", label: "Choice", stage: "trading", step: "choice", icon: ListChecks },
@@ -146,7 +147,9 @@ function SubRow({
       disabled={!onClick}
       className={cn(
         "flex w-1/2 items-center gap-2 rounded-lg border px-3 py-2 text-left font-sans text-[13px] font-medium leading-tight transition-colors disabled:cursor-not-allowed",
-        itemClasses(state, item.isEntry),
+        // A step the page has explicitly marked done or in-progress reads as such, even when it is
+        // also the "start a new bid" entry row — otherwise every override on it would be ignored.
+        itemClasses(state, item.isEntry && state !== "done" && state !== "active"),
       )}
     >
       {state === "done" ? (

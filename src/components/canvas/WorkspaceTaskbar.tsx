@@ -1,13 +1,95 @@
 import { useState } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { Plus, X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Plus, Search, X } from "lucide-react";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
 import { useDealWindows } from "@/lib/dealWindows";
+import { fallbackReference } from "@/lib/tx";
 import { cn } from "@/lib/utils";
 
 // Marketing/auth surfaces where a signed-in visitor could still be browsing — the workspace
 // taskbar is an authenticated-app concept and has no business following them onto the hero page.
 function isMarketingPath(pathname: string) {
   return pathname === "/" || pathname.startsWith("/alpha-bravo") || pathname.startsWith("/auth");
+}
+
+/** Finds an existing bid or offer by its reference or by a keyword in its name, and opens it. */
+function DealSearchDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { org } = useAuth();
+  const navigate = useNavigate();
+  const { data: deals = [] } = useQuery({
+    queryKey: ["searchable-deals", org?.id],
+    enabled: Boolean(org?.id) && open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("id, reference, title, commodity, created_at")
+        .eq("org_id", org!.id)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return (data ?? []).map((t) => {
+        const row = t as {
+          id: string;
+          reference: string | null;
+          title: string;
+          commodity: string | null;
+        };
+        return {
+          id: row.id,
+          reference: row.reference ?? fallbackReference(row.id, "bid"),
+          name: row.commodity ?? row.title ?? "",
+        };
+      });
+    },
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="p-0 sm:max-w-lg">
+        <DialogHeader className="px-4 pt-4">
+          <DialogTitle className="text-sm">Find a bid or offer</DialogTitle>
+        </DialogHeader>
+        <Command>
+          <CommandInput placeholder="Bid ID or keyword…" />
+          <CommandList>
+            <CommandEmpty>Nothing matches that.</CommandEmpty>
+            <CommandGroup>
+              {deals.map((d) => (
+                <CommandItem
+                  key={d.id}
+                  value={`${d.reference} ${d.name}`}
+                  onSelect={() => {
+                    onOpenChange(false);
+                    void navigate({ to: "/live-deal-engine", search: { tx: d.id } });
+                  }}
+                >
+                  <span className="font-mono font-semibold">{d.reference}</span>
+                  {d.name && <span className="text-muted-foreground"> — {d.name}</span>}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 /** The bottom dock listing every open deal workspace, app-wide — styled like a spreadsheet's
@@ -20,6 +102,7 @@ export function WorkspaceTaskbar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   if (isMarketingPath(pathname)) return null;
 
@@ -45,6 +128,19 @@ export function WorkspaceTaskbar() {
         <Plus className="h-3 w-3" />
         New
       </button>
+      {/* Finding an existing bid by its id or a keyword lives here, next to New — the reference on
+          the workspace heading itself is only a label now. */}
+      <button
+        type="button"
+        onClick={() => setSearchOpen(true)}
+        title="Search bids and offers"
+        aria-label="Search bids and offers"
+        className="flex w-9 shrink-0 items-center justify-center rounded-t-md border border-border border-b-transparent bg-transparent px-2 py-1.5 text-muted-foreground hover:bg-card/50 hover:text-foreground"
+      >
+        <Search className="h-3.5 w-3.5" />
+      </button>
+      <DealSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+
       {deals.map((w) => {
         const active = w.mode !== "minimized";
         return (

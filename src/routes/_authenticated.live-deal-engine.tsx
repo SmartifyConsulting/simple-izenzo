@@ -218,6 +218,7 @@ function OpenDealsPicker({ currentId, hasAttachment }: { currentId: string | nul
  * separate per-deal detail page. */
 function LiveDealEngine() {
   const { tx: txParam, popout, panel, q: matchQuery, seed, fresh } = Route.useSearch();
+  const { org } = useAuth();
   // Whatever the visitor dropped on the homepage before signing in, if anything. Read via a
   // non-destructive peek (StrictMode double-invokes this initializer in dev, and a combined
   // read-and-clear would lose the files on the second call), then clear it once via the effect
@@ -301,33 +302,9 @@ function LiveDealEngine() {
 
 
 
-  /** Which workflow item is genuinely current right now — the stored stage/step can't tell
-   * "searching" apart from "results are in", so the page says it outright. Search AI + AI+ and
-   * Online Media Screening run together, so both pulse at the same time. */
-  const stepOverrides = useMemo(() => {
-    const o: Record<string, "locked" | "open" | "active" | "done"> = {};
-    if (!dealTx) return o;
-    if (flowStep === "documents") {
-      o["bidOffer"] = "active";
-      return o;
-    }
-    o["bidOffer"] = "done";
-    if (flowStep === "searching" || screening || mediaRunning) {
-      o["search"] = "active";
-      o["onlineMedia"] = "active";
-      return o;
-    }
-    o["search"] = "done";
-    o["onlineMedia"] = "done";
-    if (hasChosen) {
-      o["choice"] = "done";
-      o["poi"] = dealTx.poi_sealed_at ? "done" : "active";
-      if (dealTx.poi_sealed_at) o["wad"] = dealTx.wad_completed_at ? "done" : "active";
-    } else {
-      o["choice"] = "active";
-    }
-    return o;
-  }, [dealTx, flowStep, screening, mediaRunning, hasChosen]);
+  /* Which workflow item is genuinely current is derived further down, once the attached documents
+     are known (see stepOverrides). */
+
 
   const [documentSummary, setDocumentSummary] = useState<string | null>(null);
   // The AI summary is written to the transaction row in the background, after the document
@@ -400,6 +377,39 @@ function LiveDealEngine() {
       return data ?? [];
     },
   });
+
+  /** Which workflow item is genuinely current right now — the stored stage/step can't tell
+   * "searching" apart from "results are in", so the page says it outright. Search AI + AI+ and
+   * Online Media Screening run together, so both pulse at the same time. */
+  const stepOverrides = useMemo(() => {
+    const o: Record<string, "locked" | "open" | "active" | "done"> = {};
+    if (!dealTx) return o;
+    o["bidRegistration"] = "done";
+    const searching = flowStep === "searching" || screening || mediaRunning;
+    if (workspaceDocs.length === 0) {
+      o["docSubmission"] = "active";
+      return o;
+    }
+    o["docSubmission"] = "done";
+    if (searching) {
+      o["search"] = "active";
+      o["onlineMedia"] = "active";
+      return o;
+    }
+    if (flowStep === "documents") return o;
+    o["search"] = "done";
+    o["onlineMedia"] = "done";
+    if (hasChosen) {
+      o["choice"] = "done";
+      o["poi"] = dealTx.poi_sealed_at ? "done" : "active";
+      if (dealTx.poi_sealed_at) o["wad"] = dealTx.wad_completed_at ? "done" : "active";
+    } else {
+      o["choice"] = "active";
+    }
+    return o;
+  }, [dealTx, flowStep, screening, mediaRunning, hasChosen, workspaceDocs.length]);
+
+
 
   // Which canvas step should pulse, on top of whichever step the canvas already highlights as
   // "active": Choice, until results have come back at least once; Background screening, while the
@@ -844,6 +854,24 @@ function LiveDealEngine() {
     );
   }
 
+  /** "Fetch Interest" — starts the AI/AI+ search and the online media screening in one go, so both
+   * steps pulse together in the workflow and every result lands without another click. */
+  async function fetchInterest(txId: string) {
+    // Anything already surfaced for this deal can be screened straight away, in parallel with the
+    // fresh search; whatever the search turns up is screened as it lands (see runSearch).
+    try {
+      const { data: existing } = await supabase
+        .from("counterparties")
+        .select("id")
+        .eq("transaction_id", txId);
+      const ids = (existing ?? []).map((c) => c.id as string);
+      if (ids.length > 0) void startMediaChecks(ids);
+    } catch {
+      // Best effort — the search below still runs and starts screening on its own results.
+    }
+    await runSearch(txId);
+  }
+
   async function runSearch(txId: string) {
     setFlowStep("searching");
     setSearchError(null);
@@ -1071,28 +1099,55 @@ function LiveDealEngine() {
           <div className="h-[calc((100vh-190px)*0.9)] w-full overflow-y-auto rounded-3xl border border-border bg-card p-3 shadow-sm sm:p-5">
           <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
             <p className="label-caps text-foreground">Live Workspace</p>
-            <OpenDealsPicker currentId={dealTx?.id ?? null} hasAttachment={workspaceDocs.length > 0} />
+            {(((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference) && (
+              <span className="flex items-center gap-2 font-mono text-lg font-bold tracking-wide text-foreground">
+                {workspaceDocs.length > 0 && (
+                  <Paperclip className="h-4 w-4 shrink-0 text-muted-foreground" />
+                )}
+                {((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference}
+              </span>
+            )}
           </div>
 
-          {/* Bidder details + AI summary come first — the very top of the workspace, before the
-              reference header and anything else — so what was actually submitted is never buried
-              behind the progress ribbon or the workflow ticks below it. The attachment(s), with a
-              download link, live here too, right after the summary. */}
+          {/* Bid Registered — the very top of the workspace: when it was registered, which business
+              registered it (with its verification status) and the country. No individual's name. */}
+          {activity && dealTx && (
+            <div className="glass-node mb-3 space-y-1.5 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="label-caps text-muted-foreground">Bid Registered</p>
+                <SubmitterIdentity orgId={dealTx.org_id} createdBy={null} />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Registered {new Date(activity.time ?? dealTx.created_at).toLocaleString()}
+              </p>
+              {org?.name && <p className="text-sm font-semibold text-foreground">{org.name}</p>}
+              {(org?.country || dealTx.jurisdiction) && (
+                <p className="text-xs text-muted-foreground">{org?.country ?? dealTx.jurisdiction}</p>
+              )}
+            </div>
+          )}
+
+          {/* Bidder details + AI summary come next — what was actually submitted, never buried
+              behind the progress ribbon. The attachment(s) live here too, with preview/download. */}
           {activity && dealTx && (
             <div className="glass-node space-y-2 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="label-caps text-muted-foreground">Bidder details &amp; AI summary</p>
-                <SubmitterIdentity orgId={dealTx.org_id} createdBy={(dealTx as unknown as { created_by?: string | null }).created_by ?? null} />
+                {idCheck?.status === "passed" && (
+                  <span
+                    title={`Verified${idCheck.completed_at ? ` — ${new Date(idCheck.completed_at).toLocaleString()}` : ""}`}
+                    className="flex shrink-0 items-center gap-1 rounded-full border border-success/40 bg-success/10 px-2 py-0.5 text-[10px] font-semibold text-success"
+                  >
+                    <BadgeCheck className="h-3 w-3" />
+                    ID Verified
+                  </span>
+                )}
+                {idCheck?.status === "in_progress" && (
+                  <span className="flex shrink-0 items-center gap-1 rounded-full bg-info px-2 py-0.5 text-[10px] font-semibold text-white">
+                    ID check pending
+                  </span>
+                )}
               </div>
-              {dealTx.created_at && (
-                <p className="text-xs text-muted-foreground">
-                  Registered {new Date(dealTx.created_at).toLocaleDateString(undefined, {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </p>
-              )}
               {/* The value of the trade belongs with the rest of its material aspects, inside this
                   frame, rather than sitting on its own outside it. */}
               {(activity.price || activity.quantity) && (
@@ -1116,12 +1171,46 @@ function LiveDealEngine() {
                     : "Reading the uploaded document…"}
                 </p>
               )}
+              {/* Documents attached but never read — say so plainly, with a way to run it again,
+                  instead of leaving a toast that has long since vanished. */}
+              {!documentSummary && workspaceDocs.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <p className="text-[11px] text-muted-foreground">
+                    These documents haven't been read yet.
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-[11px]"
+                    disabled={rereading}
+                    onClick={() => void rereadDocuments(dealTx.id)}
+                  >
+                    {rereading ? "Reading…" : "Read documents"}
+                  </Button>
+                </div>
+              )}
               {attachments.length > 0 && (
                 <ul className="mt-2 space-y-1 border-t border-border pt-2">
                   {attachments.map((a, i) => (
                     <li key={i} className="flex items-center gap-2 text-sm">
                       <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                       <span className="min-w-0 flex-1 truncate">{a.name}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">{a.kind}</span>
+                      {/* Both icons always show — greyed out for files recorded before uploads
+                          were kept, so a row never looks half-built. */}
+                      <button
+                        type="button"
+                        disabled={!a.path}
+                        onClick={() => openAttachment(a)}
+                        title={
+                          a.path
+                            ? `Preview ${a.name}`
+                            : "No stored copy — this file was recorded before uploads were kept"
+                        }
+                        className="shrink-0 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </button>
                       <button
                         type="button"
                         disabled={!a.path}
@@ -1141,6 +1230,7 @@ function LiveDealEngine() {
               )}
             </div>
           )}
+
 
             {dealTx ? (
               <div className="mt-4 flex items-start justify-end gap-4">
@@ -1162,36 +1252,18 @@ function LiveDealEngine() {
                       initialPrompt={seedPrompt}
                       initialFiles={seedFiles}
                     />
-                  ) : (
-                    <div className="space-y-1.5 rounded-xl border border-border bg-muted/30 p-3">
-                      <p className="label-caps text-muted-foreground">AI findings</p>
-                      <ul className="space-y-1 text-xs text-foreground">
-                        {workspaceDocs.slice(0, 5).map((d) => (
-                          <li key={d.id} className="truncate">
-                            • {d.name} — {String(d.doc_type).replace(/_/g, " ")}
-                          </li>
-                        ))}
-                      </ul>
-                      {/* Documents attached but never read — say so plainly, with a way to run it
-                          again, instead of leaving a toast that has long since vanished. */}
-                      {!documentSummary && (
-                        <div className="space-y-1.5 pt-1">
-                          <p className="text-[11px] text-muted-foreground">
-                            These documents haven't been read yet.
-                          </p>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 w-full text-[11px]"
-                            disabled={rereading}
-                            onClick={() => void rereadDocuments(dealTx.id)}
-                          >
-                            {rereading ? "Reading…" : "Read documents"}
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  ) : flowStep === "documents" ? (
+                    /* Documents are in — one button starts the AI/AI+ search and the online media
+                       screening together, and both pulse in the workflow while they run. */
+                    <Button
+                      className="w-full"
+                      disabled={screening || mediaRunning}
+                      onClick={() => void fetchInterest(dealTx.id)}
+                    >
+                      Fetch Interest
+                    </Button>
+                  ) : null}
+
                 </div>
               </div>
             ) : null}
@@ -1244,18 +1316,8 @@ function LiveDealEngine() {
             </div>
           )}
 
-          {activity && flowStep !== "documents" && (
-            <div className="mt-3 space-y-1.5">
-              <div className="flex items-center gap-2 text-sm text-primary">
-                <CheckCircle2 className="h-4 w-4 shrink-0" />
-                Bid Registration
-              </div>
-              <div className="flex items-center gap-2 text-sm text-primary">
-                <CheckCircle2 className="h-4 w-4 shrink-0" />
-                Submission of documents
-              </div>
-            </div>
-          )}
+          {/* Bid Registration / Submission of documents now tick in the workflow column instead. */}
+
 
           {mapPanel && dealTx && (
             <div className="mt-3">
@@ -1280,92 +1342,9 @@ function LiveDealEngine() {
                   {/* Quantity and value now live inside the summary frame above. */}
                 </div>
 
-                <div className="glass-node flex items-start gap-3 p-4">
-                  <Paperclip className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">
-                      {activity.direction === "bid" ? "Bid" : "Offer"} recorded — {activity.title}
-                    </p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {new Date(activity.time).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
+                {/* The registration card and the one attachment list both live at the top of the
+                    workspace now — no duplicate frames down here. */}
 
-                {attachments.length > 0 && (
-                  <div className="glass-node space-y-2 p-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="label-caps rounded-full border border-[#F59E0B] bg-[#F59E0B] px-2.5 py-0.5 text-white">
-                        Attachments
-                      </p>
-                      {idCheck?.status === "passed" && (
-                        <span
-                          title={`Verified${idCheck.completed_at ? ` — ${new Date(idCheck.completed_at).toLocaleString()}` : ""}`}
-                          className="flex shrink-0 items-center gap-1 rounded-full border border-success/40 bg-success/10 px-2 py-0.5 text-[10px] font-semibold text-success"
-                        >
-                          <BadgeCheck className="h-3 w-3" />
-                          ID Verified
-                        </span>
-                      )}
-                      {idCheck?.status === "in_progress" && (
-                        <span className="flex shrink-0 items-center gap-1 rounded-full bg-info px-2 py-0.5 text-[10px] font-semibold text-white">
-                          ID check pending
-                        </span>
-                      )}
-                    </div>
-                    <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
-                    {attachments.map((a, i) => (
-                      <div key={i} className="flex items-center gap-2 text-sm">
-                        <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        {a.path ? (
-                          <button
-                            type="button"
-                            onClick={() => openAttachment(a)}
-                            className="truncate text-left underline underline-offset-2 hover:text-primary"
-                          >
-                            {a.name}
-                          </button>
-                        ) : (
-                          <span className="truncate">{a.name}</span>
-                        )}
-                        <span className="shrink-0 text-xs text-muted-foreground">{a.kind}</span>
-                        {/* Both icons always show — greyed out for files recorded before uploads
-                            were kept, so a row never looks half-built. */}
-                        <span className="ml-auto flex shrink-0 items-center gap-1">
-                          <button
-                            type="button"
-                            disabled={!a.path}
-                            onClick={() => openAttachment(a)}
-                            title={
-                              a.path
-                                ? `Preview ${a.name}`
-                                : "No stored copy — this file was recorded before uploads were kept"
-                            }
-                            className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-                          >
-                            <Eye className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            disabled={!a.path}
-                            onClick={() => downloadAttachment(a)}
-                            title={
-                              a.path
-                                ? `Download ${a.name}`
-                                : "No stored copy — this file was recorded before uploads were kept"
-                            }
-                            className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-                          >
-                            <Download className="h-3.5 w-3.5" />
-                          </button>
-                        </span>
-
-
-                      </div>
-                    ))}
-                    </div>
-                  </div>
-                )}
 
                 {/* Once a party is chosen the gate panel takes over the workspace — leaving the
                     match list open below it is what made the screen look stuck. */}
