@@ -56,6 +56,7 @@ import { runBackgroundScreening, type ScreeningResult } from "@/lib/screening.fu
 import { runOnlineMediaChecks, type MediaCheckResult } from "@/lib/onlineMedia.functions";
 import { listVerificationsForTx } from "@/lib/didit.functions";
 import { summarizeBidDocuments } from "@/lib/docSummary.functions";
+import { readDocument } from "@/lib/documents.functions";
 
 import { pushRecentDeal } from "@/lib/recentDeals";
 import { useDealWindows } from "@/lib/dealWindows";
@@ -362,10 +363,22 @@ function LiveDealEngine() {
   const runMediaChecks = useServerFn(runOnlineMediaChecks);
   const listIdChecks = useServerFn(listVerificationsForTx);
   const summarizeDocs = useServerFn(summarizeBidDocuments);
+  const fetchDocument = useServerFn(readDocument);
   const [rereading, setRereading] = useState(false);
   // Once interest is being fetched the submitted detail collapses out of the way, so the results
   // have the room. The header stays clickable to open it again.
   const [bidInfoOpen, setBidInfoOpen] = useState(true);
+  // Once the ask has been made for a bid, the description/drop frame never comes back — not while
+  // the files are still saving, not on a refresh, not on a tab switch. Remembered per bid.
+  const [submittedBids, setSubmittedBids] = useState<Set<string>>(() => new Set());
+  function markSubmitted(txId: string) {
+    try {
+      sessionStorage.setItem(`bid-submitted:${txId}`, "1");
+    } catch {
+      // Private browsing without storage — the in-memory set below still holds for this session.
+    }
+    setSubmittedBids((s) => (s.has(txId) ? s : new Set(s).add(txId)));
+  }
   const queryClient = useQueryClient();
 
   /** Reads the attached documents again — offered wherever files exist but no summary does, so a
@@ -425,6 +438,21 @@ function LiveDealEngine() {
     })),
     [workspaceDocs],
   );
+  // A bid that already has documents counts as submitted, as does one whose flag survived a
+  // refresh — either way the upload frame stays away.
+  useEffect(() => {
+    if (!dealTx) return;
+    let stored = false;
+    try {
+      stored = sessionStorage.getItem(`bid-submitted:${dealTx.id}`) === "1";
+    } catch {
+      stored = false;
+    }
+    if (stored || workspaceDocs.length > 0) {
+      setSubmittedBids((s) => (s.has(dealTx.id) ? s : new Set(s).add(dealTx.id)));
+    }
+  }, [dealTx?.id, workspaceDocs.length]);
+  const submittedForThisBid = dealTx ? submittedBids.has(dealTx.id) : false;
   // Older bids may already have a good summary but still carry the old "New Bid" placeholder.
   // Read once more to generate and persist their proper display title; the ref prevents repeated
   // AI calls while the transaction query catches up with the saved title.
@@ -998,6 +1026,9 @@ function LiveDealEngine() {
   }
 
   async function runSearch(txId: string) {
+    // Whichever way the search was started, the submitted detail collapses out of the way so the
+    // results have the room; the header stays clickable to open it again.
+    setBidInfoOpen(false);
     setFlowStep("searching");
     setSearchError(null);
     // Marks Upload Documents done and moves the active step onto Search the moment the search
@@ -1045,51 +1076,46 @@ function LiveDealEngine() {
     }
   }
 
-  /** The bucket is private, so a short-lived signed link is minted on demand rather than stored.
-   * The file itself is then fetched and opened from this app's own address (a `blob:` URL) — some
-   * browser extensions and ad blockers refuse to navigate to the storage host directly, which is
-   * what produced the "blocked by Chrome" page. If even the fetch is blocked, it falls back to
-   * downloading the file rather than leaving a dead tab. */
-  async function openAttachment(a: Attachment) {
-    if (!a.path) return;
-    const { data, error } = await supabase.storage.from("documents").createSignedUrl(a.path, 60);
-    if (error || !data?.signedUrl) {
-      toast.error(`Could not open ${a.name}`);
-      return;
-    }
+  /** Files are read through this app's own address (a server function), never the storage host —
+   * some browser extensions and ad blockers refuse the storage domain outright, which is what
+   * produced the "blocked by Chrome" page for both preview and download. */
+  async function loadAttachmentBlob(a: Attachment): Promise<Blob | null> {
+    if (!a.path) return null;
     try {
-      const res = await fetch(data.signedUrl);
-      if (!res.ok) throw new Error(`status ${res.status}`);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const tab = window.open(url, "_blank", "noopener,noreferrer");
-      if (!tab) {
-        URL.revokeObjectURL(url);
-        toast.error("Allow pop-ups to preview this document, or download it instead");
-        return;
-      }
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch {
-      toast.error(`Preview was blocked for ${a.name} — downloading it instead`);
-      await downloadAttachment(a);
+      const { base64, contentType } = await fetchDocument({ data: { path: a.path } });
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+      return new Blob([bytes], { type: contentType });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : `Could not read ${a.name}`);
+      return null;
     }
   }
 
-  /** Same signed-URL flow as opening it, but asks storage for a `Content-Disposition: attachment`
-   * link so the browser saves the file instead of just previewing it inline. */
-  async function downloadAttachment(a: Attachment) {
-    if (!a.path) return;
-    const { data, error } = await supabase.storage
-      .from("documents")
-      .createSignedUrl(a.path, 60, { download: a.name });
-    if (error || !data?.signedUrl) {
-      toast.error(`Could not download ${a.name}`);
+  async function openAttachment(a: Attachment) {
+    const blob = await loadAttachmentBlob(a);
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const tab = window.open(url, "_blank", "noopener,noreferrer");
+    if (!tab) {
+      URL.revokeObjectURL(url);
+      toast.error("Allow pop-ups to preview this document, or download it instead");
       return;
     }
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
+
+  /** Same in-app read, saved to disk instead of opened. */
+  async function downloadAttachment(a: Attachment) {
+    const blob = await loadAttachmentBlob(a);
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.href = data.signedUrl;
+    link.href = url;
     link.download = a.name;
     link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
   }
 
   // A deal that hasn't been created yet still needs a stable id so it can register as its own
@@ -1443,9 +1469,9 @@ function LiveDealEngine() {
                 </ul>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  {workspaceDocs.length === 0
+                  {workspaceDocs.length === 0 && !submittedForThisBid
                     ? "The AI summary appears here once a document is uploaded."
-                    : "Reading the uploaded document…"}
+                    : "Reading your documents…"}
                 </p>
               )}
               {/* Documents attached but never read — say so plainly, with a way to run it again,
@@ -1518,11 +1544,11 @@ function LiveDealEngine() {
             {dealTx ? (
               <div className="mt-4 flex items-start justify-end gap-4">
                 <div className="w-1/2 max-w-[260px] shrink-0">
-                  {workspaceDocsPending ? (
+                  {workspaceDocsPending || (submittedForThisBid && workspaceDocs.length === 0) ? (
                     <div className="flex h-10 items-center justify-center text-xs text-muted-foreground">
-                      Loading saved documents…
+                      Reading your documents…
                     </div>
-                  ) : workspaceDocs.length === 0 ? (
+                  ) : workspaceDocs.length === 0 && !submittedForThisBid ? (
                     <DocumentUploadStep
                       // A stale resumed deal (from the "keep working on your last bid"
                       // localStorage effect) can mount this before the freshly-seeded one
@@ -1534,6 +1560,7 @@ function LiveDealEngine() {
                       transactionId={dealTx.id}
                       reference={(dealTx as unknown as { reference?: string | null }).reference ?? draftReference}
                       onNext={() => void runSearch(dealTx.id)}
+                      onSubmitted={() => markSubmitted(dealTx.id)}
                       onFirstClassified={({ directionGuess }) => void applyDirectionGuess(directionGuess)}
                       autoAdvance
                       initialPrompt={seedPrompt}

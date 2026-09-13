@@ -46,6 +46,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1218,24 +1219,38 @@ export function CounterpartyRecord({
               : "No matches found yet — run the search again."}
         </p>
       ) : (
+        <RadioGroup
+          asChild
+          value={pickedId ?? ""}
+          onValueChange={(v) => setPickedId(v)}
+          disabled={!screeningDone}
+        >
         <ul className="mt-2 space-y-2.5">
           {visibleCandidates.map((c) => (
             <li key={c.id} className="flex items-start gap-2.5">
-              <Checkbox
-                id={`shortlist-${c.id}`}
-                checked={screeningDone ? pickedId === c.id : Boolean(c.shortlisted)}
-                onCheckedChange={(v) =>
-                  screeningDone ? setPickedId(v ? c.id : null) : toggle(c, Boolean(v))
-                }
-                className="mt-0.5"
-              />
+              {/* One party gets chosen at the end, so that step is a radio list — before then it's
+                  a multi-select shortlist. */}
+              {screeningDone ? (
+                <RadioGroupItem
+                  id={`shortlist-${c.id}`}
+                  value={c.id}
+                  className="mt-0.5"
+                />
+              ) : (
+                <Checkbox
+                  id={`shortlist-${c.id}`}
+                  checked={Boolean(c.shortlisted)}
+                  onCheckedChange={(v) => toggle(c, Boolean(v))}
+                  className="mt-0.5"
+                />
+              )}
               <label htmlFor={`shortlist-${c.id}`} className="min-w-0 flex-1 cursor-pointer">
                 <span className="flex items-center gap-2">
                   <span className="text-sm font-medium text-slate-900">{c.name}</span>
                   {c.score != null && (
-                    <Badge variant="secondary" className="font-normal">
-                      {c.score}/100
-                    </Badge>
+                    <span className="shrink-0 rounded-full border border-foreground bg-foreground px-2 py-0.5 text-[11px] font-semibold text-background">
+                      {c.score}% match
+                    </span>
                   )}
                 </span>
                 <span className="block text-[11px] text-slate-500">
@@ -1269,6 +1284,7 @@ export function CounterpartyRecord({
             </li>
           ))}
         </ul>
+        </RadioGroup>
       )}
 
       {/* The match-search progress bar lives under the Counterparties node on the diagram. */}
@@ -1377,9 +1393,9 @@ export function CounterpartyRecord({
                   <span className="flex items-center gap-2">
                     <span className="text-sm font-semibold text-slate-900">{r.name}</span>
                     {cand?.score != null && (
-                      <Badge variant="secondary" className="font-normal">
-                        {cand.score}/100
-                      </Badge>
+                      <span className="shrink-0 rounded-full border border-foreground bg-foreground px-2 py-0.5 text-[11px] font-semibold text-background">
+                        {cand.score}% match
+                      </span>
                     )}
                   </span>
                   <ChevronDown
