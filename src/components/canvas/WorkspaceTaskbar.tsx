@@ -118,29 +118,34 @@ export function WorkspaceTaskbar() {
   const deals = windows.filter((w) => w.id !== "new");
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 flex items-end gap-1 overflow-x-auto border-t border-border bg-muted/60 px-2 pt-1.5 backdrop-blur">
-      <button
-        type="button"
-        onClick={() => activate("new", "maximized")}
-        title="New live workspace"
-        className="flex w-[4.5rem] shrink-0 items-center justify-center gap-1 rounded-t-md border border-foreground border-b-transparent bg-foreground px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-background"
-      >
-        <Plus className="h-3 w-3" />
-        New
-      </button>
-      {/* Finding an existing bid by its id or a keyword lives here, next to New — the reference on
-          the workspace heading itself is only a label now. */}
-      <button
-        type="button"
-        onClick={() => setSearchOpen(true)}
-        title="Search bids and offers"
-        aria-label="Search bids and offers"
-        className="flex w-9 shrink-0 items-center justify-center rounded-t-md border border-border border-b-transparent bg-transparent px-2 py-1.5 text-muted-foreground hover:bg-card/50 hover:text-foreground"
-      >
-        <Search className="h-3.5 w-3.5" />
-      </button>
+    <div className="fixed inset-x-0 bottom-0 z-40 flex items-end gap-1 border-t border-border bg-muted/60 px-2 pt-1.5 backdrop-blur">
+      {/* New + Search are pinned to the far left, outside the scrollable tab strip — they stay put
+          no matter how many deal tabs there are or how far the strip is scrolled. */}
+      <div className="flex shrink-0 items-end gap-1">
+        <button
+          type="button"
+          onClick={() => activate("new", "maximized")}
+          title="New live workspace"
+          className="flex w-[4.5rem] shrink-0 items-center justify-center gap-1 rounded-t-md border border-foreground border-b-transparent bg-foreground px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-background"
+        >
+          <Plus className="h-3 w-3" />
+          New
+        </button>
+        {/* Finding an existing bid by its id or a keyword lives here, next to New — the reference
+            on the workspace heading itself is only a label now. */}
+        <button
+          type="button"
+          onClick={() => setSearchOpen(true)}
+          title="Search bids and offers"
+          aria-label="Search bids and offers"
+          className="flex w-9 shrink-0 items-center justify-center rounded-t-md border border-border border-b-transparent bg-transparent px-2 py-1.5 text-muted-foreground hover:bg-card/50 hover:text-foreground"
+        >
+          <Search className="h-3.5 w-3.5" />
+        </button>
+      </div>
       <DealSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
 
+      <div className="flex items-end gap-1 overflow-x-auto">
       {deals.map((w) => {
         const active = w.mode !== "minimized";
         return (
@@ -194,6 +199,7 @@ export function WorkspaceTaskbar() {
           </div>
         );
       })}
+      </div>
     </div>
   );
 }
