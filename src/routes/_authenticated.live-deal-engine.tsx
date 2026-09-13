@@ -1122,28 +1122,29 @@ function LiveDealEngine() {
           <div className="h-[calc((100vh-190px)*0.9)] w-full overflow-y-auto rounded-3xl border border-border bg-card p-3 shadow-sm sm:p-5">
           <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
             <p className="label-caps text-foreground">Live Workspace</p>
-            {(((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference) && (
-              <span className="flex items-center gap-2 font-mono text-lg font-bold tracking-wide text-foreground">
-                {workspaceDocs.length > 0 && (
-                  <Paperclip className="h-4 w-4 shrink-0 text-muted-foreground" />
-                )}
-                {((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference}
-              </span>
-            )}
           </div>
 
-          {/* Bid Registered — the very top of the workspace: when it was registered, which business
-              registered it (with its verification status) and the country. No individual's name. */}
+          {/* Bid Registered — the very top of the workspace: the bid/offer id (right-aligned),
+              when it was registered, which business registered it (with its verification status)
+              and the country. SubmitterIdentity already looks up the business name itself, so
+              nothing here repeats it a second time. */}
           {activity && dealTx && (
             <div className="glass-node mb-3 space-y-1.5 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="label-caps text-muted-foreground">Bid Registered</p>
-                <SubmitterIdentity orgId={dealTx.org_id} createdBy={null} />
+                {(((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference) && (
+                  <span className="flex items-center gap-2 font-mono text-base font-bold tracking-wide text-foreground">
+                    {workspaceDocs.length > 0 && (
+                      <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    )}
+                    {((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference}
+                  </span>
+                )}
               </div>
+              <SubmitterIdentity orgId={dealTx.org_id} createdBy={null} />
               <p className="text-xs text-muted-foreground">
                 Registered {new Date(activity.time ?? dealTx.created_at).toLocaleString()}
               </p>
-              {org?.name && <p className="text-sm font-semibold text-foreground">{org.name}</p>}
               {(org?.country || dealTx.jurisdiction) && (
                 <p className="text-xs text-muted-foreground">{org?.country ?? dealTx.jurisdiction}</p>
               )}
