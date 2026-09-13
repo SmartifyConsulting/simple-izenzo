@@ -1541,11 +1541,11 @@ function LiveDealEngine() {
             {dealTx ? (
               <div className="mt-4 flex items-start justify-end gap-4">
                 <div className="w-1/2 max-w-[260px] shrink-0">
-                  {workspaceDocsPending ? (
+                  {workspaceDocsPending || (submittedForThisBid && workspaceDocs.length === 0) ? (
                     <div className="flex h-10 items-center justify-center text-xs text-muted-foreground">
-                      Loading saved documents…
+                      Reading your documents…
                     </div>
-                  ) : workspaceDocs.length === 0 ? (
+                  ) : workspaceDocs.length === 0 && !submittedForThisBid ? (
                     <DocumentUploadStep
                       // A stale resumed deal (from the "keep working on your last bid"
                       // localStorage effect) can mount this before the freshly-seeded one
