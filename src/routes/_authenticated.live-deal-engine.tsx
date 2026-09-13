@@ -378,6 +378,39 @@ function LiveDealEngine() {
     },
   });
 
+  /** Which workflow item is genuinely current right now — the stored stage/step can't tell
+   * "searching" apart from "results are in", so the page says it outright. Search AI + AI+ and
+   * Online Media Screening run together, so both pulse at the same time. */
+  const stepOverrides = useMemo(() => {
+    const o: Record<string, "locked" | "open" | "active" | "done"> = {};
+    if (!dealTx) return o;
+    o["bidRegistration"] = "done";
+    const searching = flowStep === "searching" || screening || mediaRunning;
+    if (workspaceDocs.length === 0) {
+      o["docSubmission"] = "active";
+      return o;
+    }
+    o["docSubmission"] = "done";
+    if (searching) {
+      o["search"] = "active";
+      o["onlineMedia"] = "active";
+      return o;
+    }
+    if (flowStep === "documents") return o;
+    o["search"] = "done";
+    o["onlineMedia"] = "done";
+    if (hasChosen) {
+      o["choice"] = "done";
+      o["poi"] = dealTx.poi_sealed_at ? "done" : "active";
+      if (dealTx.poi_sealed_at) o["wad"] = dealTx.wad_completed_at ? "done" : "active";
+    } else {
+      o["choice"] = "active";
+    }
+    return o;
+  }, [dealTx, flowStep, screening, mediaRunning, hasChosen, workspaceDocs.length]);
+
+
+
   // Which canvas step should pulse, on top of whichever step the canvas already highlights as
   // "active": Choice, until results have come back at least once; Background screening, while the
   // provider checks are actually running. Once screening has returned, the step it's attached to
