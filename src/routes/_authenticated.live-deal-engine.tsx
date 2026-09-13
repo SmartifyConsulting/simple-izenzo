@@ -368,10 +368,15 @@ function LiveDealEngine() {
   // Once interest is being fetched the submitted detail collapses out of the way, so the results
   // have the room. Remembered per bid, so it stays collapsed on a refresh or a tab switch; the
   // header stays clickable to open it again.
-  const [bidInfoOpen, setBidInfoOpen] = useState(true);
+  // Kept per bid rather than as one shared boolean: a single flag meant an explicit collapse could
+  // be undone the moment the transaction object was replaced (which happens on every step
+  // advance), which is exactly why this frame kept springing back open.
+  const [bidInfoCollapsedByTx, setBidInfoCollapsedByTx] = useState<Record<string, boolean>>({});
+  const bidInfoKnown = useRef<Set<string>>(new Set());
   function setBidInfoCollapsed(txId: string | undefined, collapsed: boolean) {
-    setBidInfoOpen(!collapsed);
     if (!txId) return;
+    bidInfoKnown.current.add(txId);
+    setBidInfoCollapsedByTx((prev) => ({ ...prev, [txId]: collapsed }));
     try {
       if (collapsed) sessionStorage.setItem(`bid-info-collapsed:${txId}`, "1");
       else sessionStorage.removeItem(`bid-info-collapsed:${txId}`);
@@ -379,6 +384,7 @@ function LiveDealEngine() {
       // Private browsing without storage — the state above still holds for this view.
     }
   }
+  const bidInfoOpen = dealTx ? !bidInfoCollapsedByTx[dealTx.id] : true;
   // Once the ask has been made for a bid, the description/drop frame never comes back — not while
   // the files are still saving, not on a refresh, not on a tab switch. Remembered per bid.
   const [submittedBids, setSubmittedBids] = useState<Set<string>>(() => new Set());
