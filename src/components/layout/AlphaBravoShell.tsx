@@ -26,12 +26,15 @@ function AlphaBravoShellInner({ children }: { children: ReactNode }) {
       {/* One shared menu across every screen in the app. */}
       <MainHeader />
 
-      <main>{children}</main>
+      {/* pb-16 clears the footer band below, now pinned to the viewport like the Live Workspace's
+          own taskbar rather than trailing off at the end of a long page. */}
+      <main className="pb-[3.2rem]">{children}</main>
 
       {/* Bottom banner — a full-width, contrasting band that holds the footer, so it reads as a
-          deliberate close to the page rather than a thin line of fine print blending into it. */}
-      <div className="bg-foreground text-background">
-        <footer className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-5">
+          deliberate close to the page rather than a thin line of fine print blending into it.
+          h-[3.2rem] is h-16 (4rem) reduced 20%. */}
+      <div className="fixed inset-x-0 bottom-0 z-30 bg-foreground text-background">
+        <footer className="mx-auto flex h-[3.2rem] w-full max-w-6xl items-center justify-between gap-4 px-5">
           <p className="whitespace-nowrap text-[11px] tracking-wide text-background/70 sm:text-xs">
             Izenzo is the trading name of Starfair162 (Pty) Ltd Reg: 2018 / 331720 / 07.
           </p>

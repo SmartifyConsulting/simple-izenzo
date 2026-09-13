@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Sparkles } from "lucide-react";
 import { HeroMatchCard } from "@/components/marketing/HeroMatchCard";
+import { SubmitBidButton } from "@/components/marketing/SubmitBidButton";
 
 export const Route = createFileRoute("/alpha-bravo/")({
   head: () => ({
@@ -59,16 +60,19 @@ function AlphaBravoHome() {
         Pre-vetted · Governed marketplace
       </p>
 
-      <div className="mt-3 max-w-3xl">
-        <h1 className="text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl">
+      <div className="mt-3 max-w-4xl">
+        <h1 className="max-w-3xl text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl">
           Find the right Trade
           <br />
           in ~5 minutes.
         </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-          Post your opportunity brief and get matched with verified Responders — fit scores,
-          verified contacts, and ready-to-send outreach, all under one cryptographic record.
-        </p>
+        <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
+          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+            Post your opportunity brief and get matched with verified Responders — fit scores,
+            verified contacts, and ready-to-send outreach, all under one cryptographic record.
+          </p>
+          <SubmitBidButton size="sm" className="mt-0.5 shrink-0" />
+        </div>
         <div className="mt-4">
           <Link
             to="/alpha-bravo/how-it-works"
