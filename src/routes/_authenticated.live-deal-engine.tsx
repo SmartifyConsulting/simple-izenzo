@@ -7,8 +7,6 @@ import {
   Archive,
   BadgeCheck,
   CheckCircle2,
-  ChevronDown,
-  ChevronRight,
   Download,
   Eye,
   Maximize2,
@@ -1292,34 +1290,19 @@ function LiveDealEngine() {
               the business name itself, so nothing here repeats it a second time. */}
           {activity && dealTx && (
             <div className="glass-node sticky top-0 z-20 mb-3 space-y-1.5 bg-card p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-start justify-between gap-2">
                 <p className="label-caps text-muted-foreground">Bid Registration</p>
-                {(((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference) && (
-                  <span className="flex items-center gap-2 font-mono text-base font-bold tracking-wide text-foreground">
-                    {workspaceDocs.length > 0 && (
-                      <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    )}
-                    {((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference}
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0 space-y-1">
-                  <SubmitterIdentity orgId={dealTx.org_id} createdBy={null} />
-                  {(org as unknown as { created_at?: string } | null)?.created_at && (
-                    <p className="text-xs text-muted-foreground">
-                      Bidder Active Since:{" "}
-                      {new Date((org as unknown as { created_at: string }).created_at).toLocaleDateString(
-                        undefined,
-                        { year: "numeric", month: "short", day: "numeric" },
-                      )}
-                    </p>
-                  )}
-                  {(org?.country || dealTx.jurisdiction) && (
-                    <p className="text-xs text-muted-foreground">{org?.country ?? dealTx.jurisdiction}</p>
-                  )}
-                </div>
+                {/* Title and Registered date now sit stacked directly under the BID/OFF id,
+                    instead of down in the row below alongside the bidder's own details. */}
                 <div className="shrink-0 space-y-1 text-right">
+                  {(((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference) && (
+                    <span className="flex items-center justify-end gap-2 font-mono text-base font-bold tracking-wide text-foreground">
+                      {workspaceDocs.length > 0 && (
+                        <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      )}
+                      {((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference}
+                    </span>
+                  )}
                   {(dealTx.commodity || dealTx.title) && !GENERIC_TITLES.has(dealTx.title) && (
                     <p className="text-sm font-semibold text-foreground">
                       {dealTx.commodity || dealTx.title}
@@ -1329,6 +1312,21 @@ function LiveDealEngine() {
                     Registered {new Date(activity.time ?? dealTx.created_at).toLocaleString()}
                   </p>
                 </div>
+              </div>
+              <div className="min-w-0 space-y-1">
+                <SubmitterIdentity orgId={dealTx.org_id} createdBy={null} />
+                {(org as unknown as { created_at?: string } | null)?.created_at && (
+                  <p className="text-xs text-muted-foreground">
+                    Bidder Active Since:{" "}
+                    {new Date((org as unknown as { created_at: string }).created_at).toLocaleDateString(
+                      undefined,
+                      { year: "numeric", month: "short", day: "numeric" },
+                    )}
+                  </p>
+                )}
+                {(org?.country || dealTx.jurisdiction) && (
+                  <p className="text-xs text-muted-foreground">{org?.country ?? dealTx.jurisdiction}</p>
+                )}
               </div>
             </div>
           )}
@@ -1344,24 +1342,22 @@ function LiveDealEngine() {
                   aria-expanded={bidInfoOpen}
                   className="label-caps flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
                 >
-                  {bidInfoOpen ? (
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  ) : (
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  )}
+                  <span aria-hidden className="w-2.5 text-center font-mono">
+                    {bidInfoOpen ? "−" : "+"}
+                  </span>
                   BID INFORMATION
                 </button>
                 {idCheck?.status === "passed" && (
                   <span
                     title={`Verified${idCheck.completed_at ? ` — ${new Date(idCheck.completed_at).toLocaleString()}` : ""}`}
-                    className="flex shrink-0 items-center gap-1 rounded-full border border-success/40 bg-success/10 px-2 py-0.5 text-[10px] font-semibold text-success"
+                    className="flex shrink-0 items-center gap-1 rounded-full bg-foreground px-2 py-0.5 text-[10px] font-semibold text-background"
                   >
                     <BadgeCheck className="h-3 w-3" />
                     ID Verified
                   </span>
                 )}
                 {idCheck?.status === "in_progress" && (
-                  <span className="flex shrink-0 items-center gap-1 rounded-full bg-info px-2 py-0.5 text-[10px] font-semibold text-white">
+                  <span className="flex shrink-0 items-center gap-1 rounded-full bg-foreground px-2 py-0.5 text-[10px] font-semibold text-background">
                     ID check pending
                   </span>
                 )}
@@ -1381,7 +1377,7 @@ function LiveDealEngine() {
                 </p>
               )}
               {documentSummary ? (
-                <ul className="mt-1 list-disc space-y-1 pl-4 text-sm leading-relaxed text-foreground">
+                <ul className="mt-1 list-disc space-y-1 pl-4 text-xs leading-relaxed text-foreground">
                   {documentSummary
                     .split("\n")
                     .map((line) => line.replace(/^[-•*]\s*/, "").trim())
@@ -1389,7 +1385,7 @@ function LiveDealEngine() {
                     .map((line, i) => <li key={i}>{highlightKeyTerms(line)}</li>)}
                 </ul>
               ) : (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   {workspaceDocs.length === 0
                     ? "The AI summary appears here once a document is uploaded."
                     : "Reading the uploaded document…"}
@@ -1576,7 +1572,7 @@ function LiveDealEngine() {
             <div className="mt-4 space-y-3">
                 <div className="flex flex-wrap gap-1.5">
                   {activity.commodity && (
-                    <span className="rounded-full border border-primary/40 bg-primary/12 px-2.5 py-1 text-[11px] font-semibold text-primary">
+                    <span className="rounded-full bg-foreground px-2.5 py-1 text-[11px] font-semibold text-background">
                       {activity.commodity}
                     </span>
                   )}

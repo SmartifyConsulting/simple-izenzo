@@ -1210,7 +1210,7 @@ export function CounterpartyRecord({
       )}
 
       {candidates.length === 0 ? (
-        <p className="mt-2 text-sm text-slate-500">
+        <p className="mt-2 text-xs text-slate-500">
           {searching
             ? "Searching for counterparties…"
             : error
