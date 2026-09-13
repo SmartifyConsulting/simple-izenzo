@@ -1036,7 +1036,11 @@ function LiveDealEngine() {
     }
   }
 
-  /** The bucket is private, so a short-lived signed link is minted on demand rather than stored. */
+  /** The bucket is private, so a short-lived signed link is minted on demand rather than stored.
+   * The file itself is then fetched and opened from this app's own address (a `blob:` URL) — some
+   * browser extensions and ad blockers refuse to navigate to the storage host directly, which is
+   * what produced the "blocked by Chrome" page. If even the fetch is blocked, it falls back to
+   * downloading the file rather than leaving a dead tab. */
   async function openAttachment(a: Attachment) {
     if (!a.path) return;
     const { data, error } = await supabase.storage.from("documents").createSignedUrl(a.path, 60);
@@ -1044,7 +1048,22 @@ function LiveDealEngine() {
       toast.error(`Could not open ${a.name}`);
       return;
     }
-    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+    try {
+      const res = await fetch(data.signedUrl);
+      if (!res.ok) throw new Error(`status ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const tab = window.open(url, "_blank", "noopener,noreferrer");
+      if (!tab) {
+        URL.revokeObjectURL(url);
+        toast.error("Allow pop-ups to preview this document, or download it instead");
+        return;
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      toast.error(`Preview was blocked for ${a.name} — downloading it instead`);
+      await downloadAttachment(a);
+    }
   }
 
   /** Same signed-URL flow as opening it, but asks storage for a `Content-Disposition: attachment`
