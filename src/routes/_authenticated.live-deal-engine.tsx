@@ -1317,7 +1317,9 @@ function LiveDealEngine() {
               (wrapped, right-aligned), and how long that business has been active. Column 2: the
               BID/OFF id and the data that belongs with it (when it was registered). */}
           {activity && dealTx && (
-            <div className="glass-node sticky top-0 z-20 mb-3 space-y-1.5 bg-card p-4">
+            {/* Fully opaque: the glass treatment's translucency let the content scrolling beneath
+                show through this pinned frame. */}
+            <div className="glass-node sticky top-0 z-20 mb-3 space-y-1.5 bg-card p-4 [backdrop-filter:none] [background-image:none]">
               <p className="label-caps text-muted-foreground">Bid Registration</p>
               <div className="grid grid-cols-2 items-start gap-3">
                 <div className="min-w-0 space-y-1">
