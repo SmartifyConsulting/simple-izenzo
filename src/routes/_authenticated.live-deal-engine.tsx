@@ -1244,18 +1244,8 @@ function LiveDealEngine() {
             </div>
           )}
 
-          {activity && flowStep !== "documents" && (
-            <div className="mt-3 space-y-1.5">
-              <div className="flex items-center gap-2 text-sm text-primary">
-                <CheckCircle2 className="h-4 w-4 shrink-0" />
-                Bid Registration
-              </div>
-              <div className="flex items-center gap-2 text-sm text-primary">
-                <CheckCircle2 className="h-4 w-4 shrink-0" />
-                Submission of documents
-              </div>
-            </div>
-          )}
+          {/* Bid Registration / Submission of documents now tick in the workflow column instead. */}
+
 
           {mapPanel && dealTx && (
             <div className="mt-3">
