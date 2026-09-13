@@ -111,7 +111,7 @@ export const runOnlineMediaChecks = createServerFn({ method: "POST" })
               label: src.label,
               status: "adverse",
               detail: `Possible adverse mentions: ${hits.slice(0, 4).join(", ")}. Read the source before continuing.`,
-              url,
+              ...(url ? { url } : {}),
             });
           } else if (mentioned) {
             findings.push({
@@ -119,7 +119,7 @@ export const runOnlineMediaChecks = createServerFn({ method: "POST" })
               label: src.label,
               status: "found",
               detail: "Public presence found, nothing adverse in the visible results.",
-              url,
+              ...(url ? { url } : {}),
             });
           } else {
             findings.push({
@@ -127,7 +127,7 @@ export const runOnlineMediaChecks = createServerFn({ method: "POST" })
               label: src.label,
               status: "not_found",
               detail: "No clear public presence on this source.",
-              url,
+              ...(url ? { url } : {}),
             });
           }
         } catch (err) {

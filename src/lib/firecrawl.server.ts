@@ -91,8 +91,8 @@ async function firecrawlPost(
 
 /** Firecrawl replies sometimes nest the document under `data`, sometimes not. */
 function pickText(payload: Record<string, any>): string {
-  const doc = payload?.data ?? payload;
-  const text: string = doc?.markdown || doc?.summary || doc?.html || "";
+  const doc = payload?.['data'] ?? payload;
+  const text: string = doc?.['markdown'] || doc?.['summary'] || doc?.['html'] || "";
   return String(text).replace(/\s+/g, " ").trim();
 }
 
@@ -148,21 +148,21 @@ export async function searchWeb(
     { query, limit, scrapeOptions: { formats: ["markdown"], onlyMainContent: true } },
     timeoutMs,
   );
-  const raw = payload?.data;
+  const raw = payload?.['data'];
   const items: Record<string, any>[] = Array.isArray(raw)
     ? raw
-    : Array.isArray(raw?.web)
-      ? raw.web
-      : Array.isArray(raw?.news)
-        ? raw.news
+    : Array.isArray(raw?.['web'])
+      ? raw['web']
+      : Array.isArray(raw?.['news'])
+        ? raw['news']
         : [];
 
   return items
     .map((r) => {
-      const text = String(r?.markdown || r?.description || r?.title || "")
+      const text = String(r?.["markdown"] || r?.["description"] || r?.["title"] || "")
         .replace(/\s+/g, " ")
         .trim();
-      return { label, url: String(r?.url ?? ""), text: text.slice(0, 6_000) };
+      return { label, url: String(r?.["url"] ?? ""), text: text.slice(0, 6_000) };
     })
     .filter((s) => s.url && s.text);
 }
