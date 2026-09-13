@@ -38,10 +38,12 @@ Specifics taken from the map:
 - **Memory engine** as a circle top right of that row — "Compounding CDA (Capital Deployment Assessment)" — with an arrow coming up into it from Finality.
 - Same tile colours as the map: yellow for BID, pale blue for documents/execution/finality, green frames for search and compliance, cream for the counterparty group, lavender circle for memory.
 
-## Behaviour
+## Behaviour — driven by the live deal
 
-- Tiles reflect the live deal: cleared steps green with a tick, the current step pulsing, locked steps dimmed and unclickable with the existing lock reasons.
-- Clicking a tile opens the same step frame the Steps list opens.
+- The map reads the real deal record from this database: stage, current step, intent confirmed, Proof of Intent sealed, screening and media results, tokens. The gating rules are unchanged from the Izenzo Canvas project and are reused as they are.
+- Tiles reflect that state: cleared steps green with a tick, the current step pulsing, locked steps dimmed and unclickable with the existing lock reasons on hover.
+- Clicking an unlocked tile opens the same step frame the step list opens, so any action taken on the map advances the deal exactly as it does today, and the map updates when it does.
+- A deal picker at the top of the Map screen lets you switch between your deals; it opens on the most recent one.
 - The whole diagram scales to fit the width without scrolling; on narrow screens it scales down rather than reflowing.
 
 ## Technical notes
