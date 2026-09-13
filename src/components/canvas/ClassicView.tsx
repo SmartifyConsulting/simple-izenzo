@@ -342,11 +342,13 @@ export function ClassicView({
                       </div>
                     ) : (
                       <div className="space-y-1.5">
-                        {s.items.map((item) => (
+                        {withoutHiddenRows(s.items).map((item) => (
                           <SubRow
                             key={item.key}
                             item={item}
                             state={stateOf(item)}
+                            collapsed={Boolean(collapsedHeadings[item.key])}
+                            onToggle={() => toggleHeading(item.key)}
                             onClick={
                               item.isEntry ? () => onRegister?.() : () => open(item.stage, item.step)
                             }
