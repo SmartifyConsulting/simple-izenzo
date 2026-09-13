@@ -1063,22 +1063,10 @@ function LiveDealEngine() {
     );
   }
 
-  /** "Fetch Interest" — starts the AI/AI+ search and the online media screening in one go, so both
-   * steps pulse together in the workflow and every result lands without another click. */
+  /** "Fetch Interest" — runs the AI/AI+ search. Online media screening comes later, only once a
+   * person has made their choice and continued. */
   async function fetchInterest(txId: string) {
     setBidInfoCollapsed(txId, true);
-    // Anything already surfaced for this deal can be screened straight away, in parallel with the
-    // fresh search; whatever the search turns up is screened as it lands (see runSearch).
-    try {
-      const { data: existing } = await supabase
-        .from("counterparties")
-        .select("id")
-        .eq("transaction_id", txId);
-      const ids = (existing ?? []).map((c) => c.id as string);
-      if (ids.length > 0) void startMediaChecks(ids);
-    } catch {
-      // Best effort — the search below still runs and starts screening on its own results.
-    }
     await runSearch(txId);
   }
 
