@@ -101,7 +101,7 @@ export function MatchResultsPanel({
         .select("id, name, sector, jurisdiction, media_flags")
         .eq("transaction_id", transactionId!);
       if (error) throw error;
-      return (data ?? [])
+      const rows = (data ?? [])
         .map((c) => {
           const flags = (c.media_flags ?? {}) as {
             scoring?: Scoring;
@@ -121,8 +121,8 @@ export function MatchResultsPanel({
             source: "web_search",
             score: flags.scoring?.total ?? null,
           } satisfies Row;
-        })
-        .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+        });
+      return dedupe(rows);
     },
   });
 
