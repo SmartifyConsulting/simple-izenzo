@@ -23,8 +23,6 @@ import {
   Loader2,
   ExternalLink,
   RefreshCw,
-  Mail,
-  MailCheck,
   ShieldAlert,
   ScrollText,
   X,
