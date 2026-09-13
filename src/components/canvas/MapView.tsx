@@ -148,8 +148,8 @@ function Frame({
 }: {
   box: Box;
   className: string;
-  label?: string;
-  labelClassName?: string;
+  label?: string | undefined;
+  labelClassName?: string | undefined;
 }) {
   return (
     <div
@@ -182,13 +182,13 @@ function MapNode({
 }: {
   box: Box;
   label: string;
-  icon?: typeof Search;
+  icon?: typeof Search | undefined;
   state: NodeState;
-  onClick?: () => void;
-  lock?: string | null;
+  onClick?: (() => void) | undefined;
+  lock?: string | null | undefined;
   /** Tile colour taken from the source map. */
   fill: string;
-  sub?: string;
+  sub?: string | undefined;
 }) {
   const locked = state === "locked";
   return (
@@ -240,7 +240,7 @@ export function MapView({
 }: {
   tx: Transaction;
   reload: () => void;
-  readOnly?: boolean;
+  readOnly?: boolean | undefined;
 }) {
   const [panel, setPanel] = useState<{ stage: StageKey; step: string } | null>(null);
 
