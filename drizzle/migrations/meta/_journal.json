@@ -36,6 +36,13 @@
       "when": 1789248317069,
       "tag": "0004_restore_data_api_grants_and_signup_trigger",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789260674568,
+      "tag": "0005_add_document_summary_error",
+      "breakpoints": true
     }
   ]
 }

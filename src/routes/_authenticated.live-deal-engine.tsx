@@ -311,6 +311,7 @@ function LiveDealEngine() {
   // upload effects above have already captured their one-time snapshot — without this poll,
   // "What was submitted" would stay blank until the next full reload even once the summary was
   // actually ready.
+  const [readError, setReadError] = useState<string | null>(null);
   const { data: polledSummary } = useQuery({
     queryKey: ["tx-document-summary", dealTx?.id],
     enabled: Boolean(dealTx?.id) && !documentSummary,
@@ -318,15 +319,18 @@ function LiveDealEngine() {
     queryFn: async () => {
       const { data } = await supabase
         .from("transactions")
-        .select("document_summary")
+        .select("document_summary, document_summary_error")
         .eq("id", dealTx!.id)
         .maybeSingle();
-      return (data as { document_summary: string | null } | null)?.document_summary ?? null;
+      const row = data as { document_summary: string | null; document_summary_error: string | null } | null;
+      setReadError(row?.document_summary_error ?? null);
+      return row?.document_summary ?? null;
     },
   });
   useEffect(() => {
     if (polledSummary) setDocumentSummary(polledSummary);
   }, [polledSummary]);
+
   const search = useServerFn(searchCounterparties);
   const runScreening = useServerFn(runBackgroundScreening);
   const runMediaChecks = useServerFn(runOnlineMediaChecks);
@@ -342,9 +346,12 @@ function LiveDealEngine() {
     try {
       const { summary } = await summarizeDocs({ data: { transactionId } });
       setDocumentSummary(summary);
+      setReadError(null);
       toast.success("Documents read — summary ready");
     } catch (err) {
+      setReadError((err as Error).message);
       toast.error((err as Error).message);
+
     } finally {
       setRereading(false);
     }
@@ -1176,7 +1183,7 @@ function LiveDealEngine() {
               {!documentSummary && workspaceDocs.length > 0 && (
                 <div className="flex flex-wrap items-center gap-2 pt-1">
                   <p className="text-[11px] text-muted-foreground">
-                    These documents haven't been read yet.
+                    {readError ?? "These documents haven't been read yet."}
                   </p>
                   <Button
                     size="sm"
@@ -1189,6 +1196,7 @@ function LiveDealEngine() {
                   </Button>
                 </div>
               )}
+
               {attachments.length > 0 && (
                 <ul className="mt-2 space-y-1 border-t border-border pt-2">
                   {attachments.map((a, i) => (

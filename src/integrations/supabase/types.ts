@@ -2755,6 +2755,7 @@ export type Database = {
           created_by: string
           currency: string
           document_summary: string | null
+          document_summary_error: string | null
           document_summary_generated_at: string | null
           finality_sealed_at: string | null
           id: string
@@ -2784,6 +2785,7 @@ export type Database = {
           created_by?: string
           currency?: string
           document_summary?: string | null
+          document_summary_error?: string | null
           document_summary_generated_at?: string | null
           finality_sealed_at?: string | null
           id?: string
@@ -2813,6 +2815,7 @@ export type Database = {
           created_by?: string
           currency?: string
           document_summary?: string | null
+          document_summary_error?: string | null
           document_summary_generated_at?: string | null
           finality_sealed_at?: string | null
           id?: string

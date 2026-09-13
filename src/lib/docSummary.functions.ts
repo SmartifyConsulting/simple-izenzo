@@ -11,11 +11,28 @@ export const summarizeBidDocuments = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => z.object({ transactionId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
+    try {
+      return await readAndSummarize(supabase, data.transactionId);
+    } catch (err) {
+      // A read that fails must leave its reason on the deal, so the workspace can say why instead
+      // of showing an empty summary for ever.
+      const reason = (err as Error).message || "The documents could not be read.";
+      await supabase
+        .from("transactions")
+        .update({ document_summary_error: reason.slice(0, 500) } as never)
+        .eq("id", data.transactionId);
+      throw err;
+    }
+  });
 
+type AuthedClient = { from: (t: string) => any; storage: { from: (b: string) => any } };
+
+async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
+  {
     const { data: tx, error: txErr } = await supabase
       .from("transactions")
       .select("id, title, commodity, quantity, unit, price, currency, incoterms, jurisdiction")
-      .eq("id", data.transactionId)
+      .eq("id", transactionId)
       .maybeSingle();
     if (txErr) throw new Error(txErr.message);
     if (!tx) throw new Error("You don't have access to this deal.");
@@ -23,13 +40,14 @@ export const summarizeBidDocuments = createServerFn({ method: "POST" })
     const { data: docs, error: docErr } = await supabase
       .from("documents")
       .select("name, notes, storage_path")
-      .eq("transaction_id", data.transactionId)
+      .eq("transaction_id", transactionId)
       .order("created_at", { ascending: true });
     if (docErr) throw new Error(docErr.message);
     if (!docs || docs.length === 0) throw new Error("No documents to read yet.");
 
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) throw new Error("AI is not configured for this workspace.");
+
 
     const IMAGE_EXT = /\.(jpe?g|png|webp|gif|heic|heif)$/i;
     const PDF_EXT = /\.pdf$/i;
@@ -75,10 +93,17 @@ export const summarizeBidDocuments = createServerFn({ method: "POST" })
 
       try {
         if (PDF_EXT.test(name)) {
+          // A whole PDF travels as base64, which is a third bigger again — past this size the
+          // request is refused, so say the file was too big rather than failing the whole read.
+          if (bytes.length > 8_000_000) {
+            unreadable.push(`${name} (too large to read — over 8 MB)`);
+            continue;
+          }
           parts.push({
             type: "file",
             file: { filename: name, file_data: `data:application/pdf;base64,${toBase64(bytes)}` },
           });
+
         } else if (DOCX_EXT.test(name)) {
           const text = await docxText(bytes);
           parts.push({ type: "text", text: `--- ${kind}: ${name} ---\n${text}` });
@@ -124,35 +149,49 @@ export const summarizeBidDocuments = createServerFn({ method: "POST" })
         ? ` Note: ${unreadable.join(", ")} could not be read — mention ${unreadable.length === 1 ? "it was" : "they were"} not reviewed rather than guessing.`
         : "");
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-3.8-flash",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You read trade documents (IDs, contracts, invoices, spec sheets, spreadsheets) and extract " +
-              "deal details precisely. Reply with raw JSON only — no markdown fences, no commentary.",
-          },
-          { role: "user", content: [{ type: "text", text: instruction }, ...parts] },
-        ],
-      }),
-    });
-    if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
-    if (res.status === 402) throw new Error("AI credits are exhausted for this workspace.");
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      throw new Error(`The documents could not be read just now (${res.status}). ${body.slice(0, 300)}`.trim());
+    // One retry with a stricter instruction, so a reply that came back in the wrong shape isn't
+    // treated as an unreadable document.
+    async function ask(extra: string) {
+      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "google/gemini-3.8-flash",
+          messages: [
+            {
+              role: "system",
+              content:
+                "You read trade documents (IDs, contracts, invoices, spec sheets, spreadsheets) and extract " +
+                "deal details precisely. Reply with raw JSON only — no markdown fences, no commentary." +
+                extra,
+            },
+            { role: "user", content: [{ type: "text", text: instruction + extra }, ...parts] },
+          ],
+        }),
+      });
+      if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
+      if (res.status === 402) throw new Error("AI credits are exhausted for this workspace.");
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(
+          `The documents could not be read just now (${res.status}). ${body.slice(0, 300)}`.trim(),
+        );
+      }
+      const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+      return (json.choices?.[0]?.message?.content ?? "").trim();
     }
-    const json = (await res.json()) as { choices: { message: { content: string } }[] };
-    const raw = (json.choices?.[0]?.message?.content ?? "").trim();
-    if (!raw) throw new Error("The document summary came back empty.");
 
-    const parsed = parseReply(raw);
+    let parsed = parseReply(await ask(""));
+    if (parsed.bullets.length === 0) {
+      parsed = parseReply(
+        await ask(
+          '\nReply with nothing but the JSON object, starting with { and ending with }. "summary_bullets" must contain at least three bullets.',
+        ),
+      );
+    }
     const summary = parsed.bullets.map((b) => `• ${b}`).join("\n");
     if (!summary) throw new Error("The document summary came back empty.");
+
 
     let idCipher: string | null = null;
     if (parsed.idNumber) {
@@ -181,6 +220,7 @@ export const summarizeBidDocuments = createServerFn({ method: "POST" })
       .update({
         document_summary: summary,
         document_summary_generated_at: new Date().toISOString(),
+        document_summary_error: null,
         ...filled,
         ...(idCipher ? { id_number_encrypted: idCipher } : {}),
       } as never)
@@ -188,7 +228,9 @@ export const summarizeBidDocuments = createServerFn({ method: "POST" })
     if (upErr) throw new Error(upErr.message);
 
     return { summary, facts, unreadable };
-  });
+  }
+}
+
 
 function toBase64(bytes: Uint8Array) {
   let s = "";
