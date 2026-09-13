@@ -62,6 +62,8 @@ export function DocumentUploadStep({
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [reading, setReading] = useState(false);
+  // Once the ask has been sent, the form that sent it doesn't come back.
+  const [submitted, setSubmitted] = useState(false);
   const [prompt, setPrompt] = useState(initialPrompt ?? "");
 
   /** Keeps the typed description on the deal so the search reads it alongside the documents. */
@@ -221,7 +223,7 @@ export function DocumentUploadStep({
     <div className="space-y-4">
       {/* Once something is attached, the description box and drop strip give way to the files and
           the single "Find Matching Interest" action — the ask has already been made. */}
-      {docs.length === 0 && (
+      {docs.length === 0 && !submitted && (
       <div className="space-y-1.5">
         <Label htmlFor="deal-search-prompt" className="text-xs font-medium">
           Search Prompt{reference ? ` — ${reference}` : ""}
@@ -318,6 +320,7 @@ export function DocumentUploadStep({
         className="w-full"
         disabled={uploading || reading || (docs.length === 0 && prompt.trim().length === 0)}
         onClick={() => {
+          setSubmitted(true);
           void (async () => {
             await savePrompt();
             await next();

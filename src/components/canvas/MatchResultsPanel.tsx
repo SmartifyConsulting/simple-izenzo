@@ -171,7 +171,7 @@ export function MatchResultsPanel({
                 {m.sector ? ` · ${m.sector}` : ""}
               </p>
               {typeof m.score === "number" && (
-                <span className="shrink-0 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                <span className="shrink-0 rounded-full border border-foreground bg-foreground px-2 py-0.5 text-[11px] font-semibold text-background">
                   {m.score}% match
                 </span>
               )}

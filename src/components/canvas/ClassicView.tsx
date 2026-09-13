@@ -277,7 +277,7 @@ export function ClassicView({
                       natural width of that text, and the inner one shows half of it, so the
                       sub-steps sit halfway between the bracket and the step name. */}
                   <span aria-hidden className="invisible w-max shrink-0">
-                    <span className="flex w-1/2 items-start gap-2 overflow-hidden whitespace-nowrap">
+                    <span className="flex w-1/4 items-start gap-2 overflow-hidden whitespace-nowrap">
                       {bracketAndPrefix}
                     </span>
                   </span>
