@@ -1026,6 +1026,9 @@ function LiveDealEngine() {
   }
 
   async function runSearch(txId: string) {
+    // Whichever way the search was started, the submitted detail collapses out of the way so the
+    // results have the room; the header stays clickable to open it again.
+    setBidInfoOpen(false);
     setFlowStep("searching");
     setSearchError(null);
     // Marks Upload Documents done and moves the active step onto Search the moment the search
