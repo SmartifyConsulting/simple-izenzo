@@ -147,18 +147,31 @@ function SubRow({
   item,
   state,
   onClick,
+  collapsed,
+  onToggle,
 }: {
   item: SubItem;
   state: NodeState;
   onClick?: () => void;
+  /** Headings only: whether the rows beneath this heading are hidden right now. */
+  collapsed?: boolean;
+  onToggle?: () => void;
 }) {
   const Icon = item.icon;
-  // A grouping label, not a task: no pill, no border, no hover, not clickable — just small caps
-  // with a hairline rule, so the rows beneath it read as its children.
+  // A grouping label, not a task: no pill and no border — just small caps with a hairline rule, so
+  // the rows beneath it read as its children. It can be collapsed with the −/+ marker in front.
   if (item.heading) {
     return (
       <div className="flex items-center gap-2 pt-1.5">
-        <span className="label-caps whitespace-nowrap text-muted-foreground">{item.label}</span>
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={!collapsed}
+          className="label-caps whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground"
+        >
+          {collapsed ? "+" : "−"}
+          {item.label}
+        </button>
         <span aria-hidden className="h-px flex-1 bg-border" />
       </div>
     );
