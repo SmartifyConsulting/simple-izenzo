@@ -47,6 +47,9 @@ type SubItem = {
   /** The one item per step that always reads as open/active rather than locked/done — used for
    * "Create a bid or an offer", which starts a fresh registration rather than tracking state. */
   isEntry?: boolean;
+  /** Nests this row under the group heading directly above it (e.g. Concept/Pre-feasibility/
+   * Feasibility/Bankability under "Project Preparation") rather than reading as its own peer. */
+  indent?: boolean;
 };
 
 type StepDef = {
@@ -87,12 +90,12 @@ const STEPS: StepDef[] = [
     label: "Execution",
     items: [
       { key: "preparation", label: "Project Preparation", stage: "execution", step: "preparation", icon: Briefcase },
+      { key: "concept", label: "Concept", stage: "execution", step: "preparation", indent: true },
+      { key: "prefeasibility", label: "Pre-feasibility", stage: "execution", step: "preparation", indent: true },
+      { key: "feasibility", label: "Feasibility", stage: "execution", step: "preparation", indent: true },
+      { key: "bankability", label: "Bankability", stage: "execution", step: "bankability", indent: true },
       { key: "entry", label: "Execution", stage: "execution", step: "entry", icon: Hammer },
-      { key: "concept", label: "Concept", stage: "execution", step: "preparation" },
-      { key: "prefeasibility", label: "Pre-feasibility", stage: "execution", step: "preparation" },
-      { key: "feasibility", label: "Feasibility", stage: "execution", step: "preparation" },
-      { key: "bankability", label: "Bankability", stage: "execution", step: "bankability" },
-      { key: "implementation", label: "Implementation", stage: "execution", step: "implementation" },
+      { key: "implementation", label: "Implementation", stage: "execution", step: "implementation", indent: true },
     ],
   },
   {
@@ -146,7 +149,10 @@ function SubRow({
       onClick={onClick}
       disabled={!onClick}
       className={cn(
-        "flex w-full items-start gap-2 rounded-lg border px-3 py-2 text-left font-sans text-[13px] font-medium leading-snug transition-colors disabled:cursor-not-allowed",
+        "flex items-start gap-2 rounded-lg border px-3 py-2 text-left font-sans text-[13px] font-medium leading-snug transition-colors disabled:cursor-not-allowed",
+        // Nested under the group heading directly above it, rather than reading as a full-width
+        // peer of its own.
+        item.indent ? "ml-4 w-[calc(100%-1rem)]" : "w-full",
         // A step the page has explicitly marked done or in-progress reads as such, even when it is
         // also the "start a new bid" entry row — otherwise every override on it would be ignored.
         itemClasses(state, item.isEntry && state !== "done" && state !== "active"),
@@ -157,12 +163,14 @@ function SubRow({
       ) : (
         Icon && <Icon className="h-3.5 w-3.5 shrink-0" />
       )}
-      <span className="min-w-0 flex-1 break-words">{item.label}</span>
-      {item.sub && (
-        <span className="shrink-0 text-[9px] font-semibold uppercase tracking-wide text-[#C1653D]">
-          {item.sub}
-        </span>
-      )}
+      <span className="min-w-0 flex-1">
+        <span className="block break-words">{item.label}</span>
+        {item.sub && (
+          <span className="block text-[9px] font-semibold uppercase tracking-wide text-[#C1653D]">
+            {item.sub}
+          </span>
+        )}
+      </span>
     </button>
   );
 }

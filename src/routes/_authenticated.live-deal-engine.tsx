@@ -459,34 +459,37 @@ function LiveDealEngine() {
 
   /** Which workflow item is genuinely current right now — the stored stage/step can't tell
    * "searching" apart from "results are in", so the page says it outright. Search AI + AI+ and
-   * Online Media Screening run together, so both pulse at the same time. */
+   * Online Media Screening are two separate, independently-timed operations — each pulses only
+   * while it is itself actually running, not just because the other one is. */
   const stepOverrides = useMemo(() => {
     const o: Record<string, "locked" | "open" | "active" | "done"> = {};
     if (!dealTx) return o;
     o["bidRegistration"] = "done";
-    const searching = flowStep === "searching" || screening || mediaRunning;
     if (workspaceDocs.length === 0) {
       o["docSubmission"] = "active";
       return o;
     }
     o["docSubmission"] = "done";
-    if (searching) {
-      o["search"] = "active";
-      o["onlineMedia"] = "active";
-      return o;
-    }
     if (flowStep === "documents") return o;
-    o["search"] = "done";
-    o["onlineMedia"] = "done";
-    if (hasChosen) {
-      o["choice"] = "done";
-      o["poi"] = dealTx.poi_sealed_at ? "done" : "active";
-      if (dealTx.poi_sealed_at) o["wad"] = dealTx.wad_completed_at ? "done" : "active";
-    } else {
-      o["choice"] = "active";
+
+    o["search"] = flowStep === "searching" ? "active" : "done";
+    if (mediaRunning) {
+      o["onlineMedia"] = "active";
+    } else if (mediaResults !== null || flowStep === "results") {
+      o["onlineMedia"] = "done";
+    }
+
+    if (flowStep === "results" && !mediaRunning) {
+      if (hasChosen) {
+        o["choice"] = "done";
+        o["poi"] = dealTx.poi_sealed_at ? "done" : "active";
+        if (dealTx.poi_sealed_at) o["wad"] = dealTx.wad_completed_at ? "done" : "active";
+      } else {
+        o["choice"] = "active";
+      }
     }
     return o;
-  }, [dealTx, flowStep, screening, mediaRunning, hasChosen, workspaceDocs.length]);
+  }, [dealTx, flowStep, mediaRunning, mediaResults, hasChosen, workspaceDocs.length]);
 
 
 
@@ -1281,18 +1284,35 @@ function LiveDealEngine() {
             )}
           </div>
 
-          {/* Bid Registration — the very top of the workspace: the bid/offer id (right-aligned),
-              which business registered it (with its verification status) and how long that
-              business has been active on Izenzo on the left; the bid's own name and when it was
-              registered on the right, stacked under the id. SubmitterIdentity already looks up
-              the business name itself, so nothing here repeats it a second time. */}
+          {/* Bid Registration — the very top of the workspace, pinned above everything else that
+              scrolls beneath it. Column 1: the bidder's identity/verification, the bid's own name
+              (wrapped, right-aligned), and how long that business has been active. Column 2: the
+              BID/OFF id and the data that belongs with it (when it was registered). */}
           {activity && dealTx && (
             <div className="glass-node sticky top-0 z-20 mb-3 space-y-1.5 bg-card p-4">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <p className="label-caps text-muted-foreground">Bid Registration</p>
-                {/* Title and Registered date now sit stacked directly under the BID/OFF id,
-                    instead of down in the row below alongside the bidder's own details. */}
-                <div className="shrink-0 space-y-1 text-right">
+              <p className="label-caps text-muted-foreground">Bid Registration</p>
+              <div className="grid grid-cols-2 items-start gap-3">
+                <div className="min-w-0 space-y-1">
+                  <SubmitterIdentity orgId={dealTx.org_id} createdBy={null} />
+                  {(dealTx.commodity || dealTx.title) && !GENERIC_TITLES.has(dealTx.title) && (
+                    <p className="break-words text-right text-sm font-semibold text-foreground">
+                      {dealTx.commodity || dealTx.title}
+                    </p>
+                  )}
+                  {(org as unknown as { created_at?: string } | null)?.created_at && (
+                    <p className="text-xs text-muted-foreground">
+                      Bidder Active Since:{" "}
+                      {new Date((org as unknown as { created_at: string }).created_at).toLocaleDateString(
+                        undefined,
+                        { year: "numeric", month: "short", day: "numeric" },
+                      )}
+                    </p>
+                  )}
+                  {(org?.country || dealTx.jurisdiction) && (
+                    <p className="text-xs text-muted-foreground">{org?.country ?? dealTx.jurisdiction}</p>
+                  )}
+                </div>
+                <div className="min-w-0 space-y-1 text-right">
                   {(((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference) && (
                     <span className="flex items-center justify-end gap-2 font-mono text-base font-bold tracking-wide text-foreground">
                       {workspaceDocs.length > 0 && (
@@ -1301,30 +1321,10 @@ function LiveDealEngine() {
                       {((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference}
                     </span>
                   )}
-                  {(dealTx.commodity || dealTx.title) && !GENERIC_TITLES.has(dealTx.title) && (
-                    <p className="text-sm font-semibold text-foreground">
-                      {dealTx.commodity || dealTx.title}
-                    </p>
-                  )}
                   <p className="text-xs text-muted-foreground">
                     Registered {new Date(activity.time ?? dealTx.created_at).toLocaleString()}
                   </p>
                 </div>
-              </div>
-              <div className="min-w-0 space-y-1">
-                <SubmitterIdentity orgId={dealTx.org_id} createdBy={null} />
-                {(org as unknown as { created_at?: string } | null)?.created_at && (
-                  <p className="text-xs text-muted-foreground">
-                    Bidder Active Since:{" "}
-                    {new Date((org as unknown as { created_at: string }).created_at).toLocaleDateString(
-                      undefined,
-                      { year: "numeric", month: "short", day: "numeric" },
-                    )}
-                  </p>
-                )}
-                {(org?.country || dealTx.jurisdiction) && (
-                  <p className="text-xs text-muted-foreground">{org?.country ?? dealTx.jurisdiction}</p>
-                )}
               </div>
             </div>
           )}
