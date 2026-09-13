@@ -28,9 +28,50 @@ type Row = {
   verified_at: string | null;
   source: string | null;
   score?: number | null;
+  /** Every page this organisation was found on, after duplicate rows were merged. */
+  sourceUrls?: string[];
 };
 
 type Scoring = { total?: number; components?: { label?: string; note?: string }[] };
+
+/** Same organisation found on more than one page should read as one result. Company suffixes and
+ * punctuation are dropped so "Fowler Law PLLC" and "Fowler Law, P.L.L.C." collapse together. */
+const SUFFIXES =
+  /\b(inc|llc|llp|pllc|ltd|limited|plc|pty|pte|gmbh|bv|nv|sa|srl|co|corp|corporation|company|group|holdings|partners|associates|advisors|advisers|attorneys|law|legal|services)\b/g;
+
+function nameKey(name: string) {
+  return name.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(SUFFIXES, " ").replace(/\s+/g, " ").trim();
+}
+
+function hostKey(url: string | null) {
+  if (!url) return "";
+  try {
+    return new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+/** Keeps the highest-scoring row per organisation and remembers every page it was found on. */
+function dedupe(rows: Row[]): Row[] {
+  const byKey = new Map<string, Row>();
+  const hostToKey = new Map<string, string>();
+  for (const row of rows) {
+    const host = hostKey(row.source_url);
+    const key = (host && hostToKey.get(host)) || nameKey(row.name) || row.id;
+    if (host && !hostToKey.has(host)) hostToKey.set(host, key);
+    const existing = byKey.get(key);
+    const urls = [...(existing?.sourceUrls ?? []), ...(row.source_url ? [row.source_url] : [])];
+    const uniqueUrls = Array.from(new Set(urls));
+    if (!existing) {
+      byKey.set(key, { ...row, sourceUrls: uniqueUrls });
+      continue;
+    }
+    const better = (row.score ?? 0) > (existing.score ?? 0) ? row : existing;
+    byKey.set(key, { ...better, sourceUrls: uniqueUrls });
+  }
+  return Array.from(byKey.values()).sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+}
 
 /** The full match list. For a bid it shows that bid's own results — the organisations the live web
  * search actually found and scored — with the page each one came from. Without a bid it falls back
@@ -60,7 +101,7 @@ export function MatchResultsPanel({
         .select("id, name, sector, jurisdiction, media_flags")
         .eq("transaction_id", transactionId!);
       if (error) throw error;
-      return (data ?? [])
+      const rows = (data ?? [])
         .map((c) => {
           const flags = (c.media_flags ?? {}) as {
             scoring?: Scoring;
@@ -80,8 +121,8 @@ export function MatchResultsPanel({
             source: "web_search",
             score: flags.scoring?.total ?? null,
           } satisfies Row;
-        })
-        .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+        });
+      return dedupe(rows);
     },
   });
 
@@ -184,15 +225,35 @@ export function MatchResultsPanel({
             {m.summary && (
               <p className="mt-1.5 text-xs leading-relaxed text-foreground/80">{m.summary}</p>
             )}
-            {m.source_url && (
-              <a
-                href={m.source_url}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
-              >
-                <ExternalLink className="h-3 w-3" /> Where it was found
-              </a>
+            {/* One organisation, however many pages it turned up on. */}
+            {(m.sourceUrls?.length ?? 0) > 1 ? (
+              <div className="mt-1 space-y-0.5">
+                <p className="text-[11px] text-muted-foreground">
+                  Found on {m.sourceUrls!.length} pages
+                </p>
+                {m.sourceUrls!.map((u, i) => (
+                  <a
+                    key={u}
+                    href={u}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="flex items-center gap-1 text-[11px] text-primary hover:underline"
+                  >
+                    <ExternalLink className="h-3 w-3 shrink-0" /> Page {i + 1}
+                  </a>
+                ))}
+              </div>
+            ) : (
+              m.source_url && (
+                <a
+                  href={m.source_url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+                >
+                  <ExternalLink className="h-3 w-3" /> Where it was found
+                </a>
+              )
             )}
           </li>
         ))}

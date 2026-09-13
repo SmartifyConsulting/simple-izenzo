@@ -472,14 +472,23 @@ function LiveDealEngine() {
     o["docSubmission"] = "done";
     if (flowStep === "documents") return o;
 
-    o["search"] = flowStep === "searching" ? "active" : "done";
+    // Every row from here on is stated outright, so nothing falls back to the stored step and
+    // starts pulsing alongside the operation that is genuinely running.
+    if (flowStep === "searching") {
+      o["search"] = "active";
+      o["onlineMedia"] = "open";
+      o["choice"] = "open";
+      return o;
+    }
+    o["search"] = "done";
     if (mediaRunning) {
       o["onlineMedia"] = "active";
-    } else if (mediaResults !== null || flowStep === "results") {
-      o["onlineMedia"] = "done";
+      o["choice"] = "open";
+      return o;
     }
+    o["onlineMedia"] = mediaResults !== null || flowStep === "results" ? "done" : "open";
 
-    if (flowStep === "results" && !mediaRunning) {
+    if (flowStep === "results") {
       if (hasChosen) {
         o["choice"] = "done";
         o["poi"] = dealTx.poi_sealed_at ? "done" : "active";
@@ -1036,7 +1045,11 @@ function LiveDealEngine() {
     }
   }
 
-  /** The bucket is private, so a short-lived signed link is minted on demand rather than stored. */
+  /** The bucket is private, so a short-lived signed link is minted on demand rather than stored.
+   * The file itself is then fetched and opened from this app's own address (a `blob:` URL) — some
+   * browser extensions and ad blockers refuse to navigate to the storage host directly, which is
+   * what produced the "blocked by Chrome" page. If even the fetch is blocked, it falls back to
+   * downloading the file rather than leaving a dead tab. */
   async function openAttachment(a: Attachment) {
     if (!a.path) return;
     const { data, error } = await supabase.storage.from("documents").createSignedUrl(a.path, 60);
@@ -1044,7 +1057,22 @@ function LiveDealEngine() {
       toast.error(`Could not open ${a.name}`);
       return;
     }
-    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+    try {
+      const res = await fetch(data.signedUrl);
+      if (!res.ok) throw new Error(`status ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const tab = window.open(url, "_blank", "noopener,noreferrer");
+      if (!tab) {
+        URL.revokeObjectURL(url);
+        toast.error("Allow pop-ups to preview this document, or download it instead");
+        return;
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      toast.error(`Preview was blocked for ${a.name} — downloading it instead`);
+      await downloadAttachment(a);
+    }
   }
 
   /** Same signed-URL flow as opening it, but asks storage for a `Content-Disposition: attachment`
@@ -1289,7 +1317,9 @@ function LiveDealEngine() {
               (wrapped, right-aligned), and how long that business has been active. Column 2: the
               BID/OFF id and the data that belongs with it (when it was registered). */}
           {activity && dealTx && (
-            <div className="glass-node sticky top-0 z-20 mb-3 space-y-1.5 bg-card p-4">
+            // Fully opaque: the glass treatment's translucency let content scrolling beneath show
+            // through this pinned frame.
+            <div className="glass-node sticky top-0 z-20 mb-3 space-y-1.5 bg-card p-4 [backdrop-filter:none] [background-image:none]">
               <p className="label-caps text-muted-foreground">Bid Registration</p>
               <div className="grid grid-cols-2 items-start gap-3">
                 <div className="min-w-0 space-y-1">
@@ -1308,9 +1338,6 @@ function LiveDealEngine() {
                       )}
                     </p>
                   )}
-                  {(org?.country || dealTx.jurisdiction) && (
-                    <p className="text-xs text-muted-foreground">{org?.country ?? dealTx.jurisdiction}</p>
-                  )}
                 </div>
                 <div className="min-w-0 space-y-1 text-right">
                   {(((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference) && (
@@ -1324,6 +1351,11 @@ function LiveDealEngine() {
                   <p className="text-xs text-muted-foreground">
                     Registered {new Date(activity.time ?? dealTx.created_at).toLocaleString()}
                   </p>
+                  {(org?.country || dealTx.jurisdiction) && (
+                    <p className="text-xs text-muted-foreground">
+                      {org?.country ?? dealTx.jurisdiction}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

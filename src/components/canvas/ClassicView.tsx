@@ -50,6 +50,9 @@ type SubItem = {
   /** Nests this row under the group heading directly above it (e.g. Concept/Pre-feasibility/
    * Feasibility/Bankability under "Project Preparation") rather than reading as its own peer. */
   indent?: boolean;
+  /** A grouping label for the rows beneath it, not a task — rendered as plain small caps with a
+   * hairline rule, never as a pill, so it can't be mistaken for something to click. */
+  heading?: boolean;
 };
 
 type StepDef = {
@@ -89,12 +92,19 @@ const STEPS: StepDef[] = [
     step: 3,
     label: "Execution",
     items: [
-      { key: "preparation", label: "Project Preparation", stage: "execution", step: "preparation", icon: Briefcase },
+      {
+        key: "preparation",
+        label: "Project Preparation",
+        stage: "execution",
+        step: "preparation",
+        icon: Briefcase,
+        heading: true,
+      },
       { key: "concept", label: "Concept", stage: "execution", step: "preparation", indent: true },
       { key: "prefeasibility", label: "Pre-feasibility", stage: "execution", step: "preparation", indent: true },
       { key: "feasibility", label: "Feasibility", stage: "execution", step: "preparation", indent: true },
       { key: "bankability", label: "Bankability", stage: "execution", step: "bankability", indent: true },
-      { key: "entry", label: "Execution", stage: "execution", step: "entry", icon: Hammer },
+      { key: "entry", label: "Execution", stage: "execution", step: "entry", icon: Hammer, heading: true },
       { key: "implementation", label: "Implementation", stage: "execution", step: "implementation", indent: true },
     ],
   },
@@ -143,6 +153,16 @@ function SubRow({
   onClick?: () => void;
 }) {
   const Icon = item.icon;
+  // A grouping label, not a task: no pill, no border, no hover, not clickable — just small caps
+  // with a hairline rule, so the rows beneath it read as its children.
+  if (item.heading) {
+    return (
+      <div className="flex items-center gap-2 pt-1.5">
+        <span className="label-caps whitespace-nowrap text-muted-foreground">{item.label}</span>
+        <span aria-hidden className="h-px flex-1 bg-border" />
+      </div>
+    );
+  }
   return (
     <button
       type="button"
@@ -281,7 +301,9 @@ export function ClassicView({
                       {bracketAndPrefix}
                     </span>
                   </span>
-                  <div className="min-w-0 flex-1">
+                  {/* Every sub-step (ticked or not) sits 1cm further left than the indent above
+                      would otherwise put it. */}
+                  <div className="-ml-[1cm] min-w-0 flex-1">
                     {allDone ? (
                       /* A finished step reads as one ticked label, rather than repeating every
                          task it already completed. */
