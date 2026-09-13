@@ -21,8 +21,11 @@
    on the normalised business name (ignoring case, punctuation and suffixes like Ltd, LLC, PLLC,
    Inc, Group) and on the website it was found on.
 
-5. **Project Preparation and Execution filled grey.** Both rows in the workflow list get a grey
-   fill, marking them as later work rather than something to act on now.
+5. **Project Preparation and Execution become headings, not buttons.** A filled pill reads as
+   something to click, so instead of a grey fill these two lose their pill entirely: small
+   uppercase grey text with a thin hairline rule running to the right of it, no border, no
+   background, not clickable, no hover. The items beneath each one stay as pills, so the
+   heading-and-its-children grouping is obvious at a glance.
 
 6. **All sub-steps move 1 cm further left** — completed and outstanding alike, including the single
    ticked row a finished step collapses into.
@@ -46,9 +49,10 @@
 - `MatchResultsPanel.tsx`: after mapping the bid's counterparties, reduce by
   `normalise(name) || hostname(source_url)`, keeping the max score and collecting each row's
   evidence URL into a list; render "Found on N pages" with the links when N > 1.
-- `ClassicView.tsx`: `SubItem` gains `muted?: boolean`, set on `preparation` and `entry`;
-  `itemClasses` returns a grey `border-border bg-muted text-muted-foreground` for those. The
-  sub-step container (and the collapsed finished-step row) gains `-ml-[1cm]`.
+- `ClassicView.tsx`: `SubItem` gains `heading?: boolean`, set on `preparation` and `entry`; `SubRow`
+  renders those as a non-interactive `div` — `label-caps text-muted-foreground` plus a
+  `h-px flex-1 bg-border` rule — instead of a `button` with `itemClasses`. The sub-step container
+  (and the collapsed finished-step row) gains `-ml-[1cm]`.
 - Preview (`_authenticated.live-deal-engine.tsx` line 1042): keep `createSignedUrl`, but `fetch` the
   signed URL, convert to a `Blob`, and `window.open(URL.createObjectURL(blob))` (revoked after a
   delay) so the opened URL is same-origin `blob:` rather than the storage host an extension blocks;
