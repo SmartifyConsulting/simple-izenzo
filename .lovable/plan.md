@@ -22,7 +22,8 @@ So real Firecrawl results go in one door and sample listings come out the other.
    still on the right.
 5. Workflow labels stop being cut off — "Submission of Documents" and every other label wraps onto a
    second line instead of being clipped.
-6. In the About section, the "Writing" label becomes "Articles".
+6. Completed tasks and their ticks turn green, so finished steps read at a glance.
+7. In the About section, the "Writing" label becomes "Articles".
 
 ## Technical detail
 
