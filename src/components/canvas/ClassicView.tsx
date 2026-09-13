@@ -50,6 +50,9 @@ type SubItem = {
   /** Nests this row under the group heading directly above it (e.g. Concept/Pre-feasibility/
    * Feasibility/Bankability under "Project Preparation") rather than reading as its own peer. */
   indent?: boolean;
+  /** A grouping label for the rows beneath it, not a task — rendered as plain small caps with a
+   * hairline rule, never as a pill, so it can't be mistaken for something to click. */
+  heading?: boolean;
 };
 
 type StepDef = {
