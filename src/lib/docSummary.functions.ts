@@ -93,10 +93,17 @@ async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
 
       try {
         if (PDF_EXT.test(name)) {
+          // A whole PDF travels as base64, which is a third bigger again — past this size the
+          // request is refused, so say the file was too big rather than failing the whole read.
+          if (bytes.length > 8_000_000) {
+            unreadable.push(`${name} (too large to read — over 8 MB)`);
+            continue;
+          }
           parts.push({
             type: "file",
             file: { filename: name, file_data: `data:application/pdf;base64,${toBase64(bytes)}` },
           });
+
         } else if (DOCX_EXT.test(name)) {
           const text = await docxText(bytes);
           parts.push({ type: "text", text: `--- ${kind}: ${name} ---\n${text}` });
