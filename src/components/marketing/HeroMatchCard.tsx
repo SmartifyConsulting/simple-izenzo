@@ -290,7 +290,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
                 <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-primary">
                   {BAND_LABEL[bandOf(m)]}
                   {m.sector ? ` · ${m.sector}` : ""}
-                  {m.is_example ? " · Example" : ""}
+                  
                 </p>
                 <p className="mt-1 text-sm font-medium text-foreground">{m.name}</p>
                 <p className="text-xs text-muted-foreground">
