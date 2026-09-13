@@ -1834,7 +1834,7 @@ export function CanvasStart({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function createDeal(direction: "bid" | "offer", reference: string) {
+  async function createDeal(direction: "bid" | "offer", reference: string, filesOverride?: File[]) {
     if (!user) {
       toast.error("Sign in to record a bid or offer");
       setPicking(false);
@@ -1916,7 +1916,7 @@ export function CanvasStart({
       onCreated(
         { ...newTx, stage: "trading", step: "documents" } as Transaction,
         activity,
-        { prompt, files: pendingFiles },
+        { prompt, files: filesOverride ?? pendingFiles },
       );
     } catch (err) {
       toast.error((err as Error).message);
@@ -1931,7 +1931,7 @@ export function CanvasStart({
   // direction is inferred from the document itself once it's uploaded), so a confirmation screen
   // in between would just be a click for its own sake. Whatever was already typed/dropped rides
   // along via onCreated's `seed` so the real upload step can pick up exactly where this left off.
-  function beginPicking() {
+  function beginPicking(filesOverride?: File[]) {
     const ref = draftReference ?? nextReference("bid");
     if (!draftReference) {
       setDraftReference(ref);
@@ -1939,7 +1939,11 @@ export function CanvasStart({
     }
     setPicking(true);
     setDirection("bid");
-    void createDeal("bid", ref);
+    // Passed straight through rather than relying on the pendingFiles state set moments ago by
+    // the same event handler — that setPendingFiles call hasn't re-rendered yet, so createDeal
+    // would otherwise still read the empty array from this closure and silently drop whatever was
+    // just dropped/selected.
+    void createDeal("bid", ref, filesOverride);
   }
 
   const [dragOver, setDragOver] = useState(false);
@@ -1993,7 +1997,7 @@ export function CanvasStart({
           const files = Array.from(e.dataTransfer.files);
           if (files.length === 0) return;
           setPendingFiles(files);
-          beginPicking();
+          beginPicking(files);
         }}
         className={cn(
           "flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed p-4 text-center transition-colors hover:border-primary/40",
@@ -2010,7 +2014,7 @@ export function CanvasStart({
             e.target.value = "";
             if (files.length === 0) return;
             setPendingFiles(files);
-            beginPicking();
+            beginPicking(files);
           }}
         />
         <UploadCloud className="h-5 w-5 shrink-0 text-muted-foreground" />

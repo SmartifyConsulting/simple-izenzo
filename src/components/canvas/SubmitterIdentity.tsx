@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BadgeCheck, Briefcase, ChevronDown, ShieldAlert, User } from "lucide-react";
+import { BadgeCheck, Building2, ChevronDown, ShieldAlert, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -16,8 +16,9 @@ type OrgDetail = {
 /** Who submitted this deal, and whether they were verified through the app.
  * The badge is only shown when a completed, approved identity check exists — never as a default.
  * A registration number on file means the org registered as a company; without one it's an
- * individual trading in their own name — the pill says which, and expands to the same
- * address/contact/sector detail either way. */
+ * individual trading in their own name — a small building/person icon in front of the name says
+ * which (instead of a pill, which would take more room than the distinction is worth), and it
+ * expands to the same address/contact/sector detail either way. */
 export function SubmitterIdentity({ orgId, createdBy }: { orgId: string; createdBy?: string | null }) {
   const [org, setOrg] = useState<OrgDetail | null>(null);
   const [personName, setPersonName] = useState<string | null>(null);
@@ -78,18 +79,12 @@ export function SubmitterIdentity({ orgId, createdBy }: { orgId: string; created
           !hasDetail && "cursor-default",
         )}
       >
+        {isBusiness ? (
+          <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" aria-label="Business" />
+        ) : (
+          <User className="h-4 w-4 shrink-0 text-muted-foreground" aria-label="Individual" />
+        )}
         <span className="min-w-0 truncate text-sm font-semibold text-foreground">{name}</span>
-        <span
-          className={cn(
-            "inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-            isBusiness
-              ? "border-primary/40 bg-primary/10 text-primary"
-              : "border-border bg-muted/40 text-muted-foreground",
-          )}
-        >
-          {isBusiness ? <Briefcase className="h-3 w-3" aria-hidden /> : <User className="h-3 w-3" aria-hidden />}
-          {isBusiness ? "Business" : "Individual"}
-        </span>
         {verified ? (
           <span
             title="Verified through Izenzo"
