@@ -146,7 +146,10 @@ function SubRow({
       onClick={onClick}
       disabled={!onClick}
       className={cn(
-        "flex w-1/2 items-start gap-2 rounded-lg border px-3 py-2 text-left font-sans text-[13px] font-medium leading-snug transition-colors disabled:cursor-not-allowed",
+        // No left padding: the icon (tick or otherwise) sits flush against the row's left edge,
+        // which is already indented — via the invisible bracket+prefix spacer above — to align
+        // with the first letter of the step's name.
+        "flex w-1/2 items-start gap-2 rounded-lg border py-2 pl-0 pr-3 text-left font-sans text-[13px] font-medium leading-snug transition-colors disabled:cursor-not-allowed",
         // A step the page has explicitly marked done or in-progress reads as such, even when it is
         // also the "start a new bid" entry row — otherwise every override on it would be ignored.
         itemClasses(state, item.isEntry && state !== "done" && state !== "active"),
