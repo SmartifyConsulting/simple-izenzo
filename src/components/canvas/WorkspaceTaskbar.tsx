@@ -1,7 +1,20 @@
 import { useState } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { Plus, X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Plus, Search, X } from "lucide-react";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
 import { useDealWindows } from "@/lib/dealWindows";
+import { fallbackReference } from "@/lib/tx";
 import { cn } from "@/lib/utils";
 
 // Marketing/auth surfaces where a signed-in visitor could still be browsing — the workspace
