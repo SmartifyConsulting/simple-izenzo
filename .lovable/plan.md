@@ -46,3 +46,30 @@ Changes:
 - The BID INFORMATION placeholder text at line ~1446 gains the "Reading your documents…" branch for
   the pending/submitted case.
 - No changes to search logic, scoring, gates or token costs.
+
+## 3. Choosing a counterparty: radio buttons and the % match
+
+- The candidate list in the Record panel currently uses square tick boxes and shows `72/100`.
+  At the point where one party must be chosen it becomes a proper single-select **radio** list
+  (choosing one clears the other), so it's obvious only one can be picked.
+- Each row shows the match as a **black pill with white text reading `72% match`**, the same as the
+  search results list — no more `/100`.
+- Rows with no score show nothing rather than an empty pill.
+
+## 4. BID INFORMATION must collapse when Fetch Interest is clicked
+
+It collapses today only when the button itself is pressed; starting the search any other way
+(Submit straight after upload, or a reopened bid) leaves it expanded. The collapse moves into the
+search start itself, so BID INFORMATION is always a closed clickable header once interest is being
+fetched, and stays closed for that bid until the user reopens it.
+
+## Technical detail (additions)
+
+- `DealCanvas.tsx` candidate list (~line 1222): replace `Checkbox` with `RadioGroup`/`RadioGroupItem`
+  from `@/components/ui/radio-group` while `screeningDone` (the single-choice phase); keep multi-select
+  shortlisting checkboxes for the earlier shortlist phase. Score badge (~line 1235 and the
+  ~line 1379 duplicate) becomes `rounded-full border border-foreground bg-foreground text-background`
+  with `{c.score}% match`.
+- `setBidInfoOpen(false)` moves from `fetchInterest` into `runSearch` in
+  `_authenticated.live-deal-engine.tsx`, so every path that starts a search collapses the frame;
+  the collapsed state is remembered per bid id.
