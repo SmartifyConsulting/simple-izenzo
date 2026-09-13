@@ -1289,7 +1289,7 @@ function LiveDealEngine() {
               registered on the right, stacked under the id. SubmitterIdentity already looks up
               the business name itself, so nothing here repeats it a second time. */}
           {activity && dealTx && (
-            <div className="glass-node mb-3 space-y-1.5 p-4">
+            <div className="glass-node sticky top-0 z-20 mb-3 space-y-1.5 bg-card p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="label-caps text-muted-foreground">Bid Registration</p>
                 {(((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference) && (
