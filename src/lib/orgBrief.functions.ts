@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /** Writes a short "about this company" brief onto an organisation, using its own public website
- * (read through Bright Data) plus whatever details are already captured. Existing organisation
+ * (read through Firecrawl) plus whatever details are already captured. Existing organisation
  * rules are untouched — this only fills `ai_brief`. */
 export const generateOrgBrief = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -24,10 +24,10 @@ export const generateOrgBrief = createServerFn({ method: "POST" })
     let siteText = "";
     if (org.website) {
       try {
-        const { brightDataConfigured, fetchPageText, summarisePage } = await import(
-          "@/lib/brightdata.server"
+        const { firecrawlConfigured, fetchPageText, summarisePage } = await import(
+          "@/lib/firecrawl.server"
         );
-        if (await brightDataConfigured()) {
+        if (await firecrawlConfigured()) {
           const text = await fetchPageText(org.website);
           if (text) siteText = summarisePage(text).excerpt;
         }

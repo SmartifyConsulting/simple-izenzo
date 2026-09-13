@@ -68,7 +68,7 @@ const ADVERSE = [
   "blacklist",
 ];
 
-/** Scans open web and social sources for the shortlisted counterparties through Bright Data's
+/** Scans open web and social sources for the shortlisted counterparties through Firecrawl's
  * remote browser. Nothing here changes gates or token costs — findings are recorded against each
  * counterparty so they stay on screen when the user comes back to the deal. */
 export const runOnlineMediaChecks = createServerFn({ method: "POST" })
@@ -95,8 +95,8 @@ export const runOnlineMediaChecks = createServerFn({ method: "POST" })
       throw new Error("None of those counterparties belong to this deal.");
     }
 
-    const { brightDataConfigured, fetchPageText } = await import("@/lib/brightdata.server");
-    const connected = await brightDataConfigured();
+    const { firecrawlConfigured, fetchPageText } = await import("@/lib/firecrawl.server");
+    const connected = await firecrawlConfigured();
 
     const results: MediaCheckResult[] = [];
 
@@ -111,7 +111,7 @@ export const runOnlineMediaChecks = createServerFn({ method: "POST" })
             source: src.source,
             label: src.label,
             status: "unavailable",
-            detail: "Live web scanning is not connected yet — ask an administrator to add Bright Data.",
+            detail: "Live web scanning is not connected yet — ask an administrator to add Firecrawl.",
             url,
           });
           continue;

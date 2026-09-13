@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { lookupCompanySite } from "@/lib/brightdata.functions";
+import { lookupCompanySite } from "@/lib/webLookup.functions";
 
 
 export const Route = createFileRoute("/_authenticated/registry")({

@@ -14,7 +14,7 @@ import { fallbackReference, type Transaction } from "@/lib/tx";
 import { cn } from "@/lib/utils";
 
 /** Search for traders (registry companies and known counterparties) or items to trade, ask AI and
- * AI+ to propose further counterparties, and check candidate websites live through Bright Data —
+ * AI+ to propose further counterparties, and check candidate websites live through Firecrawl —
  * every match carries a closeness rating and can be added to a personal Screen List. */
 type MatchSource = "records" | "ai" | "ai_plus" | "web";
 
@@ -42,7 +42,7 @@ const SOURCE_LABEL: Record<MatchSource, string> = {
   records: "Our records",
   ai: "AI",
   ai_plus: "AI+",
-  web: "Web · Bright Data",
+  web: "Web · Firecrawl",
 };
 
 export function SearchButton() {
@@ -147,7 +147,7 @@ export function SearchButton() {
   });
 
   /** Asks AI and AI+ for counterparty candidates and looks for further ones on the open web
-   * (Bright Data), then rates the closest of them by reading their site. */
+   * (Firecrawl), then rates the closest of them by reading their site. */
   async function runDeepSearch() {
     const trimmed = query.trim();
     if (trimmed.length < 2) return;
