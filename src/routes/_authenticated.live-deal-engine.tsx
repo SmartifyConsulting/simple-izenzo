@@ -1351,6 +1351,11 @@ function LiveDealEngine() {
                   <p className="text-xs text-muted-foreground">
                     Registered {new Date(activity.time ?? dealTx.created_at).toLocaleString()}
                   </p>
+                  {(org?.country || dealTx.jurisdiction) && (
+                    <p className="text-xs text-muted-foreground">
+                      {org?.country ?? dealTx.jurisdiction}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
