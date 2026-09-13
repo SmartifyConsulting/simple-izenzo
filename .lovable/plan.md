@@ -49,5 +49,5 @@ Specifics taken from the map:
 - Restore `src/components/canvas/MahjongView.tsx` from commit `cf0827a^` as `src/components/canvas/MapView.tsx`, keeping its `nodeState`/`lockReason`/`stepIndex` wiring and `InlineFrame` click handling.
 - Replace its vertical coordinate system with a wide fixed canvas (roughly 1600×1050) whose box table matches the attached map's positions; connectors keep the existing elbow/arrow helper, with endpoints touching box borders.
 - New group frames: trading (implicit), counterparty (cream, rounded), compliance (green), plus the memory circle rendered as an SVG/rounded div.
-- `src/routes/_authenticated.live-deal-engine.tsx`: local `workflowView` state (`"steps" | "map"`, default `"steps"`) with a small segmented control above the workflow column, rendering `ClassicView` or `MapView` in the same slot.
+- New route `src/routes/_authenticated.map.tsx` (`/map`) rendering `MapView` inside the existing shell, for the most recent deal (same deal selection the Live Workspace uses); `src/components/layout/MainHeader.tsx` nav list gains `{ to: "/map", label: "Map" }` as the first entry, before Home.
 - Presentation only — no database, server function, spine or gating changes.
