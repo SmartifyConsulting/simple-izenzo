@@ -63,7 +63,8 @@ import { ensureOrg } from "@/lib/org";
 import { FLAT_STEPS, lockReason, stepDef, stepIndex, type StageKey } from "@/lib/spine";
 import { advance, money, recordEvent, when, type Transaction, type TxEvent } from "@/lib/tx";
 import { setCounterpartyShortlist } from "@/lib/izenzo.functions";
-import { findCounterpartyContact, inviteCounterparty, enrichCounterparty } from "@/lib/counterpartyOutreach.functions";
+import { enrichCounterparty } from "@/lib/counterpartyOutreach.functions";
+import { dedupeOrgs } from "@/lib/dedupeOrgs";
 import type { ScreeningCheck, ScreeningResult } from "@/lib/screening.functions";
 import type { MediaCheckResult, MediaFinding } from "@/lib/onlineMedia.functions";
 import {
