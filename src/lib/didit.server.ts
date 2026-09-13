@@ -18,6 +18,19 @@ export type DiditCreds = {
 
 const DEFAULT_BASE = "https://verification.didit.me";
 
+/** Verification sessions live on verification.didit.me and the paths include their own version. */
+function normaliseBase(raw: string | undefined): string {
+  const trimmed = (raw ?? "").trim().replace(/\/+$/, "");
+  if (!trimmed) return DEFAULT_BASE;
+  try {
+    const url = new URL(trimmed);
+    if (!/^verification\./.test(url.hostname)) return DEFAULT_BASE;
+    return `${url.protocol}//${url.host}`;
+  } catch {
+    return DEFAULT_BASE;
+  }
+}
+
 export async function loadDiditCreds(): Promise<DiditCreds> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { decryptSecrets } = await import("@/lib/integrationCrypto.server");
