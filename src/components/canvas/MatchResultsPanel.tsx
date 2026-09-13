@@ -225,15 +225,35 @@ export function MatchResultsPanel({
             {m.summary && (
               <p className="mt-1.5 text-xs leading-relaxed text-foreground/80">{m.summary}</p>
             )}
-            {m.source_url && (
-              <a
-                href={m.source_url}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
-              >
-                <ExternalLink className="h-3 w-3" /> Where it was found
-              </a>
+            {/* One organisation, however many pages it turned up on. */}
+            {(m.sourceUrls?.length ?? 0) > 1 ? (
+              <div className="mt-1 space-y-0.5">
+                <p className="text-[11px] text-muted-foreground">
+                  Found on {m.sourceUrls!.length} pages
+                </p>
+                {m.sourceUrls!.map((u, i) => (
+                  <a
+                    key={u}
+                    href={u}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="flex items-center gap-1 text-[11px] text-primary hover:underline"
+                  >
+                    <ExternalLink className="h-3 w-3 shrink-0" /> Page {i + 1}
+                  </a>
+                ))}
+              </div>
+            ) : (
+              m.source_url && (
+                <a
+                  href={m.source_url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+                >
+                  <ExternalLink className="h-3 w-3" /> Where it was found
+                </a>
+              )
             )}
           </li>
         ))}
