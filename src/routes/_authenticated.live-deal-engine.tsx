@@ -1119,15 +1119,13 @@ function LiveDealEngine() {
     };
   }, [dragging, move, windowId]);
 
-  if (!popout && windowMode === "minimized") {
-    return (
-      <AppShell wide compactFooter hideFooter>
-        <div className="flex min-h-[200px] items-center justify-center text-sm text-muted-foreground">
-          {windowLabel} is minimized — restore it from the taskbar below.
-        </div>
-      </AppShell>
-    );
-  }
+  // The tab you are actually looking at is never presented as "minimized" — landing here means a
+  // stale mode was restored, so it is simply reopened instead of showing an empty canvas.
+  useEffect(() => {
+    if (!popout && windowMode === "minimized") setMode(windowId, "maximized");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [popout, windowMode, windowId]);
+
 
   if (poppedElsewhere) {
     return (
