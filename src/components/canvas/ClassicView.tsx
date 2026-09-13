@@ -250,6 +250,15 @@ export function ClassicView({
     for (const s of STEPS) initial[s.step] = s.step !== activeStep;
     return initial;
   });
+  // The workflow moving on to the next numbered step folds the finished one away and opens the new
+  // one, without touching whatever the user has since opened or closed by hand.
+  const lastActiveStep = useRef(activeStep);
+  useEffect(() => {
+    if (lastActiveStep.current === activeStep) return;
+    const previous = lastActiveStep.current;
+    lastActiveStep.current = activeStep;
+    setCollapsed((c) => ({ ...c, [previous]: true, [activeStep]: false }));
+  }, [activeStep]);
 
   const open = (stage: StageKey, step: string) => {
     if (readOnly) return;
