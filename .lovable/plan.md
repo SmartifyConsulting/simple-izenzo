@@ -22,7 +22,8 @@ So real Firecrawl results go in one door and sample listings come out the other.
    still on the right.
 5. Workflow labels stop being cut off — "Submission of Documents" and every other label wraps onto a
    second line instead of being clipped.
-6. In the About section, the "Writing" label becomes "Articles".
+6. Completed tasks and their ticks turn green, so finished steps read at a glance.
+7. In the About section, the "Writing" label becomes "Articles".
 
 ## Technical detail
 
@@ -44,5 +45,7 @@ So real Firecrawl results go in one door and sample listings come out the other.
   saved attachment row.
 - Labels: in `ClassicView.tsx` remove `truncate` from the item and step label spans (lines ~160 and
   ~261) and allow wrapping (`leading-snug`), keeping the `min-w-0 flex-1` layout.
+- Done state in `ClassicView.tsx`: `itemClasses` and the finished-step row use a green token
+  (`text-emerald-500`, tick icon included) instead of `text-primary`.
 - `alpha-bravo.about.$slug.tsx` back-link text `Writing` → `Articles`.
 - No changes to `firecrawl.server.ts`, scoring weights, gates or token costs.
