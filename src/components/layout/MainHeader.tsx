@@ -60,7 +60,7 @@ export function MainHeader() {
           <Logo />
         </Link>
 
-        <nav className="ml-auto hidden items-center gap-2 whitespace-nowrap text-sm text-muted-foreground lg:flex">
+        <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-2 whitespace-nowrap text-sm text-muted-foreground lg:flex">
           {NAV.map((item) => (
             <Link
               key={item.to}
