@@ -1503,6 +1503,21 @@ const WAD_CHECK_SOURCE: Record<string, ScreeningCheck["kind"] | null> = {
   authority: null,
 };
 
+const CHECK_TYPE_LABEL: Record<string, string> = {
+  id_document: "ID document + selfie",
+  kyb: "Company (KYB) — entity, UBO & AML",
+  aml: "Sanctions / PEP",
+};
+
+const PRIOR_STATUS_LABEL: Record<string, string> = {
+  passed: "Cleared",
+  failed: "Declined",
+  review: "Needs review",
+  in_progress: "In progress",
+  pending: "Not started",
+  expired: "Expired",
+};
+
 async function sha256Hex(text: string) {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
   return Array.from(new Uint8Array(buf))
