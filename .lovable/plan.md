@@ -4,7 +4,7 @@ The old Mahjong (tile map) view still exists in this project's history — it wa
 
 ## Where it lives
 
-The Live Workspace gets a small view switch: **Steps** (today's list, still the default) and **Map**. Choosing Map shows the diagram; clicking any tile opens that step's frame just as the list does. Nothing about the workflow, gates, tokens or permissions changes.
+It becomes its own **Map** screen, listed in the main menu as the first item, before Home. Opening it shows the whole diagram; clicking any tile opens that step's frame, exactly as the step list does. The Live Workspace step list stays as it is. Nothing about the workflow, gates, tokens or permissions changes.
 
 ## Layout, following the attached map
 
