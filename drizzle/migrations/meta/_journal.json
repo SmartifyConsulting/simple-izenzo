@@ -50,6 +50,13 @@
       "when": 1789332737769,
       "tag": "0006_add_counterparty_contact_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1789333184938,
+      "tag": "0007_create_intent_messages",
+      "breakpoints": true
     }
   ]
 }
