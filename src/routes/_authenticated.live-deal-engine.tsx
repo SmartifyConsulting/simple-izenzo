@@ -1338,9 +1338,6 @@ function LiveDealEngine() {
                       )}
                     </p>
                   )}
-                  {(org?.country || dealTx.jurisdiction) && (
-                    <p className="text-xs text-muted-foreground">{org?.country ?? dealTx.jurisdiction}</p>
-                  )}
                 </div>
                 <div className="min-w-0 space-y-1 text-right">
                   {(((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference) && (
