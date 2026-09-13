@@ -52,7 +52,8 @@ type Props = {
   description?: string;
 };
 
-export function VerificationPanel({ transactionId, checks, title, description }: Props) {
+export function VerificationPanel({ transactionId, checks: requested, title, description }: Props) {
+  const listEnabled = useServerFn(listEnabledCheckTypes);
   const start = useServerFn(startVerification);
   const refresh = useServerFn(refreshVerification);
   const listMine = useServerFn(listMyVerifications);
