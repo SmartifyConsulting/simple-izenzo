@@ -368,6 +368,17 @@ function LiveDealEngine() {
   // Once interest is being fetched the submitted detail collapses out of the way, so the results
   // have the room. The header stays clickable to open it again.
   const [bidInfoOpen, setBidInfoOpen] = useState(true);
+  // Once the ask has been made for a bid, the description/drop frame never comes back — not while
+  // the files are still saving, not on a refresh, not on a tab switch. Remembered per bid.
+  const [submittedBids, setSubmittedBids] = useState<Set<string>>(() => new Set());
+  function markSubmitted(txId: string) {
+    try {
+      sessionStorage.setItem(`bid-submitted:${txId}`, "1");
+    } catch {
+      // Private browsing without storage — the in-memory set below still holds for this session.
+    }
+    setSubmittedBids((s) => (s.has(txId) ? s : new Set(s).add(txId)));
+  }
   const queryClient = useQueryClient();
 
   /** Reads the attached documents again — offered wherever files exist but no summary does, so a
