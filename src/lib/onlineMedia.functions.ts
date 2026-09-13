@@ -17,38 +17,23 @@ export type MediaCheckResult = {
   findings: MediaFinding[];
 };
 
-const SOURCES: { source: MediaFinding["source"]; label: string; url: (q: string) => string }[] = [
-  {
-    source: "linkedin",
-    label: "LinkedIn",
-    url: (q) => `https://www.bing.com/search?q=${q}+site%3Alinkedin.com`,
-  },
-  {
-    source: "facebook",
-    label: "Facebook",
-    url: (q) => `https://www.bing.com/search?q=${q}+site%3Afacebook.com`,
-  },
-  {
-    source: "tiktok",
-    label: "TikTok",
-    url: (q) => `https://www.bing.com/search?q=${q}+site%3Atiktok.com`,
-  },
+const SOURCES: { source: MediaFinding["source"]; label: string; query: (q: string) => string }[] = [
+  { source: "linkedin", label: "LinkedIn", query: (q) => `${q} site:linkedin.com` },
+  { source: "facebook", label: "Facebook", query: (q) => `${q} site:facebook.com` },
+  { source: "tiktok", label: "TikTok", query: (q) => `${q} site:tiktok.com` },
   {
     source: "instagram",
     label: "Instagram / X",
-    url: (q) => `https://www.bing.com/search?q=${q}+(site%3Ainstagram.com+OR+site%3Ax.com)`,
+    query: (q) => `${q} (site:instagram.com OR site:x.com)`,
   },
   {
     source: "marketplaces",
     label: "Marketplaces & directories",
-    url: (q) => `https://www.bing.com/search?q=${q}+(marketplace+OR+supplier+OR+directory+OR+reviews)`,
+    query: (q) => `${q} (marketplace OR supplier OR directory OR reviews)`,
   },
-  {
-    source: "news",
-    label: "News & adverse media",
-    url: (q) => `https://www.bing.com/news/search?q=${q}`,
-  },
+  { source: "news", label: "News & adverse media", query: (q) => `${q} news` },
 ];
+
 
 /** Words that turn an ordinary mention into something a compliance officer should read. */
 const ADVERSE = [
