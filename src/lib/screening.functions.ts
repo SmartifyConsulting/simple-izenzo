@@ -120,8 +120,12 @@ export const runBackgroundScreening = createServerFn({ method: "POST" })
         });
       }
 
-      // 2. Didit ID / KYB / AML.
-      for (const check of DIDIT_CHECKS) {
+      // 2. Didit ID / KYB (and AML only when the separate sanctions/PEP check is switched on —
+      // the KYB workflow already covers UBO and AML).
+      const activeChecks = DIDIT_CHECKS.filter(
+        (c) => c.kind !== "aml" || Boolean(creds?.amlEnabled),
+      );
+      for (const check of activeChecks) {
         if (!creds) {
           checks.push({
             kind: check.kind,
