@@ -3,7 +3,6 @@ import {
   Banknote,
   Briefcase,
   CheckCircle2,
-  Cog,
   Database,
   FileText,
   Globe,
@@ -168,35 +167,6 @@ function SubRow({
   );
 }
 
-/** The cog marker for one step on the vertical stepper — filled/spinning-still for the step
- * the deal is actually in right now, muted otherwise. Doubles as the expand/collapse toggle. */
-function StepCog({
-  active,
-  done,
-  collapsed,
-  onToggle,
-}: {
-  active: boolean;
-  done: boolean;
-  collapsed: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-expanded={!collapsed}
-      className={cn(
-        "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
-        active && "border-primary bg-primary/15 text-primary animate-throb-aqua",
-        done && !active && "border-primary/60 bg-primary/12 text-primary",
-        !active && !done && "border-border bg-card text-muted-foreground hover:border-primary/40",
-      )}
-    >
-      <Cog className="h-5 w-5" />
-    </button>
-  );
-}
 
 /** The Classic view: the whole deal pipeline as a vertical stepper — a column of cog markers,
  * one per numbered step, each expanding to its own list of sub-items. Each item opens that
@@ -257,43 +227,41 @@ export function ClassicView({
   return (
     <div className="relative h-full overflow-y-auto pr-1">
       <div className="flex flex-col">
-        {STEPS.map((s, i) => {
+        {STEPS.map((s) => {
           const stepCollapsed = Boolean(collapsed[s.step]);
-          const stepIsActive = s.step === activeStep;
           const allDone = s.items.every((item) => stateOf(item) === "done");
-          const stepIsDone = s.step < activeStep || allDone;
           return (
-            <div key={s.step} className="flex gap-4">
-              <div className="flex flex-col items-center">
-                <StepCog
-                  active={stepIsActive}
-                  done={stepIsDone}
-                  collapsed={stepCollapsed}
-                  onToggle={() => toggleStep(s.step)}
-                />
-                {i < STEPS.length - 1 && <div className="w-px flex-1 bg-border" />}
-              </div>
-
-              <div className={cn("min-w-0 flex-1", i < STEPS.length - 1 ? "pb-6" : "pb-1")}>
-                <button
-                  type="button"
-                  onClick={() => toggleStep(s.step)}
-                  className="flex h-11 items-center gap-1.5 text-left font-sans text-[11px] font-semibold uppercase tracking-wide text-foreground transition-colors hover:text-primary"
-                  aria-expanded={!stepCollapsed}
+            <div key={s.step} className="flex items-start gap-3 pb-3">
+              {/* The original bracket treatment: a large serif "{" instead of a cog/connector
+                  column, matching the Ink & Aqua "Next steps" list this stepper replaced. */}
+              <button
+                type="button"
+                onClick={() => toggleStep(s.step)}
+                aria-expanded={!stepCollapsed}
+                className="flex shrink-0 items-start gap-2 text-left"
+              >
+                <span
+                  aria-hidden
+                  className="select-none font-serif text-3xl leading-[0.6] text-muted-foreground/50"
                 >
-                  {stepCollapsed ? "+ " : "− "}Step {s.step} · {s.label}
-                </button>
+                  {"{"}
+                </span>
+                <span className="label-caps mt-1 text-foreground transition-colors hover:text-primary">
+                  {stepCollapsed ? "+" : "−"}Step {s.step} · {s.label}
+                </span>
+              </button>
 
-                {!stepCollapsed &&
-                  (allDone ? (
-                    /* A finished step reads as one ticked label on the left, rather than
-                       repeating every task it already completed. */
-                    <div className="mt-2 flex w-1/2 items-center justify-start gap-2 px-3 py-2 font-sans text-[13px] font-medium text-primary">
+              {!stepCollapsed && (
+                <div className="min-w-0 flex-1">
+                  {allDone ? (
+                    /* A finished step reads as one ticked label, rather than repeating every
+                       task it already completed. */
+                    <div className="flex w-1/2 items-center justify-start gap-2 px-3 py-2 font-sans text-[13px] font-medium text-primary">
                       <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
                       <span className="min-w-0 flex-1 truncate">{s.label}</span>
                     </div>
                   ) : (
-                    <div className="mt-2 space-y-1.5">
+                    <div className="space-y-1.5">
                       {s.items.map((item) => (
                         <SubRow
                           key={item.key}
@@ -305,8 +273,9 @@ export function ClassicView({
                         />
                       ))}
                     </div>
-                  ))}
-              </div>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}
