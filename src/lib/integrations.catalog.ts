@@ -6,6 +6,8 @@ export type IntegrationField = {
   key: string;
   label: string;
   secret: boolean;
+  /** "switch" renders an on/off control and stores "true"/"false" in the provider config. */
+  type?: "text" | "switch";
   placeholder?: string;
   help?: string;
 };
