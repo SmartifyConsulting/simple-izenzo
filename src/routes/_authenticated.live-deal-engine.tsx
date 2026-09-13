@@ -1107,17 +1107,8 @@ function LiveDealEngine() {
       // The candidates are written server-side, so the Record panel's cached (empty) list has to
       // be refreshed or it stays stuck on "Searching for counterparties…".
       await queryClient.invalidateQueries({ queryKey: ["counterparties", txId] });
-      // The moment matches are in, carry straight on into online media screening for all of
-      // them — a freshly-searched deal has no reason yet to exclude any candidate, so waiting on
-      // a tick-and-continue click here would just leave the workspace looking stalled right after
-      // the document/prompt that triggered this search.
-      try {
-        const { data: cps } = await supabase.from("counterparties").select("id").eq("transaction_id", txId);
-        const ids = (cps ?? []).map((c) => c.id as string);
-        if (ids.length > 0) void startMediaChecks(ids);
-      } catch {
-        // Best effort — the manual tick-and-continue flow in the Record panel still works.
-      }
+      // Online media screening deliberately does NOT start here — Choice comes first. It runs from
+      // the Record panel's tick-and-continue, once a person has picked their counterparties.
     }
   }
 
