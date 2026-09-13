@@ -218,6 +218,7 @@ function OpenDealsPicker({ currentId, hasAttachment }: { currentId: string | nul
  * separate per-deal detail page. */
 function LiveDealEngine() {
   const { tx: txParam, popout, panel, q: matchQuery, seed, fresh } = Route.useSearch();
+  const { org } = useAuth();
   // Whatever the visitor dropped on the homepage before signing in, if anything. Read via a
   // non-destructive peek (StrictMode double-invokes this initializer in dev, and a combined
   // read-and-clear would lose the files on the second call), then clear it once via the effect
