@@ -204,21 +204,60 @@ type CandidateResult = {
   sourceUrl?: string | undefined;
 };
 
+/** Real listings already published in the Izenzo directory, used as grounding when the live web
+ * cannot be read. Still real, named organisations — never invented. */
+async function listingSources() {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await supabaseAdmin
+      .from("responder_listings")
+      .select("name, sector, jurisdiction, summary, source_url")
+      .eq("published", true)
+      .order("verified_at", { ascending: false, nullsFirst: false })
+      .limit(40);
+    return (data ?? []).map((r) => ({
+      label: `Izenzo directory — ${r.name}`,
+      url: r.source_url ?? "",
+      text: [r.name, r.sector, r.jurisdiction, r.summary].filter(Boolean).join(" — "),
+    }));
+  } catch {
+    return [];
+  }
+}
+
 /** Scrapes the open web for one query and turns the pages into grounding context for the model.
- * Fails loudly when the live web connection is missing — an ungrounded answer would be invented
- * names, which is worse than no answer. */
+ * When the live web cannot be read, it falls back to the published Izenzo directory rather than
+ * failing the whole search — but it never lets the model answer without real sources. */
 async function groundOnWeb(query: string, kind: "ai" | "ai_plus") {
   const { brightDataConfigured, fetchSearchResults } = await import("@/lib/brightdata.server");
+  let sources: { label: string; url: string; text: string }[] = [];
+  let failures: { label: string; reason: string }[] = [];
+  let webError: string | null = null;
+
   if (!(await brightDataConfigured())) {
-    throw new Error(
-      "Live web search is not connected, so this search cannot be grounded in real listings. Add the Bright Data connection in Admin → Integrations.",
-    );
+    webError = "Live web search is not connected (add it in Admin → Integrations).";
+  } else {
+    try {
+      const read = await fetchSearchResults(query, SOURCE_LIMIT[kind]);
+      sources = read.sources;
+      failures = read.failures;
+      if (sources.length === 0) {
+        const reason = failures[0]?.reason ? ` (${failures[0].reason})` : "";
+        webError = `The live web could not be read for this search${reason}.`;
+      }
+    } catch (err) {
+      webError = `The live web could not be read (${(err as Error).message}).`;
+    }
   }
 
-  const { sources, failures } = await fetchSearchResults(query, SOURCE_LIMIT[kind]);
   if (sources.length === 0) {
-    const reason = failures[0]?.reason ? ` (${failures[0].reason})` : "";
-    throw new Error(`No sources could be read from the live web for this search${reason}.`);
+    sources = await listingSources();
+    if (sources.length === 0) {
+      throw new Error(
+        `${webError ?? "No sources could be read for this search."} There are no published directory listings to match against either.`,
+      );
+    }
+    failures = [...failures, { label: "Live web search", reason: webError ?? "unavailable" }];
   }
 
   const context = sources
@@ -227,6 +266,7 @@ async function groundOnWeb(query: string, kind: "ai" | "ai_plus") {
 
   return { sources, failures, context };
 }
+
 
 const GROUNDING_RULES =
   "You are given the visible text of real web and marketplace search pages. Only return organisations that actually appear in that text. Never invent a company. For each one, set sourceUrl to the URL of the SOURCE block it came from.";
