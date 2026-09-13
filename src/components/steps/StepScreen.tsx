@@ -1491,24 +1491,15 @@ function PoiStep({ tx, reload }: Props) {
 
 const WAD_CHECKS = [
   { key: "kyc", label: "KYC — individuals identified" },
-  { key: "kyb", label: "KYB — entity verified" },
-  { key: "ubo", label: "UBO — beneficial owners established" },
-  { key: "sanctions", label: "Sanctions screening clear" },
-  { key: "pep", label: "PEP screening reviewed" },
+  { key: "kyb", label: "KYB — entity, beneficial owners (UBO) and AML verified" },
   { key: "authority", label: "Authority to act confirmed" },
 ];
 
-
-
-
-/** Which provider check satisfies each WaD item. UBO and Authority have no provider behind
- * them, so they stay manual confirmations rather than pretending to a screened result. */
+/** Which provider check satisfies each WaD item. Authority has no provider behind it, so it
+ * stays a manual confirmation rather than pretending to a screened result. */
 const WAD_CHECK_SOURCE: Record<string, ScreeningCheck["kind"] | null> = {
   kyc: "id_document",
   kyb: "kyb",
-  ubo: null,
-  sanctions: "aml",
-  pep: "aml",
   authority: null,
 };
 
