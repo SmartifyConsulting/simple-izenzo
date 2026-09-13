@@ -244,7 +244,12 @@ export function ClassicView({
   const stateOf = (item: SubItem): NodeState => {
     const override = overrideStates?.[item.key];
     if (override) return override;
-    if (item.isEntry && readOnly) return "open";
+    if (item.isEntry && readOnly) {
+      // Still pulses together with the rest of the current step on the read-only preview (the
+      // empty "New" canvas) — only pinned to "open" so it never reads as done/locked there.
+      const natural = nodeState(item.stage, item.step, tx);
+      return natural === "active" ? "active" : "open";
+    }
     return nodeState(item.stage, item.step, tx);
   };
   const active = panel && !readOnly ? panel : null;

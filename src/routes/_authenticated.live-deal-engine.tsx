@@ -1124,14 +1124,15 @@ function LiveDealEngine() {
             <p className="label-caps text-foreground">Live Workspace</p>
           </div>
 
-          {/* Bid Registered — the very top of the workspace: the bid/offer id (right-aligned),
-              when it was registered, which business registered it (with its verification status)
-              and the country. SubmitterIdentity already looks up the business name itself, so
-              nothing here repeats it a second time. */}
+          {/* Bid Registration — the very top of the workspace: the bid/offer id (right-aligned),
+              which business registered it (with its verification status) and how long that
+              business has been active on Izenzo on the left; the bid's own name and when it was
+              registered on the right, stacked under the id. SubmitterIdentity already looks up
+              the business name itself, so nothing here repeats it a second time. */}
           {activity && dealTx && (
             <div className="glass-node mb-3 space-y-1.5 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="label-caps text-muted-foreground">Bid Registered</p>
+                <p className="label-caps text-muted-foreground">Bid Registration</p>
                 {(((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference) && (
                   <span className="flex items-center gap-2 font-mono text-base font-bold tracking-wide text-foreground">
                     {workspaceDocs.length > 0 && (
@@ -1141,13 +1142,33 @@ function LiveDealEngine() {
                   </span>
                 )}
               </div>
-              <SubmitterIdentity orgId={dealTx.org_id} createdBy={null} />
-              <p className="text-xs text-muted-foreground">
-                Registered {new Date(activity.time ?? dealTx.created_at).toLocaleString()}
-              </p>
-              {(org?.country || dealTx.jurisdiction) && (
-                <p className="text-xs text-muted-foreground">{org?.country ?? dealTx.jurisdiction}</p>
-              )}
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0 space-y-1">
+                  <SubmitterIdentity orgId={dealTx.org_id} createdBy={null} />
+                  {(org as unknown as { created_at?: string } | null)?.created_at && (
+                    <p className="text-xs text-muted-foreground">
+                      Bidder Active Since:{" "}
+                      {new Date((org as unknown as { created_at: string }).created_at).toLocaleDateString(
+                        undefined,
+                        { year: "numeric", month: "short", day: "numeric" },
+                      )}
+                    </p>
+                  )}
+                  {(org?.country || dealTx.jurisdiction) && (
+                    <p className="text-xs text-muted-foreground">{org?.country ?? dealTx.jurisdiction}</p>
+                  )}
+                </div>
+                <div className="shrink-0 space-y-1 text-right">
+                  {(dealTx.commodity || dealTx.title) && !GENERIC_TITLES.has(dealTx.title) && (
+                    <p className="text-sm font-semibold text-foreground">
+                      {dealTx.commodity || dealTx.title}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Registered {new Date(activity.time ?? dealTx.created_at).toLocaleString()}
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
