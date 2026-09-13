@@ -153,6 +153,16 @@ function SubRow({
   onClick?: () => void;
 }) {
   const Icon = item.icon;
+  // A grouping label, not a task: no pill, no border, no hover, not clickable — just small caps
+  // with a hairline rule, so the rows beneath it read as its children.
+  if (item.heading) {
+    return (
+      <div className="flex items-center gap-2 pt-1.5">
+        <span className="label-caps whitespace-nowrap text-muted-foreground">{item.label}</span>
+        <span aria-hidden className="h-px flex-1 bg-border" />
+      </div>
+    );
+  }
   return (
     <button
       type="button"
