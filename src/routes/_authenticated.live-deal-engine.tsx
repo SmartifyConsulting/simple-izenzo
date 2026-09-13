@@ -366,8 +366,19 @@ function LiveDealEngine() {
   const fetchDocument = useServerFn(readDocument);
   const [rereading, setRereading] = useState(false);
   // Once interest is being fetched the submitted detail collapses out of the way, so the results
-  // have the room. The header stays clickable to open it again.
+  // have the room. Remembered per bid, so it stays collapsed on a refresh or a tab switch; the
+  // header stays clickable to open it again.
   const [bidInfoOpen, setBidInfoOpen] = useState(true);
+  function setBidInfoCollapsed(txId: string | undefined, collapsed: boolean) {
+    setBidInfoOpen(!collapsed);
+    if (!txId) return;
+    try {
+      if (collapsed) sessionStorage.setItem(`bid-info-collapsed:${txId}`, "1");
+      else sessionStorage.removeItem(`bid-info-collapsed:${txId}`);
+    } catch {
+      // Private browsing without storage — the state above still holds for this view.
+    }
+  }
   // Once the ask has been made for a bid, the description/drop frame never comes back — not while
   // the files are still saving, not on a refresh, not on a tab switch. Remembered per bid.
   const [submittedBids, setSubmittedBids] = useState<Set<string>>(() => new Set());
