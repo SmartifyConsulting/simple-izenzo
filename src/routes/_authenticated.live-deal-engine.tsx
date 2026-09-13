@@ -625,6 +625,9 @@ function LiveDealEngine() {
   async function startMediaChecks(counterpartyIds: string[]) {
     if (!dealTx || counterpartyIds.length === 0) return;
     const SOURCES_PER_COUNTERPARTY = 6;
+    // Picking who to take through screening *is* the Choice — stating it here means the pulse moves
+    // on to Online Media Screening on a repeat pass too, not just the first time round.
+    setHasChosen(true);
     setMediaRunning(true);
     setMediaResults(null);
     setMediaProgress({ done: 0, total: counterpartyIds.length * SOURCES_PER_COUNTERPARTY });
