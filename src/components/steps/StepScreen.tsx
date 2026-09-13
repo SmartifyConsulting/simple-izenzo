@@ -83,7 +83,11 @@ function Panel({
     <div className={cn("rounded-md border", light ? "border-slate-200 bg-white text-slate-900" : "border-border")}>
       <div className={cn("border-b px-4 py-3", light ? "border-slate-200" : "border-border")}>
         {/* Same heading treatment as the Bid Registration frame: small caps, muted. */}
-        <h2 className={cn("label-caps", light ? "text-slate-900" : "text-muted-foreground")}>{title}</h2>
+        {/* font-sans is explicit: headings otherwise inherit the display face, which made this
+            read in a different font from the LIVE WORKSPACE / BID INFORMATION labels. */}
+        <h2 className={cn("label-caps font-sans", light ? "text-slate-900" : "text-muted-foreground")}>
+          {title}
+        </h2>
         {description && (
           <p className={cn("mt-1 text-xs", light ? "text-slate-500" : "text-muted-foreground")}>{description}</p>
         )}
@@ -108,6 +112,8 @@ function TokenGateFooter({ cost }: { cost: number }) {
   const returnTo = typeof window !== "undefined" ? window.location.pathname + window.location.search : undefined;
   return (
     <div className="flex items-center gap-2 text-xs">
+      {/* Spelled out as a balance, never a bare number — a lone "3 tokens" beside a Seal button
+          reads as the price of the action. */}
       <span
         className={cn(
           "flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-semibold",
@@ -115,7 +121,10 @@ function TokenGateFooter({ cost }: { cost: number }) {
         )}
       >
         <Coins className="h-3.5 w-3.5" />
-        {balance} token{balance === 1 ? "" : "s"}
+        Your balance: {balance} token{balance === 1 ? "" : "s"}
+      </span>
+      <span className="text-muted-foreground">
+        Cost: {cost} token{cost === 1 ? "" : "s"}
       </span>
       {short && (
         <Link to="/credits" search={{ returnTo }}>
@@ -1346,19 +1355,10 @@ function PoiStep({ tx, reload }: Props) {
   const [busy, setBusy] = useState(false);
   const shortOnTokens = (org?.credits ?? 0) < POI_COST;
 
-  const { data: screened } = useQuery({
-    queryKey: ["background-screening", tx.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("transaction_events")
-        .select("id")
-        .eq("transaction_id", tx.id)
-        .eq("action", "media_scanned")
-        .limit(1)
-        .maybeSingle();
-      return Boolean(data);
-    },
-  });
+  // Screening is no longer gated here: Online Media Screening and Background Screening both run in
+  // Step 1, before intent can be confirmed.
+
+
 
   /** The certificate text — identical whether it is filed against the deal or downloaded. */
   function certificateBody(sealedAt: string | null, hash: string | null) {
@@ -1463,11 +1463,7 @@ function PoiStep({ tx, reload }: Props) {
       footer={
         <div className="flex items-center justify-between gap-3">
           <TokenGateFooter cost={POI_COST} />
-          <Button
-            size="sm"
-            onClick={doSeal}
-            disabled={busy || !tx.intent_confirmed_at || !screened || shortOnTokens}
-          >
+          <Button size="sm" onClick={doSeal} disabled={busy || !tx.intent_confirmed_at || shortOnTokens}>
             {busy ? "Sealing…" : "Seal Proof of Intent"}
           </Button>
         </div>
@@ -1476,11 +1472,6 @@ function PoiStep({ tx, reload }: Props) {
       {!tx.intent_confirmed_at ? (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
           <Lock className="h-3.5 w-3.5" /> Confirm intent first.
-        </p>
-      ) : !screened ? (
-        <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Lock className="h-3.5 w-3.5" /> Run the background screening (Social &amp; News Media step)
-          before this can be sealed.
         </p>
       ) : shortOnTokens ? (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">

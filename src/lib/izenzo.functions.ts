@@ -46,14 +46,9 @@ export const sealProofOfIntent = createServerFn({ method: "POST" })
     if (tx.poi_sealed_at) throw new Error("Proof of Intent is already sealed");
     if (!tx.intent_confirmed_at) throw new Error("Confirm intent before sealing the Proof of Intent");
 
-    const { data: screened } = await supabase
-      .from("transaction_events")
-      .select("id")
-      .eq("transaction_id", tx.id)
-      .eq("action", "media_scanned")
-      .limit(1)
-      .maybeSingle();
-    if (!screened) throw new Error("Run the background screening (Social & News Media scan) before sealing the Proof of Intent");
+    // No separate media-scan gate: Online Media Screening and Background Screening are both part
+    // of Step 1 and must already be complete for intent to have been confirmed at all.
+
 
     const { data: org } = await supabase
       .from("organisations")
