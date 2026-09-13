@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
+  Archive,
   BadgeCheck,
   CheckCircle2,
   Download,
@@ -11,8 +12,10 @@ import {
   Maximize2,
   Minimize2,
   Minus,
+  MoreVertical,
   Move,
   Paperclip,
+  Ban,
   X as XIcon,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
@@ -32,6 +35,18 @@ import { DocumentUploadStep } from "@/components/guided/DocumentUploadStep";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { advance, fallbackReference, recordEvent, swapReferencePrefix, type Transaction } from "@/lib/tx";
 import type { StageKey } from "@/lib/spine";
@@ -133,9 +148,10 @@ function OpenDealsPicker({ currentId, hasAttachment }: { currentId: string | nul
     queryFn: async () => {
       const { data, error } = await supabase
         .from("transactions")
-        .select("id, reference, title, commodity, stage, created_at, bid_offers(direction, created_at)")
+        .select("id, reference, title, commodity, stage, status, created_at, bid_offers(direction, created_at)")
         .eq("org_id", org!.id)
         .neq("stage", "memory")
+        .not("status", "in", "(cancelled,archived)")
         // Newest first, so the most recent trade is what the picker lands on.
         .order("created_at", { ascending: false })
         .limit(20);
@@ -218,6 +234,7 @@ function OpenDealsPicker({ currentId, hasAttachment }: { currentId: string | nul
  * separate per-deal detail page. */
 function LiveDealEngine() {
   const { tx: txParam, popout, panel, q: matchQuery, seed, fresh } = Route.useSearch();
+  const navigate = useNavigate();
   const { org } = useAuth();
   // Whatever the visitor dropped on the homepage before signing in, if anything. Read via a
   // non-destructive peek (StrictMode double-invokes this initializer in dev, and a combined
@@ -658,6 +675,39 @@ function LiveDealEngine() {
 
 
 
+  /** Cancels or archives the deal currently open in this workspace: marks it on the transaction
+   * row (so it drops out of the open-deals picker and the Trades report can still filter for it),
+   * closes its taskbar tab, and returns to the blank "New" workspace. Cancel is for a bid/offer
+   * that's being withdrawn; Archive is for one that's simply done with but not through Finality —
+   * both are soft, reversible only by editing the row directly, never a hard delete. */
+  async function cancelOrArchiveDeal(kind: "cancelled" | "archived") {
+    if (!dealTx) return;
+    try {
+      const { error } = await supabase
+        .from("transactions")
+        .update({ status: kind })
+        .eq("id", dealTx.id);
+      if (error) throw error;
+      await recordEvent({
+        transactionId: dealTx.id,
+        stage: dealTx.stage,
+        step: dealTx.step,
+        action: kind === "cancelled" ? "deal_cancelled" : "deal_archived",
+        summary: kind === "cancelled" ? "Bid/offer cancelled" : "Bid/offer archived",
+      });
+      closeWindow(dealTx.id);
+      try {
+        localStorage.removeItem(ACTIVE_DEAL_KEY);
+      } catch {
+        // Best-effort — worst case a later refresh resumes the same deal again.
+      }
+      toast.success(kind === "cancelled" ? "Bid/offer cancelled" : "Bid/offer archived");
+      void navigate({ to: "/live-deal-engine", search: { fresh: true } });
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  }
+
   /** "Create a bid or an offer" from the Engine Map — always starts a fresh registration, even
    * when a deal is already loaded here, instead of just switching view onto whatever that deal
    * already is. The Workspace's own form is where bid vs offer actually gets picked. */
@@ -993,6 +1043,10 @@ function LiveDealEngine() {
   // floating "maximized" layout — positioned to clear a taskbar of several visible windows, not
   // the sticky header, so its title bar rendered partly behind the header.
   const soloWorkspace = windows.filter((w) => w.mode !== "minimized").length <= 1;
+  // Only the full-bleed layouts (nothing else open, or explicitly maximized) stretch the Map and
+  // Workspace panels all the way down to the taskbar of open bid tabs — a docked/floating
+  // workspace is a small window, not the whole screen, so it keeps its own fixed height instead.
+  const fillToTaskbar = !popout && (soloWorkspace || windowMode === "maximized");
 
   useEffect(() => {
     if (popout) return;
@@ -1095,18 +1149,30 @@ function LiveDealEngine() {
           always just the page itself — no halo/backdrop layer behind it, which used to read as a
           second frame peeking out from underneath the real one. One outer frame wraps the workflow
           and the workspace so the pair reads as a single working surface. */}
-      <div className="relative rounded-3xl border border-border bg-card/40 p-3 shadow-sm">
+      <div
+        className={cn(
+          "relative rounded-3xl border border-border bg-card/40 p-3 shadow-sm",
+          fillToTaskbar && "flex min-h-0 flex-1 flex-col",
+        )}
+      >
         <div
           className={cn(
             "relative grid grid-cols-1 items-stretch gap-4 rounded-3xl lg:grid-cols-[minmax(0,1fr)_minmax(0,1.63fr)]",
+            fillToTaskbar && "min-h-0 flex-1",
           )}
         >
           {/* Engine Map — always visible on the left. Clicking a node opens that step inline in
-              the Live Workspace beside it, instead of navigating away from this screen. Both
-              panels share the same fixed viewport-relative height so the pair fits on screen
-              without the page itself needing to scroll — the Map scales its diagram to fit, the
-              Workspace scrolls its own content internally if it runs long. */}
-          <div className="flex h-[calc((100vh-190px)*0.9)] w-full flex-col overflow-hidden p-3 sm:p-5">
+              the Live Workspace beside it, instead of navigating away from this screen. When
+              nothing else is competing for screen space (the common case), both panels stretch to
+              fill all the way down to the taskbar of open bid tabs rather than stopping short of
+              it; a docked/floating workspace instead keeps a fixed viewport-relative height, since
+              it's a small window rather than the whole screen. */}
+          <div
+            className={cn(
+              "flex w-full flex-col overflow-hidden p-3 sm:p-5",
+              fillToTaskbar ? "h-full" : "h-[calc((100vh-190px)*0.9)]",
+            )}
+          >
             <p className="label-caps shrink-0 text-foreground">Izenzo Trade Workflow</p>
             <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
               <ClassicView
@@ -1124,9 +1190,57 @@ function LiveDealEngine() {
               reference on the same row; below it is either the real upload frame (before any
               document is attached) or a bulleted list of what's been classified from the documents
               already uploaded. */}
-          <div className="h-[calc((100vh-190px)*0.9)] w-full overflow-y-auto rounded-3xl border border-border bg-card p-3 shadow-sm sm:p-5">
+          <div
+            className={cn(
+              "w-full overflow-y-auto rounded-3xl border border-border bg-card p-3 shadow-sm sm:p-5",
+              fillToTaskbar ? "h-full" : "h-[calc((100vh-190px)*0.9)]",
+            )}
+          >
           <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
             <p className="label-caps text-foreground">Live Workspace</p>
+            {dealTx && (
+              <AlertDialog>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      title="Cancel or archive this bid/offer"
+                      aria-label="Cancel or archive this bid/offer"
+                      className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <AlertDialogTrigger asChild>
+                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                        <Ban className="mr-2 h-3.5 w-3.5" />
+                        Cancel bid/offer
+                      </DropdownMenuItem>
+                    </AlertDialogTrigger>
+                    <DropdownMenuItem onSelect={() => void cancelOrArchiveDeal("archived")}>
+                      <Archive className="mr-2 h-3.5 w-3.5" />
+                      Archive
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Cancel this bid/offer?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {windowLabel} will be marked cancelled and removed from your open workspaces. This
+                      doesn't delete it — it stays visible in the Trades report.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep it</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => void cancelOrArchiveDeal("cancelled")}>
+                      Cancel bid/offer
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
           </div>
 
           {/* Bid Registration — the very top of the workspace: the bid/offer id (right-aligned),
@@ -1448,20 +1562,15 @@ function LiveDealEngine() {
     return <div className="min-h-screen bg-background p-4">{workspaceContent}</div>;
   }
 
-  if (soloWorkspace) {
-    return (
-      <AppShell wide compactFooter>
-        {workspaceContent}
-      </AppShell>
-    );
-  }
-
-  if (windowMode === "maximized") {
+  if (soloWorkspace || windowMode === "maximized") {
     return (
       <AppShell wide compactFooter>
         {/* bottom-14 (not inset-4 on every side) leaves room for the taskbar of open deal tabs
-            fixed to the viewport bottom, so a maximized workspace never draws over it. */}
-        <div className="fixed inset-x-4 top-4 bottom-14 z-30 overflow-y-auto rounded-2xl border border-border bg-background p-4 shadow-2xl">
+            fixed to the viewport bottom, so the workspace stretches all the way down to it
+            without ever drawing underneath it. Used both when this is the only workspace open
+            and when it's explicitly maximized — in both cases it's the full screen, not a small
+            floating window. */}
+        <div className="fixed inset-x-4 top-[calc(7.5rem+1vh)] bottom-[calc(3.5rem+2.5vh)] z-30 flex flex-col overflow-y-auto rounded-2xl border border-border bg-background p-4 shadow-2xl">
           {workspaceContent}
         </div>
       </AppShell>
