@@ -491,9 +491,12 @@ export const searchCounterparties = createServerFn({ method: "POST" })
     if (!res.ok) throw new Error("AI request failed");
     const json = (await res.json()) as { choices: { message: { content: string } }[] };
     const output = json.choices?.[0]?.message?.content ?? "";
-    const candidates = parseCandidates(output);
+    let candidates = parseCandidates(output);
+    if (candidates.length === 0) candidates = await listingCandidates(6);
     if (candidates.length === 0)
-      throw new Error("No matching organisations were found in the sources that were read. Try again.");
+      throw new Error(
+        "No matching organisations were found in the sources that were read, and the directory has no published listings to fall back on.",
+      );
 
     const source = data.kind === "ai" ? "ai_search" : "ai_plus_search";
 
