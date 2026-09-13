@@ -1405,7 +1405,7 @@ function LiveDealEngine() {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <button
                   type="button"
-                  onClick={() => setBidInfoOpen((o) => !o)}
+                  onClick={() => setBidInfoCollapsed(dealTx.id, bidInfoOpen)}
                   aria-expanded={bidInfoOpen}
                   className="label-caps flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
                 >
