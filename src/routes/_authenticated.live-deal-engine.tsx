@@ -1280,92 +1280,9 @@ function LiveDealEngine() {
                   {/* Quantity and value now live inside the summary frame above. */}
                 </div>
 
-                <div className="glass-node flex items-start gap-3 p-4">
-                  <Paperclip className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">
-                      {activity.direction === "bid" ? "Bid" : "Offer"} recorded — {activity.title}
-                    </p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {new Date(activity.time).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
+                {/* The registration card and the one attachment list both live at the top of the
+                    workspace now — no duplicate frames down here. */}
 
-                {attachments.length > 0 && (
-                  <div className="glass-node space-y-2 p-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="label-caps rounded-full border border-[#F59E0B] bg-[#F59E0B] px-2.5 py-0.5 text-white">
-                        Attachments
-                      </p>
-                      {idCheck?.status === "passed" && (
-                        <span
-                          title={`Verified${idCheck.completed_at ? ` — ${new Date(idCheck.completed_at).toLocaleString()}` : ""}`}
-                          className="flex shrink-0 items-center gap-1 rounded-full border border-success/40 bg-success/10 px-2 py-0.5 text-[10px] font-semibold text-success"
-                        >
-                          <BadgeCheck className="h-3 w-3" />
-                          ID Verified
-                        </span>
-                      )}
-                      {idCheck?.status === "in_progress" && (
-                        <span className="flex shrink-0 items-center gap-1 rounded-full bg-info px-2 py-0.5 text-[10px] font-semibold text-white">
-                          ID check pending
-                        </span>
-                      )}
-                    </div>
-                    <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
-                    {attachments.map((a, i) => (
-                      <div key={i} className="flex items-center gap-2 text-sm">
-                        <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        {a.path ? (
-                          <button
-                            type="button"
-                            onClick={() => openAttachment(a)}
-                            className="truncate text-left underline underline-offset-2 hover:text-primary"
-                          >
-                            {a.name}
-                          </button>
-                        ) : (
-                          <span className="truncate">{a.name}</span>
-                        )}
-                        <span className="shrink-0 text-xs text-muted-foreground">{a.kind}</span>
-                        {/* Both icons always show — greyed out for files recorded before uploads
-                            were kept, so a row never looks half-built. */}
-                        <span className="ml-auto flex shrink-0 items-center gap-1">
-                          <button
-                            type="button"
-                            disabled={!a.path}
-                            onClick={() => openAttachment(a)}
-                            title={
-                              a.path
-                                ? `Preview ${a.name}`
-                                : "No stored copy — this file was recorded before uploads were kept"
-                            }
-                            className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-                          >
-                            <Eye className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            disabled={!a.path}
-                            onClick={() => downloadAttachment(a)}
-                            title={
-                              a.path
-                                ? `Download ${a.name}`
-                                : "No stored copy — this file was recorded before uploads were kept"
-                            }
-                            className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-                          >
-                            <Download className="h-3.5 w-3.5" />
-                          </button>
-                        </span>
-
-
-                      </div>
-                    ))}
-                    </div>
-                  </div>
-                )}
 
                 {/* Once a party is chosen the gate panel takes over the workspace — leaving the
                     match list open below it is what made the screen look stuck. */}
