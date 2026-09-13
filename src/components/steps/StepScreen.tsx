@@ -1355,19 +1355,10 @@ function PoiStep({ tx, reload }: Props) {
   const [busy, setBusy] = useState(false);
   const shortOnTokens = (org?.credits ?? 0) < POI_COST;
 
-  const { data: screened } = useQuery({
-    queryKey: ["background-screening", tx.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("transaction_events")
-        .select("id")
-        .eq("transaction_id", tx.id)
-        .eq("action", "media_scanned")
-        .limit(1)
-        .maybeSingle();
-      return Boolean(data);
-    },
-  });
+  // Screening is no longer gated here: Online Media Screening and Background Screening both run in
+  // Step 1, before intent can be confirmed.
+
+
 
   /** The certificate text — identical whether it is filed against the deal or downloaded. */
   function certificateBody(sealedAt: string | null, hash: string | null) {
