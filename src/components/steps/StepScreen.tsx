@@ -1288,7 +1288,7 @@ function IntentStep({ tx, reload }: Props) {
       description="Read the terms as they stand. Confirming does not seal them — that is the next step."
       footer={
         <div className="flex items-center justify-between">
-          <label className="flex items-center gap-2 text-sm text-slate-900">
+          <label className="flex items-center gap-2 text-sm text-foreground">
             <Checkbox checked={agreed} onCheckedChange={(v) => setAgreed(Boolean(v))} />I confirm
             these terms reflect our intent
           </label>
@@ -1303,42 +1303,42 @@ function IntentStep({ tx, reload }: Props) {
     >
       <dl className="grid gap-3 text-sm sm:grid-cols-2">
         <div>
-          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-500">Transaction</dt>
-          <dd className="text-slate-900">{tx.title}</dd>
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-muted-foreground">Transaction</dt>
+          <dd className="text-foreground">{tx.title}</dd>
         </div>
         <div>
-          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-500">Commodity</dt>
-          <dd className="text-slate-900">{tx.commodity ?? "—"}</dd>
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-muted-foreground">Commodity</dt>
+          <dd className="text-foreground">{tx.commodity ?? "—"}</dd>
         </div>
         <div>
-          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-500">Quantity</dt>
-          <dd className="text-slate-900">
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-muted-foreground">Quantity</dt>
+          <dd className="text-foreground">
             {tx.quantity ?? "—"} {tx.unit ?? ""}
           </dd>
         </div>
         <div>
-          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-500">Price</dt>
-          <dd className="text-slate-900">{money(tx.price, tx.currency)}</dd>
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-muted-foreground">Price</dt>
+          <dd className="text-foreground">{money(tx.price, tx.currency)}</dd>
         </div>
         <div>
-          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-500">Incoterms</dt>
-          <dd className="text-slate-900">{tx.incoterms ?? "—"}</dd>
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-muted-foreground">Incoterms</dt>
+          <dd className="text-foreground">{tx.incoterms ?? "—"}</dd>
         </div>
         <div>
-          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-500">Jurisdiction</dt>
-          <dd className="text-slate-900">{tx.jurisdiction ?? "—"}</dd>
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-muted-foreground">Jurisdiction</dt>
+          <dd className="text-foreground">{tx.jurisdiction ?? "—"}</dd>
         </div>
         <div>
-          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-500">Counterparty</dt>
-          <dd className="text-slate-900">{chosen ?? "—"}</dd>
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-muted-foreground">Counterparty</dt>
+          <dd className="text-foreground">{chosen ?? "—"}</dd>
         </div>
         <div>
-          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-500">Signed by</dt>
-          <dd className="text-slate-900">{signer}</dd>
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-muted-foreground">Signed by</dt>
+          <dd className="text-foreground">{signer}</dd>
         </div>
       </dl>
       {tx.intent_confirmed_at && (
-        <p className="mt-4 text-xs text-slate-500">
+        <p className="mt-4 text-xs text-muted-foreground">
           Signed by {signer} · {when(tx.intent_confirmed_at)}
         </p>
       )}
