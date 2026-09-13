@@ -301,7 +301,9 @@ export function ClassicView({
                       {bracketAndPrefix}
                     </span>
                   </span>
-                  <div className="min-w-0 flex-1">
+                  {/* Every sub-step (ticked or not) sits 1cm further left than the indent above
+                      would otherwise put it. */}
+                  <div className="-ml-[1cm] min-w-0 flex-1">
                     {allDone ? (
                       /* A finished step reads as one ticked label, rather than repeating every
                          task it already completed. */
