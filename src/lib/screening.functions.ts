@@ -23,7 +23,7 @@ export type ScreeningResult = {
 
 const DIDIT_CHECKS = [
   { kind: "id_document", label: "ID document + selfie" },
-  { kind: "kyb", label: "Company (KYB)" },
+  { kind: "kyb", label: "Company (KYB) — entity, UBO & AML" },
   { kind: "aml", label: "Sanctions / PEP" },
 ] as const;
 

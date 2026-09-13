@@ -18,7 +18,7 @@ export type CheckType = "id_document" | "kyb" | "aml";
 
 const CHECK_LABEL: Record<CheckType, string> = {
   id_document: "ID document + selfie",
-  kyb: "Company (KYB)",
+  kyb: "Company (KYB) — entity, UBO & AML",
   aml: "Sanctions / PEP",
 };
 
