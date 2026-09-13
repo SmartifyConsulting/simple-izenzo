@@ -67,6 +67,13 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
       { key: "workflow_kyb", label: "Workflow ID — company (KYB)", secret: false },
       { key: "workflow_aml", label: "Workflow ID — sanctions / PEP", secret: false },
       {
+        key: "aml_enabled",
+        label: "Run the separate sanctions / PEP (AML) check",
+        secret: false,
+        type: "switch",
+        help: "Off by default — the KYB workflow already covers UBO and AML. Switch on to run a separate sanctions / PEP check as well.",
+      },
+      {
         key: "base_url",
         label: "API base URL",
         secret: false,
