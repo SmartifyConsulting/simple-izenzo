@@ -27,6 +27,12 @@
 6. **All sub-steps move 1 cm further left** — completed and outstanding alike, including the single
    ticked row a finished step collapses into.
 
+7. **Document preview fails ("blocked by Chrome").** Preview currently opens the file's storage
+   address in a new tab, and a browser extension or ad blocker on your machine blocks that address
+   outright. Preview will instead fetch the file inside the app and open it from the app's own
+   address, so nothing external is loaded; if the file still cannot be shown it falls back to
+   downloading it and says so, rather than leaving a blocked page.
+
 ## Technical detail
 
 - `_authenticated.live-deal-engine.tsx`: `stepOverrides` derives from one explicit phase rather
