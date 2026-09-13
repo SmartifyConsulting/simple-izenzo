@@ -209,7 +209,7 @@ function MapNode({
     >
       <span className="flex w-full items-center justify-center gap-2">
         {Icon && <Icon className="h-4 w-4 shrink-0" />}
-        <span className="truncate">{label}</span>
+        <span className="whitespace-normal break-words leading-tight">{label}</span>
         {state === "done" && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success" />}
       </span>
       {sub && <span className="w-full text-[9px] font-medium normal-case leading-snug opacity-90">{sub}</span>}
