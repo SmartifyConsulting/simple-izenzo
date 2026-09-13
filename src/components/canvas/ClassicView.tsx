@@ -115,7 +115,7 @@ type Collapsed = Record<number, boolean>;
 
 function itemClasses(state: NodeState, isEntry?: boolean) {
   // Finished work reads as a plain ticked line — no pill frame around it.
-  if (state === "done") return "border-transparent bg-transparent text-primary";
+  if (state === "done") return "border-transparent bg-transparent text-success";
   if (isEntry) {
     return state === "open"
       ? "border-primary/60 bg-primary/10 text-primary hover:border-primary"
@@ -146,7 +146,7 @@ function SubRow({
       onClick={onClick}
       disabled={!onClick}
       className={cn(
-        "flex w-1/2 items-center gap-2 rounded-lg border px-3 py-2 text-left font-sans text-[13px] font-medium leading-tight transition-colors disabled:cursor-not-allowed",
+        "flex w-1/2 items-start gap-2 rounded-lg border px-3 py-2 text-left font-sans text-[13px] font-medium leading-snug transition-colors disabled:cursor-not-allowed",
         // A step the page has explicitly marked done or in-progress reads as such, even when it is
         // also the "start a new bid" entry row — otherwise every override on it would be ignored.
         itemClasses(state, item.isEntry && state !== "done" && state !== "active"),
@@ -157,9 +157,9 @@ function SubRow({
       ) : (
         Icon && <Icon className="h-3.5 w-3.5 shrink-0" />
       )}
-      <span className="min-w-0 flex-1 truncate">{item.label}</span>
+      <span className="min-w-0 flex-1 break-words">{item.label}</span>
       {item.sub && (
-        <span className="shrink-0 truncate text-[9px] font-semibold uppercase tracking-wide text-[#C1653D]">
+        <span className="shrink-0 text-[9px] font-semibold uppercase tracking-wide text-[#C1653D]">
           {item.sub}
         </span>
       )}
@@ -256,9 +256,9 @@ export function ClassicView({
                   {allDone ? (
                     /* A finished step reads as one ticked label, rather than repeating every
                        task it already completed. */
-                    <div className="flex w-1/2 items-center justify-start gap-2 px-3 py-2 font-sans text-[13px] font-medium text-primary">
-                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-                      <span className="min-w-0 flex-1 truncate">{s.label}</span>
+                    <div className="flex w-1/2 items-start justify-start gap-2 px-3 py-2 font-sans text-[13px] font-medium leading-snug text-success">
+                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      <span className="min-w-0 flex-1 break-words">{s.label}</span>
                     </div>
                   ) : (
                     <div className="space-y-1.5">

@@ -17,11 +17,33 @@ function bandOf(l: { verified_at: string | null; org_id: string | null }) {
   return l.org_id ? ("registered" as const) : ("unclaimed" as const);
 }
 
-/** The full match list, opened from the homepage's "See more" once the visitor is signed in. Reads
- * the exact same public `responder_listings` table the homepage's preview card queries (and the
- * Responder Directory), narrowed by the same typed-word matching, so "See more" shows the same
- * top-5-and-beyond results the visitor already saw — not a different, unrelated dataset. */
-export function MatchResultsPanel({ query, className }: { query?: string | undefined; className?: string | undefined }) {
+type Row = {
+  id: string;
+  name: string;
+  sector: string | null;
+  jurisdiction: string | null;
+  summary: string | null;
+  source_url: string | null;
+  org_id: string | null;
+  verified_at: string | null;
+  source: string | null;
+  score?: number | null;
+};
+
+type Scoring = { total?: number; components?: { label?: string; note?: string }[] };
+
+/** The full match list. For a bid it shows that bid's own results — the organisations the live web
+ * search actually found and scored — with the page each one came from. Without a bid it falls back
+ * to the public `responder_listings` directory (the same table the homepage card reads). */
+export function MatchResultsPanel({
+  query,
+  transactionId,
+  className,
+}: {
+  query?: string | undefined;
+  transactionId?: string | undefined;
+  className?: string | undefined;
+}) {
   const q = (query ?? "").trim();
   const terms = q
     .toLowerCase()
@@ -29,13 +51,51 @@ export function MatchResultsPanel({ query, className }: { query?: string | undef
     .filter((w) => w.length > 3)
     .slice(0, 6);
 
-  const { data = [], isLoading } = useQuery({
+  const bidMatches = useQuery({
+    queryKey: ["bid-matches", transactionId],
+    enabled: Boolean(transactionId),
+    queryFn: async (): Promise<Row[]> => {
+      const { data, error } = await supabase
+        .from("counterparties")
+        .select("id, name, sector, jurisdiction, notes, media_flags")
+        .eq("transaction_id", transactionId!);
+      if (error) throw error;
+      return (data ?? [])
+        .map((c) => {
+          const flags = (c.media_flags ?? {}) as {
+            scoring?: Scoring;
+            evidence?: { url?: string }[];
+          };
+          const reason =
+            flags.scoring?.components?.find((k) => k.label === "Izenzo AI read")?.note ??
+            (c as unknown as { notes?: string | null }).notes ??
+            null;
+          return {
+            id: c.id as string,
+            name: c.name as string,
+            sector: (c.sector as string | null) ?? null,
+            jurisdiction: (c.jurisdiction as string | null) ?? null,
+            summary: reason,
+            source_url: flags.evidence?.[0]?.url ?? null,
+            org_id: null,
+            verified_at: null,
+            source: "web_search",
+            score: flags.scoring?.total ?? null,
+          } satisfies Row;
+        })
+        .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+    },
+  });
+
+  const directory = useQuery({
     queryKey: ["all-matches", terms.join(",")],
-    queryFn: async () => {
+    enabled: !transactionId,
+    queryFn: async (): Promise<Row[]> => {
       let builder = supabase
         .from("responder_listings")
-        .select("id, org_id, name, sector, jurisdiction, source, is_example, verified_at, summary, source_url")
-        .eq("published", true);
+        .select("id, org_id, name, sector, jurisdiction, source, verified_at, summary, source_url")
+        .eq("published", true)
+        .eq("is_example", false);
       if (terms.length > 0) {
         builder = builder.or(
           terms.flatMap((t) => [`name.ilike.%${t}%`, `sector.ilike.%${t}%`, `jurisdiction.ilike.%${t}%`]).join(","),
@@ -43,9 +103,12 @@ export function MatchResultsPanel({ query, className }: { query?: string | undef
       }
       const { data: rows, error } = await builder.order("created_at", { ascending: false }).limit(50);
       if (error) throw error;
-      return rows ?? [];
+      return (rows ?? []) as Row[];
     },
   });
+
+  const isLoading = transactionId ? bidMatches.isLoading : directory.isLoading;
+  const data: Row[] = (transactionId ? bidMatches.data : directory.data) ?? [];
 
   // Narrows what's already been fetched — refining within these results is instant, without
   // re-running the original search each keystroke.
@@ -60,7 +123,9 @@ export function MatchResultsPanel({ query, className }: { query?: string | undef
   return (
     <div className={cn("rounded-2xl border border-border bg-card/60 p-3 sm:p-4", className)}>
       <div className="flex items-center justify-between gap-2">
-        <p className="label-caps text-foreground">All matches</p>
+        <p className="label-caps text-foreground">
+          {transactionId ? "Matches found for this bid" : "All matches"}
+        </p>
         <Badge variant="secondary" className="font-normal">
           {visible.length}
         </Badge>
@@ -89,7 +154,9 @@ export function MatchResultsPanel({ query, className }: { query?: string | undef
 
       {!isLoading && data.length === 0 && (
         <p className="mt-3 text-sm text-muted-foreground">
-          No Responders on file for this search yet.
+          {transactionId
+            ? "No matches recorded for this bid yet — run Fetch Interest."
+            : "No Responders on file for this search yet."}
         </p>
       )}
 
@@ -100,15 +167,21 @@ export function MatchResultsPanel({ query, className }: { query?: string | undef
       <ul className="mt-3 space-y-2">
         {visible.map((m) => (
           <li key={m.id} className="rounded-xl border border-border p-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-primary">
-              {BAND_LABEL[bandOf(m)]}
-              {m.sector ? ` · ${m.sector}` : ""}
-              {m.is_example ? " · Example" : ""}
-            </p>
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-primary">
+                {transactionId ? "Found on the web" : BAND_LABEL[bandOf(m)]}
+                {m.sector ? ` · ${m.sector}` : ""}
+              </p>
+              {typeof m.score === "number" && (
+                <span className="shrink-0 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                  {m.score}% match
+                </span>
+              )}
+            </div>
             <p className="mt-1 text-sm font-medium text-foreground">{m.name}</p>
             <p className="text-xs text-muted-foreground">
               {m.jurisdiction ?? "Jurisdiction pending"}
-              {m.source === "web_search" ? " · Found on the web" : ""}
+              {!transactionId && m.source === "web_search" ? " · Found on the web" : ""}
             </p>
             {m.summary && (
               <p className="mt-1.5 text-xs leading-relaxed text-foreground/80">{m.summary}</p>
