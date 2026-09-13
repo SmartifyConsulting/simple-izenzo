@@ -58,6 +58,19 @@ export function WorkspaceTaskbar() {
         <Plus className="h-3 w-3" />
         New
       </button>
+      {/* Finding an existing bid by its id or a keyword lives here, next to New — the reference on
+          the workspace heading itself is only a label now. */}
+      <button
+        type="button"
+        onClick={() => setSearchOpen(true)}
+        title="Search bids and offers"
+        aria-label="Search bids and offers"
+        className="flex w-9 shrink-0 items-center justify-center rounded-t-md border border-border border-b-transparent bg-transparent px-2 py-1.5 text-muted-foreground hover:bg-card/50 hover:text-foreground"
+      >
+        <Search className="h-3.5 w-3.5" />
+      </button>
+      <DealSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+
       {deals.map((w) => {
         const active = w.mode !== "minimized";
         return (
