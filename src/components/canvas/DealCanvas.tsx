@@ -23,8 +23,6 @@ import {
   Loader2,
   ExternalLink,
   RefreshCw,
-  Mail,
-  MailCheck,
   ShieldAlert,
   ScrollText,
   X,
@@ -65,7 +63,8 @@ import { ensureOrg } from "@/lib/org";
 import { FLAT_STEPS, lockReason, stepDef, stepIndex, type StageKey } from "@/lib/spine";
 import { advance, money, recordEvent, when, type Transaction, type TxEvent } from "@/lib/tx";
 import { setCounterpartyShortlist } from "@/lib/izenzo.functions";
-import { findCounterpartyContact, inviteCounterparty, enrichCounterparty } from "@/lib/counterpartyOutreach.functions";
+import { enrichCounterparty } from "@/lib/counterpartyOutreach.functions";
+import { dedupeOrgs } from "@/lib/dedupeOrgs";
 import type { ScreeningCheck, ScreeningResult } from "@/lib/screening.functions";
 import type { MediaCheckResult, MediaFinding } from "@/lib/onlineMedia.functions";
 import {
@@ -925,12 +924,9 @@ export function CounterpartyRecord({
 }) {
   const qc = useQueryClient();
   const setShortlist = useServerFn(setCounterpartyShortlist);
-  const findContact = useServerFn(findCounterpartyContact);
-  const sendInvite = useServerFn(inviteCounterparty);
   const enrichContact = useServerFn(enrichCounterparty);
   const raiseChallengeFn = useServerFn(raiseChallenge);
   const listChallengesFn = useServerFn(listChallenges);
-  const [invitingId, setInvitingId] = useState<string | null>(null);
   const [pickedId, setPickedId] = useState<string | null>(null);
   const [challengeOpen, setChallengeOpen] = useState(false);
   const [governanceOpen, setGovernanceOpen] = useState(false);
@@ -994,7 +990,13 @@ export function CounterpartyRecord({
         .order("score", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false });
       if (qErr) throw qErr;
-      return (data ?? []) as unknown as CounterpartyCandidate[];
+      const rows = (data ?? []) as unknown as CounterpartyCandidate[];
+      // The same organisation can be found on several pages (and by several sources) — it should
+      // read as one result, keeping the highest match percentage.
+      return dedupeOrgs(rows, (r) => {
+        const flags = (r as unknown as { media_flags?: { evidence?: { url?: string }[] } }).media_flags;
+        return r.website ?? flags?.evidence?.[0]?.url ?? null;
+      }) as CounterpartyCandidate[];
     },
   });
 
@@ -1129,37 +1131,6 @@ export function CounterpartyRecord({
     }
   }
 
-  /** Invites a counterparty who isn't signed up yet — finds a real contact email on their own
-   * public website (only one actually printed there, never guessed) if we don't have one on file,
-   * then sends the invite through Resend. */
-  async function inviteCandidate(c: CounterpartyCandidate) {
-    setInvitingId(c.id);
-    try {
-      let email = c.contact_email ?? null;
-      if (!email) {
-        const website = window.prompt(`${c.name}'s website (used only to read a public contact email):`);
-        if (!website) return;
-        const result = await findContact({ data: { counterpartyId: c.id, website } });
-        email = result.email;
-        qc.setQueryData<CounterpartyCandidate[]>(["counterparties", txId], (prev) =>
-          (prev ?? []).map((row) => (row.id === c.id ? { ...row, contact_email: email } : row)),
-        );
-        if (!email) {
-          toast.error(`No contact email found on ${c.name}'s website.`);
-          return;
-        }
-      }
-      await sendInvite({ data: { counterpartyId: c.id } });
-      qc.setQueryData<CounterpartyCandidate[]>(["counterparties", txId], (prev) =>
-        (prev ?? []).map((row) => (row.id === c.id ? { ...row, invited_at: new Date().toISOString() } : row)),
-      );
-      toast.success(`Invite sent to ${c.name}`);
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setInvitingId(null);
-    }
-  }
 
   // Screening is done once every ticked counterparty has a result and nothing is still running —
   // that's the moment the user can pick which one they actually want to trade with.
@@ -1262,25 +1233,6 @@ export function CounterpartyRecord({
                   </span>
                 )}
               </label>
-              <button
-                type="button"
-                onClick={() => inviteCandidate(c)}
-                disabled={invitingId === c.id}
-                title={
-                  c.invited_at
-                    ? `Invited ${new Date(c.invited_at).toLocaleDateString()} — send again`
-                    : "Not on the platform yet — email them an invite"
-                }
-                className="mt-0.5 shrink-0 rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700 disabled:opacity-50"
-              >
-                {invitingId === c.id ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : c.invited_at ? (
-                  <MailCheck className="h-3.5 w-3.5 text-primary" />
-                ) : (
-                  <Mail className="h-3.5 w-3.5" />
-                )}
-              </button>
             </li>
           ))}
         </ul>

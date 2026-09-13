@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { dedupeOrgs } from "@/lib/dedupeOrgs";
 
 const BAND_LABEL = {
   verified: "Verified",
@@ -34,43 +35,10 @@ type Row = {
 
 type Scoring = { total?: number; components?: { label?: string; note?: string }[] };
 
-/** Same organisation found on more than one page should read as one result. Company suffixes and
- * punctuation are dropped so "Fowler Law PLLC" and "Fowler Law, P.L.L.C." collapse together. */
-const SUFFIXES =
-  /\b(inc|llc|llp|pllc|ltd|limited|plc|pty|pte|gmbh|bv|nv|sa|srl|co|corp|corporation|company|group|holdings|partners|associates|advisors|advisers|attorneys|law|legal|services)\b/g;
-
-function nameKey(name: string) {
-  return name.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(SUFFIXES, " ").replace(/\s+/g, " ").trim();
-}
-
-function hostKey(url: string | null) {
-  if (!url) return "";
-  try {
-    return new URL(url).hostname.replace(/^www\./, "").toLowerCase();
-  } catch {
-    return "";
-  }
-}
-
-/** Keeps the highest-scoring row per organisation and remembers every page it was found on. */
+/** Same organisation found on more than one page reads as one result — the same rule the shortlist
+ * in the workflow uses. */
 function dedupe(rows: Row[]): Row[] {
-  const byKey = new Map<string, Row>();
-  const hostToKey = new Map<string, string>();
-  for (const row of rows) {
-    const host = hostKey(row.source_url);
-    const key = (host && hostToKey.get(host)) || nameKey(row.name) || row.id;
-    if (host && !hostToKey.has(host)) hostToKey.set(host, key);
-    const existing = byKey.get(key);
-    const urls = [...(existing?.sourceUrls ?? []), ...(row.source_url ? [row.source_url] : [])];
-    const uniqueUrls = Array.from(new Set(urls));
-    if (!existing) {
-      byKey.set(key, { ...row, sourceUrls: uniqueUrls });
-      continue;
-    }
-    const better = (row.score ?? 0) > (existing.score ?? 0) ? row : existing;
-    byKey.set(key, { ...better, sourceUrls: uniqueUrls });
-  }
-  return Array.from(byKey.values()).sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  return dedupeOrgs(rows, (r) => r.source_url);
 }
 
 /** The full match list. For a bid it shows that bid's own results — the organisations the live web

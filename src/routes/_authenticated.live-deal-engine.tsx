@@ -366,8 +366,19 @@ function LiveDealEngine() {
   const fetchDocument = useServerFn(readDocument);
   const [rereading, setRereading] = useState(false);
   // Once interest is being fetched the submitted detail collapses out of the way, so the results
-  // have the room. The header stays clickable to open it again.
+  // have the room. Remembered per bid, so it stays collapsed on a refresh or a tab switch; the
+  // header stays clickable to open it again.
   const [bidInfoOpen, setBidInfoOpen] = useState(true);
+  function setBidInfoCollapsed(txId: string | undefined, collapsed: boolean) {
+    setBidInfoOpen(!collapsed);
+    if (!txId) return;
+    try {
+      if (collapsed) sessionStorage.setItem(`bid-info-collapsed:${txId}`, "1");
+      else sessionStorage.removeItem(`bid-info-collapsed:${txId}`);
+    } catch {
+      // Private browsing without storage — the state above still holds for this view.
+    }
+  }
   // Once the ask has been made for a bid, the description/drop frame never comes back — not while
   // the files are still saving, not on a refresh, not on a tab switch. Remembered per bid.
   const [submittedBids, setSubmittedBids] = useState<Set<string>>(() => new Set());
@@ -453,6 +464,18 @@ function LiveDealEngine() {
     }
   }, [dealTx?.id, workspaceDocs.length]);
   const submittedForThisBid = dealTx ? submittedBids.has(dealTx.id) : false;
+  // A bid whose detail was collapsed when interest was fetched stays collapsed when it's opened
+  // again, rather than springing back open on every load.
+  useEffect(() => {
+    if (!dealTx?.id) return;
+    let collapsed = false;
+    try {
+      collapsed = sessionStorage.getItem(`bid-info-collapsed:${dealTx.id}`) === "1";
+    } catch {
+      collapsed = false;
+    }
+    setBidInfoOpen(!collapsed);
+  }, [dealTx?.id]);
   // Older bids may already have a good summary but still carry the old "New Bid" placeholder.
   // Read once more to generate and persist their proper display title; the ref prevents repeated
   // AI calls while the transaction query catches up with the saved title.
@@ -1009,7 +1032,7 @@ function LiveDealEngine() {
   /** "Fetch Interest" — starts the AI/AI+ search and the online media screening in one go, so both
    * steps pulse together in the workflow and every result lands without another click. */
   async function fetchInterest(txId: string) {
-    setBidInfoOpen(false);
+    setBidInfoCollapsed(txId, true);
     // Anything already surfaced for this deal can be screened straight away, in parallel with the
     // fresh search; whatever the search turns up is screened as it lands (see runSearch).
     try {
@@ -1028,7 +1051,7 @@ function LiveDealEngine() {
   async function runSearch(txId: string) {
     // Whichever way the search was started, the submitted detail collapses out of the way so the
     // results have the room; the header stays clickable to open it again.
-    setBidInfoOpen(false);
+    setBidInfoCollapsed(txId, true);
     setFlowStep("searching");
     setSearchError(null);
     // Marks Upload Documents done and moves the active step onto Search the moment the search
@@ -1394,7 +1417,7 @@ function LiveDealEngine() {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <button
                   type="button"
-                  onClick={() => setBidInfoOpen((o) => !o)}
+                  onClick={() => setBidInfoCollapsed(dealTx.id, bidInfoOpen)}
                   aria-expanded={bidInfoOpen}
                   className="label-caps flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
                 >

@@ -147,18 +147,31 @@ function SubRow({
   item,
   state,
   onClick,
+  collapsed,
+  onToggle,
 }: {
   item: SubItem;
   state: NodeState;
   onClick?: () => void;
+  /** Headings only: whether the rows beneath this heading are hidden right now. */
+  collapsed?: boolean;
+  onToggle?: () => void;
 }) {
   const Icon = item.icon;
-  // A grouping label, not a task: no pill, no border, no hover, not clickable — just small caps
-  // with a hairline rule, so the rows beneath it read as its children.
+  // A grouping label, not a task: no pill and no border — just small caps with a hairline rule, so
+  // the rows beneath it read as its children. It can be collapsed with the −/+ marker in front.
   if (item.heading) {
     return (
       <div className="flex items-center gap-2 pt-1.5">
-        <span className="label-caps whitespace-nowrap text-muted-foreground">{item.label}</span>
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={!collapsed}
+          className="label-caps whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground"
+        >
+          {collapsed ? "+" : "−"}
+          {item.label}
+        </button>
         <span aria-hidden className="h-px flex-1 bg-border" />
       </div>
     );
@@ -235,6 +248,22 @@ export function ClassicView({
       return;
     }
     setPanel((p) => (p?.stage === stage && p?.step === step ? null : { stage, step }));
+  };
+  // Which grouping headings (Project Preparation, Execution) are folded shut. Both start open.
+  const [collapsedHeadings, setCollapsedHeadings] = useState<Record<string, boolean>>({});
+  const toggleHeading = (key: string) =>
+    setCollapsedHeadings((c) => ({ ...c, [key]: !c[key] }));
+  /** Drops the indented rows that belong to a collapsed heading. */
+  const withoutHiddenRows = (items: SubItem[]) => {
+    let hiding = false;
+    return items.filter((item) => {
+      if (item.heading) {
+        hiding = Boolean(collapsedHeadings[item.key]);
+        return true;
+      }
+      if (!item.indent) hiding = false;
+      return !(hiding && item.indent);
+    });
   };
 
   const toggleStep = (step: number) => setCollapsed((c) => ({ ...c, [step]: !c[step] }));
@@ -313,11 +342,13 @@ export function ClassicView({
                       </div>
                     ) : (
                       <div className="space-y-1.5">
-                        {s.items.map((item) => (
+                        {withoutHiddenRows(s.items).map((item) => (
                           <SubRow
                             key={item.key}
                             item={item}
                             state={stateOf(item)}
+                            collapsed={Boolean(collapsedHeadings[item.key])}
+                            onToggle={() => toggleHeading(item.key)}
                             onClick={
                               item.isEntry ? () => onRegister?.() : () => open(item.stage, item.step)
                             }
