@@ -385,6 +385,22 @@ function LiveDealEngine() {
     },
   });
 
+  // Has interest already been fetched for this bid? Drives the "Fetch Interest" button, so it
+  // stays offered for any bid that has documents but no matches yet — not only in the moment
+  // straight after an upload.
+  const { data: interestCount = 0 } = useQuery({
+    queryKey: ["counterparties-count", dealTx?.id],
+    enabled: Boolean(dealTx?.id),
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("counterparties")
+        .select("id", { count: "exact", head: true })
+        .eq("transaction_id", dealTx!.id);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+
   /** Which workflow item is genuinely current right now — the stored stage/step can't tell
    * "searching" apart from "results are in", so the page says it outright. Search AI + AI+ and
    * Online Media Screening run together, so both pulse at the same time. */
@@ -1139,7 +1155,7 @@ function LiveDealEngine() {
           {activity && dealTx && (
             <div className="glass-node space-y-2 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="label-caps text-muted-foreground">Bidder details &amp; AI summary</p>
+                <p className="label-caps text-muted-foreground">BID INFORMATION</p>
                 {idCheck?.status === "passed" && (
                   <span
                     title={`Verified${idCheck.completed_at ? ` — ${new Date(idCheck.completed_at).toLocaleString()}` : ""}`}
@@ -1260,15 +1276,18 @@ function LiveDealEngine() {
                       initialPrompt={seedPrompt}
                       initialFiles={seedFiles}
                     />
-                  ) : flowStep === "documents" ? (
+                  ) : interestCount === 0 ? (
                     /* Documents are in — one button starts the AI/AI+ search and the online media
-                       screening together, and both pulse in the workflow while they run. */
+                       screening together, and both pulse in the workflow while they run. The
+                       upload frame never comes back once a file exists. */
                     <Button
                       className="w-full"
-                      disabled={screening || mediaRunning}
+                      disabled={screening || mediaRunning || flowStep === "searching"}
                       onClick={() => void fetchInterest(dealTx.id)}
                     >
-                      Fetch Interest
+                      {screening || mediaRunning || flowStep === "searching"
+                        ? "Fetching interest…"
+                        : "Fetch Interest"}
                     </Button>
                   ) : null}
 

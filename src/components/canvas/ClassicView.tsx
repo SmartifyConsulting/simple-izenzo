@@ -115,13 +115,14 @@ const STEPS: StepDef[] = [
 type Collapsed = Record<number, boolean>;
 
 function itemClasses(state: NodeState, isEntry?: boolean) {
+  // Finished work reads as a plain ticked line — no pill frame around it.
+  if (state === "done") return "border-transparent bg-transparent text-primary";
   if (isEntry) {
     return state === "open"
       ? "border-primary/60 bg-primary/10 text-primary hover:border-primary"
       : "border-primary/50 bg-primary/12 text-primary";
   }
   return cn(
-    state === "done" && "border-primary/50 bg-primary/12 text-primary",
     state === "active" && "border-primary bg-primary/15 text-primary animate-throb-aqua",
     state === "open" && "border-border bg-card text-foreground hover:border-primary/40",
     state === "locked" && "cursor-not-allowed border-border/60 bg-card/50 text-muted-foreground",
@@ -282,7 +283,7 @@ export function ClassicView({
                   (allDone ? (
                     /* A finished step reads as one ticked label on the left, rather than
                        repeating every task it already completed. */
-                    <div className="mt-2 flex w-1/2 items-center justify-start gap-2 rounded-lg border border-primary/50 bg-primary/12 px-3 py-2 font-sans text-[13px] font-medium text-primary">
+                    <div className="mt-2 flex w-1/2 items-center justify-start gap-2 px-3 py-2 font-sans text-[13px] font-medium text-primary">
                       <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
                       <span className="min-w-0 flex-1 truncate">{s.label}</span>
                     </div>
