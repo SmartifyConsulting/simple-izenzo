@@ -1336,6 +1336,10 @@ function LiveDealEngine() {
               fillToTaskbar ? "h-full" : "h-[calc((100vh-190px)*0.9)]",
             )}
           >
+          {/* Everything pinned to the top of the workspace sits inside one opaque, full-bleed
+              surface — the heading row and the Bid Registration frame together — so nothing
+              scrolling underneath can appear through it or in the gap above it. */}
+          <div className="sticky top-0 z-20 -mx-3 -mt-3 bg-card px-3 pt-3 sm:-mx-5 sm:-mt-5 sm:px-5 sm:pt-5">
           <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
             <p className="label-caps text-foreground">Live Workspace</p>
             {dealTx && (
@@ -1390,7 +1394,7 @@ function LiveDealEngine() {
           {activity && dealTx && (
             // Fully opaque: the glass treatment's translucency let content scrolling beneath show
             // through this pinned frame.
-            <div className="glass-node sticky top-0 z-20 mb-3 space-y-1.5 bg-card p-4 [backdrop-filter:none] [background-image:none]">
+            <div className="glass-node mb-3 space-y-1.5 bg-card p-4 [backdrop-filter:none] [background-image:none]">
               <p className="label-caps text-muted-foreground">Bid Registration</p>
               <div className="grid grid-cols-2 items-start gap-3">
                 <div className="min-w-0 space-y-1">
@@ -1431,6 +1435,7 @@ function LiveDealEngine() {
               </div>
             </div>
           )}
+          </div>
 
           {/* Bidder details + AI summary come next — what was actually submitted, never buried
               behind the progress ribbon. The attachment(s) live here too, with preview/download. */}
