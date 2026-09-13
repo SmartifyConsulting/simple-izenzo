@@ -264,12 +264,14 @@ export function ClassicView({
               </button>
 
               {!stepCollapsed && (
-                <div className="flex items-start gap-2">
-                  {/* Invisible twin of the bracket + "Step N · " above — same markup and classes,
-                      so its width always matches exactly regardless of the step number's own
-                      width, and the sub-steps line up under the step name's first letter. */}
-                  <span aria-hidden className="invisible flex shrink-0 items-start gap-2">
-                    {bracketAndPrefix}
+                <div className="flex items-start gap-2 pt-2">
+                  {/* Invisible twin of the bracket + "Step N · " above — the outer span takes the
+                      natural width of that text, and the inner one shows half of it, so the
+                      sub-steps sit halfway between the bracket and the step name. */}
+                  <span aria-hidden className="invisible w-max shrink-0">
+                    <span className="flex w-1/2 items-start gap-2 overflow-hidden whitespace-nowrap">
+                      {bracketAndPrefix}
+                    </span>
                   </span>
                   <div className="min-w-0 flex-1">
                     {allDone ? (
