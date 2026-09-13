@@ -220,6 +220,7 @@ async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
       .update({
         document_summary: summary,
         document_summary_generated_at: new Date().toISOString(),
+        document_summary_error: null,
         ...filled,
         ...(idCipher ? { id_number_encrypted: idCipher } : {}),
       } as never)
@@ -227,7 +228,9 @@ async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
     if (upErr) throw new Error(upErr.message);
 
     return { summary, facts, unreadable };
-  });
+  }
+}
+
 
 function toBase64(bytes: Uint8Array) {
   let s = "";
