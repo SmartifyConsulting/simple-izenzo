@@ -20,7 +20,7 @@ import {
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { sealProofOfIntent, completeWad, runAiProposal, searchCounterparties } from "@/lib/izenzo.functions";
-import { runBackgroundScreening, type ScreeningCheck } from "@/lib/screening.functions";
+import { type ScreeningCheck } from "@/lib/screening.functions";
 import { listIntentMessages, postIntentMessage } from "@/lib/intentChallenge.functions";
 import { advance, fingerprintOf, money, recordEvent, shortHash, when, type Transaction, type TxEvent } from "@/lib/tx";
 import { POI_COST, WAD_COST, type StageKey } from "@/lib/spine";
@@ -1491,25 +1491,31 @@ function PoiStep({ tx, reload }: Props) {
 
 const WAD_CHECKS = [
   { key: "kyc", label: "KYC — individuals identified" },
-  { key: "kyb", label: "KYB — entity verified" },
-  { key: "ubo", label: "UBO — beneficial owners established" },
-  { key: "sanctions", label: "Sanctions screening clear" },
-  { key: "pep", label: "PEP screening reviewed" },
+  { key: "kyb", label: "KYB — entity, beneficial owners (UBO) and AML verified" },
   { key: "authority", label: "Authority to act confirmed" },
 ];
 
-
-
-
-/** Which provider check satisfies each WaD item. UBO and Authority have no provider behind
- * them, so they stay manual confirmations rather than pretending to a screened result. */
+/** Which provider check satisfies each WaD item. Authority has no provider behind it, so it
+ * stays a manual confirmation rather than pretending to a screened result. */
 const WAD_CHECK_SOURCE: Record<string, ScreeningCheck["kind"] | null> = {
   kyc: "id_document",
   kyb: "kyb",
-  ubo: null,
-  sanctions: "aml",
-  pep: "aml",
   authority: null,
+};
+
+const CHECK_TYPE_LABEL: Record<string, string> = {
+  id_document: "ID document + selfie",
+  kyb: "Company (KYB) — entity, UBO & AML",
+  aml: "Sanctions / PEP",
+};
+
+const PRIOR_STATUS_LABEL: Record<string, string> = {
+  passed: "Cleared",
+  failed: "Declined",
+  review: "Needs review",
+  in_progress: "In progress",
+  pending: "Not started",
+  expired: "Expired",
 };
 
 async function sha256Hex(text: string) {
@@ -1521,17 +1527,12 @@ async function sha256Hex(text: string) {
 
 function WadStep({ tx, reload }: Props) {
   const complete = useServerFn(completeWad);
-  const runScreening = useServerFn(runBackgroundScreening);
   const navigate = useNavigate();
   const { org } = useAuth();
   const shortOnTokens = (org?.credits ?? 0) < WAD_COST;
   const [checks, setChecks] = useState<Record<string, boolean>>({});
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
-  const [screening, setScreening] = useState(false);
-  const [screened, setScreened] = useState<ScreeningCheck[] | null>(null);
-  const [screenError, setScreenError] = useState<string | null>(null);
-  const startedRef = useRef(false);
   const { data: chosenCp } = useQuery({
     queryKey: ["chosen-counterparty-rating", tx.id],
     queryFn: async () => {
@@ -1546,61 +1547,55 @@ function WadStep({ tx, reload }: Props) {
   });
   const flagged = chosenCp && (chosenCp.rating_override ?? chosenCp.rating_band) === "flagged";
 
-  // Screening runs on its own as soon as the gate opens, against the counterparty that was
-  // chosen. Nothing about the gate, its cost or its decision changes — this only fills in what
-  // the providers already know.
-  useEffect(() => {
-    if (tx.wad_completed_at || !chosenCp?.id || startedRef.current) return;
-    startedRef.current = true;
-    (async () => {
-      setScreening(true);
-      setScreenError(null);
-      try {
-        const results = await runScreening({
-          data: {
-            transactionId: tx.id,
-            counterpartyIds: [chosenCp.id as string],
-            ...(typeof window !== "undefined" ? { origin: window.location.origin } : {}),
-          },
-        });
-        const found = results[0]?.checks ?? [];
-        setScreened(found);
-        // Anything that came back clear ticks itself; anything else stays open.
-        setChecks((prev) => {
-          const next = { ...prev };
-          for (const [key, kind] of Object.entries(WAD_CHECK_SOURCE)) {
-            if (!kind) continue;
-            const hit = found.find((c) => c.kind === kind);
-            if (hit?.status === "matched") next[key] = true;
-          }
-          // KYB only ticks itself when the company register also confirms the entity.
-          const registry = found.find((c) => c.kind === "registry");
-          if (registry?.status !== "matched") next["kyb"] = false;
-          return next;
-        });
-      } catch (err) {
-        setScreenError((err as Error).message);
-      } finally {
-        setScreening(false);
-      }
-    })();
-  }, [tx.id, tx.wad_completed_at, chosenCp?.id, runScreening]);
+  // Nothing is screened again here — Step 1 already ran the background screening. This only
+  // reads back what came in, so the same checks are never paid for or repeated twice.
+  const { data: priorRows = [] } = useQuery({
+    queryKey: ["wad-prior-screening", tx.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("identity_verifications")
+        .select("id, check_type, status, reason, completed_at, created_at")
+        .eq("transaction_id", tx.id)
+        .order("created_at", { ascending: false });
+      return data ?? [];
+    },
+  });
 
-  const settled = (screened ?? []).filter((c) =>
-    ["matched", "no_match", "unavailable", "failed"].includes(c.status),
-  ).length;
-  const totalChecks = 4;
+  /** Newest row per check type. */
+  const priorByKind = new Map<string, (typeof priorRows)[number]>();
+  for (const r of priorRows) {
+    if (!priorByKind.has(r.check_type as string)) priorByKind.set(r.check_type as string, r);
+  }
+  const priorChecks = Array.from(priorByKind.values());
+
+  // Anything already cleared in Step 1 ticks itself; everything else stays open for a person.
+  useEffect(() => {
+    if (priorChecks.length === 0) return;
+    setChecks((prev) => {
+      const next = { ...prev };
+      for (const [key, kind] of Object.entries(WAD_CHECK_SOURCE)) {
+        if (!kind) continue;
+        if (priorByKind.get(kind)?.status === "passed") next[key] = true;
+      }
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [priorChecks.length, priorRows]);
 
   function statusFor(key: string) {
     const kind = WAD_CHECK_SOURCE[key];
     if (!kind) return null;
-    if (screening && !screened) return { tone: "muted", text: "Screening…" } as const;
-    const hit = (screened ?? []).find((c) => c.kind === kind);
+    const hit = priorByKind.get(kind);
     if (!hit) return null;
-    if (hit.status === "matched") return { tone: "ok", text: `Matched — ${hit.detail}` } as const;
-    if (hit.status === "started") return { tone: "muted", text: `Screening — ${hit.detail}` } as const;
-    if (hit.status === "unavailable") return { tone: "warn", text: `Could not run — ${hit.detail}` } as const;
-    return { tone: "warn", text: `Needs review — ${hit.detail}` } as const;
+    const when = hit.completed_at ?? hit.created_at;
+    const stamp = when ? ` (${new Date(when as string).toLocaleString()})` : "";
+    if (hit.status === "passed")
+      return { tone: "ok", text: `Cleared in Step 1 screening${stamp}` } as const;
+    if (hit.status === "failed")
+      return { tone: "warn", text: `Declined in Step 1 screening — ${hit.reason ?? "provider returned a negative result"}` } as const;
+    if (hit.status === "review")
+      return { tone: "warn", text: `Needs review — ${hit.reason ?? "a person must look at this result"}` } as const;
+    return { tone: "muted", text: "Opened in Step 1 — no result yet" } as const;
   }
 
   const allChecked = WAD_CHECKS.every((c) => checks[c.key]);
@@ -1766,23 +1761,30 @@ function WadStep({ tx, reload }: Props) {
         </div>
       )}
 
-      {(screening || screened || screenError) && (
-        <div className="mb-4 space-y-1">
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-            <div
-              className={cn(
-                "h-full rounded-full transition-all duration-500",
-                screenError ? "w-full bg-destructive" : screening ? "w-1/2 animate-ribbon-sweep bg-primary" : "bg-emerald-500",
-              )}
-              style={!screening && !screenError ? { width: `${Math.round((settled / totalChecks) * 100)}%` } : undefined}
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {screenError
-              ? `Screening could not finish: ${screenError}`
-              : screening
-                ? `Screening ${chosenCp?.name ?? "the counterparty"}…`
-                : `${settled} of ${totalChecks} checks returned`}
+      {priorChecks.length > 0 && (
+        <div className="mb-4 rounded-lg border border-border p-3">
+          <p className="label-caps font-sans">Already screened in Step 1</p>
+          <ul className="mt-2 space-y-1.5">
+            {priorChecks.map((r) => (
+              <li key={r.id} className="flex items-center justify-between gap-2 text-xs">
+                <span>{CHECK_TYPE_LABEL[r.check_type as string] ?? r.check_type}</span>
+                <span
+                  className={cn(
+                    "shrink-0 text-xs",
+                    r.status === "passed"
+                      ? "text-emerald-500"
+                      : r.status === "failed" || r.status === "review"
+                        ? "text-[#F97316]"
+                        : "text-muted-foreground",
+                  )}
+                >
+                  {PRIOR_STATUS_LABEL[r.status as string] ?? r.status}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-muted-foreground">
+            These results carry through from the background screening on {chosenCp?.name ?? "the chosen party"} — they are not run again here.
           </p>
         </div>
       )}
@@ -1833,9 +1835,11 @@ function WadStep({ tx, reload }: Props) {
       <div className="mt-5">
         <VerificationPanel
           transactionId={tx.id}
-          checks={["id_document", "kyb", "aml"]}
+          checks={(["id_document", "kyb", "aml"] as const).filter(
+            (k) => priorByKind.get(k)?.status !== "passed",
+          )}
           title="Identity verification"
-          description="Run the live checks against the chosen counterparty. Results are recorded on the deal as they land; they inform the WaD decision but never make it."
+          description="Only the checks that have not already come back clear. Results are recorded on the deal as they land; they inform the WaD decision but never make it."
         />
       </div>
       <div className="mt-5">

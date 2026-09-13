@@ -261,3 +261,17 @@ export const finaliseVerificationPublic = createServerFn({ method: "POST" })
 
     return { status, checkType };
   });
+
+/** Which identity checks are switched on. The KYB workflow already covers UBO and AML, so the
+ * separate sanctions / PEP check only appears when an administrator turns it on. */
+export const listEnabledCheckTypes = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async (): Promise<VerificationRow["check_type"][]> => {
+    try {
+      const { loadDiditCreds } = await import("@/lib/didit.server");
+      const creds = await loadDiditCreds();
+      return creds.amlEnabled ? ["id_document", "kyb", "aml"] : ["id_document", "kyb"];
+    } catch {
+      return ["id_document", "kyb"];
+    }
+  });

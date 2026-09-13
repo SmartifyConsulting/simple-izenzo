@@ -6,6 +6,8 @@ export type IntegrationField = {
   key: string;
   label: string;
   secret: boolean;
+  /** "switch" renders an on/off control and stores "true"/"false" in the provider config. */
+  type?: "text" | "switch";
   placeholder?: string;
   help?: string;
 };
@@ -64,6 +66,13 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
       { key: "workflow_id_document", label: "Workflow ID — ID document + selfie", secret: false },
       { key: "workflow_kyb", label: "Workflow ID — company (KYB)", secret: false },
       { key: "workflow_aml", label: "Workflow ID — sanctions / PEP", secret: false },
+      {
+        key: "aml_enabled",
+        label: "Run the separate sanctions / PEP (AML) check",
+        secret: false,
+        type: "switch",
+        help: "Off by default — the KYB workflow already covers UBO and AML. Switch on to run a separate sanctions / PEP check as well.",
+      },
       {
         key: "base_url",
         label: "API base URL",

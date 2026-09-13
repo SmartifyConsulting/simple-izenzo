@@ -661,10 +661,7 @@ export function DealCanvas({
           <div className="space-y-1.5">
             {[
               "KYC — individuals identified",
-              "KYB — entity verified",
-              "UBO — beneficial owners established",
-              "Sanctions screening clear",
-              "PEP screening reviewed",
+              "KYB — entity, beneficial owners (UBO) and AML verified",
               "Authority to act confirmed",
               "Without a Doubt cleared",
               "Clearance certificate filed",
@@ -971,6 +968,15 @@ export function CounterpartyRecord({
   // rather than every company's full check list stacking up at once.
   const [expandedMediaCos, setExpandedMediaCos] = useState<Set<string>>(new Set());
   const [expandedScreeningCos, setExpandedScreeningCos] = useState<Set<string>>(new Set());
+  // Screening findings open themselves the moment they land, so they are read before Continue.
+  const screeningSeenRef = useRef<string>("");
+  useEffect(() => {
+    const ids = (screeningResults ?? []).map((r) => r.counterpartyId);
+    const key = ids.join("|");
+    if (!key || screeningSeenRef.current === key) return;
+    screeningSeenRef.current = key;
+    setExpandedScreeningCos(new Set(ids));
+  }, [screeningResults]);
   function toggleCo(set: Set<string>, setSet: (s: Set<string>) => void, id: string) {
     const next = new Set(set);
     if (next.has(id)) next.delete(id);

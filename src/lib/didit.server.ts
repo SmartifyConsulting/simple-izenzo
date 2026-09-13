@@ -13,6 +13,9 @@ export type DiditCreds = {
   baseUrl: string;
   environment: string;
   enabled: boolean;
+  /** The KYB workflow already covers UBO and AML, so the separate sanctions/PEP check is
+   * off unless an administrator switches it on under Admin → Integrations. */
+  amlEnabled: boolean;
   workflows: Record<DiditCheckType, string>;
 };
 
@@ -56,6 +59,7 @@ export async function loadDiditCreds(): Promise<DiditCreds> {
     baseUrl: normaliseBase(config["base_url"]),
     environment: (row.environment as string) || "sandbox",
     enabled: Boolean(row.enabled),
+    amlEnabled: config["aml_enabled"] === "true",
     workflows: {
       id_document: config["workflow_id_document"] ?? "",
       kyb: config["workflow_kyb"] ?? "",
@@ -92,6 +96,11 @@ export async function createDiditSession(
   creds: DiditCreds,
   args: { checkType: DiditCheckType; vendorData: string; callbackUrl?: string; contactEmail?: string },
 ): Promise<{ sessionId: string; url: string; raw: unknown }> {
+  if (args.checkType === "aml" && !creds.amlEnabled) {
+    throw new Error(
+      "The separate sanctions / PEP check is switched off under Admin → Integrations — KYB already covers UBO and AML.",
+    );
+  }
   const workflowId = creds.workflows[args.checkType];
   if (!workflowId) {
     throw new Error(

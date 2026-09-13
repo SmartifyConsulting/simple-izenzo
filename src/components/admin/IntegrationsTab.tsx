@@ -410,6 +410,23 @@ function ProviderCard({
             ? Boolean(row?.maskedSecrets[field.key])
             : Boolean((config[field.key] ?? "").trim());
           const pending = field.secret && Boolean((secrets[field.key] ?? "").trim());
+          if (field.type === "switch") {
+            return (
+              <div key={field.key} className="space-y-1.5 rounded-md border border-border p-2.5">
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor={`${provider.id}-${field.key}`}>{field.label}</Label>
+                  <Switch
+                    id={`${provider.id}-${field.key}`}
+                    checked={config[field.key] === "true"}
+                    onCheckedChange={(v) =>
+                      setConfig((c) => ({ ...c, [field.key]: v ? "true" : "false" }))
+                    }
+                  />
+                </div>
+                {field.help && <p className="text-xs text-muted-foreground">{field.help}</p>}
+              </div>
+            );
+          }
           return (
           <div key={field.key} className="space-y-1.5">
             <div className="flex items-center justify-between gap-2">

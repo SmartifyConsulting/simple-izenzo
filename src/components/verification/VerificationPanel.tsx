@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
+  listEnabledCheckTypes,
   listMyVerifications,
   listVerificationsForTx,
   refreshVerification,
@@ -18,7 +19,7 @@ export type CheckType = "id_document" | "kyb" | "aml";
 
 const CHECK_LABEL: Record<CheckType, string> = {
   id_document: "ID document + selfie",
-  kyb: "Company (KYB)",
+  kyb: "Company (KYB) — entity, UBO & AML",
   aml: "Sanctions / PEP",
 };
 
@@ -51,7 +52,8 @@ type Props = {
   description?: string;
 };
 
-export function VerificationPanel({ transactionId, checks, title, description }: Props) {
+export function VerificationPanel({ transactionId, checks: requested, title, description }: Props) {
+  const listEnabled = useServerFn(listEnabledCheckTypes);
   const start = useServerFn(startVerification);
   const refresh = useServerFn(refreshVerification);
   const listMine = useServerFn(listMyVerifications);
@@ -71,6 +73,14 @@ export function VerificationPanel({ transactionId, checks, title, description }:
     queryFn: async (): Promise<VerificationRow[]> =>
       transactionId ? listForTx({ data: { transactionId } }) : listMine({}),
   });
+
+  // The separate sanctions / PEP check only appears while an administrator has it switched on.
+  const { data: enabled } = useQuery({
+    queryKey: ["enabled-check-types"],
+    queryFn: async () => listEnabled({}),
+    staleTime: 5 * 60 * 1000,
+  });
+  const checks = requested.filter((c) => (enabled ?? ["id_document", "kyb"]).includes(c));
 
   const latest = (type: CheckType) => rows.find((r) => r.check_type === type);
 

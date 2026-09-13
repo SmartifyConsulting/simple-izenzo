@@ -23,7 +23,7 @@ export type ScreeningResult = {
 
 const DIDIT_CHECKS = [
   { kind: "id_document", label: "ID document + selfie" },
-  { kind: "kyb", label: "Company (KYB)" },
+  { kind: "kyb", label: "Company (KYB) — entity, UBO & AML" },
   { kind: "aml", label: "Sanctions / PEP" },
 ] as const;
 
@@ -120,8 +120,12 @@ export const runBackgroundScreening = createServerFn({ method: "POST" })
         });
       }
 
-      // 2. Didit ID / KYB / AML.
-      for (const check of DIDIT_CHECKS) {
+      // 2. Didit ID / KYB (and AML only when the separate sanctions/PEP check is switched on —
+      // the KYB workflow already covers UBO and AML).
+      const activeChecks = DIDIT_CHECKS.filter(
+        (c) => c.kind !== "aml" || Boolean(creds?.amlEnabled),
+      );
+      for (const check of activeChecks) {
         if (!creds) {
           checks.push({
             kind: check.kind,
