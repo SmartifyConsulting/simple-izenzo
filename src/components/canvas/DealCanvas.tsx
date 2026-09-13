@@ -1219,6 +1219,12 @@ export function CounterpartyRecord({
               : "No matches found yet — run the search again."}
         </p>
       ) : (
+        <RadioGroup
+          asChild
+          value={pickedId ?? ""}
+          onValueChange={(v) => setPickedId(v)}
+          disabled={!screeningDone}
+        >
         <ul className="mt-2 space-y-2.5">
           {visibleCandidates.map((c) => (
             <li key={c.id} className="flex items-start gap-2.5">
@@ -1278,6 +1284,7 @@ export function CounterpartyRecord({
             </li>
           ))}
         </ul>
+        </RadioGroup>
       )}
 
       {/* The match-search progress bar lives under the Counterparties node on the diagram. */}
