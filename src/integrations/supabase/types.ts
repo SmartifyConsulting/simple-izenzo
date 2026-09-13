@@ -1798,6 +1798,38 @@ export type Database = {
         }
         Relationships: []
       }
+      intent_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          sender_id: string
+          transaction_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          sender_id: string
+          transaction_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          sender_id?: string
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intent_messages_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       match_challenges: {
         Row: {
           counterparty_id: string | null
