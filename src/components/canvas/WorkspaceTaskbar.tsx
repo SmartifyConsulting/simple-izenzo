@@ -27,12 +27,86 @@ function isMarketingPath(pathname: string) {
  * sheet tabs (Excel/Google Sheets) so several bids read as a row of named tabs rather than a row
  * of pill buttons. Rendered once from the root so it persists across every authenticated page,
  * not just Live Deal Engine — but never shows on the marketing site itself. */
+/** Finds an existing bid or offer by its reference or by a keyword in its name, and opens it. */
+function DealSearchDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { org } = useAuth();
+  const navigate = useNavigate();
+  const { data: deals = [] } = useQuery({
+    queryKey: ["searchable-deals", org?.id],
+    enabled: Boolean(org?.id) && open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("id, reference, title, commodity, created_at")
+        .eq("org_id", org!.id)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return (data ?? []).map((t) => {
+        const row = t as {
+          id: string;
+          reference: string | null;
+          title: string;
+          commodity: string | null;
+        };
+        return {
+          id: row.id,
+          reference: row.reference ?? fallbackReference(row.id, "bid"),
+          name: row.commodity ?? row.title ?? "",
+        };
+      });
+    },
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="p-0 sm:max-w-lg">
+        <DialogHeader className="px-4 pt-4">
+          <DialogTitle className="text-sm">Find a bid or offer</DialogTitle>
+        </DialogHeader>
+        <Command>
+          <CommandInput placeholder="Bid ID or keyword…" />
+          <CommandList>
+            <CommandEmpty>Nothing matches that.</CommandEmpty>
+            <CommandGroup>
+              {deals.map((d) => (
+                <CommandItem
+                  key={d.id}
+                  value={`${d.reference} ${d.name}`}
+                  onSelect={() => {
+                    onOpenChange(false);
+                    void navigate({ to: "/live-deal-engine", search: { tx: d.id } });
+                  }}
+                >
+                  <span className="font-mono font-semibold">{d.reference}</span>
+                  {d.name && <span className="text-muted-foreground"> — {d.name}</span>}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** The bottom dock listing every open deal workspace, app-wide — styled like a spreadsheet's
+ * sheet tabs (Excel/Google Sheets) so several bids read as a row of named tabs rather than a row
+ * of pill buttons. Rendered once from the root so it persists across every authenticated page,
+ * not just Live Deal Engine — but never shows on the marketing site itself. */
 export function WorkspaceTaskbar() {
   const { windows, setMode, close, reorder } = useDealWindows();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   if (isMarketingPath(pathname)) return null;
 
