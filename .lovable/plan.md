@@ -37,3 +37,14 @@ A tab with a magnifier icon sits immediately right of the permanent "New" tab in
   - Replace `OpenDealsPicker` in the heading row with a static `<span className="font-mono text-lg font-bold">` reference; keep `OpenDealsPicker` exported/unused-free by deleting it if nothing else references it.
 - `src/components/canvas/ClassicView.tsx`: in step 1, replace the `bidOffer` "Upload documents" item with two items — `bidRegistration` ("Bid Registration") and `docSubmission` ("Submission of Documents") — both driven by `overrideStates` so they read as done once a bid exists with documents; the page's `stepOverrides` memo is updated to set both keys.
 - `src/components/canvas/WorkspaceTaskbar.tsx`: add a `Search`-icon tab right after the "New" tab, opening a `Command`-based dialog listing open deals (same query shape as `OpenDealsPicker`: reference, title/commodity) and navigating to `/live-deal-engine?tx=<id>` on select.
+
+### 7. "Fetch Interest" button and working sequential pulsing
+Once documents are submitted, the workspace shows a **Fetch Interest** button. Pressing it:
+
+- starts the search and the online media screening together, and
+- makes **Search AI + AI+** and **Online Media Screening** pulse at the same time in the workflow column while they run,
+- then turns both green with ticks and shows the full result list, with **Choice** pulsing.
+
+The sub-step pulsing in the workflow column currently doesn't follow the deal along — it is fixed so exactly the steps that are genuinely in progress pulse, the finished ones tick, and the next one to act on is highlighted.
+
+**Technical:** the `stepOverrides` memo in `_authenticated.live-deal-engine.tsx` is rewritten as a single derivation from `flowStep`, `screening`, `mediaRunning`, `mediaResults`, `hasChosen` and the stored `dealTx.stage/step`, returning `done`/`active`/`open` per stepper key so `search` and `onlineMedia` can both be `active` at once and `choice` becomes `active` when results are in. `ClassicView` keeps `animate-throb-aqua` for `active` rows and must not fall back to the stored-state calculation for any key the override supplies. The Fetch Interest button calls the existing `runSearch(dealTx.id)` and `startMediaChecks` together (instead of media checks only after a search completes), and results render in `CounterpartyRecord`/`MatchResultsPanel` as they land.
