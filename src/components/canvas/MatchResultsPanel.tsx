@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { dedupeOrgs } from "@/lib/dedupeOrgs";
 
 const BAND_LABEL = {
   verified: "Verified",
