@@ -1129,37 +1129,6 @@ export function CounterpartyRecord({
     }
   }
 
-  /** Invites a counterparty who isn't signed up yet — finds a real contact email on their own
-   * public website (only one actually printed there, never guessed) if we don't have one on file,
-   * then sends the invite through Resend. */
-  async function inviteCandidate(c: CounterpartyCandidate) {
-    setInvitingId(c.id);
-    try {
-      let email = c.contact_email ?? null;
-      if (!email) {
-        const website = window.prompt(`${c.name}'s website (used only to read a public contact email):`);
-        if (!website) return;
-        const result = await findContact({ data: { counterpartyId: c.id, website } });
-        email = result.email;
-        qc.setQueryData<CounterpartyCandidate[]>(["counterparties", txId], (prev) =>
-          (prev ?? []).map((row) => (row.id === c.id ? { ...row, contact_email: email } : row)),
-        );
-        if (!email) {
-          toast.error(`No contact email found on ${c.name}'s website.`);
-          return;
-        }
-      }
-      await sendInvite({ data: { counterpartyId: c.id } });
-      qc.setQueryData<CounterpartyCandidate[]>(["counterparties", txId], (prev) =>
-        (prev ?? []).map((row) => (row.id === c.id ? { ...row, invited_at: new Date().toISOString() } : row)),
-      );
-      toast.success(`Invite sent to ${c.name}`);
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setInvitingId(null);
-    }
-  }
 
   // Screening is done once every ticked counterparty has a result and nothing is still running —
   // that's the moment the user can pick which one they actually want to trade with.
