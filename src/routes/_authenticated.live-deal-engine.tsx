@@ -973,7 +973,12 @@ function LiveDealEngine() {
 
   // A deal that hasn't been created yet still needs a stable id so it can register as its own
   // taskbar entry rather than being lost the moment the user starts filling in a bid/offer.
-  const windowId = dealTx?.id ?? "new";
+  // Prefers the URL's own `tx` param over `dealTx?.id`: clicking a different taskbar tab changes
+  // `txParam` synchronously, but `dealTx` only catches up once its async fetch resolves — using
+  // `dealTx?.id` here meant windowId briefly still pointed at the *previous* tab's id (which
+  // setMode had just minimized as a side effect of activating the new one), flashing its "is
+  // minimized" placeholder for a moment on every tab switch.
+  const windowId = txParam ?? dealTx?.id ?? "new";
   const windowLabel = dealTx
     ? dealTx.reference || activity?.reference || fallbackReference(dealTx.id, activity?.direction ?? "bid")
     : (draftReference ?? "+ New");
