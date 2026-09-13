@@ -21,8 +21,11 @@
    on the normalised business name (ignoring case, punctuation and suffixes like Ltd, LLC, PLLC,
    Inc, Group) and on the website it was found on.
 
-5. **Project Preparation and Execution filled grey.** Both rows in the workflow list get a grey
-   fill, marking them as later work rather than something to act on now.
+5. **Project Preparation and Execution become headings, not buttons.** A filled pill reads as
+   something to click, so instead of a grey fill these two lose their pill entirely: small
+   uppercase grey text with a thin hairline rule running to the right of it, no border, no
+   background, not clickable, no hover. The items beneath each one stay as pills, so the
+   heading-and-its-children grouping is obvious at a glance.
 
 6. **All sub-steps move 1 cm further left** — completed and outstanding alike, including the single
    ticked row a finished step collapses into.
