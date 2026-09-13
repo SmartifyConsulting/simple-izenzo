@@ -80,29 +80,29 @@ export const runOnlineMediaChecks = createServerFn({ method: "POST" })
       throw new Error("None of those counterparties belong to this deal.");
     }
 
-    const { firecrawlConfigured, fetchPageText } = await import("@/lib/firecrawl.server");
+    const { firecrawlConfigured, searchWeb } = await import("@/lib/firecrawl.server");
     const connected = await firecrawlConfigured();
 
     const results: MediaCheckResult[] = [];
 
     for (const cp of counterparties) {
-      const query = encodeURIComponent(`"${cp.name}"${cp.jurisdiction ? ` ${cp.jurisdiction}` : ""}`);
+      const query = `"${cp.name}"${cp.jurisdiction ? ` ${cp.jurisdiction}` : ""}`;
       const findings: MediaFinding[] = [];
 
       for (const src of SOURCES) {
-        const url = src.url(query);
         if (!connected) {
           findings.push({
             source: src.source,
             label: src.label,
             status: "unavailable",
             detail: "Live web scanning is not connected yet — ask an administrator to add Firecrawl.",
-            url,
           });
           continue;
         }
         try {
-          const text = (await fetchPageText(url, 25_000)).toLowerCase();
+          const found = await searchWeb(src.query(query), src.label, 5, 30_000);
+          const text = found.map((f) => f.text).join(" ").toLowerCase();
+          const url = found[0]?.url;
           const mentioned = text.includes(cp.name.toLowerCase().slice(0, 24));
           const hits = ADVERSE.filter((w) => text.includes(w));
           if (hits.length > 0) {
@@ -136,10 +136,10 @@ export const runOnlineMediaChecks = createServerFn({ method: "POST" })
             label: src.label,
             status: "failed",
             detail: (err as Error).message,
-            url,
           });
         }
       }
+
 
       await supabase
         .from("counterparties")
