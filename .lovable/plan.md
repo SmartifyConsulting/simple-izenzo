@@ -35,3 +35,8 @@ You are not doing anything wrong. These are implementation regressions: a comple
    - Advance into Step 2 and confirm Step 1 closes while Step 2 opens automatically; repeat for the next available transition.
    - Run Fetch Interest and confirm Bid Information closes immediately, remains closed after refresh and bid-tab switching, and still opens manually.
    - Confirm the bid name appears only in column 2 beneath the BID/Offer ID at desktop and narrow widths.
+
+7. **Match the Proof of Intent heading style to Bid Registration**
+   - Give the Proof of Intent frame heading the same small-caps label styling, size, weight, letter spacing and colour as the Bid Registration heading.
+   - Apply the same heading treatment to the frames that follow it (Without a Doubt, Execution, Finality and Memory) so no later frame heading reads larger or differently.
+   - Colour, borders and layout otherwise stay as they are.
