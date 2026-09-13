@@ -1463,11 +1463,7 @@ function PoiStep({ tx, reload }: Props) {
       footer={
         <div className="flex items-center justify-between gap-3">
           <TokenGateFooter cost={POI_COST} />
-          <Button
-            size="sm"
-            onClick={doSeal}
-            disabled={busy || !tx.intent_confirmed_at || !screened || shortOnTokens}
-          >
+          <Button size="sm" onClick={doSeal} disabled={busy || !tx.intent_confirmed_at || shortOnTokens}>
             {busy ? "Sealing…" : "Seal Proof of Intent"}
           </Button>
         </div>
@@ -1476,11 +1472,6 @@ function PoiStep({ tx, reload }: Props) {
       {!tx.intent_confirmed_at ? (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
           <Lock className="h-3.5 w-3.5" /> Confirm intent first.
-        </p>
-      ) : !screened ? (
-        <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Lock className="h-3.5 w-3.5" /> Run the background screening (Social &amp; News Media step)
-          before this can be sealed.
         </p>
       ) : shortOnTokens ? (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
