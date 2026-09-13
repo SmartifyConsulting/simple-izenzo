@@ -329,24 +329,33 @@ function LiveDealEngine() {
   // "What was submitted" would stay blank until the next full reload even once the summary was
   // actually ready.
   const [readError, setReadError] = useState<string | null>(null);
-  const { data: polledSummary } = useQuery({
+  const { data: polledDocumentData } = useQuery({
     queryKey: ["tx-document-summary", dealTx?.id],
     enabled: Boolean(dealTx?.id) && !documentSummary,
     refetchInterval: 4000,
     queryFn: async () => {
       const { data } = await supabase
         .from("transactions")
-        .select("document_summary, document_summary_error")
+        .select("document_summary, document_summary_error, title")
         .eq("id", dealTx!.id)
         .maybeSingle();
-      const row = data as { document_summary: string | null; document_summary_error: string | null } | null;
+      const row = data as {
+        document_summary: string | null;
+        document_summary_error: string | null;
+        title: string;
+      } | null;
       setReadError(row?.document_summary_error ?? null);
-      return row?.document_summary ?? null;
+      return row;
     },
   });
   useEffect(() => {
-    if (polledSummary) setDocumentSummary(polledSummary);
-  }, [polledSummary]);
+    if (!polledDocumentData) return;
+    if (polledDocumentData.document_summary) setDocumentSummary(polledDocumentData.document_summary);
+    if (polledDocumentData.title && !GENERIC_TITLES.has(polledDocumentData.title)) {
+      setDealTx((prev) => (prev ? { ...prev, title: polledDocumentData.title } : prev));
+      setActivity((prev) => (prev ? { ...prev, title: polledDocumentData.title } : prev));
+    }
+  }, [polledDocumentData]);
 
   const search = useServerFn(searchCounterparties);
   const runScreening = useServerFn(runBackgroundScreening);
