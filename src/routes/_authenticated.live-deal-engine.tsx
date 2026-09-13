@@ -1123,7 +1123,7 @@ function LiveDealEngine() {
 
   if (!popout && windowMode === "minimized") {
     return (
-      <AppShell wide compactFooter>
+      <AppShell wide compactFooter hideFooter>
         <div className="flex min-h-[200px] items-center justify-center text-sm text-muted-foreground">
           {windowLabel} is minimized — restore it from the taskbar below.
         </div>
@@ -1133,7 +1133,7 @@ function LiveDealEngine() {
 
   if (poppedElsewhere) {
     return (
-      <AppShell wide compactFooter>
+      <AppShell wide compactFooter hideFooter>
         <div className="flex min-h-[200px] items-center justify-center text-sm text-muted-foreground">
           {windowLabel} is open in its own window — switch to it, or close it there to bring it back here.
         </div>
@@ -1637,7 +1637,7 @@ function LiveDealEngine() {
 
   if (soloWorkspace || windowMode === "maximized") {
     return (
-      <AppShell wide compactFooter>
+      <AppShell wide compactFooter hideFooter>
         {/* bottom-14 (not inset-4 on every side) leaves room for the taskbar of open deal tabs
             fixed to the viewport bottom, so the workspace stretches all the way down to it
             without ever drawing underneath it. Used both when this is the only workspace open
@@ -1651,7 +1651,7 @@ function LiveDealEngine() {
   }
 
   return (
-    <AppShell wide compactFooter>
+    <AppShell wide compactFooter hideFooter>
       <div
         className="fixed z-30 w-[min(1040px,calc(100vw-2rem))] rounded-2xl"
         style={{ left: posX, top: posY }}

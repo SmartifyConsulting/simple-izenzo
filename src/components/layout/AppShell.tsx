@@ -25,6 +25,7 @@ export function AppShell({
   wide,
   pureBlack,
   compactFooter,
+  hideFooter,
 }: {
   title?: string;
   description?: string;
@@ -34,9 +35,12 @@ export function AppShell({
   /** Forces the page background to literal black instead of the theme's near-black
    * `--background`, for screens meant to sit flush with the header/nav's own black chrome. */
   pureBlack?: boolean;
-  /** Shows the shorter (30% reduced height) footer — used on the Live Workspace, where vertical
-   * space is at a premium. */
+  /** Shows the shorter (30% reduced height) footer. */
   compactFooter?: boolean;
+  /** Skips the site footer entirely — the Live Workspace has its own fixed-to-viewport taskbar
+   * of open bid tabs occupying that same strip, and the two shouldn't stack on top of each
+   * other. */
+  hideFooter?: boolean;
 }) {
   const { profile } = useAuth();
   const firstName = (profile?.full_name ?? profile?.email ?? "").split(/[\s@]/)[0];
@@ -91,7 +95,7 @@ export function AppShell({
           wide ? "pt-3" : "pt-5",
           // Bottom padding clears the now fixed-to-viewport footer so content never renders
           // underneath it.
-          compactFooter ? "pb-16" : "pb-24",
+          hideFooter ? "pb-4" : compactFooter ? "pb-16" : "pb-24",
         )}
       >
         <div
@@ -128,7 +132,7 @@ export function AppShell({
         {children}
       </main>
 
-      <SiteFooter compact={compactFooter} />
+      {!hideFooter && <SiteFooter compact={compactFooter} />}
     </div>
   );
 

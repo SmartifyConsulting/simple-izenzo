@@ -230,8 +230,25 @@ export function ClassicView({
         {STEPS.map((s) => {
           const stepCollapsed = Boolean(collapsed[s.step]);
           const allDone = s.items.every((item) => stateOf(item) === "done");
+          // Bracket + "Step N · " (no step name) — an invisible copy of this is used below to
+          // indent the sub-steps by exactly this width, so they line up under the first letter of
+          // the step's actual name (e.g. under the "T" of "Trading") rather than under the
+          // bracket or the step number.
+          const bracketAndPrefix = (
+            <>
+              <span
+                aria-hidden
+                className="select-none font-serif text-3xl leading-[0.6] text-muted-foreground/50"
+              >
+                {"{"}
+              </span>
+              <span className="label-caps mt-1 text-foreground">
+                {stepCollapsed ? "+" : "−"}Step {s.step} ·{" "}
+              </span>
+            </>
+          );
           return (
-            <div key={s.step} className="flex items-start gap-3 pb-3">
+            <div key={s.step} className="flex flex-col pb-3">
               {/* The original bracket treatment: a large serif "{" instead of a cog/connector
                   column, matching the Ink & Aqua "Next steps" list this stepper replaced. */}
               <button
@@ -240,40 +257,43 @@ export function ClassicView({
                 aria-expanded={!stepCollapsed}
                 className="flex shrink-0 items-start gap-2 text-left"
               >
-                <span
-                  aria-hidden
-                  className="select-none font-serif text-3xl leading-[0.6] text-muted-foreground/50"
-                >
-                  {"{"}
-                </span>
-                <span className="label-caps mt-1 text-foreground transition-colors hover:text-primary">
-                  {stepCollapsed ? "+" : "−"}Step {s.step} · {s.label}
+                {bracketAndPrefix}
+                <span className="label-caps -ml-2 mt-1 text-foreground transition-colors hover:text-primary">
+                  {s.label}
                 </span>
               </button>
 
               {!stepCollapsed && (
-                <div className="min-w-0 flex-1">
-                  {allDone ? (
-                    /* A finished step reads as one ticked label, rather than repeating every
-                       task it already completed. */
-                    <div className="flex w-1/2 items-start justify-start gap-2 px-3 py-2 font-sans text-[13px] font-medium leading-snug text-success">
-                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                      <span className="min-w-0 flex-1 break-words">{s.label}</span>
-                    </div>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {s.items.map((item) => (
-                        <SubRow
-                          key={item.key}
-                          item={item}
-                          state={stateOf(item)}
-                          onClick={
-                            item.isEntry ? () => onRegister?.() : () => open(item.stage, item.step)
-                          }
-                        />
-                      ))}
-                    </div>
-                  )}
+                <div className="flex items-start gap-2">
+                  {/* Invisible twin of the bracket + "Step N · " above — same markup and classes,
+                      so its width always matches exactly regardless of the step number's own
+                      width, and the sub-steps line up under the step name's first letter. */}
+                  <span aria-hidden className="invisible flex shrink-0 items-start gap-2">
+                    {bracketAndPrefix}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    {allDone ? (
+                      /* A finished step reads as one ticked label, rather than repeating every
+                         task it already completed. */
+                      <div className="flex w-1/2 items-start justify-start gap-2 px-3 py-2 font-sans text-[13px] font-medium leading-snug text-success">
+                        <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                        <span className="min-w-0 flex-1 break-words">{s.label}</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {s.items.map((item) => (
+                          <SubRow
+                            key={item.key}
+                            item={item}
+                            state={stateOf(item)}
+                            onClick={
+                              item.isEntry ? () => onRegister?.() : () => open(item.stage, item.step)
+                            }
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
