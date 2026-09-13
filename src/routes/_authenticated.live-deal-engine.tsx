@@ -1032,7 +1032,7 @@ function LiveDealEngine() {
   /** "Fetch Interest" — starts the AI/AI+ search and the online media screening in one go, so both
    * steps pulse together in the workflow and every result lands without another click. */
   async function fetchInterest(txId: string) {
-    setBidInfoOpen(false);
+    setBidInfoCollapsed(txId, true);
     // Anything already surfaced for this deal can be screened straight away, in parallel with the
     // fresh search; whatever the search turns up is screened as it lands (see runSearch).
     try {
