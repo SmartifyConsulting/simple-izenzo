@@ -34,10 +34,14 @@ export function DocumentUploadStep({
   reference,
   initialPrompt,
   initialFiles,
+  onSubmitted,
 
 }: {
   transactionId: string;
   onNext: () => void;
+  /** Fires the moment the ask has been made — files started uploading, or Submit was pressed — so
+   * the caller can put this frame away for good and show its own progress instead. */
+  onSubmitted?: () => void;
   /** Fires once, with the very first document ever attached to this transaction — lets the
    * caller correct a bid/offer's direction from what the document actually looks like, rather
    * than a side picked before any document existed. */
@@ -111,6 +115,7 @@ export function DocumentUploadStep({
       }
 
       setUploading(true);
+      onSubmitted?.();
       await savePrompt();
       const isFirstEver = docs.length === 0;
       try {
@@ -321,6 +326,7 @@ export function DocumentUploadStep({
         disabled={uploading || reading || (docs.length === 0 && prompt.trim().length === 0)}
         onClick={() => {
           setSubmitted(true);
+          onSubmitted?.();
           void (async () => {
             await savePrompt();
             await next();
