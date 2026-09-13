@@ -313,7 +313,8 @@ export function ClassicView({
               >
                 {"{"}
               </span>
-              <span className="label-caps mt-1 text-foreground">
+              {/* "Step N ·" goes green together with the step's name once the step is complete. */}
+              <span className={cn("label-caps mt-1", allDone ? "text-success" : "text-foreground")}>
                 {stepCollapsed ? "+" : "−"}Step {s.step} ·{" "}
               </span>
             </>

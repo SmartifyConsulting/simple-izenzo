@@ -82,7 +82,8 @@ function Panel({
     // read at the same size rather than a step larger.
     <div className={cn("rounded-md border", light ? "border-slate-200 bg-white text-slate-900" : "border-border")}>
       <div className={cn("border-b px-4 py-3", light ? "border-slate-200" : "border-border")}>
-        <h2 className={cn("label-caps", light ? "text-slate-900" : "text-foreground")}>{title}</h2>
+        {/* Same heading treatment as the Bid Registration frame: small caps, muted. */}
+        <h2 className={cn("label-caps", light ? "text-slate-900" : "text-muted-foreground")}>{title}</h2>
         {description && (
           <p className={cn("mt-1 text-xs", light ? "text-slate-500" : "text-muted-foreground")}>{description}</p>
         )}
