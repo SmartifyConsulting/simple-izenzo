@@ -661,10 +661,7 @@ export function DealCanvas({
           <div className="space-y-1.5">
             {[
               "KYC — individuals identified",
-              "KYB — entity verified",
-              "UBO — beneficial owners established",
-              "Sanctions screening clear",
-              "PEP screening reviewed",
+              "KYB — entity, beneficial owners (UBO) and AML verified",
               "Authority to act confirmed",
               "Without a Doubt cleared",
               "Clearance certificate filed",
