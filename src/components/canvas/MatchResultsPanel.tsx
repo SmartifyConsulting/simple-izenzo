@@ -57,7 +57,7 @@ export function MatchResultsPanel({
     queryFn: async (): Promise<Row[]> => {
       const { data, error } = await supabase
         .from("counterparties")
-        .select("id, name, sector, jurisdiction, notes, media_flags")
+        .select("id, name, sector, jurisdiction, media_flags")
         .eq("transaction_id", transactionId!);
       if (error) throw error;
       return (data ?? [])
@@ -67,9 +67,7 @@ export function MatchResultsPanel({
             evidence?: { url?: string }[];
           };
           const reason =
-            flags.scoring?.components?.find((k) => k.label === "Izenzo AI read")?.note ??
-            (c as unknown as { notes?: string | null }).notes ??
-            null;
+            flags.scoring?.components?.find((k) => k.label === "Izenzo AI read")?.note ?? null;
           return {
             id: c.id as string,
             name: c.name as string,
