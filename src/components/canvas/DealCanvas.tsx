@@ -2023,8 +2023,7 @@ export function CanvasStart({
   if (!picking) {
     return (
       <div className="ink-grid relative rounded-3xl border border-border p-4 sm:p-6">
-        <p className="label-caps text-center">Submit your Proposal</p>
-        <div className="mt-6">{startNode}</div>
+        {startNode}
       </div>
     );
   }
@@ -2033,8 +2032,7 @@ export function CanvasStart({
   // real document-upload step — not a screen anyone needs to act on.
   return (
     <div className="ink-grid relative rounded-3xl border border-border p-4 sm:p-6">
-      <p className="label-caps text-center">Submit your Proposal</p>
-      <div className="mt-6 flex flex-col items-center justify-center gap-2 py-6 text-center">
+      <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
         <Loader2 className="h-5 w-5 animate-spin text-primary" />
         <p className="text-sm text-muted-foreground">Setting up your workspace…</p>
       </div>
