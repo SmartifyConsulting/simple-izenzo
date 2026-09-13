@@ -6,7 +6,8 @@ import {
   CheckCircle2,
   ChevronDown,
   Download,
-
+  ArrowUp,
+  FileCheck2,
   FileUp,
   Radar,
   Users,
@@ -1966,44 +1967,63 @@ export function CanvasStart({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Same look as the marketing hero's search bar — a description on the left, a drop zone on the
-  // right — so capturing what someone's after starts here instead of asking them to repeat it
-  // once the deal already exists.
+  // Same look as the marketing hero's search bar — one unified pill with the description on the
+  // left, the drop zone on the right, and a circular submit button — so capturing what someone's
+  // after starts here instead of asking them to repeat it once the deal already exists.
+  const canBeginPicking = prompt.trim().length > 0 || pendingFiles.length > 0;
+
+  function removePendingFile(name: string) {
+    setPendingFiles((prev) => prev.filter((f) => f.name !== name));
+  }
+
   const startNode = (
-    <div className="mx-auto w-full max-w-2xl space-y-2">
-      <input
-        type="text"
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && prompt.trim()) {
+    <div className="mx-auto w-full max-w-2xl space-y-3">
+      <div className="flex items-stretch gap-2 rounded-2xl border-2 border-border bg-background p-2 shadow-sm transition-colors focus-within:border-primary">
+        <input
+          type="text"
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && canBeginPicking) {
+              e.preventDefault();
+              beginPicking();
+            }
+          }}
+          placeholder="Describe your offer"
+          className="min-w-0 flex-1 basis-1/2 bg-transparent px-2 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+        />
+
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          onDragOver={(e) => {
             e.preventDefault();
-            beginPicking();
-          }
-        }}
-        placeholder="Describe what you're looking for — product, quantity, location, terms"
-        className="h-10 w-full rounded-full border border-border bg-white px-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
-      />
-      <div
-        onClick={() => fileInputRef.current?.click()}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragOver(true);
-        }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragOver(false);
-          const files = Array.from(e.dataTransfer.files);
-          if (files.length === 0) return;
-          setPendingFiles(files);
-          beginPicking(files);
-        }}
-        className={cn(
-          "flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed p-4 text-center transition-colors hover:border-primary/40",
-          dragOver ? "border-primary bg-primary/5" : "border-border bg-background",
-        )}
-      >
+            setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOver(false);
+            const files = Array.from(e.dataTransfer.files);
+            if (files.length === 0) return;
+            setPendingFiles(files);
+          }}
+          aria-label="Drop files here or click to browse"
+          className={cn(
+            "flex min-w-0 flex-1 basis-1/2 items-center justify-center gap-2 rounded-xl border border-dashed px-2 text-xs transition-colors",
+            dragOver
+              ? "border-primary bg-primary/5 text-foreground"
+              : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground",
+          )}
+        >
+          <UploadCloud className="h-4 w-4 shrink-0" />
+          <span className="truncate">
+            {pendingFiles.length > 0
+              ? `${pendingFiles.length} file${pendingFiles.length === 1 ? "" : "s"} attached`
+              : "Drop files here or click to browse"}
+          </span>
+        </button>
+
         <input
           ref={fileInputRef}
           type="file"
@@ -2014,13 +2034,41 @@ export function CanvasStart({
             e.target.value = "";
             if (files.length === 0) return;
             setPendingFiles(files);
-            beginPicking(files);
           }}
         />
-        <UploadCloud className="h-5 w-5 shrink-0 text-muted-foreground" />
-        <span className="text-xs font-medium text-foreground">Drop files here or click to browse</span>
-        <span className="text-[11px] text-muted-foreground">— Pitch deck, proposal, or any file, multiple OK</span>
+
+        <button
+          type="button"
+          onClick={() => beginPicking()}
+          disabled={!canBeginPicking}
+          aria-label="Start"
+          className="flex h-10 w-10 shrink-0 items-center justify-center self-center rounded-full bg-primary text-primary-foreground transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <ArrowUp className="h-4 w-4" />
+        </button>
       </div>
+
+      {pendingFiles.length > 0 && (
+        <ul className="space-y-1.5">
+          {pendingFiles.map((f) => (
+            <li
+              key={f.name}
+              className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-1.5 text-xs"
+            >
+              <FileCheck2 className="h-3.5 w-3.5 shrink-0 text-success" />
+              <span className="min-w-0 flex-1 break-words text-foreground">{f.name}</span>
+              <button
+                type="button"
+                onClick={() => removePendingFile(f.name)}
+                aria-label={`Remove ${f.name}`}
+                className="shrink-0 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 
