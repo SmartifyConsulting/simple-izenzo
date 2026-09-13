@@ -2,17 +2,31 @@ import { Toaster as Sonner } from "sonner";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
+/** App-styled notifications: the same card surface, hairline border and label typography as the
+ * workspace frames, with a coloured left edge marking the kind. */
 const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
       className="toaster group"
+      position="bottom-right"
+      closeButton
+      duration={4500}
       toastOptions={{
         classNames: {
           toast:
-            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
-          description: "group-[.toast]:text-muted-foreground",
-          actionButton: "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
-          cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
+            "group toast pointer-events-auto w-full gap-2.5 rounded-xl border border-border border-l-4 border-l-border bg-card px-4 py-3 text-foreground shadow-[0_10px_30px_-12px_rgba(0,0,0,0.45)]",
+          title: "label-caps font-sans text-foreground",
+          description: "mt-0.5 text-xs leading-relaxed text-muted-foreground",
+          icon: "mt-0.5",
+          actionButton:
+            "rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground",
+          cancelButton:
+            "rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground",
+          closeButton: "border-border bg-card text-muted-foreground hover:text-foreground",
+          success: "border-l-success [&_[data-icon]]:text-success",
+          warning: "border-l-warning [&_[data-icon]]:text-warning",
+          error: "border-l-destructive [&_[data-icon]]:text-destructive",
+          info: "border-l-primary [&_[data-icon]]:text-primary",
         },
       }}
       {...props}

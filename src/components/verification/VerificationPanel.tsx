@@ -57,6 +57,8 @@ export function VerificationPanel({ transactionId, checks, title, description }:
   const listMine = useServerFn(listMyVerifications);
   const listForTx = useServerFn(listVerificationsForTx);
   const [busy, setBusy] = useState<string | null>(null);
+  const [rerunning, setRerunning] = useState(false);
+
   // The hosted provider page refuses to display inside another site's frame, so we always hand
   // over the link itself as well — if the new tab is blocked, the person can still open it.
   const [sessionUrl, setSessionUrl] = useState<string | null>(null);
@@ -156,21 +158,61 @@ export function VerificationPanel({ transactionId, checks, title, description }:
     }
   }
 
+  async function onRerunAll() {
+    setRerunning(true);
+    setError(null);
+    let opened = 0;
+    for (const type of checks) {
+      try {
+        const origin = typeof window !== "undefined" ? window.location.origin : undefined;
+        const res = await start({
+          data: { checkType: type, ...(transactionId ? { transactionId } : {}), ...(origin ? { origin } : {}) },
+        });
+        if (res.url) setSessionUrl(res.url);
+        opened += 1;
+      } catch (err) {
+        setError((err as Error).message);
+      }
+    }
+    setRerunning(false);
+    void refetch();
+    if (opened > 0) {
+      toast.success(`${opened} of ${checks.length} checks re-opened.`);
+    } else {
+      toast.error("None of the checks could be re-opened.");
+    }
+  }
+
   return (
     <section className="rounded-xl border border-border">
-      <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-3">
+      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-4 w-4 text-primary" />
-          <h2 className="text-sm font-semibold">{title ?? "Identity verification"}</h2>
+          <h2 className="label-caps font-sans">{title ?? "Identity verification"}</h2>
         </div>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 gap-1.5 text-xs"
+          disabled={rerunning || Boolean(busy)}
+          onClick={() => void onRerunAll()}
+        >
+          {rerunning ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <RefreshCw className="h-3.5 w-3.5" />
+          )}
+          Re-run all
+        </Button>
       </div>
 
       {description && (
-        <p className="px-5 pt-4 text-sm text-muted-foreground">{description}</p>
+        <p className="px-4 pt-4 text-xs text-muted-foreground">{description}</p>
       )}
 
-      <div className="space-y-3 p-5">
-        {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
+      <div className="space-y-3 p-4">
+        {isLoading && <p className="text-xs text-muted-foreground">Loading…</p>}
+
 
         {checks.map((type) => {
           const row = latest(type);
@@ -181,7 +223,7 @@ export function VerificationPanel({ transactionId, checks, title, description }:
               className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-4"
             >
               <div className="min-w-0">
-                <p className="text-sm font-medium">{CHECK_LABEL[type]}</p>
+                <p className="text-xs font-medium">{CHECK_LABEL[type]}</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   {row
                     ? `${row.subject_label ? `${row.subject_label} · ` : ""}${
