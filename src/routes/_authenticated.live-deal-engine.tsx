@@ -1336,7 +1336,19 @@ function LiveDealEngine() {
           {activity && dealTx && (
             <div className="glass-node space-y-2 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="label-caps text-muted-foreground">BID INFORMATION</p>
+                <button
+                  type="button"
+                  onClick={() => setBidInfoOpen((o) => !o)}
+                  aria-expanded={bidInfoOpen}
+                  className="label-caps flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
+                >
+                  {bidInfoOpen ? (
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  ) : (
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  )}
+                  BID INFORMATION
+                </button>
                 {idCheck?.status === "passed" && (
                   <span
                     title={`Verified${idCheck.completed_at ? ` — ${new Date(idCheck.completed_at).toLocaleString()}` : ""}`}
