@@ -225,6 +225,31 @@ async function listingSources() {
   }
 }
 
+/** Published directory listings turned straight into candidates. Used when the model returns
+ * nothing from the fallback sources, so a search still yields real named organisations. */
+async function listingCandidates(limit = 6): Promise<CandidateResult[]> {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await supabaseAdmin
+      .from("responder_listings")
+      .select("name, sector, jurisdiction, summary, source_url")
+      .eq("published", true)
+      .order("verified_at", { ascending: false, nullsFirst: false })
+      .limit(limit);
+    return (data ?? []).map((r) => ({
+      name: r.name,
+      jurisdiction: r.jurisdiction ?? undefined,
+      sector: r.sector ?? undefined,
+      rationale: r.summary
+        ? `From the Izenzo directory: ${String(r.summary).slice(0, 160)}`
+        : "From the Izenzo directory — the live web could not be read for this search.",
+      sourceUrl: r.source_url ?? undefined,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 /** Scrapes the open web for one query and turns the pages into grounding context for the model.
  * When the live web cannot be read, it falls back to the published Izenzo directory rather than
  * failing the whole search — but it never lets the model answer without real sources. */
