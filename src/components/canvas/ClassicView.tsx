@@ -326,12 +326,20 @@ export function ClassicView({
                 type="button"
                 onClick={() => toggleStep(s.step)}
                 aria-expanded={!stepCollapsed}
-                className="flex shrink-0 items-start gap-2 text-left"
+                className="flex w-full shrink-0 items-start gap-2 text-left"
               >
                 {bracketAndPrefix}
-                <span className="label-caps -ml-2 mt-1 text-foreground transition-colors hover:text-primary">
+                <span
+                  className={cn(
+                    "label-caps -ml-2 mt-1 transition-colors",
+                    allDone ? "text-success" : "text-foreground hover:text-primary",
+                  )}
+                >
                   {s.label}
                 </span>
+                {/* A finished step keeps its tick on the heading itself, so completion still reads
+                    at a glance while its sub-tasks are collapsed. */}
+                {allDone && <CheckCircle2 className="ml-auto mt-1 h-3.5 w-3.5 shrink-0 text-success" />}
               </button>
 
               {!stepCollapsed && (
