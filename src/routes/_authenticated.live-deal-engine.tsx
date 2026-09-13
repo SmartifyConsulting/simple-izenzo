@@ -472,14 +472,23 @@ function LiveDealEngine() {
     o["docSubmission"] = "done";
     if (flowStep === "documents") return o;
 
-    o["search"] = flowStep === "searching" ? "active" : "done";
+    // Every row from here on is stated outright, so nothing falls back to the stored step and
+    // starts pulsing alongside the operation that is genuinely running.
+    if (flowStep === "searching") {
+      o["search"] = "active";
+      o["onlineMedia"] = "open";
+      o["choice"] = "open";
+      return o;
+    }
+    o["search"] = "done";
     if (mediaRunning) {
       o["onlineMedia"] = "active";
-    } else if (mediaResults !== null || flowStep === "results") {
-      o["onlineMedia"] = "done";
+      o["choice"] = "open";
+      return o;
     }
+    o["onlineMedia"] = mediaResults !== null || flowStep === "results" ? "done" : "open";
 
-    if (flowStep === "results" && !mediaRunning) {
+    if (flowStep === "results") {
       if (hasChosen) {
         o["choice"] = "done";
         o["poi"] = dealTx.poi_sealed_at ? "done" : "active";
