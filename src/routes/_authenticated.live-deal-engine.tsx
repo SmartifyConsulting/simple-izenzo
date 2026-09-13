@@ -1162,36 +1162,18 @@ function LiveDealEngine() {
                       initialPrompt={seedPrompt}
                       initialFiles={seedFiles}
                     />
-                  ) : (
-                    <div className="space-y-1.5 rounded-xl border border-border bg-muted/30 p-3">
-                      <p className="label-caps text-muted-foreground">AI findings</p>
-                      <ul className="space-y-1 text-xs text-foreground">
-                        {workspaceDocs.slice(0, 5).map((d) => (
-                          <li key={d.id} className="truncate">
-                            • {d.name} — {String(d.doc_type).replace(/_/g, " ")}
-                          </li>
-                        ))}
-                      </ul>
-                      {/* Documents attached but never read — say so plainly, with a way to run it
-                          again, instead of leaving a toast that has long since vanished. */}
-                      {!documentSummary && (
-                        <div className="space-y-1.5 pt-1">
-                          <p className="text-[11px] text-muted-foreground">
-                            These documents haven't been read yet.
-                          </p>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 w-full text-[11px]"
-                            disabled={rereading}
-                            onClick={() => void rereadDocuments(dealTx.id)}
-                          >
-                            {rereading ? "Reading…" : "Read documents"}
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  ) : flowStep === "documents" ? (
+                    /* Documents are in — one button starts the AI/AI+ search and the online media
+                       screening together, and both pulse in the workflow while they run. */
+                    <Button
+                      className="w-full"
+                      disabled={screening || mediaRunning}
+                      onClick={() => void fetchInterest(dealTx.id)}
+                    >
+                      Fetch Interest
+                    </Button>
+                  ) : null}
+
                 </div>
               </div>
             ) : null}
