@@ -25,3 +25,8 @@
    - Confirm Intent and verify Step 1 turns green with a right-side tick both expanded and collapsed.
    - Run Fetch Interest, verify Bid Information closes immediately, remains closed after refresh/tab switching, and can still be reopened manually.
    - Scroll the full Live Workspace and verify no content appears through or above the pinned Bid Registration area in both light and dark modes.
+
+5. **Consistent typography from Proof of Intent onward**
+   - Match the font sizes used in Bid Information (small caps section label, small body text, compact list items) across the Proof of Intent frame and every frame that follows it (Without a Doubt, Execution, Finality and Memory panels).
+   - Keep headings, body copy and list text at the same sizes and line spacing as Bid Information, so no later frame reads noticeably larger or smaller.
+   - Colour, borders and layout stay as they are — this is a text-size alignment only.
