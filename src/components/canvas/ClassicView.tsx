@@ -249,6 +249,22 @@ export function ClassicView({
     }
     setPanel((p) => (p?.stage === stage && p?.step === step ? null : { stage, step }));
   };
+  // Which grouping headings (Project Preparation, Execution) are folded shut. Both start open.
+  const [collapsedHeadings, setCollapsedHeadings] = useState<Record<string, boolean>>({});
+  const toggleHeading = (key: string) =>
+    setCollapsedHeadings((c) => ({ ...c, [key]: !c[key] }));
+  /** Drops the indented rows that belong to a collapsed heading. */
+  const withoutHiddenRows = (items: SubItem[]) => {
+    let hiding = false;
+    return items.filter((item) => {
+      if (item.heading) {
+        hiding = Boolean(collapsedHeadings[item.key]);
+        return true;
+      }
+      if (!item.indent) hiding = false;
+      return !(hiding && item.indent);
+    });
+  };
 
   const toggleStep = (step: number) => setCollapsed((c) => ({ ...c, [step]: !c[step] }));
 
