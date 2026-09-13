@@ -28,6 +28,8 @@ type Row = {
   verified_at: string | null;
   source: string | null;
   score?: number | null;
+  /** Every page this organisation was found on, after duplicate rows were merged. */
+  sourceUrls?: string[];
 };
 
 type Scoring = { total?: number; components?: { label?: string; note?: string }[] };
