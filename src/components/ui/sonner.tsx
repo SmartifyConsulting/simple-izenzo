@@ -15,14 +15,17 @@ const Toaster = ({ ...props }: ToasterProps) => {
         classNames: {
           toast:
             "group toast pointer-events-auto w-full gap-2.5 rounded-xl border border-border border-l-4 border-l-border bg-card px-4 py-3 text-foreground shadow-[0_10px_30px_-12px_rgba(0,0,0,0.45)]",
-          title: "label-caps font-sans text-foreground",
+          // Same face and size as the workflow sub-step labels, bold and in plain black.
+          title: "font-sans text-[13px] font-bold leading-snug text-foreground",
           description: "mt-0.5 text-xs leading-relaxed text-muted-foreground",
           icon: "mt-0.5",
           actionButton:
             "rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground",
           cancelButton:
             "rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground",
-          closeButton: "border-border bg-card text-muted-foreground hover:text-foreground",
+          // Sonner puts the close control top-left by default; move it to the top-right corner.
+          closeButton:
+            "!left-auto !right-0 border-border bg-card text-muted-foreground hover:text-foreground",
           success: "border-l-success [&_[data-icon]]:text-success",
           warning: "border-l-warning [&_[data-icon]]:text-warning",
           error: "border-l-destructive [&_[data-icon]]:text-destructive",

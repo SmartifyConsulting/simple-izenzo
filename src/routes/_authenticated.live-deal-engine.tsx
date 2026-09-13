@@ -628,6 +628,20 @@ function LiveDealEngine() {
     // Picking who to take through screening *is* the Choice — stating it here means the pulse moves
     // on to Online Media Screening on a repeat pass too, not just the first time round.
     setHasChosen(true);
+    // A new party has been picked, so an intent confirmed against the previous one no longer
+    // applies: clear it so Confirm Intent is available again for this party. Anything already
+    // sealed stays on the record as history.
+    if (dealTx.intent_confirmed_at) {
+      await supabase.from("transactions").update({ intent_confirmed_at: null }).eq("id", dealTx.id);
+      await recordEvent({
+        transactionId: dealTx.id,
+        stage: "trading",
+        step: "intent",
+        action: "intent_reopened",
+        summary: "Intent reopened — a different counterparty was chosen",
+      });
+      setDealTx((prev) => (prev ? { ...prev, intent_confirmed_at: null } : prev));
+    }
     setMediaRunning(true);
     setMediaResults(null);
     setMediaProgress({ done: 0, total: counterpartyIds.length * SOURCES_PER_COUNTERPARTY });
