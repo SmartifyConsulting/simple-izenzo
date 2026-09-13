@@ -384,7 +384,13 @@ function LiveDealEngine() {
       // Private browsing without storage — the state above still holds for this view.
     }
   }
-  const bidInfoOpen = dealTx ? !bidInfoCollapsedByTx[dealTx.id] : true;
+  // A bid that has already moved past submitting its documents opens with this frame closed, so it
+  // never flashes open while the saved state is being read. Anything the user (or a search) sets
+  // explicitly wins over that default.
+  const bidInfoDefaultCollapsed = dealTx ? !["bid-offer", "documents"].includes(dealTx.step) : false;
+  const bidInfoOpen = dealTx
+    ? !(bidInfoCollapsedByTx[dealTx.id] ?? bidInfoDefaultCollapsed)
+    : true;
   // Once the ask has been made for a bid, the description/drop frame never comes back — not while
   // the files are still saving, not on a refresh, not on a tab switch. Remembered per bid.
   const [submittedBids, setSubmittedBids] = useState<Set<string>>(() => new Set());
@@ -483,7 +489,9 @@ function LiveDealEngine() {
     } catch {
       collapsed = false;
     }
-    setBidInfoCollapsedByTx((prev) => ({ ...prev, [txId]: collapsed }));
+    // Only a stored collapse is applied here — with nothing stored the default above decides, so a
+    // progressed bid is never forced open.
+    if (collapsed) setBidInfoCollapsedByTx((prev) => ({ ...prev, [txId]: true }));
   }, [dealTx?.id]);
   // Older bids may already have a good summary but still carry the old "New Bid" placeholder.
   // Read once more to generate and persist their proper display title; the ref prevents repeated
@@ -1388,9 +1396,9 @@ function LiveDealEngine() {
           </div>
 
           {/* Bid Registration — the very top of the workspace, pinned above everything else that
-              scrolls beneath it. Column 1: the bidder's identity/verification, the bid's own name
-              (wrapped, right-aligned), and how long that business has been active. Column 2: the
-              BID/OFF id and the data that belongs with it (when it was registered). */}
+              scrolls beneath it. Column 1: the bidder's identity/verification and how long that
+              business has been active. Column 2: the BID/OFF id, the bid's own name directly
+              beneath it (wrapped, right-aligned), when it was registered, and the country. */}
           {activity && dealTx && (
             // Fully opaque: the glass treatment's translucency let content scrolling beneath show
             // through this pinned frame.
@@ -1399,11 +1407,6 @@ function LiveDealEngine() {
               <div className="grid grid-cols-2 items-start gap-3">
                 <div className="min-w-0 space-y-1">
                   <SubmitterIdentity orgId={dealTx.org_id} createdBy={null} />
-                  {(dealTx.commodity || dealTx.title) && !GENERIC_TITLES.has(dealTx.title) && (
-                    <p className="break-words text-right text-sm font-semibold text-foreground">
-                      {dealTx.commodity || dealTx.title}
-                    </p>
-                  )}
                   {(org as unknown as { created_at?: string } | null)?.created_at && (
                     <p className="text-xs text-muted-foreground">
                       Bidder Active Since:{" "}
@@ -1422,6 +1425,11 @@ function LiveDealEngine() {
                       )}
                       {((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference}
                     </span>
+                  )}
+                  {(dealTx.commodity || dealTx.title) && !GENERIC_TITLES.has(dealTx.title) && (
+                    <p className="break-words text-right text-sm font-semibold text-foreground">
+                      {dealTx.commodity || dealTx.title}
+                    </p>
                   )}
                   <p className="text-xs text-muted-foreground">
                     Registered {new Date(activity.time ?? dealTx.created_at).toLocaleString()}

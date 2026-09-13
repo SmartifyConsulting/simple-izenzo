@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Banknote,
   Briefcase,
@@ -250,6 +250,15 @@ export function ClassicView({
     for (const s of STEPS) initial[s.step] = s.step !== activeStep;
     return initial;
   });
+  // The workflow moving on to the next numbered step folds the finished one away and opens the new
+  // one, without touching whatever the user has since opened or closed by hand.
+  const lastActiveStep = useRef(activeStep);
+  useEffect(() => {
+    if (lastActiveStep.current === activeStep) return;
+    const previous = lastActiveStep.current;
+    lastActiveStep.current = activeStep;
+    setCollapsed((c) => ({ ...c, [previous]: true, [activeStep]: false }));
+  }, [activeStep]);
 
   const open = (stage: StageKey, step: string) => {
     if (readOnly) return;
@@ -313,7 +322,8 @@ export function ClassicView({
               >
                 {"{"}
               </span>
-              <span className="label-caps mt-1 text-foreground">
+              {/* "Step N ·" goes green together with the step's name once the step is complete. */}
+              <span className={cn("label-caps mt-1", allDone ? "text-success" : "text-foreground")}>
                 {stepCollapsed ? "+" : "−"}Step {s.step} ·{" "}
               </span>
             </>
@@ -354,30 +364,24 @@ export function ClassicView({
                   </span>
                   {/* Every sub-step (ticked or not) sits 1cm further left than the indent above
                       would otherwise put it. */}
+                  {/* An expanded step always lists every one of its activities — a finished one
+                      keeps them all visible, each with its own tick, rather than collapsing them
+                      into a single summary line. */}
                   <div className="-ml-[1cm] min-w-0 flex-1">
-                    {allDone ? (
-                      /* A finished step reads as one ticked label, rather than repeating every
-                         task it already completed. */
-                      <div className="flex w-full items-start justify-start gap-2 px-3 py-2 font-sans text-[13px] font-medium leading-snug text-success">
-                        <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                        <span className="min-w-0 flex-1 break-words">{s.label}</span>
-                      </div>
-                    ) : (
-                      <div className="space-y-1.5">
-                        {withoutHiddenRows(s.items).map((item) => (
-                          <SubRow
-                            key={item.key}
-                            item={item}
-                            state={stateOf(item)}
-                            collapsed={Boolean(collapsedHeadings[item.key])}
-                            onToggle={() => toggleHeading(item.key)}
-                            onClick={
-                              item.isEntry ? () => onRegister?.() : () => open(item.stage, item.step)
-                            }
-                          />
-                        ))}
-                      </div>
-                    )}
+                    <div className="space-y-1.5">
+                      {withoutHiddenRows(s.items).map((item) => (
+                        <SubRow
+                          key={item.key}
+                          item={item}
+                          state={allDone && !item.heading ? "done" : stateOf(item)}
+                          collapsed={Boolean(collapsedHeadings[item.key])}
+                          onToggle={() => toggleHeading(item.key)}
+                          onClick={
+                            item.isEntry ? () => onRegister?.() : () => open(item.stage, item.step)
+                          }
+                        />
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
