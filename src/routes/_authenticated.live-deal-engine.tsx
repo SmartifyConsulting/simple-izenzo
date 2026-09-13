@@ -7,6 +7,8 @@ import {
   Archive,
   BadgeCheck,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Download,
   Eye,
   Maximize2,
@@ -363,6 +365,9 @@ function LiveDealEngine() {
   const listIdChecks = useServerFn(listVerificationsForTx);
   const summarizeDocs = useServerFn(summarizeBidDocuments);
   const [rereading, setRereading] = useState(false);
+  // Once interest is being fetched the submitted detail collapses out of the way, so the results
+  // have the room. The header stays clickable to open it again.
+  const [bidInfoOpen, setBidInfoOpen] = useState(true);
   const queryClient = useQueryClient();
 
   /** Reads the attached documents again — offered wherever files exist but no summary does, so a
@@ -966,6 +971,7 @@ function LiveDealEngine() {
   /** "Fetch Interest" — starts the AI/AI+ search and the online media screening in one go, so both
    * steps pulse together in the workflow and every result lands without another click. */
   async function fetchInterest(txId: string) {
+    setBidInfoOpen(false);
     // Anything already surfaced for this deal can be screened straight away, in parallel with the
     // fresh search; whatever the search turns up is screened as it lands (see runSearch).
     try {
@@ -1285,7 +1291,7 @@ function LiveDealEngine() {
               registered on the right, stacked under the id. SubmitterIdentity already looks up
               the business name itself, so nothing here repeats it a second time. */}
           {activity && dealTx && (
-            <div className="glass-node mb-3 space-y-1.5 p-4">
+            <div className="glass-node sticky top-0 z-20 mb-3 space-y-1.5 bg-card p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="label-caps text-muted-foreground">Bid Registration</p>
                 {(((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference) && (
@@ -1332,7 +1338,19 @@ function LiveDealEngine() {
           {activity && dealTx && (
             <div className="glass-node space-y-2 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="label-caps text-muted-foreground">BID INFORMATION</p>
+                <button
+                  type="button"
+                  onClick={() => setBidInfoOpen((o) => !o)}
+                  aria-expanded={bidInfoOpen}
+                  className="label-caps flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
+                >
+                  {bidInfoOpen ? (
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  ) : (
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  )}
+                  BID INFORMATION
+                </button>
                 {idCheck?.status === "passed" && (
                   <span
                     title={`Verified${idCheck.completed_at ? ` — ${new Date(idCheck.completed_at).toLocaleString()}` : ""}`}
@@ -1348,6 +1366,8 @@ function LiveDealEngine() {
                   </span>
                 )}
               </div>
+              {bidInfoOpen && (
+                <>
               {/* The value of the trade belongs with the rest of its material aspects, inside this
                   frame, rather than sitting on its own outside it. */}
               {(Number(activity.price) > 0 || Number(activity.quantity) > 0) && (
@@ -1397,10 +1417,13 @@ function LiveDealEngine() {
               {savedAttachments.length > 0 && (
                 <ul className="mt-2 space-y-1 border-t border-border pt-2">
                   {savedAttachments.map((a, i) => (
-                    <li key={i} className="flex items-center gap-2 text-sm">
-                      <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <li
+                      key={i}
+                      className="flex items-center gap-2 rounded-lg bg-foreground px-2.5 py-1.5 text-sm text-background"
+                    >
+                      <Paperclip className="h-3.5 w-3.5 shrink-0 text-background/70" />
                       <span className="min-w-0 flex-1 truncate">{a.name}</span>
-                      <span className="shrink-0 text-xs text-muted-foreground">{a.kind}</span>
+                      <span className="shrink-0 text-xs text-background/70">{a.kind}</span>
                       {/* Both icons always show — greyed out for files recorded before uploads
                           were kept, so a row never looks half-built. */}
                       <button
@@ -1412,7 +1435,7 @@ function LiveDealEngine() {
                             ? `Preview ${a.name}`
                             : "No stored copy — this file was recorded before uploads were kept"
                         }
-                        className="shrink-0 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                        className="shrink-0 rounded p-1 text-background/80 hover:bg-background/20 hover:text-background disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
                       >
                         <Eye className="h-3.5 w-3.5" />
                       </button>
@@ -1425,13 +1448,15 @@ function LiveDealEngine() {
                             ? `Download ${a.name}`
                             : "No stored copy — this file was recorded before uploads were kept"
                         }
-                        className="shrink-0 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                        className="shrink-0 rounded p-1 text-background/80 hover:bg-background/20 hover:text-background disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
                       >
                         <Download className="h-3.5 w-3.5" />
                       </button>
                     </li>
                   ))}
                 </ul>
+              )}
+                </>
               )}
             </div>
           )}
@@ -1516,7 +1541,11 @@ function LiveDealEngine() {
           )}
 
           {panel === "matches" && (
-            <MatchResultsPanel query={matchQuery} className="mt-4" />
+            <MatchResultsPanel
+              query={matchQuery}
+              transactionId={dealTx?.id}
+              className="mt-4"
+            />
           )}
 
           {activity && dealTx && flowStep === "searching" && (

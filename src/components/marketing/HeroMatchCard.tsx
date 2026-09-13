@@ -23,10 +23,11 @@ function useIllustrativeMatches(enabled: boolean, prompt: string) {
     queryFn: async () => {
       let q = supabase
         .from("responder_listings")
-        .select("id, org_id, name, sector, jurisdiction, source, is_example, verified_at, summary, source_url", {
+        .select("id, org_id, name, sector, jurisdiction, source, verified_at, summary, source_url", {
           count: "exact",
         })
-        .eq("published", true);
+        .eq("published", true)
+        .eq("is_example", false);
 
       // What was typed narrows the directory; with nothing typed the newest listings are shown.
       if (terms.length > 0) {
@@ -277,14 +278,6 @@ export function HeroMatchCard({ className }: { className?: string }) {
           <div className="mt-4 space-y-3">
             {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
 
-            {/* Honest about what you're looking at: while only sample listings exist, say so
-                instead of letting examples read as live businesses. */}
-            {!isLoading && (matches?.length ?? 0) > 0 && matches?.every((m) => m.is_example) && (
-              <p className="rounded-xl border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-                These are sample listings only. Live web results appear here once the web search
-                connection is active.
-              </p>
-            )}
 
             {!isLoading && (!matches || matches.length === 0) && (
               <p className="text-sm text-muted-foreground">
@@ -297,7 +290,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
                 <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-primary">
                   {BAND_LABEL[bandOf(m)]}
                   {m.sector ? ` · ${m.sector}` : ""}
-                  {m.is_example ? " · Example" : ""}
+                  
                 </p>
                 <p className="mt-1 text-sm font-medium text-foreground">{m.name}</p>
                 <p className="text-xs text-muted-foreground">

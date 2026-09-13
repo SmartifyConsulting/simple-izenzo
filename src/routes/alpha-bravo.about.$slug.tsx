@@ -25,7 +25,7 @@ function InsightArticlePage() {
           to="/alpha-bravo/about"
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft className="h-3.5 w-3.5" /> Writing
+          <ArrowLeft className="h-3.5 w-3.5" /> Articles
         </Link>
 
         <p className="mt-8 text-xs font-medium text-muted-foreground">{article.date}</p>

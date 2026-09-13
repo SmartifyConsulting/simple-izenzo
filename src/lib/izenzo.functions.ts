@@ -213,6 +213,7 @@ async function listingSources() {
       .from("responder_listings")
       .select("name, sector, jurisdiction, summary, source_url")
       .eq("published", true)
+      .eq("is_example", false)
       .order("verified_at", { ascending: false, nullsFirst: false })
       .limit(40);
     return (data ?? []).map((r) => ({
@@ -234,6 +235,7 @@ async function listingCandidates(limit = 6): Promise<CandidateResult[]> {
       .from("responder_listings")
       .select("name, sector, jurisdiction, summary, source_url")
       .eq("published", true)
+      .eq("is_example", false)
       .order("verified_at", { ascending: false, nullsFirst: false })
       .limit(limit);
     return (data ?? []).map((r) => ({
