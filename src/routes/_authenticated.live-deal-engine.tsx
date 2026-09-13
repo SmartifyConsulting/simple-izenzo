@@ -1276,15 +1276,18 @@ function LiveDealEngine() {
                       initialPrompt={seedPrompt}
                       initialFiles={seedFiles}
                     />
-                  ) : flowStep === "documents" ? (
+                  ) : interestCount === 0 ? (
                     /* Documents are in — one button starts the AI/AI+ search and the online media
-                       screening together, and both pulse in the workflow while they run. */
+                       screening together, and both pulse in the workflow while they run. The
+                       upload frame never comes back once a file exists. */
                     <Button
                       className="w-full"
-                      disabled={screening || mediaRunning}
+                      disabled={screening || mediaRunning || flowStep === "searching"}
                       onClick={() => void fetchInterest(dealTx.id)}
                     >
-                      Fetch Interest
+                      {screening || mediaRunning || flowStep === "searching"
+                        ? "Fetching interest…"
+                        : "Fetch Interest"}
                     </Button>
                   ) : null}
 
