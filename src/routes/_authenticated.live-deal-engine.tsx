@@ -1155,7 +1155,7 @@ function LiveDealEngine() {
           {activity && dealTx && (
             <div className="glass-node space-y-2 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="label-caps text-muted-foreground">Bidder details &amp; AI summary</p>
+                <p className="label-caps text-muted-foreground">BID INFORMATION</p>
                 {idCheck?.status === "passed" && (
                   <span
                     title={`Verified${idCheck.completed_at ? ` — ${new Date(idCheck.completed_at).toLocaleString()}` : ""}`}
