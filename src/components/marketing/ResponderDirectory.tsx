@@ -76,6 +76,7 @@ function useResponders({
           "id, org_id, name, sector, jurisdiction, summary, source, source_url, verified_at, is_example",
         )
         .eq("published", true)
+        .eq("is_example", false)
         .order("created_at", { ascending: false })
         .limit(60);
       if (sector) query = query.ilike("sector", sector);
@@ -175,11 +176,6 @@ export function ResponderDirectory({
               </div>
               <h3 className="mt-2 text-base font-medium tracking-tight text-foreground">
                 {l.name}
-                {l.is_example && (
-                  <span className="ml-2 rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                    Example
-                  </span>
-                )}
               </h3>
               <p className="mt-1 text-xs text-muted-foreground">
                 {l.jurisdiction ?? "Location not stated"}

@@ -23,10 +23,11 @@ function useIllustrativeMatches(enabled: boolean, prompt: string) {
     queryFn: async () => {
       let q = supabase
         .from("responder_listings")
-        .select("id, org_id, name, sector, jurisdiction, source, is_example, verified_at, summary, source_url", {
+        .select("id, org_id, name, sector, jurisdiction, source, verified_at, summary, source_url", {
           count: "exact",
         })
-        .eq("published", true);
+        .eq("published", true)
+        .eq("is_example", false);
 
       // What was typed narrows the directory; with nothing typed the newest listings are shown.
       if (terms.length > 0) {
