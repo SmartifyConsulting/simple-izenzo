@@ -77,15 +77,20 @@ function Panel({
 }) {
   const light = tone === "light";
   return (
+    // Typography matches the Bid Information frame on the Live Workspace: a small-caps section
+    // label, small body copy, and compact list text — so Proof of Intent and every frame after it
+    // read at the same size rather than a step larger.
     <div className={cn("rounded-md border", light ? "border-slate-200 bg-white text-slate-900" : "border-border")}>
-      <div className={cn("border-b px-6 py-4", light ? "border-slate-200" : "border-border")}>
-        <h2 className="text-base font-semibold">{title}</h2>
+      <div className={cn("border-b px-4 py-3", light ? "border-slate-200" : "border-border")}>
+        <h2 className={cn("label-caps", light ? "text-slate-900" : "text-foreground")}>{title}</h2>
         {description && (
-          <p className={cn("mt-1 text-sm", light ? "text-slate-500" : "text-muted-foreground")}>{description}</p>
+          <p className={cn("mt-1 text-xs", light ? "text-slate-500" : "text-muted-foreground")}>{description}</p>
         )}
       </div>
-      <div className="p-6">{children}</div>
-      {footer && <div className={cn("border-t px-6 py-4", light ? "border-slate-200" : "border-border")}>{footer}</div>}
+      <div className="p-4 text-xs leading-relaxed">{children}</div>
+      {footer && (
+        <div className={cn("border-t px-4 py-3 text-xs", light ? "border-slate-200" : "border-border")}>{footer}</div>
+      )}
     </div>
   );
 }

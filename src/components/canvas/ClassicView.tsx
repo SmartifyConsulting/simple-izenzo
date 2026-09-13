@@ -296,7 +296,11 @@ export function ClassicView({
       <div className="flex flex-col">
         {STEPS.map((s) => {
           const stepCollapsed = Boolean(collapsed[s.step]);
-          const allDone = s.items.every((item) => stateOf(item) === "done");
+          // A confirmed Intent finishes every Trading task, so Step 1 reads as complete even
+          // before the page states each row outright.
+          const allDone =
+            s.items.every((item) => stateOf(item) === "done") ||
+            (s.step === 1 && Boolean(tx.intent_confirmed_at));
           // Bracket + "Step N · " (no step name) — an invisible copy of this is used below to
           // indent the sub-steps by exactly this width, so they line up under the first letter of
           // the step's actual name (e.g. under the "T" of "Trading") rather than under the
