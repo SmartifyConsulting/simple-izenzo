@@ -49,4 +49,8 @@
 - `ClassicView.tsx`: `SubItem` gains `muted?: boolean`, set on `preparation` and `entry`;
   `itemClasses` returns a grey `border-border bg-muted text-muted-foreground` for those. The
   sub-step container (and the collapsed finished-step row) gains `-ml-[1cm]`.
+- Preview (`_authenticated.live-deal-engine.tsx` line 1042): keep `createSignedUrl`, but `fetch` the
+  signed URL, convert to a `Blob`, and `window.open(URL.createObjectURL(blob))` (revoked after a
+  delay) so the opened URL is same-origin `blob:` rather than the storage host an extension blocks;
+  on fetch failure fall through to the existing download path with a toast.
 - No changes to search logic, scoring weights, gates or token costs.
