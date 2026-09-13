@@ -31,7 +31,7 @@ async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
   {
     const { data: tx, error: txErr } = await supabase
       .from("transactions")
-      .select("id, title, commodity, quantity, unit, price, currency, incoterms, jurisdiction")
+      .select("id, title, commodity, quantity, unit, price, currency, incoterms, jurisdiction, search_prompt")
       .eq("id", transactionId)
       .maybeSingle();
     if (txErr) throw new Error(txErr.message);
@@ -130,9 +130,12 @@ async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
     const instruction =
       "These are the ID and supporting documents attached to a trade bid/offer. Read every one of them " +
       "(photos by sight, documents by their text) and write out the party's ask in their own terms.\n" +
-      'Reply with JSON only: {"summary_bullets": string[], "id_number": string|null, "facts": ' +
+      'Reply with JSON only: {"title": string, "summary_bullets": string[], "id_number": string|null, "facts": ' +
       '{"commodity": string|null, "quantity": number|null, "unit": string|null, "price": number|null, ' +
       '"currency": string|null, "incoterms": string|null, "jurisdiction": string|null, "side": "buy"|"sell"|null}}.\n' +
+      "title is a concise, specific trade title of 4-10 words suitable for display under a bid ID. " +
+      "Use the documents and Search Prompt, never a filename or a generic title such as New Bid. " +
+      `Search Prompt: ${tx.search_prompt || "not provided"}.\n` +
       "summary_bullets is 5-12 short bullet points, each a complete statement without a leading dash, covering " +
       "everything material to the exchange that the documents actually state: what is wanted or offered, " +
       "quantities and units, prices and currency, grades/specifications, delivery terms, timing, payment terms, " +
@@ -191,6 +194,7 @@ async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
     }
     const summary = parsed.bullets.map((b) => `• ${b}`).join("\n");
     if (!summary) throw new Error("The document summary came back empty.");
+    const generatedTitle = parsed.title?.slice(0, 120) ?? null;
 
 
     let idCipher: string | null = null;
@@ -221,13 +225,16 @@ async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
         document_summary: summary,
         document_summary_generated_at: new Date().toISOString(),
         document_summary_error: null,
+        ...((tx.title === "New Bid" || tx.title === "New Offer") && generatedTitle
+          ? { title: generatedTitle }
+          : {}),
         ...filled,
         ...(idCipher ? { id_number_encrypted: idCipher } : {}),
       } as never)
       .eq("id", tx.id);
     if (upErr) throw new Error(upErr.message);
 
-    return { summary, facts, unreadable };
+    return { summary, title: generatedTitle, facts, unreadable };
   }
 }
 
@@ -339,15 +346,16 @@ function readFacts(v: unknown): DocumentFacts {
 }
 
 /** The model is asked for raw JSON, but tolerate fenced JSON or a plain-prose fallback. */
-function parseReply(raw: string): { bullets: string[]; idNumber: string | null; facts: DocumentFacts } {
+function parseReply(raw: string): { title: string | null; bullets: string[]; idNumber: string | null; facts: DocumentFacts } {
   const body = raw.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
   try {
-    const obj = JSON.parse(body) as { summary_bullets?: unknown; id_number?: unknown; facts?: unknown };
+    const obj = JSON.parse(body) as { title?: unknown; summary_bullets?: unknown; id_number?: unknown; facts?: unknown };
     const bullets = Array.isArray(obj.summary_bullets)
       ? obj.summary_bullets.map((b) => String(b).replace(/^[-•*]\s*/, "").trim()).filter(Boolean)
       : [];
     if (bullets.length > 0) {
       return {
+        title: str(obj.title),
         bullets,
         idNumber: typeof obj.id_number === "string" && obj.id_number.trim() ? obj.id_number.trim() : null,
         facts: readFacts(obj.facts),
@@ -360,5 +368,5 @@ function parseReply(raw: string): { bullets: string[]; idNumber: string | null; 
     .split(/\n+/)
     .map((line) => line.replace(/^[-•*]\s*/, "").trim())
     .filter(Boolean);
-  return { bullets, idNumber: null, facts: EMPTY_FACTS };
+  return { title: null, bullets, idNumber: null, facts: EMPTY_FACTS };
 }
