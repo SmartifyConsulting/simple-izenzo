@@ -45,8 +45,7 @@ export async function firecrawlConfigured() {
   return apiKey.startsWith("lovc_") ? Boolean(lovableKey) : true;
 }
 
-/** Backwards-compatible alias so older call sites keep reading. */
-export const brightDataConfigured = firecrawlConfigured;
+
 
 async function firecrawlPost(
   path: string,

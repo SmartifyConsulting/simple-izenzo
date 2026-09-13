@@ -229,28 +229,39 @@ async function probe(
       return { ok: allOk, message: `Key accepted. ${notes.join(" ")}` };
     }
 
-    case "brightdata": {
+    case "firecrawl": {
       const token = secrets["api_key"] ?? "";
-      if (!token) return { ok: false, message: "No API token saved yet." };
-      const res = await fetch("https://api.brightdata.com/zone/get_active_zones", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      if (!token) return { ok: false, message: "No API key saved yet." };
+      const gateway = token.startsWith("lovc_");
+      const lovableKey = process.env["LOVABLE_API_KEY"] ?? "";
+      if (gateway && !lovableKey) {
+        return { ok: false, message: "That is a Lovable connection key, but the workspace key is missing." };
+      }
+      const res = await fetch(
+        gateway
+          ? "https://connector-gateway.lovable.dev/firecrawl/v2/scrape"
+          : "https://api.firecrawl.dev/v2/scrape",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${gateway ? lovableKey : token}`,
+            ...(gateway ? { "X-Connection-Api-Key": token } : {}),
+          },
+          body: JSON.stringify({ url: "https://example.com", formats: ["markdown"], onlyMainContent: true }),
+        },
+      );
+      const body = (await res.text()).slice(0, 200);
       if (res.status === 401 || res.status === 403) {
-        const body = (await res.text()).slice(0, 200);
-        return { ok: false, message: `Bright Data rejected the token [${res.status}]: ${body}` };
+        return { ok: false, message: `Firecrawl rejected the key [${res.status}]: ${body}` };
       }
-      if (!res.ok) return { ok: false, message: `Rejected [${res.status}]` };
-      const zones = (await res.json().catch(() => [])) as { name?: string; type?: string }[];
-      if (!Array.isArray(zones) || zones.length === 0) {
-        return {
-          ok: false,
-          message:
-            "Token accepted, but the account has no active zones yet. Create a Scraping Browser zone and a Web Unlocker or SERP zone.",
-        };
+      if (res.status === 402) {
+        return { ok: false, message: `Firecrawl has no credit left: ${body}` };
       }
-      const names = zones.map((z) => z.name).filter(Boolean).join(", ");
-      return { ok: true, message: `Token accepted. Active zones: ${names}.` };
+      if (!res.ok) return { ok: false, message: `Rejected [${res.status}]: ${body}` };
+      return { ok: true, message: "Key accepted — a live test page was read successfully." };
     }
+
 
 
     case "onfido": {
