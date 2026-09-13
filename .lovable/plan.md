@@ -10,6 +10,9 @@
 
 4. **Add a Re-run all button for verification** — The Identity verification panel gains a single "Re-run all" action in its header. It restarts every listed check (ID document, company and sanctions) in one press, shows a spinner and disables itself while running, and reports how many were re-opened. Individual per-check start and refresh actions stay as they are.
 
+5. **Move the verification controls up to save space** — The identity verification block, with its per-check buttons and the new Re-run all, moves to sit in line with the screening findings at the top of the Without a Doubt frame, above Case notes. The buttons sit on the same rows as the findings they belong to rather than in a separate block below, so the frame is shorter and Case notes stays last before the decision buttons.
+
+
 ## Verification
 
 Open a deal at Without a Doubt and confirm the heading and all text inside match the other frames, the admin/developer panel is gone, a triggered notification appears in the new style in both light and dark mode, and Re-run all restarts the three checks and reports the outcome.
