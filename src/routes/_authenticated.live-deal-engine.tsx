@@ -56,6 +56,7 @@ import { runBackgroundScreening, type ScreeningResult } from "@/lib/screening.fu
 import { runOnlineMediaChecks, type MediaCheckResult } from "@/lib/onlineMedia.functions";
 import { listVerificationsForTx } from "@/lib/didit.functions";
 import { summarizeBidDocuments } from "@/lib/docSummary.functions";
+import { readDocument } from "@/lib/documents.functions";
 
 import { pushRecentDeal } from "@/lib/recentDeals";
 import { useDealWindows } from "@/lib/dealWindows";
