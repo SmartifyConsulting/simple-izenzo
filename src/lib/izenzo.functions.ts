@@ -653,7 +653,8 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
     if (!res.ok) throw new Error("AI request failed");
     const json = (await res.json()) as { choices: { message: { content: string } }[] };
     const output = json.choices?.[0]?.message?.content ?? "";
-    const candidates = parseCandidates(output);
+    let candidates = parseCandidates(output);
+    if (candidates.length === 0) candidates = await listingCandidates(6);
 
     return {
       candidates,
