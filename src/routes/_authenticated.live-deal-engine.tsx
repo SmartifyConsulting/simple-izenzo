@@ -599,11 +599,9 @@ function LiveDealEngine() {
     ? "media"
     : mediaRunning
       ? "online-media"
-      : mediaResults && !screeningResults
+      : flowStep === "results" && !hasChosen
         ? "choice"
-        : flowStep === "results" && !mediaResults && !screeningResults
-          ? "counterparties"
-          : null;
+        : null;
 
   /** Scans the open web (LinkedIn, Facebook, TikTok, marketplaces, news) for the counterparties
    * that were ticked, before any paid provider screening is opened. */
