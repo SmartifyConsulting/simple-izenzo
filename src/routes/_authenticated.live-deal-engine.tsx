@@ -489,7 +489,9 @@ function LiveDealEngine() {
     } catch {
       collapsed = false;
     }
-    setBidInfoCollapsedByTx((prev) => ({ ...prev, [txId]: collapsed }));
+    // Only a stored collapse is applied here — with nothing stored the default above decides, so a
+    // progressed bid is never forced open.
+    if (collapsed) setBidInfoCollapsedByTx((prev) => ({ ...prev, [txId]: true }));
   }, [dealTx?.id]);
   // Older bids may already have a good summary but still carry the old "New Bid" placeholder.
   // Read once more to generate and persist their proper display title; the ref prevents repeated
