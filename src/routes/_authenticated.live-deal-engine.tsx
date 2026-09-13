@@ -94,10 +94,10 @@ export const Route = createFileRoute("/_authenticated/live-deal-engine")({
   component: LiveDealEngine,
 });
 
-// Picks out the facts a reader actually scans an AI summary for — amounts, quantities, dates and
-// percentages — and renders them in green so they stand out from the surrounding prose.
+// Picks out the facts a reader actually scans an AI summary for — material terms, amounts,
+// quantities, dates and percentages — and renders them in bold so the summary remains scannable.
 const KEY_TERM_PATTERN =
-  /(?:[$€£R]\s?\d[\d,]*(?:\.\d+)?(?:\s?(?:million|billion|k|m|bn))?)|(?:\b(?:USD|EUR|GBP|ZAR|R)\s?\d[\d,]*(?:\.\d+)?\b)|(?:\b\d[\d,]*(?:\.\d+)?\s?(?:MT|kg|tonnes?|tons?|barrels?|units?|bbl|%)\b)|(?:\b\d{1,3}(?:\.\d+)?%\b)|(?:\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b)|(?:\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\b)/gi;
+  /(?:\b(?:quantity|price|currency|delivery|payment terms?|specifications?|location|jurisdiction|deadline|duration|contract term|incoterms?|units?|scope)\b)|(?:[$€£R]\s?\d[\d,]*(?:\.\d+)?(?:\s?(?:million|billion|k|m|bn))?)|(?:\b(?:USD|EUR|GBP|ZAR|R)\s?\d[\d,]*(?:\.\d+)?\b)|(?:\b\d[\d,]*(?:\.\d+)?\s?(?:MT|kg|tonnes?|tons?|barrels?|units?|bbl|%)\b)|(?:\b\d{1,3}(?:\.\d+)?%\b)|(?:\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b)|(?:\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\b)/gi;
 
 function highlightKeyTerms(text: string): React.ReactNode[] {
   const parts = text.split(KEY_TERM_PATTERN);
@@ -361,8 +361,12 @@ function LiveDealEngine() {
   async function rereadDocuments(transactionId: string) {
     setRereading(true);
     try {
-      const { summary } = await summarizeDocs({ data: { transactionId } });
+      const { summary, title } = await summarizeDocs({ data: { transactionId } });
       setDocumentSummary(summary);
+      if (title) {
+        setDealTx((prev) => (prev ? { ...prev, title } : prev));
+        setActivity((prev) => (prev ? { ...prev, title } : prev));
+      }
       setReadError(null);
       toast.success("Documents read — summary ready");
     } catch (err) {
@@ -388,7 +392,7 @@ function LiveDealEngine() {
 
   // Same query key DocumentUploadStep uses, so once a file is attached there (or here) both
   // stay in sync off one cache entry rather than each polling storage independently.
-  const { data: workspaceDocs = [] } = useQuery({
+  const { data: workspaceDocs = [], isPending: workspaceDocsPending } = useQuery({
     queryKey: ["documents", dealTx?.id],
     enabled: Boolean(dealTx?.id),
     queryFn: async () => {
@@ -401,6 +405,14 @@ function LiveDealEngine() {
       return data ?? [];
     },
   });
+  const savedAttachments: Attachment[] = useMemo(
+    () => workspaceDocs.map((d) => ({
+      name: d.name,
+      kind: d.doc_type === "identity" ? "ID" : "Document",
+      path: d.storage_path,
+    })),
+    [workspaceDocs],
+  );
 
   // Has interest already been fetched for this bid? Drives the "Fetch Interest" button, so it
   // stays offered for any bid that has documents but no matches yet — not only in the moment
@@ -1354,9 +1366,9 @@ function LiveDealEngine() {
                 </div>
               )}
 
-              {attachments.length > 0 && (
+              {savedAttachments.length > 0 && (
                 <ul className="mt-2 space-y-1 border-t border-border pt-2">
-                  {attachments.map((a, i) => (
+                  {savedAttachments.map((a, i) => (
                     <li key={i} className="flex items-center gap-2 text-sm">
                       <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                       <span className="min-w-0 flex-1 truncate">{a.name}</span>
@@ -1400,7 +1412,11 @@ function LiveDealEngine() {
             {dealTx ? (
               <div className="mt-4 flex items-start justify-end gap-4">
                 <div className="w-1/2 max-w-[260px] shrink-0">
-                  {workspaceDocs.length === 0 ? (
+                  {workspaceDocsPending ? (
+                    <div className="flex h-10 items-center justify-center text-xs text-muted-foreground">
+                      Loading saved documents…
+                    </div>
+                  ) : workspaceDocs.length === 0 ? (
                     <DocumentUploadStep
                       // A stale resumed deal (from the "keep working on your last bid"
                       // localStorage effect) can mount this before the freshly-seeded one

@@ -113,7 +113,11 @@ export function DocumentUploadStep({
       const isFirstEver = docs.length === 0;
       try {
         for (const [i, file] of list.entries()) {
-          const { docType, directionGuess } = await classify({ data: { filename: file.name } });
+          // Classification helps the workflow, but an empty/older server response must never
+          // prevent the file itself from being stored.
+          const classification = await classify({ data: { filename: file.name } });
+          const docType = classification?.docType ?? "other";
+          const directionGuess = classification?.directionGuess ?? null;
           if (isFirstEver && i === 0) onFirstClassified?.({ docType, directionGuess });
 
           let storagePath: string | null = null;
