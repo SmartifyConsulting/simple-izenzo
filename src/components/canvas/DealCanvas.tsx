@@ -1262,25 +1262,6 @@ export function CounterpartyRecord({
                   </span>
                 )}
               </label>
-              <button
-                type="button"
-                onClick={() => inviteCandidate(c)}
-                disabled={invitingId === c.id}
-                title={
-                  c.invited_at
-                    ? `Invited ${new Date(c.invited_at).toLocaleDateString()} — send again`
-                    : "Not on the platform yet — email them an invite"
-                }
-                className="mt-0.5 shrink-0 rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700 disabled:opacity-50"
-              >
-                {invitingId === c.id ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : c.invited_at ? (
-                  <MailCheck className="h-3.5 w-3.5 text-primary" />
-                ) : (
-                  <Mail className="h-3.5 w-3.5" />
-                )}
-              </button>
             </li>
           ))}
         </ul>
