@@ -925,12 +925,9 @@ export function CounterpartyRecord({
 }) {
   const qc = useQueryClient();
   const setShortlist = useServerFn(setCounterpartyShortlist);
-  const findContact = useServerFn(findCounterpartyContact);
-  const sendInvite = useServerFn(inviteCounterparty);
   const enrichContact = useServerFn(enrichCounterparty);
   const raiseChallengeFn = useServerFn(raiseChallenge);
   const listChallengesFn = useServerFn(listChallenges);
-  const [invitingId, setInvitingId] = useState<string | null>(null);
   const [pickedId, setPickedId] = useState<string | null>(null);
   const [challengeOpen, setChallengeOpen] = useState(false);
   const [governanceOpen, setGovernanceOpen] = useState(false);
