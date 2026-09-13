@@ -302,33 +302,9 @@ function LiveDealEngine() {
 
 
 
-  /** Which workflow item is genuinely current right now — the stored stage/step can't tell
-   * "searching" apart from "results are in", so the page says it outright. Search AI + AI+ and
-   * Online Media Screening run together, so both pulse at the same time. */
-  const stepOverrides = useMemo(() => {
-    const o: Record<string, "locked" | "open" | "active" | "done"> = {};
-    if (!dealTx) return o;
-    if (flowStep === "documents") {
-      o["bidOffer"] = "active";
-      return o;
-    }
-    o["bidOffer"] = "done";
-    if (flowStep === "searching" || screening || mediaRunning) {
-      o["search"] = "active";
-      o["onlineMedia"] = "active";
-      return o;
-    }
-    o["search"] = "done";
-    o["onlineMedia"] = "done";
-    if (hasChosen) {
-      o["choice"] = "done";
-      o["poi"] = dealTx.poi_sealed_at ? "done" : "active";
-      if (dealTx.poi_sealed_at) o["wad"] = dealTx.wad_completed_at ? "done" : "active";
-    } else {
-      o["choice"] = "active";
-    }
-    return o;
-  }, [dealTx, flowStep, screening, mediaRunning, hasChosen]);
+  /* Which workflow item is genuinely current is derived further down, once the attached documents
+     are known (see stepOverrides). */
+
 
   const [documentSummary, setDocumentSummary] = useState<string | null>(null);
   // The AI summary is written to the transaction row in the background, after the document
