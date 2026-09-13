@@ -7,6 +7,8 @@ import {
   Archive,
   BadgeCheck,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Download,
   Eye,
   Maximize2,
@@ -1539,7 +1541,11 @@ function LiveDealEngine() {
           )}
 
           {panel === "matches" && (
-            <MatchResultsPanel query={matchQuery} className="mt-4" />
+            <MatchResultsPanel
+              query={matchQuery}
+              transactionId={dealTx?.id}
+              className="mt-4"
+            />
           )}
 
           {activity && dealTx && flowStep === "searching" && (
