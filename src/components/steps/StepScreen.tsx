@@ -1706,7 +1706,7 @@ function WadStep({ tx, reload }: Props) {
   if (tx.wad_completed_at) {
     return (
       <Panel
-        title="WaD — cleared"
+        title="Without a Doubt — cleared"
         description={`Cleared ${when(tx.wad_completed_at)}`}
         footer={
           <div className="text-right">
@@ -1725,7 +1725,7 @@ function WadStep({ tx, reload }: Props) {
           <br />
           cleared {tx.wad_completed_at}
         </div>
-        <p className="mt-3 text-sm text-muted-foreground">
+        <p className="mt-3 text-xs text-muted-foreground">
           Without a Doubt has cleared. Execution is open.
         </p>
       </Panel>
@@ -1754,13 +1754,13 @@ function WadStep({ tx, reload }: Props) {
       }
     >
       {shortOnTokens && (
-        <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
           <Lock className="h-3.5 w-3.5" /> Not enough tokens — this needs {WAD_COST} and the
           organisation has {org?.credits ?? 0}.
         </div>
       )}
       {flagged && (
-        <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+        <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
           <strong>{chosenCp?.name}</strong> carries a Flagged counterparty rating. This requires
           admin review before WaD proceeds — the rating itself does not clear or block any
           compliance gate on its own.
@@ -1778,7 +1778,7 @@ function WadStep({ tx, reload }: Props) {
               style={!screening && !screenError ? { width: `${Math.round((settled / totalChecks) * 100)}%` } : undefined}
             />
           </div>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {screenError
               ? `Screening could not finish: ${screenError}`
               : screening
@@ -1793,7 +1793,7 @@ function WadStep({ tx, reload }: Props) {
           const route = c.key === "kyc" ? routeIdentityVerification(tx.jurisdiction) : null;
           const status = statusFor(c.key);
           return (
-            <li key={c.key} className="text-sm">
+            <li key={c.key} className="text-xs">
               <div className="flex items-center gap-2.5">
                 <Checkbox
                   checked={Boolean(checks[c.key])}
@@ -1801,7 +1801,7 @@ function WadStep({ tx, reload }: Props) {
                 />
                 {c.label}
                 {!WAD_CHECK_SOURCE[c.key] && (
-                  <Badge variant="secondary" className="font-normal">
+                  <Badge variant="secondary" className="text-[10px] font-normal">
                     manual
                   </Badge>
                 )}
