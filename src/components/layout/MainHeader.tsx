@@ -94,7 +94,7 @@ export function MainHeader() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <div className="ml-6 flex shrink-0 items-center gap-3 lg:ml-3">
+        <div className="ml-auto flex shrink-0 items-center gap-3">
           {user ? (
             <>
               
