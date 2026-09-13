@@ -1499,73 +1499,8 @@ const WAD_CHECKS = [
   { key: "authority", label: "Authority to act confirmed" },
 ];
 
-/** Providers wired in the WaD checks above are not yet live integrations. Per the stub-provider
- * labelling rules, they must never appear to client-facing users, never claim a real result, and
- * any "run" is an admin/dev Test-Mode simulation only, audited as stub_not_live. */
-const STUB_PROVIDERS = [
-  { name: "CIPC", feeds: "kyb", note: "Company registry lookup" },
-  { name: "Onfido", feeds: "kyc", note: "Identity verification" },
-  { name: "Dow Jones", feeds: "sanctions", note: "Sanctions & adverse media" },
-  { name: "Refinitiv", feeds: "pep", note: "PEP screening" },
-];
 
-function StubProviderPanel({ tx }: { tx: Transaction }) {
-  const { roles } = useAuth();
-  const [busy, setBusy] = useState<string | null>(null);
-  const [results, setResults] = useState<Record<string, string>>({});
-  if (!roles.includes("admin")) return null;
 
-  async function simulate(provider: string) {
-    setBusy(provider);
-    try {
-      await recordEvent({
-        transactionId: tx.id,
-        stage: "compliance",
-        step: "wad",
-        action: "stub_provider_simulated",
-        summary: `${provider} — stub_not_live`,
-        payload: { provider, status: "stub_not_live" },
-      });
-      setResults((r) => ({ ...r, [provider]: "stub_not_live" }));
-      toast.success(`${provider}: stub_not_live (test mode, audited)`);
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  return (
-    <div className="mt-5 rounded-md border border-dashed border-border bg-muted/30 p-4">
-      <p className="label-caps text-warning">Admin / developer only</p>
-      <p className="mt-1 text-xs text-muted-foreground">
-        Not live yet — no external provider check is performed.
-      </p>
-      <ul className="mt-3 space-y-2">
-        {STUB_PROVIDERS.map((p) => (
-          <li key={p.name} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-            <span className="text-muted-foreground">
-              <span className="font-medium text-foreground">{p.name}</span> — {p.note}
-              {results[p.name] && (
-                <Badge variant="secondary" className="ml-2 font-normal">
-                  {results[p.name]}
-                </Badge>
-              )}
-            </span>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={busy === p.name}
-              onClick={() => simulate(p.name)}
-            >
-              Simulate (Test Mode)
-            </Button>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
 
 /** Which provider check satisfies each WaD item. UBO and Authority have no provider behind
  * them, so they stay manual confirmations rather than pretending to a screened result. */
@@ -1897,11 +1832,6 @@ function WadStep({ tx, reload }: Props) {
         })}
       </ul>
       <div className="mt-5">
-        <Field label="Case notes">
-          <Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
-        </Field>
-      </div>
-      <div className="mt-5">
         <VerificationPanel
           transactionId={tx.id}
           checks={["id_document", "kyb", "aml"]}
@@ -1909,7 +1839,12 @@ function WadStep({ tx, reload }: Props) {
           description="Run the live checks against the chosen counterparty. Results are recorded on the deal as they land; they inform the WaD decision but never make it."
         />
       </div>
-      <StubProviderPanel tx={tx} />
+      <div className="mt-5">
+        <Field label="Case notes">
+          <Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
+        </Field>
+      </div>
+
     </Panel>
   );
 }
