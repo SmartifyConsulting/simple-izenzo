@@ -136,12 +136,22 @@ async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
       "title is a concise, specific trade title of 4-10 words suitable for display under a bid ID. " +
       "Use the documents and Search Prompt, never a filename or a generic title such as New Bid. " +
       `Search Prompt: ${tx.search_prompt || "not provided"}.\n` +
-      "summary_bullets is 5-12 short bullet points, each a complete statement without a leading dash, covering " +
-      "everything material to the exchange that the documents actually state: what is wanted or offered, " +
-      "quantities and units, prices and currency, grades/specifications, delivery terms, timing, payment terms, " +
-      "conditions, and who the party is. Do not force the documents into a fixed shape — if a document states " +
-      "something material that none of these words cover, say it anyway. Only state what the documents show, " +
-      "and say plainly when something isn't stated.\n" +
+      "summary_bullets is an ordered array of plain strings (no leading dash on any of them) laid out as " +
+      "fixed sections, each a separate array entry:\n" +
+      '1. One entry exactly "Proposal: <one clear sentence stating what is being asked for or offered>".\n' +
+      '2. One entry exactly "Scope", immediately followed by one entry per concrete scope item, each of ' +
+      'those prefixed with exactly two spaces then "- " (e.g. "  - <scope item>"). If the documents state no ' +
+      'scope, still include the header followed by one entry "  - Not stated".\n' +
+      '3. The same pattern for "Deliverables": a header entry "Deliverables" then "  - " prefixed entries, ' +
+      'or "  - Not stated".\n' +
+      '4. The same pattern for "Evaluation Criteria": a header entry "Evaluation Criteria" then "  - " ' +
+      'prefixed entries, or "  - Not stated".\n' +
+      '5. One final entry exactly "Due Date: <the date the documents state, or "Not stated">".\n' +
+      "Never merge two of these sections into one entry, never add the \"- \" prefix to a header entry, and " +
+      "never add extra top-level entries outside this structure — everything material that doesn't fit one " +
+      "of these five sections still belongs inside the closest matching one (Scope is the default) rather " +
+      "than as a loose bullet. Only state what the documents show, and say plainly when something isn't " +
+      "stated — never guess.\n" +
       "facts repeats just the few details needed to search for a counterparty, in machine form: commodity as a " +
       "short plain name, numbers as numbers, currency as a 3-letter code, jurisdiction as a country or region " +
       "name, side as buy when the party wants to acquire and sell when they want to dispose. Use null for " +
@@ -192,7 +202,7 @@ async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
         ),
       );
     }
-    const summary = parsed.bullets.map((b) => `• ${b}`).join("\n");
+    const summary = parsed.bullets.map((b) => (b.startsWith("  - ") ? b : `• ${b}`)).join("\n");
     if (!summary) throw new Error("The document summary came back empty.");
     const generatedTitle = parsed.title?.slice(0, 120) ?? null;
 
@@ -351,7 +361,7 @@ function parseReply(raw: string): { title: string | null; bullets: string[]; idN
   try {
     const obj = JSON.parse(body) as { title?: unknown; summary_bullets?: unknown; id_number?: unknown; facts?: unknown };
     const bullets = Array.isArray(obj.summary_bullets)
-      ? obj.summary_bullets.map((b) => String(b).replace(/^[-•*]\s*/, "").trim()).filter(Boolean)
+      ? obj.summary_bullets.map((b) => normalizeBulletLine(String(b))).filter(Boolean)
       : [];
     if (bullets.length > 0) {
       return {
@@ -366,7 +376,16 @@ function parseReply(raw: string): { title: string | null; bullets: string[]; idN
   }
   const bullets = body
     .split(/\n+/)
-    .map((line) => line.replace(/^[-•*]\s*/, "").trim())
+    .map((line) => normalizeBulletLine(line))
     .filter(Boolean);
   return { title: null, bullets, idNumber: null, facts: EMPTY_FACTS };
+}
+
+/** Keeps a "  - " sub-bullet marker intact (so the Live Workspace can still tell it apart from a
+ * section header once every bullet is joined into one text blob) while still stripping whatever
+ * dash/bullet character the model itself put on the line. */
+function normalizeBulletLine(line: string): string {
+  const isSub = /^\s{2,}[-•*]/.test(line);
+  const text = line.replace(/^\s*[-•*]\s*/, "").trim();
+  return text ? (isSub ? `  - ${text}` : text) : "";
 }

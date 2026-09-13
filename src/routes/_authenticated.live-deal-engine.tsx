@@ -1407,12 +1407,39 @@ function LiveDealEngine() {
                 </p>
               )}
               {documentSummary ? (
-                <ul className="mt-1 list-disc space-y-1 pl-4 text-xs leading-relaxed text-foreground">
+                <ul className="mt-1 space-y-1 text-xs leading-relaxed text-foreground">
                   {documentSummary
                     .split("\n")
-                    .map((line) => line.replace(/^[-•*]\s*/, "").trim())
-                    .filter(Boolean)
-                    .map((line, i) => <li key={i}>{highlightKeyTerms(line)}</li>)}
+                    .filter((raw) => raw.trim().length > 0)
+                    .map((raw, i) => {
+                      // A sub-bullet is indented under the section header directly above it (e.g.
+                      // Scope/Deliverables/Evaluation Criteria's own items) — nested and disc-
+                      // marked, but never run through highlightKeyTerms on the header word itself.
+                      const isSub = /^\s{2,}[-•*]/.test(raw);
+                      const text = raw.replace(/^\s*[-•*]\s*/, "").trim();
+                      const headerMatch = !isSub && /^(Proposal|Scope|Deliverables|Evaluation Criteria|Due Date)\s*:?\s*(.*)$/i.exec(text);
+                      if (isSub) {
+                        return (
+                          <li key={i} className="ml-4 list-disc pl-1">
+                            {highlightKeyTerms(text)}
+                          </li>
+                        );
+                      }
+                      if (headerMatch) {
+                        const [, label, rest] = headerMatch;
+                        return (
+                          <li key={i} className="list-none pt-1.5 font-semibold text-foreground first:pt-0">
+                            {label}
+                            {rest ? <>: {highlightKeyTerms(rest)}</> : null}
+                          </li>
+                        );
+                      }
+                      return (
+                        <li key={i} className="ml-4 list-disc pl-1">
+                          {highlightKeyTerms(text)}
+                        </li>
+                      );
+                    })}
                 </ul>
               ) : (
                 <p className="text-xs text-muted-foreground">
@@ -1445,7 +1472,7 @@ function LiveDealEngine() {
                   {savedAttachments.map((a, i) => (
                     <li
                       key={i}
-                      className="flex items-center gap-2 rounded-lg bg-foreground px-2.5 py-1.5 text-sm text-background"
+                      className="flex items-center gap-2 rounded-lg bg-foreground px-2.5 py-1.5 text-xs text-background"
                     >
                       <Paperclip className="h-3.5 w-3.5 shrink-0 text-background/70" />
                       <span className="min-w-0 flex-1 truncate">{a.name}</span>
