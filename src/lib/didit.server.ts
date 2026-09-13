@@ -13,6 +13,9 @@ export type DiditCreds = {
   baseUrl: string;
   environment: string;
   enabled: boolean;
+  /** The KYB workflow already covers UBO and AML, so the separate sanctions/PEP check is
+   * off unless an administrator switches it on under Admin → Integrations. */
+  amlEnabled: boolean;
   workflows: Record<DiditCheckType, string>;
 };
 
