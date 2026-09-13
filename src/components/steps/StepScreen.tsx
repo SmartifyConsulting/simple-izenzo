@@ -1532,61 +1532,55 @@ function WadStep({ tx, reload }: Props) {
   });
   const flagged = chosenCp && (chosenCp.rating_override ?? chosenCp.rating_band) === "flagged";
 
-  // Screening runs on its own as soon as the gate opens, against the counterparty that was
-  // chosen. Nothing about the gate, its cost or its decision changes — this only fills in what
-  // the providers already know.
-  useEffect(() => {
-    if (tx.wad_completed_at || !chosenCp?.id || startedRef.current) return;
-    startedRef.current = true;
-    (async () => {
-      setScreening(true);
-      setScreenError(null);
-      try {
-        const results = await runScreening({
-          data: {
-            transactionId: tx.id,
-            counterpartyIds: [chosenCp.id as string],
-            ...(typeof window !== "undefined" ? { origin: window.location.origin } : {}),
-          },
-        });
-        const found = results[0]?.checks ?? [];
-        setScreened(found);
-        // Anything that came back clear ticks itself; anything else stays open.
-        setChecks((prev) => {
-          const next = { ...prev };
-          for (const [key, kind] of Object.entries(WAD_CHECK_SOURCE)) {
-            if (!kind) continue;
-            const hit = found.find((c) => c.kind === kind);
-            if (hit?.status === "matched") next[key] = true;
-          }
-          // KYB only ticks itself when the company register also confirms the entity.
-          const registry = found.find((c) => c.kind === "registry");
-          if (registry?.status !== "matched") next["kyb"] = false;
-          return next;
-        });
-      } catch (err) {
-        setScreenError((err as Error).message);
-      } finally {
-        setScreening(false);
-      }
-    })();
-  }, [tx.id, tx.wad_completed_at, chosenCp?.id, runScreening]);
+  // Nothing is screened again here — Step 1 already ran the background screening. This only
+  // reads back what came in, so the same checks are never paid for or repeated twice.
+  const { data: priorRows = [] } = useQuery({
+    queryKey: ["wad-prior-screening", tx.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("identity_verifications")
+        .select("id, check_type, status, reason, completed_at, created_at")
+        .eq("transaction_id", tx.id)
+        .order("created_at", { ascending: false });
+      return data ?? [];
+    },
+  });
 
-  const settled = (screened ?? []).filter((c) =>
-    ["matched", "no_match", "unavailable", "failed"].includes(c.status),
-  ).length;
-  const totalChecks = 4;
+  /** Newest row per check type. */
+  const priorByKind = new Map<string, (typeof priorRows)[number]>();
+  for (const r of priorRows) {
+    if (!priorByKind.has(r.check_type as string)) priorByKind.set(r.check_type as string, r);
+  }
+  const priorChecks = Array.from(priorByKind.values());
+
+  // Anything already cleared in Step 1 ticks itself; everything else stays open for a person.
+  useEffect(() => {
+    if (priorChecks.length === 0) return;
+    setChecks((prev) => {
+      const next = { ...prev };
+      for (const [key, kind] of Object.entries(WAD_CHECK_SOURCE)) {
+        if (!kind) continue;
+        if (priorByKind.get(kind)?.status === "passed") next[key] = true;
+      }
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [priorChecks.length, priorRows]);
 
   function statusFor(key: string) {
     const kind = WAD_CHECK_SOURCE[key];
     if (!kind) return null;
-    if (screening && !screened) return { tone: "muted", text: "Screening…" } as const;
-    const hit = (screened ?? []).find((c) => c.kind === kind);
+    const hit = priorByKind.get(kind);
     if (!hit) return null;
-    if (hit.status === "matched") return { tone: "ok", text: `Matched — ${hit.detail}` } as const;
-    if (hit.status === "started") return { tone: "muted", text: `Screening — ${hit.detail}` } as const;
-    if (hit.status === "unavailable") return { tone: "warn", text: `Could not run — ${hit.detail}` } as const;
-    return { tone: "warn", text: `Needs review — ${hit.detail}` } as const;
+    const when = hit.completed_at ?? hit.created_at;
+    const stamp = when ? ` (${new Date(when as string).toLocaleString()})` : "";
+    if (hit.status === "passed")
+      return { tone: "ok", text: `Cleared in Step 1 screening${stamp}` } as const;
+    if (hit.status === "failed")
+      return { tone: "warn", text: `Declined in Step 1 screening — ${hit.reason ?? "provider returned a negative result"}` } as const;
+    if (hit.status === "review")
+      return { tone: "warn", text: `Needs review — ${hit.reason ?? "a person must look at this result"}` } as const;
+    return { tone: "muted", text: "Opened in Step 1 — no result yet" } as const;
   }
 
   const allChecked = WAD_CHECKS.every((c) => checks[c.key]);
