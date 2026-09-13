@@ -18,7 +18,20 @@ You are not doing anything wrong. Two older implementation details are overridin
    - With the displayed balance of three tokens, the button will be available after confirmed Intent and the balance will become two after a successful seal.
    - Preserve certificate creation, attachment filing, and progression to Without a Doubt.
 
-4. **Verify the complete action**
+4. **Verify the sealing action**
    - Confirm the Proof of Intent heading visually matches the workspace labels.
    - Open a bid that completed Step 1, confirm the blocker message is gone, seal with three tokens, and verify the certificate is attached and the workflow advances.
    - Confirm the app still blocks sealing before Intent confirmation and when the balance is below one token.
+
+5. **Make the token cost unmistakable on the Seal button**
+   - Change the balance chip beside Seal Proof of Intent to read `Your balance: 3 tokens` so it cannot be mistaken for the price.
+   - Show the price separately and explicitly as a one-token cost next to the action.
+   - Keep the shortfall warning and Buy tokens link when the balance is below the cost.
+
+6. **Restore pulsing after choosing another party**
+   - After reopening the list and selecting a party again, the workflow must register that a choice exists again, instead of staying stuck on Choice.
+   - Online Media Screening must pulse while it runs, then tick; Background Screening must then pulse while it runs, then tick; then Intent, exactly as on the first pass.
+   - Reopening the list must return the pulse to Choice until the new selection is made.
+
+7. **Verify the re-selection path**
+   - Reopen the choice, select another party, and confirm the pulse moves Choice, Online Media Screening, Background Screening, Intent in order, with each completed step ticked.
