@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-/** Reads a counterparty's own public website (through Bright Data) and asks AI to report a
+/** Reads a counterparty's own public website (through Firecrawl) and asks AI to report a
  * contact email — but only one that's literally printed on the page. AI is explicitly told never
  * to invent or guess an address; if the site doesn't show one, this comes back empty rather than
  * fabricating a contact. Nothing here submits anything to the counterparty's own site — it only
@@ -22,9 +22,9 @@ export const findCounterpartyContact = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     if (!cp) throw new Error("Counterparty not found, or you don't have access to it.");
 
-    const { brightDataConfigured, fetchPageText } = await import("@/lib/brightdata.server");
-    if (!(await brightDataConfigured())) {
-      throw new Error("Bright Data is not connected yet. Add it under Admin → Integrations.");
+    const { firecrawlConfigured, fetchPageText } = await import("@/lib/firecrawl.server");
+    if (!(await firecrawlConfigured())) {
+      throw new Error("Firecrawl is not connected yet. Add it under Admin → Integrations.");
     }
     const pageText = await fetchPageText(data.website);
     if (!pageText) throw new Error("Could not read that website.");
@@ -107,12 +107,12 @@ export const enrichCounterparty = createServerFn({ method: "POST" })
       return { source: "platform-org" as const, website: org.website ?? null, email: org.primary_contact_email ?? null };
     }
 
-    // 2) Not a platform org — best-effort open-web lookup, if Bright Data and AI are both
+    // 2) Not a platform org — best-effort open-web lookup, if Firecrawl and AI are both
     // configured. Silent no-op rather than a hard failure if either isn't (shortlisting itself
     // must never fail because enrichment couldn't run).
-    const { brightDataConfigured, fetchPageText } = await import("@/lib/brightdata.server");
+    const { firecrawlConfigured, fetchPageText } = await import("@/lib/firecrawl.server");
     const apiKey = process.env["LOVABLE_API_KEY"];
-    if (!(await brightDataConfigured()) || !apiKey) return { source: "unavailable" as const };
+    if (!(await firecrawlConfigured()) || !apiKey) return { source: "unavailable" as const };
 
     try {
       const searchText = await fetchPageText(

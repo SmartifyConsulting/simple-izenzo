@@ -27,7 +27,7 @@ function aiPlusOptions(model: string, kind: "ai" | "ai_plus" = "ai_plus") {
   };
 }
 
-/** How many open-web surfaces each tier reads through Bright Data. */
+/** How many open-web surfaces each tier reads through Firecrawl. */
 const SOURCE_LIMIT = { ai: 3, ai_plus: 6 } as const;
 
 /** Seal the Proof of Intent. Hard server-side gate: 1 token. */
@@ -254,12 +254,12 @@ async function listingCandidates(limit = 6): Promise<CandidateResult[]> {
  * When the live web cannot be read, it falls back to the published Izenzo directory rather than
  * failing the whole search — but it never lets the model answer without real sources. */
 async function groundOnWeb(query: string, kind: "ai" | "ai_plus") {
-  const { brightDataConfigured, fetchSearchResults } = await import("@/lib/brightdata.server");
+  const { firecrawlConfigured, fetchSearchResults } = await import("@/lib/firecrawl.server");
   let sources: { label: string; url: string; text: string }[] = [];
   let failures: { label: string; reason: string }[] = [];
   let webError: string | null = null;
 
-  if (!(await brightDataConfigured())) {
+  if (!(await firecrawlConfigured())) {
     webError = "Live web search is not connected (add it in Admin → Integrations).";
   } else {
     try {
@@ -699,9 +699,9 @@ export const checkCandidateProducts = createServerFn({ method: "POST" })
     let text = "";
     let note = "";
 
-    // Preferred path: Bright Data's remote browser, which renders JavaScript-only sites.
-    const { brightDataConfigured, fetchPageText } = await import("@/lib/brightdata.server");
-    if (await brightDataConfigured()) {
+    // Preferred path: Firecrawl's remote browser, which renders JavaScript-only sites.
+    const { firecrawlConfigured, fetchPageText } = await import("@/lib/firecrawl.server");
+    if (await firecrawlConfigured()) {
       try {
         text = await fetchPageText(data.url);
       } catch (err) {
