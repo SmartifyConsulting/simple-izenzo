@@ -1180,7 +1180,7 @@ function LiveDealEngine() {
               {!documentSummary && workspaceDocs.length > 0 && (
                 <div className="flex flex-wrap items-center gap-2 pt-1">
                   <p className="text-[11px] text-muted-foreground">
-                    These documents haven't been read yet.
+                    {readError ?? "These documents haven't been read yet."}
                   </p>
                   <Button
                     size="sm"
@@ -1193,6 +1193,7 @@ function LiveDealEngine() {
                   </Button>
                 </div>
               )}
+
               {attachments.length > 0 && (
                 <ul className="mt-2 space-y-1 border-t border-border pt-2">
                   {attachments.map((a, i) => (
