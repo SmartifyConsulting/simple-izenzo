@@ -1466,9 +1466,9 @@ function LiveDealEngine() {
                 </ul>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  {workspaceDocs.length === 0
+                  {workspaceDocs.length === 0 && !submittedForThisBid
                     ? "The AI summary appears here once a document is uploaded."
-                    : "Reading the uploaded document…"}
+                    : "Reading your documents…"}
                 </p>
               )}
               {/* Documents attached but never read — say so plainly, with a way to run it again,
@@ -1557,6 +1557,7 @@ function LiveDealEngine() {
                       transactionId={dealTx.id}
                       reference={(dealTx as unknown as { reference?: string | null }).reference ?? draftReference}
                       onNext={() => void runSearch(dealTx.id)}
+                      onSubmitted={() => markSubmitted(dealTx.id)}
                       onFirstClassified={({ directionGuess }) => void applyDirectionGuess(directionGuess)}
                       autoAdvance
                       initialPrompt={seedPrompt}
