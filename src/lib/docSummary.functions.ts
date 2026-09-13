@@ -11,11 +11,28 @@ export const summarizeBidDocuments = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => z.object({ transactionId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
+    try {
+      return await readAndSummarize(supabase, data.transactionId);
+    } catch (err) {
+      // A read that fails must leave its reason on the deal, so the workspace can say why instead
+      // of showing an empty summary for ever.
+      const reason = (err as Error).message || "The documents could not be read.";
+      await supabase
+        .from("transactions")
+        .update({ document_summary_error: reason.slice(0, 500) } as never)
+        .eq("id", data.transactionId);
+      throw err;
+    }
+  });
 
+type AuthedClient = { from: (t: string) => any; storage: { from: (b: string) => any } };
+
+async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
+  {
     const { data: tx, error: txErr } = await supabase
       .from("transactions")
       .select("id, title, commodity, quantity, unit, price, currency, incoterms, jurisdiction")
-      .eq("id", data.transactionId)
+      .eq("id", transactionId)
       .maybeSingle();
     if (txErr) throw new Error(txErr.message);
     if (!tx) throw new Error("You don't have access to this deal.");
@@ -23,13 +40,14 @@ export const summarizeBidDocuments = createServerFn({ method: "POST" })
     const { data: docs, error: docErr } = await supabase
       .from("documents")
       .select("name, notes, storage_path")
-      .eq("transaction_id", data.transactionId)
+      .eq("transaction_id", transactionId)
       .order("created_at", { ascending: true });
     if (docErr) throw new Error(docErr.message);
     if (!docs || docs.length === 0) throw new Error("No documents to read yet.");
 
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) throw new Error("AI is not configured for this workspace.");
+
 
     const IMAGE_EXT = /\.(jpe?g|png|webp|gif|heic|heif)$/i;
     const PDF_EXT = /\.pdf$/i;
