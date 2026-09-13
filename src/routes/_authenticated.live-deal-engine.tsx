@@ -363,6 +363,9 @@ function LiveDealEngine() {
   const listIdChecks = useServerFn(listVerificationsForTx);
   const summarizeDocs = useServerFn(summarizeBidDocuments);
   const [rereading, setRereading] = useState(false);
+  // Once interest is being fetched the submitted detail collapses out of the way, so the results
+  // have the room. The header stays clickable to open it again.
+  const [bidInfoOpen, setBidInfoOpen] = useState(true);
   const queryClient = useQueryClient();
 
   /** Reads the attached documents again — offered wherever files exist but no summary does, so a
@@ -966,6 +969,7 @@ function LiveDealEngine() {
   /** "Fetch Interest" — starts the AI/AI+ search and the online media screening in one go, so both
    * steps pulse together in the workflow and every result lands without another click. */
   async function fetchInterest(txId: string) {
+    setBidInfoOpen(false);
     // Anything already surfaced for this deal can be screened straight away, in parallel with the
     // fresh search; whatever the search turns up is screened as it lands (see runSearch).
     try {
