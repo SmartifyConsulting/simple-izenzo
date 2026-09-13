@@ -311,6 +311,7 @@ function LiveDealEngine() {
   // upload effects above have already captured their one-time snapshot — without this poll,
   // "What was submitted" would stay blank until the next full reload even once the summary was
   // actually ready.
+  const [readError, setReadError] = useState<string | null>(null);
   const { data: polledSummary } = useQuery({
     queryKey: ["tx-document-summary", dealTx?.id],
     enabled: Boolean(dealTx?.id) && !documentSummary,
@@ -318,15 +319,18 @@ function LiveDealEngine() {
     queryFn: async () => {
       const { data } = await supabase
         .from("transactions")
-        .select("document_summary")
+        .select("document_summary, document_summary_error")
         .eq("id", dealTx!.id)
         .maybeSingle();
-      return (data as { document_summary: string | null } | null)?.document_summary ?? null;
+      const row = data as { document_summary: string | null; document_summary_error: string | null } | null;
+      setReadError(row?.document_summary_error ?? null);
+      return row?.document_summary ?? null;
     },
   });
   useEffect(() => {
     if (polledSummary) setDocumentSummary(polledSummary);
   }, [polledSummary]);
+
   const search = useServerFn(searchCounterparties);
   const runScreening = useServerFn(runBackgroundScreening);
   const runMediaChecks = useServerFn(runOnlineMediaChecks);
