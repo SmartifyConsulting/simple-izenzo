@@ -48,7 +48,7 @@ function IntelligenceFabric() {
     <>
       {/* Hero */}
       <section className="bg-gradient-to-b from-primary/[0.04] to-transparent">
-        <div className="mx-auto max-w-5xl px-5 py-10 sm:py-14">
+        <div className="mx-auto max-w-5xl px-5 pb-7 pt-10 sm:pb-10 sm:pt-14">
           <div className="flex items-start justify-between gap-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
               The Intelligence Fabric
@@ -74,7 +74,7 @@ function IntelligenceFabric() {
       </section>
 
       {/* How it transforms decision-making, with Why It Matters as a sidebar */}
-      <section className="mx-auto max-w-5xl px-5 py-10 sm:py-12">
+      <section className="mx-auto max-w-5xl px-5 pb-10 pt-7 sm:pb-12 sm:pt-8">
         <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
           How it transforms decision-making
         </p>

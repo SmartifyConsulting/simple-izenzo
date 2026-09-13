@@ -42,7 +42,7 @@ function About() {
             delivering fully actionable, compliant deals straight to your desk.
           </p>
 
-          <p className="mt-10 text-sm font-medium uppercase tracking-[0.1em] text-muted-foreground">
+          <p className="mt-10 text-sm font-bold uppercase tracking-[0.1em] text-muted-foreground">
             That's the difference.
           </p>
 
