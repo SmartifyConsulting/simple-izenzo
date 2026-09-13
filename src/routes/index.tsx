@@ -13,7 +13,7 @@ export const Route = createFileRoute("/")({
 
 function safeNext(next: string | undefined) {
   if (next && next.startsWith("/") && !next.startsWith("//")) return next;
-  return "/live-deal-engine";
+  return "/map";
 }
 
 /** The root route no longer renders its own marketing page — Alpha-Bravo is the site's real
