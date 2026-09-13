@@ -1071,28 +1071,55 @@ function LiveDealEngine() {
           <div className="h-[calc((100vh-190px)*0.9)] w-full overflow-y-auto rounded-3xl border border-border bg-card p-3 shadow-sm sm:p-5">
           <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
             <p className="label-caps text-foreground">Live Workspace</p>
-            <OpenDealsPicker currentId={dealTx?.id ?? null} hasAttachment={workspaceDocs.length > 0} />
+            {(((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference) && (
+              <span className="flex items-center gap-2 font-mono text-lg font-bold tracking-wide text-foreground">
+                {workspaceDocs.length > 0 && (
+                  <Paperclip className="h-4 w-4 shrink-0 text-muted-foreground" />
+                )}
+                {((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference}
+              </span>
+            )}
           </div>
 
-          {/* Bidder details + AI summary come first — the very top of the workspace, before the
-              reference header and anything else — so what was actually submitted is never buried
-              behind the progress ribbon or the workflow ticks below it. The attachment(s), with a
-              download link, live here too, right after the summary. */}
+          {/* Bid Registered — the very top of the workspace: when it was registered, which business
+              registered it (with its verification status) and the country. No individual's name. */}
+          {activity && dealTx && (
+            <div className="glass-node mb-3 space-y-1.5 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="label-caps text-muted-foreground">Bid Registered</p>
+                <SubmitterIdentity orgId={dealTx.org_id} createdBy={null} />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Registered {new Date(activity.time ?? dealTx.created_at).toLocaleString()}
+              </p>
+              {org?.name && <p className="text-sm font-semibold text-foreground">{org.name}</p>}
+              {(org?.country || dealTx.jurisdiction) && (
+                <p className="text-xs text-muted-foreground">{org?.country ?? dealTx.jurisdiction}</p>
+              )}
+            </div>
+          )}
+
+          {/* Bidder details + AI summary come next — what was actually submitted, never buried
+              behind the progress ribbon. The attachment(s) live here too, with preview/download. */}
           {activity && dealTx && (
             <div className="glass-node space-y-2 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="label-caps text-muted-foreground">Bidder details &amp; AI summary</p>
-                <SubmitterIdentity orgId={dealTx.org_id} createdBy={(dealTx as unknown as { created_by?: string | null }).created_by ?? null} />
+                {idCheck?.status === "passed" && (
+                  <span
+                    title={`Verified${idCheck.completed_at ? ` — ${new Date(idCheck.completed_at).toLocaleString()}` : ""}`}
+                    className="flex shrink-0 items-center gap-1 rounded-full border border-success/40 bg-success/10 px-2 py-0.5 text-[10px] font-semibold text-success"
+                  >
+                    <BadgeCheck className="h-3 w-3" />
+                    ID Verified
+                  </span>
+                )}
+                {idCheck?.status === "in_progress" && (
+                  <span className="flex shrink-0 items-center gap-1 rounded-full bg-info px-2 py-0.5 text-[10px] font-semibold text-white">
+                    ID check pending
+                  </span>
+                )}
               </div>
-              {dealTx.created_at && (
-                <p className="text-xs text-muted-foreground">
-                  Registered {new Date(dealTx.created_at).toLocaleDateString(undefined, {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </p>
-              )}
               {/* The value of the trade belongs with the rest of its material aspects, inside this
                   frame, rather than sitting on its own outside it. */}
               {(activity.price || activity.quantity) && (
@@ -1116,12 +1143,46 @@ function LiveDealEngine() {
                     : "Reading the uploaded document…"}
                 </p>
               )}
+              {/* Documents attached but never read — say so plainly, with a way to run it again,
+                  instead of leaving a toast that has long since vanished. */}
+              {!documentSummary && workspaceDocs.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <p className="text-[11px] text-muted-foreground">
+                    These documents haven't been read yet.
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-[11px]"
+                    disabled={rereading}
+                    onClick={() => void rereadDocuments(dealTx.id)}
+                  >
+                    {rereading ? "Reading…" : "Read documents"}
+                  </Button>
+                </div>
+              )}
               {attachments.length > 0 && (
                 <ul className="mt-2 space-y-1 border-t border-border pt-2">
                   {attachments.map((a, i) => (
                     <li key={i} className="flex items-center gap-2 text-sm">
                       <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                       <span className="min-w-0 flex-1 truncate">{a.name}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">{a.kind}</span>
+                      {/* Both icons always show — greyed out for files recorded before uploads
+                          were kept, so a row never looks half-built. */}
+                      <button
+                        type="button"
+                        disabled={!a.path}
+                        onClick={() => openAttachment(a)}
+                        title={
+                          a.path
+                            ? `Preview ${a.name}`
+                            : "No stored copy — this file was recorded before uploads were kept"
+                        }
+                        className="shrink-0 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </button>
                       <button
                         type="button"
                         disabled={!a.path}
@@ -1141,6 +1202,7 @@ function LiveDealEngine() {
               )}
             </div>
           )}
+
 
             {dealTx ? (
               <div className="mt-4 flex items-start justify-end gap-4">
