@@ -471,16 +471,19 @@ function LiveDealEngine() {
   }, [dealTx?.id, workspaceDocs.length]);
   const submittedForThisBid = dealTx ? submittedBids.has(dealTx.id) : false;
   // A bid whose detail was collapsed when interest was fetched stays collapsed when it's opened
-  // again, rather than springing back open on every load.
+  // again, rather than springing back open on every load. Read once per bid only, so it can never
+  // overwrite a collapse the user (or a search) just made.
   useEffect(() => {
-    if (!dealTx?.id) return;
+    const txId = dealTx?.id;
+    if (!txId || bidInfoKnown.current.has(txId)) return;
+    bidInfoKnown.current.add(txId);
     let collapsed = false;
     try {
-      collapsed = sessionStorage.getItem(`bid-info-collapsed:${dealTx.id}`) === "1";
+      collapsed = sessionStorage.getItem(`bid-info-collapsed:${txId}`) === "1";
     } catch {
       collapsed = false;
     }
-    setBidInfoOpen(!collapsed);
+    setBidInfoCollapsedByTx((prev) => ({ ...prev, [txId]: collapsed }));
   }, [dealTx?.id]);
   // Older bids may already have a good summary but still carry the old "New Bid" placeholder.
   // Read once more to generate and persist their proper display title; the ref prevents repeated
