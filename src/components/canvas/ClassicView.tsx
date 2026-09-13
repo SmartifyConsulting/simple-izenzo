@@ -146,7 +146,7 @@ function SubRow({
       onClick={onClick}
       disabled={!onClick}
       className={cn(
-        "flex w-1/2 items-start gap-2 rounded-lg border px-3 py-2 text-left font-sans text-[13px] font-medium leading-snug transition-colors disabled:cursor-not-allowed",
+        "flex w-full items-start gap-2 rounded-lg border px-3 py-2 text-left font-sans text-[13px] font-medium leading-snug transition-colors disabled:cursor-not-allowed",
         // A step the page has explicitly marked done or in-progress reads as such, even when it is
         // also the "start a new bid" entry row — otherwise every override on it would be ignored.
         itemClasses(state, item.isEntry && state !== "done" && state !== "active"),
@@ -275,7 +275,7 @@ export function ClassicView({
                     {allDone ? (
                       /* A finished step reads as one ticked label, rather than repeating every
                          task it already completed. */
-                      <div className="flex w-1/2 items-start justify-start gap-2 px-3 py-2 font-sans text-[13px] font-medium leading-snug text-success">
+                      <div className="flex w-full items-start justify-start gap-2 px-3 py-2 font-sans text-[13px] font-medium leading-snug text-success">
                         <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                         <span className="min-w-0 flex-1 break-words">{s.label}</span>
                       </div>
