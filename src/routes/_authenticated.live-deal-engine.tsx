@@ -346,9 +346,12 @@ function LiveDealEngine() {
     try {
       const { summary } = await summarizeDocs({ data: { transactionId } });
       setDocumentSummary(summary);
+      setReadError(null);
       toast.success("Documents read — summary ready");
     } catch (err) {
+      setReadError((err as Error).message);
       toast.error((err as Error).message);
+
     } finally {
       setRereading(false);
     }
