@@ -1835,9 +1835,11 @@ function WadStep({ tx, reload }: Props) {
       <div className="mt-5">
         <VerificationPanel
           transactionId={tx.id}
-          checks={["id_document", "kyb", "aml"]}
+          checks={(["id_document", "kyb", "aml"] as const).filter(
+            (k) => priorByKind.get(k)?.status !== "passed",
+          )}
           title="Identity verification"
-          description="Run the live checks against the chosen counterparty. Results are recorded on the deal as they land; they inform the WaD decision but never make it."
+          description="Only the checks that have not already come back clear. Results are recorded on the deal as they land; they inform the WaD decision but never make it."
         />
       </div>
       <div className="mt-5">
