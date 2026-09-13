@@ -363,6 +363,7 @@ function LiveDealEngine() {
   const runMediaChecks = useServerFn(runOnlineMediaChecks);
   const listIdChecks = useServerFn(listVerificationsForTx);
   const summarizeDocs = useServerFn(summarizeBidDocuments);
+  const fetchDocument = useServerFn(readDocument);
   const [rereading, setRereading] = useState(false);
   // Once interest is being fetched the submitted detail collapses out of the way, so the results
   // have the room. The header stays clickable to open it again.
