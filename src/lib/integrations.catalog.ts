@@ -179,31 +179,26 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
     testable: true,
   },
   {
-    id: "brightdata",
-    name: "Bright Data",
+    id: "firecrawl",
+    name: "Firecrawl",
     group: "Web Scraping",
     summary:
-      "Live web, marketplace, directory and news scraping. Powers counterparty matching and the online media checks.",
+      "Live web, marketplace, directory and news reading. Powers counterparty matching and the online media checks.",
     usedAt:
-      "Trading Gate → Counterparties (AI / AI+ web matching) and Online Media Checks (social, marketplace and news scraping).",
-    docsUrl: "https://docs.brightdata.com",
+      "Trading Gate → Counterparties (AI / AI+ web matching) and Online Media Checks (social, marketplace and news reading).",
+    docsUrl: "https://docs.firecrawl.dev",
     fields: [
       {
         key: "api_key",
-        label: "API token",
+        label: "API key",
         secret: true,
-        help: "Bright Data → Account settings → API tokens. Used for the SERP and Web Unlocker zones.",
-      },
-      {
-        key: "browser_url",
-        label: "Browser API address",
-        secret: true,
-        placeholder: "wss://brd-customer-…:password@brd.superproxy.io:9222",
-        help: "From the Scraping Browser zone's access parameters. Also stored as a server secret (BRIGHTDATA_BROWSER_URL).",
+        placeholder: "fc-…",
+        help: "Firecrawl → Dashboard → API Keys. Also read from the server secret FIRECRAWL_API_KEY.",
       },
       { key: "portal_username", label: "Username", secret: false },
       { key: "portal_credentials", label: "Credentials", secret: true, help: "Password or API secret used to sign in to the provider portal." },
     ],
+
     testable: true,
   },
   {
