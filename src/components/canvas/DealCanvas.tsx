@@ -365,7 +365,7 @@ export function DealCanvas({
                 ← Back to workflow
               </button>
             )}
-            <p className="label-caps">Live deal engine</p>
+            <p className="label-caps">Submit your Proposal</p>
             <h2 className="mt-1 truncate text-xl font-semibold tracking-tight">{tx.title}</h2>
           </div>
           <p className="text-sm text-muted-foreground">{money(tx.price, tx.currency)}</p>
@@ -2023,7 +2023,7 @@ export function CanvasStart({
   if (!picking) {
     return (
       <div className="ink-grid relative rounded-3xl border border-border p-4 sm:p-6">
-        <p className="label-caps text-center">Live deal engine</p>
+        <p className="label-caps text-center">Submit your Proposal</p>
         <div className="mt-6">{startNode}</div>
       </div>
     );
@@ -2033,7 +2033,7 @@ export function CanvasStart({
   // real document-upload step — not a screen anyone needs to act on.
   return (
     <div className="ink-grid relative rounded-3xl border border-border p-4 sm:p-6">
-      <p className="label-caps text-center">Live deal engine</p>
+      <p className="label-caps text-center">Submit your Proposal</p>
       <div className="mt-6 flex flex-col items-center justify-center gap-2 py-6 text-center">
         <Loader2 className="h-5 w-5 animate-spin text-primary" />
         <p className="text-sm text-muted-foreground">Setting up your workspace…</p>

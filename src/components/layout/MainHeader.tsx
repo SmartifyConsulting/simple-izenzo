@@ -55,12 +55,12 @@ export function MainHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur">
-      <div className="mx-auto flex h-16 w-full max-w-[1680px] items-center px-5">
+      <div className="relative mx-auto flex h-16 w-full max-w-[1680px] items-center px-5">
         <Link to={user ? "/live-deal-engine" : "/alpha-bravo"} className="flex shrink-0 items-center gap-1.5">
           <Logo />
         </Link>
 
-        <nav className="ml-auto hidden items-center gap-2 whitespace-nowrap text-sm text-muted-foreground lg:flex">
+        <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-2 whitespace-nowrap text-sm text-muted-foreground lg:flex">
           {NAV.map((item) => (
             <Link
               key={item.to}
@@ -94,7 +94,7 @@ export function MainHeader() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <div className="ml-6 flex shrink-0 items-center gap-3 lg:ml-3">
+        <div className="ml-auto flex shrink-0 items-center gap-3">
           {user ? (
             <>
               

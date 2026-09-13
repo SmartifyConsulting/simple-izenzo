@@ -40,6 +40,8 @@ import { searchCounterparties } from "@/lib/izenzo.functions";
 import { runBackgroundScreening, type ScreeningResult } from "@/lib/screening.functions";
 import { runOnlineMediaChecks, type MediaCheckResult } from "@/lib/onlineMedia.functions";
 import { listVerificationsForTx } from "@/lib/didit.functions";
+import { summarizeBidDocuments } from "@/lib/docSummary.functions";
+
 import { pushRecentDeal } from "@/lib/recentDeals";
 import { useDealWindows } from "@/lib/dealWindows";
 import { peekStashedHeroFiles, clearStashedHeroFiles } from "@/lib/heroSearchContext";
@@ -173,7 +175,7 @@ function OpenDealsPicker({ currentId, hasAttachment }: { currentId: string | nul
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="h-9 w-[140px] justify-start gap-2 text-[13px] font-normal"
+          className="h-9 w-[280px] justify-start gap-2 text-[13px] font-normal"
         >
           {hasAttachment && <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
           {selected ? (
@@ -352,7 +354,25 @@ function LiveDealEngine() {
   const runScreening = useServerFn(runBackgroundScreening);
   const runMediaChecks = useServerFn(runOnlineMediaChecks);
   const listIdChecks = useServerFn(listVerificationsForTx);
+  const summarizeDocs = useServerFn(summarizeBidDocuments);
+  const [rereading, setRereading] = useState(false);
   const queryClient = useQueryClient();
+
+  /** Reads the attached documents again — offered wherever files exist but no summary does, so a
+   * read that failed earlier isn't a dead end. */
+  async function rereadDocuments(transactionId: string) {
+    setRereading(true);
+    try {
+      const { summary } = await summarizeDocs({ data: { transactionId } });
+      setDocumentSummary(summary);
+      toast.success("Documents read — summary ready");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setRereading(false);
+    }
+  }
+
 
   // The bidder/responder's own ID front/back, run through Didit the moment they're uploaded —
   // shown as a small "ID Verified" badge once it comes back passed, without making them visit
@@ -1015,17 +1035,14 @@ function LiveDealEngine() {
         </div>
       )}
 
-      <div className="mb-3 flex items-center justify-end gap-3">
-        <OpenDealsPicker currentId={dealTx?.id ?? null} hasAttachment={workspaceDocs.length > 0} />
-      </div>
-
       {/* Only one workspace is ever open at a time now (see dealWindows' setMode), so this is
           always just the page itself — no halo/backdrop layer behind it, which used to read as a
-          second frame peeking out from underneath the real one. */}
-      <div className="relative">
+          second frame peeking out from underneath the real one. One outer frame wraps the workflow
+          and the workspace so the pair reads as a single working surface. */}
+      <div className="relative rounded-3xl border border-border bg-card/40 p-3 shadow-sm">
         <div
           className={cn(
-            "relative grid grid-cols-1 items-stretch gap-4 rounded-3xl lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]",
+            "relative grid grid-cols-1 items-stretch gap-4 rounded-3xl lg:grid-cols-[minmax(0,1fr)_minmax(0,1.63fr)]",
           )}
         >
           {/* Engine Map — always visible on the left. Clicking a node opens that step inline in
@@ -1033,7 +1050,7 @@ function LiveDealEngine() {
               panels share the same fixed viewport-relative height so the pair fits on screen
               without the page itself needing to scroll — the Map scales its diagram to fit, the
               Workspace scrolls its own content internally if it runs long. */}
-          <div className="flex h-[calc(100vh-190px)] w-full flex-col overflow-hidden p-3 sm:p-5">
+          <div className="flex h-[calc((100vh-190px)*0.9)] w-full flex-col overflow-hidden p-3 sm:p-5">
             <p className="label-caps shrink-0 text-foreground">Izenzo Trade Workflow</p>
             <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
               <ClassicView
@@ -1047,12 +1064,16 @@ function LiveDealEngine() {
             </div>
           </div>
 
-          {/* Live Workspace — always visible on the right. Once a bid/offer exists, its header
-              is the bid/offer ID on the left; the top right is either the real upload frame
-              (before any document is attached) or a bulleted list of what's been classified from
-              the documents already uploaded. */}
-          <div className="h-[calc(100vh-190px)] w-full overflow-y-auto rounded-3xl border border-border bg-card p-3 shadow-sm sm:p-5">
-          <p className="label-caps mb-3 shrink-0 text-foreground">Live Workspace</p>
+          {/* Live Workspace — always visible on the right. Its heading line carries the bid/offer
+              reference on the same row; below it is either the real upload frame (before any
+              document is attached) or a bulleted list of what's been classified from the documents
+              already uploaded. */}
+          <div className="h-[calc((100vh-190px)*0.9)] w-full overflow-y-auto rounded-3xl border border-border bg-card p-3 shadow-sm sm:p-5">
+          <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
+            <p className="label-caps text-foreground">Live Workspace</p>
+            <OpenDealsPicker currentId={dealTx?.id ?? null} hasAttachment={workspaceDocs.length > 0} />
+          </div>
+
           {/* Bidder details + AI summary come first — the very top of the workspace, before the
               reference header and anything else — so what was actually submitted is never buried
               behind the progress ribbon or the workflow ticks below it. The attachment(s), with a
@@ -1134,6 +1155,7 @@ function LiveDealEngine() {
                       // homepage.
                       key={dealTx.id}
                       transactionId={dealTx.id}
+                      reference={(dealTx as unknown as { reference?: string | null }).reference ?? draftReference}
                       onNext={() => void runSearch(dealTx.id)}
                       onFirstClassified={({ directionGuess }) => void applyDirectionGuess(directionGuess)}
                       autoAdvance
@@ -1150,17 +1172,30 @@ function LiveDealEngine() {
                           </li>
                         ))}
                       </ul>
+                      {/* Documents attached but never read — say so plainly, with a way to run it
+                          again, instead of leaving a toast that has long since vanished. */}
+                      {!documentSummary && (
+                        <div className="space-y-1.5 pt-1">
+                          <p className="text-[11px] text-muted-foreground">
+                            These documents haven't been read yet.
+                          </p>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 w-full text-[11px]"
+                            disabled={rereading}
+                            onClick={() => void rereadDocuments(dealTx.id)}
+                          >
+                            {rereading ? "Reading…" : "Read documents"}
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               </div>
-            ) : (
-              draftReference && (
-                <p className="label-caps font-mono text-base font-bold uppercase tracking-wide text-foreground">
-                  {draftReference}
-                </p>
-              )
-            )}
+            ) : null}
+
 
           {/* No deal yet: shows the upload/search starting card. If a `seed` came from the
               homepage's search bar, CanvasStart auto-creates the deal on mount instead of

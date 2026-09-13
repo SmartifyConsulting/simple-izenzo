@@ -31,8 +31,10 @@ export function DocumentUploadStep({
   onNext,
   onFirstClassified,
   autoAdvance = false,
+  reference,
   initialPrompt,
   initialFiles,
+
 }: {
   transactionId: string;
   onNext: () => void;
@@ -44,11 +46,15 @@ export function DocumentUploadStep({
    * Used where there's nothing else to review on this screen (e.g. going straight into search),
    * as opposed to a guided wizard step someone might want a beat to check before continuing. */
   autoAdvance?: boolean;
+  /** The bid/offer reference these files are being attached to — named on the panel so a document
+   * can't be added to the wrong workspace tab unnoticed. */
+  reference?: string | null;
   /** Whatever was already typed/dropped before this transaction existed — applied once, on
    * mount, so the caller doesn't have to make someone repeat themselves. */
   initialPrompt?: string;
   initialFiles?: File[];
 }) {
+
   const qc = useQueryClient();
   const classify = useServerFn(classifyDocument);
   const summarize = useServerFn(summarizeBidDocuments);
@@ -209,10 +215,14 @@ export function DocumentUploadStep({
 
   return (
     <div className="space-y-4">
+      {/* Once something is attached, the description box and drop strip give way to the files and
+          the single "Find Matching Interest" action — the ask has already been made. */}
+      {docs.length === 0 && (
       <div className="space-y-1.5">
         <Label htmlFor="deal-search-prompt" className="text-xs font-medium">
-          Search Prompt
+          Search Prompt{reference ? ` — ${reference}` : ""}
         </Label>
+
         {/* One strip, split down the middle: description on the left, drop zone on the right. */}
         <div className="flex items-stretch gap-2 rounded-2xl border-2 border-border bg-background p-2 transition-colors focus-within:border-primary">
           <Textarea
@@ -272,6 +282,9 @@ export function DocumentUploadStep({
           Used together with your attached documents to find matches.
         </p>
       </div>
+      )}
+
+
 
 
       {docs.length > 0 && (
@@ -307,8 +320,9 @@ export function DocumentUploadStep({
           })();
         }}
       >
-        {autoAdvance ? "Submit" : "Next"}
+        {docs.length > 0 ? "Find Matching Interest" : autoAdvance ? "Submit" : "Next"}
       </Button>
+
     </div>
   );
 }
