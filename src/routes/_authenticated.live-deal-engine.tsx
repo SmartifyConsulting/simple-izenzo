@@ -384,7 +384,13 @@ function LiveDealEngine() {
       // Private browsing without storage — the state above still holds for this view.
     }
   }
-  const bidInfoOpen = dealTx ? !bidInfoCollapsedByTx[dealTx.id] : true;
+  // A bid that has already moved past submitting its documents opens with this frame closed, so it
+  // never flashes open while the saved state is being read. Anything the user (or a search) sets
+  // explicitly wins over that default.
+  const bidInfoDefaultCollapsed = dealTx ? !["bid-offer", "documents"].includes(dealTx.step) : false;
+  const bidInfoOpen = dealTx
+    ? !(bidInfoCollapsedByTx[dealTx.id] ?? bidInfoDefaultCollapsed)
+    : true;
   // Once the ask has been made for a bid, the description/drop frame never comes back — not while
   // the files are still saving, not on a refresh, not on a tab switch. Remembered per bid.
   const [submittedBids, setSubmittedBids] = useState<Set<string>>(() => new Set());
