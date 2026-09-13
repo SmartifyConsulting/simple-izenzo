@@ -7,7 +7,9 @@ import {
   FileText,
   Globe,
   Hammer,
+  Handshake,
   ListChecks,
+  Newspaper,
   Search,
   ShieldCheck,
 } from "lucide-react";
@@ -69,8 +71,16 @@ const STEPS: StepDef[] = [
       { key: "bidRegistration", label: "Bid Registration", stage: "trading", step: "bid-offer", isEntry: true },
       { key: "docSubmission", label: "Submission of Documents", stage: "trading", step: "bid-offer" },
       { key: "search", label: "Search AI + AI+", stage: "trading", step: "search", icon: Search },
-      { key: "onlineMedia", label: "Online Media Screening", stage: "trading", step: "online-media", icon: Globe },
       { key: "choice", label: "Choice", stage: "trading", step: "choice", icon: ListChecks },
+      { key: "onlineMedia", label: "Online Media Screening", stage: "trading", step: "online-media", icon: Globe },
+      {
+        key: "backgroundScreening",
+        label: "Background Screening",
+        stage: "trading",
+        step: "media",
+        icon: Newspaper,
+      },
+      { key: "intent", label: "Intent", stage: "trading", step: "intent", icon: Handshake },
     ],
   },
   {

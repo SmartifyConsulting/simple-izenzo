@@ -532,24 +532,60 @@ function LiveDealEngine() {
       return o;
     }
     o["search"] = "done";
-    if (mediaRunning) {
-      o["onlineMedia"] = "active";
-      o["choice"] = "open";
+
+    // Choice comes first now: nothing below it can start until a person has picked.
+    if (!hasChosen) {
+      o["choice"] = flowStep === "results" ? "active" : "open";
+      o["onlineMedia"] = "open";
+      o["backgroundScreening"] = "open";
+      o["intent"] = "open";
       return o;
     }
-    o["onlineMedia"] = mediaResults !== null || flowStep === "results" ? "done" : "open";
+    o["choice"] = "done";
 
-    if (flowStep === "results") {
-      if (hasChosen) {
-        o["choice"] = "done";
-        o["poi"] = dealTx.poi_sealed_at ? "done" : "active";
-        if (dealTx.poi_sealed_at) o["wad"] = dealTx.wad_completed_at ? "done" : "active";
-      } else {
-        o["choice"] = "active";
-      }
+    // Online media screening runs only once the choice has been made and continued.
+    if (mediaRunning) {
+      o["onlineMedia"] = "active";
+      o["backgroundScreening"] = "open";
+      o["intent"] = "open";
+      return o;
+    }
+    if (mediaResults === null) {
+      o["onlineMedia"] = "open";
+      o["backgroundScreening"] = "open";
+      o["intent"] = "open";
+      return o;
+    }
+    o["onlineMedia"] = "done";
+
+    if (screening) {
+      o["backgroundScreening"] = "active";
+      o["intent"] = "open";
+      return o;
+    }
+    if (screeningResults === null) {
+      o["backgroundScreening"] = "open";
+      o["intent"] = "open";
+      return o;
+    }
+    o["backgroundScreening"] = "done";
+
+    o["intent"] = dealTx.intent_confirmed_at ? "done" : "active";
+    if (dealTx.intent_confirmed_at) {
+      o["poi"] = dealTx.poi_sealed_at ? "done" : "active";
+      if (dealTx.poi_sealed_at) o["wad"] = dealTx.wad_completed_at ? "done" : "active";
     }
     return o;
-  }, [dealTx, flowStep, mediaRunning, mediaResults, hasChosen, workspaceDocs.length]);
+  }, [
+    dealTx,
+    flowStep,
+    mediaRunning,
+    mediaResults,
+    screening,
+    screeningResults,
+    hasChosen,
+    workspaceDocs.length,
+  ]);
 
 
 
@@ -563,11 +599,9 @@ function LiveDealEngine() {
     ? "media"
     : mediaRunning
       ? "online-media"
-      : mediaResults && !screeningResults
+      : flowStep === "results" && !hasChosen
         ? "choice"
-        : flowStep === "results" && !mediaResults && !screeningResults
-          ? "counterparties"
-          : null;
+        : null;
 
   /** Scans the open web (LinkedIn, Facebook, TikTok, marketplaces, news) for the counterparties
    * that were ticked, before any paid provider screening is opened. */
@@ -1029,22 +1063,10 @@ function LiveDealEngine() {
     );
   }
 
-  /** "Fetch Interest" — starts the AI/AI+ search and the online media screening in one go, so both
-   * steps pulse together in the workflow and every result lands without another click. */
+  /** "Fetch Interest" — runs the AI/AI+ search. Online media screening comes later, only once a
+   * person has made their choice and continued. */
   async function fetchInterest(txId: string) {
     setBidInfoCollapsed(txId, true);
-    // Anything already surfaced for this deal can be screened straight away, in parallel with the
-    // fresh search; whatever the search turns up is screened as it lands (see runSearch).
-    try {
-      const { data: existing } = await supabase
-        .from("counterparties")
-        .select("id")
-        .eq("transaction_id", txId);
-      const ids = (existing ?? []).map((c) => c.id as string);
-      if (ids.length > 0) void startMediaChecks(ids);
-    } catch {
-      // Best effort — the search below still runs and starts screening on its own results.
-    }
     await runSearch(txId);
   }
 
@@ -1085,17 +1107,8 @@ function LiveDealEngine() {
       // The candidates are written server-side, so the Record panel's cached (empty) list has to
       // be refreshed or it stays stuck on "Searching for counterparties…".
       await queryClient.invalidateQueries({ queryKey: ["counterparties", txId] });
-      // The moment matches are in, carry straight on into online media screening for all of
-      // them — a freshly-searched deal has no reason yet to exclude any candidate, so waiting on
-      // a tick-and-continue click here would just leave the workspace looking stalled right after
-      // the document/prompt that triggered this search.
-      try {
-        const { data: cps } = await supabase.from("counterparties").select("id").eq("transaction_id", txId);
-        const ids = (cps ?? []).map((c) => c.id as string);
-        if (ids.length > 0) void startMediaChecks(ids);
-      } catch {
-        // Best effort — the manual tick-and-continue flow in the Record panel still works.
-      }
+      // Online media screening deliberately does NOT start here — Choice comes first. It runs from
+      // the Record panel's tick-and-continue, once a person has picked their counterparties.
     }
   }
 
