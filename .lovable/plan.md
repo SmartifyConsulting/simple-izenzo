@@ -49,9 +49,10 @@
 - `MatchResultsPanel.tsx`: after mapping the bid's counterparties, reduce by
   `normalise(name) || hostname(source_url)`, keeping the max score and collecting each row's
   evidence URL into a list; render "Found on N pages" with the links when N > 1.
-- `ClassicView.tsx`: `SubItem` gains `muted?: boolean`, set on `preparation` and `entry`;
-  `itemClasses` returns a grey `border-border bg-muted text-muted-foreground` for those. The
-  sub-step container (and the collapsed finished-step row) gains `-ml-[1cm]`.
+- `ClassicView.tsx`: `SubItem` gains `heading?: boolean`, set on `preparation` and `entry`; `SubRow`
+  renders those as a non-interactive `div` — `label-caps text-muted-foreground` plus a
+  `h-px flex-1 bg-border` rule — instead of a `button` with `itemClasses`. The sub-step container
+  (and the collapsed finished-step row) gains `-ml-[1cm]`.
 - Preview (`_authenticated.live-deal-engine.tsx` line 1042): keep `createSignedUrl`, but `fetch` the
   signed URL, convert to a `Blob`, and `window.open(URL.createObjectURL(blob))` (revoked after a
   delay) so the opened URL is same-origin `blob:` rather than the storage host an extension blocks;
