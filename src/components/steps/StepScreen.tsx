@@ -1512,17 +1512,12 @@ async function sha256Hex(text: string) {
 
 function WadStep({ tx, reload }: Props) {
   const complete = useServerFn(completeWad);
-  const runScreening = useServerFn(runBackgroundScreening);
   const navigate = useNavigate();
   const { org } = useAuth();
   const shortOnTokens = (org?.credits ?? 0) < WAD_COST;
   const [checks, setChecks] = useState<Record<string, boolean>>({});
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
-  const [screening, setScreening] = useState(false);
-  const [screened, setScreened] = useState<ScreeningCheck[] | null>(null);
-  const [screenError, setScreenError] = useState<string | null>(null);
-  const startedRef = useRef(false);
   const { data: chosenCp } = useQuery({
     queryKey: ["chosen-counterparty-rating", tx.id],
     queryFn: async () => {
