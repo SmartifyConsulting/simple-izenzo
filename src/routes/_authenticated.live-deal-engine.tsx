@@ -368,10 +368,15 @@ function LiveDealEngine() {
   // Once interest is being fetched the submitted detail collapses out of the way, so the results
   // have the room. Remembered per bid, so it stays collapsed on a refresh or a tab switch; the
   // header stays clickable to open it again.
-  const [bidInfoOpen, setBidInfoOpen] = useState(true);
+  // Kept per bid rather than as one shared boolean: a single flag meant an explicit collapse could
+  // be undone the moment the transaction object was replaced (which happens on every step
+  // advance), which is exactly why this frame kept springing back open.
+  const [bidInfoCollapsedByTx, setBidInfoCollapsedByTx] = useState<Record<string, boolean>>({});
+  const bidInfoKnown = useRef<Set<string>>(new Set());
   function setBidInfoCollapsed(txId: string | undefined, collapsed: boolean) {
-    setBidInfoOpen(!collapsed);
     if (!txId) return;
+    bidInfoKnown.current.add(txId);
+    setBidInfoCollapsedByTx((prev) => ({ ...prev, [txId]: collapsed }));
     try {
       if (collapsed) sessionStorage.setItem(`bid-info-collapsed:${txId}`, "1");
       else sessionStorage.removeItem(`bid-info-collapsed:${txId}`);
@@ -379,6 +384,7 @@ function LiveDealEngine() {
       // Private browsing without storage — the state above still holds for this view.
     }
   }
+  const bidInfoOpen = dealTx ? !bidInfoCollapsedByTx[dealTx.id] : true;
   // Once the ask has been made for a bid, the description/drop frame never comes back — not while
   // the files are still saving, not on a refresh, not on a tab switch. Remembered per bid.
   const [submittedBids, setSubmittedBids] = useState<Set<string>>(() => new Set());
@@ -465,16 +471,19 @@ function LiveDealEngine() {
   }, [dealTx?.id, workspaceDocs.length]);
   const submittedForThisBid = dealTx ? submittedBids.has(dealTx.id) : false;
   // A bid whose detail was collapsed when interest was fetched stays collapsed when it's opened
-  // again, rather than springing back open on every load.
+  // again, rather than springing back open on every load. Read once per bid only, so it can never
+  // overwrite a collapse the user (or a search) just made.
   useEffect(() => {
-    if (!dealTx?.id) return;
+    const txId = dealTx?.id;
+    if (!txId || bidInfoKnown.current.has(txId)) return;
+    bidInfoKnown.current.add(txId);
     let collapsed = false;
     try {
-      collapsed = sessionStorage.getItem(`bid-info-collapsed:${dealTx.id}`) === "1";
+      collapsed = sessionStorage.getItem(`bid-info-collapsed:${txId}`) === "1";
     } catch {
       collapsed = false;
     }
-    setBidInfoOpen(!collapsed);
+    setBidInfoCollapsedByTx((prev) => ({ ...prev, [txId]: collapsed }));
   }, [dealTx?.id]);
   // Older bids may already have a good summary but still carry the old "New Bid" placeholder.
   // Read once more to generate and persist their proper display title; the ref prevents repeated
@@ -1327,6 +1336,10 @@ function LiveDealEngine() {
               fillToTaskbar ? "h-full" : "h-[calc((100vh-190px)*0.9)]",
             )}
           >
+          {/* Everything pinned to the top of the workspace sits inside one opaque, full-bleed
+              surface — the heading row and the Bid Registration frame together — so nothing
+              scrolling underneath can appear through it or in the gap above it. */}
+          <div className="sticky -top-3 z-20 -mx-3 -mt-3 mb-3 bg-card px-3 pb-3 pt-3 sm:-top-5 sm:-mx-5 sm:-mt-5 sm:px-5 sm:pt-5">
           <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
             <p className="label-caps text-foreground">Live Workspace</p>
             {dealTx && (
@@ -1381,7 +1394,7 @@ function LiveDealEngine() {
           {activity && dealTx && (
             // Fully opaque: the glass treatment's translucency let content scrolling beneath show
             // through this pinned frame.
-            <div className="glass-node sticky top-0 z-20 mb-3 space-y-1.5 bg-card p-4 [backdrop-filter:none] [background-image:none]">
+            <div className="glass-node space-y-1.5 bg-card p-4 [backdrop-filter:none] [background-image:none]">
               <p className="label-caps text-muted-foreground">Bid Registration</p>
               <div className="grid grid-cols-2 items-start gap-3">
                 <div className="min-w-0 space-y-1">
@@ -1422,6 +1435,7 @@ function LiveDealEngine() {
               </div>
             </div>
           )}
+          </div>
 
           {/* Bidder details + AI summary come next — what was actually submitted, never buried
               behind the progress ribbon. The attachment(s) live here too, with preview/download. */}

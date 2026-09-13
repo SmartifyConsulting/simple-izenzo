@@ -296,7 +296,11 @@ export function ClassicView({
       <div className="flex flex-col">
         {STEPS.map((s) => {
           const stepCollapsed = Boolean(collapsed[s.step]);
-          const allDone = s.items.every((item) => stateOf(item) === "done");
+          // A confirmed Intent finishes every Trading task, so Step 1 reads as complete even
+          // before the page states each row outright.
+          const allDone =
+            s.items.every((item) => stateOf(item) === "done") ||
+            (s.step === 1 && Boolean(tx.intent_confirmed_at));
           // Bracket + "Step N · " (no step name) — an invisible copy of this is used below to
           // indent the sub-steps by exactly this width, so they line up under the first letter of
           // the step's actual name (e.g. under the "T" of "Trading") rather than under the
@@ -322,12 +326,20 @@ export function ClassicView({
                 type="button"
                 onClick={() => toggleStep(s.step)}
                 aria-expanded={!stepCollapsed}
-                className="flex shrink-0 items-start gap-2 text-left"
+                className="flex w-full shrink-0 items-start gap-2 text-left"
               >
                 {bracketAndPrefix}
-                <span className="label-caps -ml-2 mt-1 text-foreground transition-colors hover:text-primary">
+                <span
+                  className={cn(
+                    "label-caps -ml-2 mt-1 transition-colors",
+                    allDone ? "text-success" : "text-foreground hover:text-primary",
+                  )}
+                >
                   {s.label}
                 </span>
+                {/* A finished step keeps its tick on the heading itself, so completion still reads
+                    at a glance while its sub-tasks are collapsed. */}
+                {allDone && <CheckCircle2 className="ml-auto mt-1 h-3.5 w-3.5 shrink-0 text-success" />}
               </button>
 
               {!stepCollapsed && (
