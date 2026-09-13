@@ -1135,6 +1135,7 @@ function LiveDealEngine() {
                       // homepage.
                       key={dealTx.id}
                       transactionId={dealTx.id}
+                      reference={(dealTx as unknown as { reference?: string | null }).reference ?? draftReference}
                       onNext={() => void runSearch(dealTx.id)}
                       onFirstClassified={({ directionGuess }) => void applyDirectionGuess(directionGuess)}
                       autoAdvance
@@ -1151,17 +1152,30 @@ function LiveDealEngine() {
                           </li>
                         ))}
                       </ul>
+                      {/* Documents attached but never read — say so plainly, with a way to run it
+                          again, instead of leaving a toast that has long since vanished. */}
+                      {!documentSummary && (
+                        <div className="space-y-1.5 pt-1">
+                          <p className="text-[11px] text-muted-foreground">
+                            These documents haven't been read yet.
+                          </p>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 w-full text-[11px]"
+                            disabled={rereading}
+                            onClick={() => void rereadDocuments(dealTx.id)}
+                          >
+                            {rereading ? "Reading…" : "Read documents"}
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               </div>
-            ) : (
-              draftReference && (
-                <p className="label-caps font-mono text-base font-bold uppercase tracking-wide text-foreground">
-                  {draftReference}
-                </p>
-              )
-            )}
+            ) : null}
+
 
           {/* No deal yet: shows the upload/search starting card. If a `seed` came from the
               homepage's search bar, CanvasStart auto-creates the deal on mount instead of
