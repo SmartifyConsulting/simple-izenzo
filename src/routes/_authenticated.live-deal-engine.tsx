@@ -1047,51 +1047,46 @@ function LiveDealEngine() {
     }
   }
 
-  /** The bucket is private, so a short-lived signed link is minted on demand rather than stored.
-   * The file itself is then fetched and opened from this app's own address (a `blob:` URL) — some
-   * browser extensions and ad blockers refuse to navigate to the storage host directly, which is
-   * what produced the "blocked by Chrome" page. If even the fetch is blocked, it falls back to
-   * downloading the file rather than leaving a dead tab. */
-  async function openAttachment(a: Attachment) {
-    if (!a.path) return;
-    const { data, error } = await supabase.storage.from("documents").createSignedUrl(a.path, 60);
-    if (error || !data?.signedUrl) {
-      toast.error(`Could not open ${a.name}`);
-      return;
-    }
+  /** Files are read through this app's own address (a server function), never the storage host —
+   * some browser extensions and ad blockers refuse the storage domain outright, which is what
+   * produced the "blocked by Chrome" page for both preview and download. */
+  async function loadAttachmentBlob(a: Attachment): Promise<Blob | null> {
+    if (!a.path) return null;
     try {
-      const res = await fetch(data.signedUrl);
-      if (!res.ok) throw new Error(`status ${res.status}`);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const tab = window.open(url, "_blank", "noopener,noreferrer");
-      if (!tab) {
-        URL.revokeObjectURL(url);
-        toast.error("Allow pop-ups to preview this document, or download it instead");
-        return;
-      }
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch {
-      toast.error(`Preview was blocked for ${a.name} — downloading it instead`);
-      await downloadAttachment(a);
+      const { base64, contentType } = await fetchDocument({ data: { path: a.path } });
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+      return new Blob([bytes], { type: contentType });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : `Could not read ${a.name}`);
+      return null;
     }
   }
 
-  /** Same signed-URL flow as opening it, but asks storage for a `Content-Disposition: attachment`
-   * link so the browser saves the file instead of just previewing it inline. */
-  async function downloadAttachment(a: Attachment) {
-    if (!a.path) return;
-    const { data, error } = await supabase.storage
-      .from("documents")
-      .createSignedUrl(a.path, 60, { download: a.name });
-    if (error || !data?.signedUrl) {
-      toast.error(`Could not download ${a.name}`);
+  async function openAttachment(a: Attachment) {
+    const blob = await loadAttachmentBlob(a);
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const tab = window.open(url, "_blank", "noopener,noreferrer");
+    if (!tab) {
+      URL.revokeObjectURL(url);
+      toast.error("Allow pop-ups to preview this document, or download it instead");
       return;
     }
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
+
+  /** Same in-app read, saved to disk instead of opened. */
+  async function downloadAttachment(a: Attachment) {
+    const blob = await loadAttachmentBlob(a);
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.href = data.signedUrl;
+    link.href = url;
     link.download = a.name;
     link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
   }
 
   // A deal that hasn't been created yet still needs a stable id so it can register as its own
