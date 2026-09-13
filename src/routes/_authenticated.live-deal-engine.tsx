@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -422,6 +422,21 @@ function LiveDealEngine() {
     })),
     [workspaceDocs],
   );
+  // Older bids may already have a good summary but still carry the old "New Bid" placeholder.
+  // Read once more to generate and persist their proper display title; the ref prevents repeated
+  // AI calls while the transaction query catches up with the saved title.
+  const titleGenerationStarted = useRef<string | null>(null);
+  useEffect(() => {
+    if (
+      !dealTx ||
+      workspaceDocs.length === 0 ||
+      !documentSummary ||
+      !GENERIC_TITLES.has(dealTx.title) ||
+      titleGenerationStarted.current === dealTx.id
+    ) return;
+    titleGenerationStarted.current = dealTx.id;
+    void rereadDocuments(dealTx.id);
+  }, [dealTx?.id, dealTx?.title, documentSummary, workspaceDocs.length]);
 
   // Has interest already been fetched for this bid? Drives the "Fetch Interest" button, so it
   // stays offered for any bid that has documents but no matches yet — not only in the moment
@@ -1335,10 +1350,14 @@ function LiveDealEngine() {
               </div>
               {/* The value of the trade belongs with the rest of its material aspects, inside this
                   frame, rather than sitting on its own outside it. */}
-              {(activity.price || activity.quantity) && (
+              {(Number(activity.price) > 0 || Number(activity.quantity) > 0) && (
                 <p className="text-sm font-semibold text-foreground">
-                  {activity.price ? `${activity.currency ?? ""} ${activity.price}`.trim() : "Value not stated"}
-                  {activity.quantity ? ` · ${activity.quantity} ${activity.unit ?? ""}`.trimEnd() : ""}
+                  {Number(activity.price) > 0
+                    ? `${activity.currency ?? ""} ${activity.price}`.trim()
+                    : "Value not stated"}
+                  {Number(activity.quantity) > 0
+                    ? ` · ${activity.quantity} ${activity.unit ?? ""}`.trimEnd()
+                    : ""}
                 </p>
               )}
               {documentSummary ? (
