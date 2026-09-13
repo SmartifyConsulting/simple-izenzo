@@ -438,6 +438,21 @@ function LiveDealEngine() {
     })),
     [workspaceDocs],
   );
+  // A bid that already has documents counts as submitted, as does one whose flag survived a
+  // refresh — either way the upload frame stays away.
+  useEffect(() => {
+    if (!dealTx) return;
+    let stored = false;
+    try {
+      stored = sessionStorage.getItem(`bid-submitted:${dealTx.id}`) === "1";
+    } catch {
+      stored = false;
+    }
+    if (stored || workspaceDocs.length > 0) {
+      setSubmittedBids((s) => (s.has(dealTx.id) ? s : new Set(s).add(dealTx.id)));
+    }
+  }, [dealTx?.id, workspaceDocs.length]);
+  const submittedForThisBid = dealTx ? submittedBids.has(dealTx.id) : false;
   // Older bids may already have a good summary but still carry the old "New Bid" placeholder.
   // Read once more to generate and persist their proper display title; the ref prevents repeated
   // AI calls while the transaction query catches up with the saved title.
