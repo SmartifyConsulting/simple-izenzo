@@ -23,10 +23,6 @@ function isMarketingPath(pathname: string) {
   return pathname === "/" || pathname.startsWith("/alpha-bravo") || pathname.startsWith("/auth");
 }
 
-/** The bottom dock listing every open deal workspace, app-wide — styled like a spreadsheet's
- * sheet tabs (Excel/Google Sheets) so several bids read as a row of named tabs rather than a row
- * of pill buttons. Rendered once from the root so it persists across every authenticated page,
- * not just Live Deal Engine — but never shows on the marketing site itself. */
 /** Finds an existing bid or offer by its reference or by a keyword in its name, and opens it. */
 function DealSearchDialog({
   open,
