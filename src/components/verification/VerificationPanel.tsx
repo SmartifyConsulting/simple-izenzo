@@ -74,6 +74,14 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
       transactionId ? listForTx({ data: { transactionId } }) : listMine({}),
   });
 
+  // The separate sanctions / PEP check only appears while an administrator has it switched on.
+  const { data: enabled } = useQuery({
+    queryKey: ["enabled-check-types"],
+    queryFn: async () => listEnabled({}),
+    staleTime: 5 * 60 * 1000,
+  });
+  const checks = requested.filter((c) => (enabled ?? ["id_document", "kyb"]).includes(c));
+
   const latest = (type: CheckType) => rows.find((r) => r.check_type === type);
 
   function isNarrow() {
