@@ -1339,7 +1339,7 @@ function LiveDealEngine() {
           {/* Everything pinned to the top of the workspace sits inside one opaque, full-bleed
               surface — the heading row and the Bid Registration frame together — so nothing
               scrolling underneath can appear through it or in the gap above it. */}
-          <div className="sticky -top-3 z-20 -mx-3 -mt-3 bg-card px-3 pt-3 sm:-top-5 sm:-mx-5 sm:-mt-5 sm:px-5 sm:pt-5">
+          <div className="sticky -top-3 z-20 -mx-3 -mt-3 mb-3 bg-card px-3 pb-3 pt-3 sm:-top-5 sm:-mx-5 sm:-mt-5 sm:px-5 sm:pt-5">
           <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
             <p className="label-caps text-foreground">Live Workspace</p>
             {dealTx && (
@@ -1394,7 +1394,7 @@ function LiveDealEngine() {
           {activity && dealTx && (
             // Fully opaque: the glass treatment's translucency let content scrolling beneath show
             // through this pinned frame.
-            <div className="glass-node mb-3 space-y-1.5 bg-card p-4 [backdrop-filter:none] [background-image:none]">
+            <div className="glass-node space-y-1.5 bg-card p-4 [backdrop-filter:none] [background-image:none]">
               <p className="label-caps text-muted-foreground">Bid Registration</p>
               <div className="grid grid-cols-2 items-start gap-3">
                 <div className="min-w-0 space-y-1">
