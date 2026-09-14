@@ -90,10 +90,10 @@ function elbow(a: Point, b: Point, via: "x" | "y" = "y"): string {
 const ARROWS: string[] = [
   // Trading engine, left to right.
   line(bottomOf(BOXES.bid), topOf(BOXES.loadDocs)),
-  line(rightOf(BOXES.loadDocs), { x: TRADING_SEARCH_FRAME.x, y: cy(BOXES.loadDocs) }),
+  line(rightOf(BOXES.loadDocs), leftOf(BOXES.search)),
   line(rightOf(BOXES.search), leftOf(BOXES.steps)),
-  // The steps card feeds both Offer and Choice.
-  elbow(rightOf(BOXES.steps), leftOf(BOXES.offer), "x"),
+  // One clean connector from the Step 1–5 card into the counterparty group; Offer is fed from
+  // inside that group, so no second overlapping line is drawn here.
   line(rightOf(BOXES.steps), leftOf(BOXES.choice)),
   // Counterparty group's own loop.
   line(bottomOf(BOXES.offer), topOf(BOXES.choice)),
