@@ -216,6 +216,29 @@ export function WorkspaceTaskbar() {
         );
       })}
       </div>
+
+      {/* The footer details now live in the middle of this same strip, so the dock carries both the
+          open deal tabs and the site's legal line and links. */}
+      <div className="hidden min-w-0 flex-1 items-center justify-center gap-5 pb-2 lg:flex">
+        <p className="truncate text-[11px] tracking-wide text-muted-foreground">
+          Izenzo is the trading name of Starfair162 (Pty) Ltd Reg: 2018 / 331720 / 07.
+        </p>
+        <nav aria-label="Footer" className="flex shrink-0 items-center gap-4">
+          <Link to="/glossary" className={footerLinkClass}>
+            Glossary
+          </Link>
+          <a href="/privacy" className={footerLinkClass}>
+            Privacy
+          </a>
+          <a href="/terms" className={footerLinkClass}>
+            Terms &amp; Conditions
+          </a>
+          <a href="mailto:support@izenzo.co.za" className={footerLinkClass}>
+            Support
+          </a>
+        </nav>
+      </div>
     </div>
+
   );
 }
