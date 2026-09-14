@@ -302,6 +302,12 @@ function LiveDealEngine() {
   // already has a chosen counterparty but no signed intent always reopens Intent, whatever step
   // happens to be stored on the row — that is what left users stranded on "Choice recorded".
   const [hasChosen, setHasChosen] = useState(false);
+  // Separate from `hasChosen`: that flag means "the flow has moved past Choice" and is set the
+  // moment media screening starts, well before any party is actually finalized — using it to
+  // decide whether to force-open the Intent panel meant clicking "Run online media screening"
+  // immediately hijacked the workspace into a locked Intent panel, so the screening UI (and its
+  // results) never had a chance to show. This one only ever reflects a real chosen row in the DB.
+  const [dbHasChosenParty, setDbHasChosenParty] = useState(false);
   /** Whether the deal map is shown above the stepper — folded away by hand if it isn't wanted. */
   const [mapOpen, setMapOpen] = useState(true);
   // Only re-derived when switching to a different deal — not on every step change within the
@@ -318,7 +324,10 @@ function LiveDealEngine() {
         .select("id", { count: "exact", head: true })
         .eq("transaction_id", dealTx.id)
         .eq("status", "chosen");
-      if (live) setHasChosen((count ?? 0) > 0);
+      if (live) {
+        setHasChosen((count ?? 0) > 0);
+        setDbHasChosenParty((count ?? 0) > 0);
+      }
     })();
     return () => {
       live = false;
@@ -333,7 +342,7 @@ function LiveDealEngine() {
         ? "poi"
         : dealTx?.step === "intent" || dealTx?.step === "poi"
           ? dealTx.step
-          : hasChosen
+          : dbHasChosenParty
             ? "intent"
             : null;
   useEffect(() => {
@@ -897,6 +906,7 @@ function LiveDealEngine() {
         prev ? { ...prev, stage: "trading", step: "choice", intent_confirmed_at: null } : prev,
       );
       setHasChosen(false);
+      setDbHasChosenParty(false);
       setStagePanel(null);
       setMediaRunning(false);
       setMediaResults(null);
@@ -965,6 +975,7 @@ function LiveDealEngine() {
     setMediaProgress(null);
     setStagePanel(null);
     setHasChosen(false);
+    setDbHasChosenParty(false);
     setMapPanel(null);
     setPendingDirection(null);
     setDraftReference(null);
@@ -1042,6 +1053,7 @@ function LiveDealEngine() {
         setMediaResults(null);
         setMediaProgress(null);
         setHasChosen(false);
+        setDbHasChosenParty(false);
         setDocumentSummary((tx as unknown as { document_summary: string | null }).document_summary ?? null);
         setFlowStep(tx.step === "documents" ? "documents" : "results");
         const { data: docs } = await supabase
@@ -1103,6 +1115,7 @@ function LiveDealEngine() {
         setMediaResults(null);
         setMediaProgress(null);
         setHasChosen(false);
+        setDbHasChosenParty(false);
         setDocumentSummary((tx as unknown as { document_summary: string | null }).document_summary ?? null);
         setFlowStep(tx.step === "documents" ? "documents" : "results");
         const { data: docs } = await supabase
