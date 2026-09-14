@@ -2,9 +2,11 @@
 
 ## What changes
 
-1. **The New tab works every time.** Pressing New while you are already on a new, empty workspace
-   currently does nothing, because the address it navigates to is the one you are already on. Each
-   press now genuinely starts a clean workspace — cleared prompt, cleared files, no bid attached.
+1. **The New tab works every time, with a new bid number.** Pressing New while you are already on a
+   new, empty workspace currently does nothing, because the address it navigates to is the one you
+   are already on. Each press now genuinely starts a clean workspace — cleared prompt, cleared files,
+   no bid attached — and always issues a fresh, unused BID number for it, never the one shown on the
+   previous new workspace.
 
 2. **Step 5 label at 11px.** The "Step 5 · Memory" text around the memory circle is set to the same
    11px as the other step labels.
@@ -16,8 +18,10 @@
    the Trading, Compliance, Execution and Finality groups and slightly shorter tiles — so the
    diagram sits inside its column at a normal window height with no scrolling.
 
-5. **Search progress bars are green.** The progress bars beneath Search and screening turn green
-   instead of blue/orange (failures stay red).
+5. **The Live Workspace search bars turn green.** The progress bars on the Live Workspace — the
+   AI / AI+ search, online media screening and background screening bars — become green instead of
+   blue or orange (a failed run still shows red). The matching bar on the map follows the same
+   colour.
 
 6. **Bid Information visible after Search.** Once Search has been pressed, the Bid Information
    section is shown open rather than collapsed, so the bid's details stay in view alongside the
@@ -39,7 +43,13 @@
 
 - `WorkspaceTaskbar.activate("new")` navigates to `/live-deal-engine?fresh=true`, which is a no-op
   when already there; add a changing nonce to the search params (validated in the route) and include
-  it in the reset effect's dependency list so the reset re-runs on every press.
+  it in the reset effect's dependency list so the reset re-runs on every press. The same effect
+  clears the draft reference so `CanvasStart` draws a new one.
+- Bid numbers must be unique: `nextReference` in `DealCanvas.tsx` draws at random from a span of only
+  1000 and never checks, which is how two bids ended up numbered BID9089119. Widen the span and add
+  an async claim that checks `transactions.reference` before use (bounded retries), plus a unique
+  partial index on `public.transactions (reference)` and a one-off renumber of the duplicate empty
+  row so the index can be created.
 - `MapView.tsx`: `Step 5 · Memory` text class → `text-[11px]`; `BOXES.entryExit.h` → match
   `BOXES.search.h`; reduce `H` and the y-offsets of `COMPLIANCE_FRAME`/`EXECUTION_FRAME`/
   `ENTRY_EXIT_FRAME`/`FINALITY_FRAME` and their boxes (and the memory circle) so the content ends
