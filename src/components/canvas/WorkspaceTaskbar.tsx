@@ -112,11 +112,24 @@ export function WorkspaceTaskbar() {
 
   if (isMarketingPath(pathname)) return null;
 
+  // On the Map screen the tabs drive the map itself rather than sending you off to the step list:
+  // picking a bid switches which deal the diagram is showing, and New opens the empty workspace
+  // beside it.
+  const onMap = pathname === "/map";
+
   function activate(id: string, mode: string) {
     if (mode === "minimized") setMode(id, "maximized");
+    if (onMap) {
+      void navigate({ to: "/map", search: id === "new" ? { fresh: true } : { tx: id } });
+      return;
+    }
     // `fresh: 1` tells the Live Workspace to show the empty upload/search template — otherwise a
     // bare URL with no `tx` is indistinguishable from "just resume whatever was last worked on".
     void navigate({ to: "/live-deal-engine", search: id === "new" ? { fresh: true } : { tx: id } });
+  }
+
+  function openDeal(txId: string) {
+    void navigate({ to: onMap ? "/map" : "/live-deal-engine", search: { tx: txId } });
   }
 
   // The blank template tab is permanent and always leftmost: recorded deals get their own tab, and
