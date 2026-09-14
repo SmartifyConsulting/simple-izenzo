@@ -61,8 +61,8 @@ const BOXES = {
   wad: { x: 60, y: 842, w: 300, h: 62 },
   businessDocs: { x: 60, y: 928, w: 300, h: 62 },
   execution: { x: 430, y: 1000, w: 300, h: 104 },
-  entryExit: { x: 430, y: 1140, w: 140, h: 56 },
-  finality: { x: 600, y: 1140, w: 130, h: 56 },
+  entryExit: { x: 424, y: 1141, w: 140, h: 56 },
+  finality: { x: 584, y: 1136, w: 150, h: 66 },
 } as const satisfies Record<string, Box>;
 
 // One outer frame holds the whole trading step — Bid, Load Deal Documents, Search, the Step 1–5
