@@ -79,7 +79,9 @@ export const Route = createFileRoute("/_authenticated/live-deal-engine")({
     search: Record<string, unknown>,
   ): { tx?: string; popout?: boolean; panel?: "matches"; q?: string; seed?: string; fresh?: boolean } => ({
     ...(typeof search["tx"] === "string" ? { tx: search["tx"] as string } : {}),
-    popout: search["popout"] === "1",
+    // The router serialises this back out as a boolean, so a reload/round-trip has to be read
+    // as truthy too — otherwise `popout=1` turns into `popout=false` on the next navigation.
+    popout: search["popout"] === "1" || search["popout"] === true || search["popout"] === "true",
     // Opened from the homepage's "…" — shows the full match list in the Live Workspace.
     ...(search["panel"] === "matches" ? { panel: "matches" as const } : {}),
     ...(typeof search["q"] === "string" ? { q: search["q"] as string } : {}),

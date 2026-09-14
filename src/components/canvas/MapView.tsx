@@ -23,8 +23,10 @@ import type { Transaction } from "@/lib/tx";
 type NodeState = "locked" | "open" | "active" | "done";
 
 /** Node state comes straight from the live deal record and the shared gating rules — the same
- * `lockReason`/`stepIndex` logic the step list uses, unchanged. */
-function nodeState(stage: StageKey, step: string, tx: Transaction): NodeState {
+ * `lockReason`/`stepIndex` logic the step list uses, unchanged. With no deal open yet, only Bid
+ * is available and it pulses as the thing to do first. */
+function nodeState(stage: StageKey, step: string, tx: Transaction | null): NodeState {
+  if (!tx) return step === "bid-offer" ? "active" : "locked";
   if (lockReason(stage, step, tx)) return "locked";
   const idx = stepIndex(stage, step);
   const currentIdx = stepIndex(tx.stage, tx.step);
@@ -44,15 +46,15 @@ const py = (v: number) => `${(v / H) * 100}%`;
 type Box = { x: number; y: number; w: number; h: number };
 
 const BOXES = {
-  bid: { x: 35, y: 68, w: 212, h: 78 },
-  loadDocs: { x: 35, y: 206, w: 212, h: 86 },
+  bid: { x: 35, y: 100, w: 212, h: 76 },
+  loadDocs: { x: 35, y: 222, w: 212, h: 82 },
   search: { x: 335, y: 218, w: 286, h: 68 },
-  steps: { x: 670, y: 192, w: 150, h: 178 },
+  steps: { x: 670, y: 178, w: 150, h: 164 },
   offer: { x: 1018, y: 124, w: 206, h: 72 },
   choice: { x: 1018, y: 240, w: 206, h: 70 },
   counterOffer: { x: 1268, y: 226, w: 178, h: 74 },
   socialMedia: { x: 1018, y: 360, w: 256, h: 70 },
-  expressIntent: { x: 335, y: 432, w: 280, h: 62 },
+  expressIntent: { x: 335, y: 444, w: 280, h: 62 },
   poi: { x: 335, y: 524, w: 280, h: 62 },
   withoutADoubt: { x: 335, y: 622, w: 280, h: 62 },
   wad: { x: 335, y: 714, w: 280, h: 62 },
@@ -62,8 +64,9 @@ const BOXES = {
   finality: { x: 1350, y: 902, w: 196, h: 78 },
 } as const satisfies Record<string, Box>;
 
-// Group frames.
-const TRADING_SEARCH_FRAME: Box = { x: 313, y: 190, w: 330, h: 126 };
+// Group frames. Bid, Load Deal Documents, Search and the Step 1–5 card all live inside one
+// outer frame — the trade engine — rather than the search box carrying a small frame of its own.
+const TRADE_ENGINE_FRAME: Box = { x: 14, y: 26, w: 838, h: 322 };
 const COUNTERPARTY_FRAME: Box = { x: 990, y: 88, w: 478, h: 370 };
 const COMPLIANCE_FRAME: Box = { x: 313, y: 352, w: 330, h: 542 };
 const MEMORY = { cx: 1196, cy: 655, r: 150 };
@@ -87,10 +90,10 @@ function elbow(a: Point, b: Point, via: "x" | "y" = "y"): string {
 const ARROWS: string[] = [
   // Trading engine, left to right.
   line(bottomOf(BOXES.bid), topOf(BOXES.loadDocs)),
-  line(rightOf(BOXES.loadDocs), { x: TRADING_SEARCH_FRAME.x, y: cy(BOXES.loadDocs) }),
+  line(rightOf(BOXES.loadDocs), leftOf(BOXES.search)),
   line(rightOf(BOXES.search), leftOf(BOXES.steps)),
-  // The steps card feeds both Offer and Choice.
-  elbow(rightOf(BOXES.steps), leftOf(BOXES.offer), "x"),
+  // One clean connector from the Step 1–5 card into the counterparty group; Offer is fed from
+  // inside that group, so no second overlapping line is drawn here.
   line(rightOf(BOXES.steps), leftOf(BOXES.choice)),
   // Counterparty group's own loop.
   line(bottomOf(BOXES.offer), topOf(BOXES.choice)),
@@ -237,19 +240,28 @@ export function MapView({
   tx,
   reload,
   readOnly,
+  onBid,
+  onLoadDocuments,
+  searching,
 }: {
-  tx: Transaction;
+  tx: Transaction | null;
   reload: () => void;
   readOnly?: boolean | undefined;
+  /** Bid tile — opens the registration workspace beside the map. */
+  onBid?: (() => void) | undefined;
+  /** Load Deal Documents tile — opens the search prompt + upload window. */
+  onLoadDocuments?: (() => void) | undefined;
+  /** True while AI and AI+ are running, so Search pulses and shows its own progress bar. */
+  searching?: boolean | undefined;
 }) {
   const [panel, setPanel] = useState<{ stage: StageKey; step: string } | null>(null);
 
   const open = (stage: StageKey, step: string) => {
-    if (readOnly) return;
+    if (readOnly || !tx) return;
     setPanel((p) => (p?.stage === stage && p?.step === step ? null : { stage, step }));
   };
   const st = (stage: StageKey, step: string) => nodeState(stage, step, tx);
-  const lock = (stage: StageKey, step: string) => lockReason(stage, step, tx);
+  const lock = (stage: StageKey, step: string) => (tx ? lockReason(stage, step, tx) : "Register a bid or offer first");
 
   const node = (
     key: keyof typeof BOXES,
@@ -259,6 +271,7 @@ export function MapView({
     fill: string,
     icon?: typeof Search,
     sub?: string,
+    override?: { state?: NodeState; onClick?: () => void },
   ) => (
     <MapNode
       box={BOXES[key]}
@@ -266,9 +279,9 @@ export function MapView({
       icon={icon}
       sub={sub}
       fill={fill}
-      state={st(stage, step)}
+      state={override?.state ?? st(stage, step)}
       lock={lock(stage, step)}
-      onClick={() => open(stage, step)}
+      onClick={override?.onClick ?? (() => open(stage, step))}
     />
   );
 
@@ -285,7 +298,12 @@ export function MapView({
           <ArrowLayer />
 
           {/* Engine frames */}
-          <Frame box={TRADING_SEARCH_FRAME} className="border-[#8fd3bc] bg-[#e4f6ef]/50" />
+          <Frame
+            box={TRADE_ENGINE_FRAME}
+            className="border-[#8fd3bc] bg-[#e4f6ef]/40"
+            label="1. Trade Engine"
+            labelClassName="text-[#12312a]"
+          />
           <Frame
             box={COUNTERPARTY_FRAME}
             className="border-[#e6d9a8] bg-[#fdf6e0]/60"
@@ -297,15 +315,14 @@ export function MapView({
             labelClassName="text-[#12312a]"
           />
 
-          <SideLabel x={30} y={20} text="1. Trading Engine" className="uppercase text-foreground" />
-          <SideLabel x={415} y={158} text="AI and AI+" className="text-foreground" />
+          <SideLabel x={415} y={176} text="AI and AI+" className="text-foreground" />
           <SideLabel x={648} y={726} text="KYC, KYB, PEP, AML" className="text-foreground" />
           <SideLabel x={648} y={822} text="POI, NDA, MOU, Contract" className="text-foreground" />
           <SideLabel x={1310} y={1012} text="Payment, Signoff, Handover" className="text-foreground" />
 
           {/* Step card between Search and the counterparty group */}
           <div
-            className="pointer-events-none absolute rounded-lg border-2 border-[#3f5bd9] bg-[#fdf6e0] px-2 py-2"
+            className="pointer-events-none absolute overflow-hidden rounded-lg border-2 border-[#3f5bd9] bg-[#fdf6e0] px-2 py-1"
             style={{
               left: px(BOXES.steps.x),
               top: py(BOXES.steps.y),
@@ -313,19 +330,39 @@ export function MapView({
               height: py(BOXES.steps.h),
             }}
           >
-            <ul className="flex h-full flex-col justify-between">
+            <ul className="flex h-full flex-col justify-center gap-0.5">
               {STEP_CHIPS.map((s) => (
-                <li key={s} className="text-[10px] font-semibold text-[#1c1c2b] sm:text-[11px]">
+                <li key={s} className="text-[8px] font-semibold leading-tight text-[#1c1c2b] sm:text-[10px]">
                   {s}
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* 1. Trading engine */}
-          {node("bid", "Bid", "trading", "bid-offer", YELLOW, Gavel)}
-          {node("loadDocs", "Load Deal Documents", "trading", "documents", BLUE, FileText)}
-          {node("search", "Search", "trading", "search", MINT, Search)}
+          {/* 1. Trade engine — Bid and Load Deal Documents drive the workspace beside the map. */}
+          {node("bid", "Bid", "trading", "bid-offer", YELLOW, Gavel, undefined, {
+            ...(onBid ? { onClick: onBid } : {}),
+          })}
+          {node("loadDocs", "Load Deal Documents", "trading", "documents", BLUE, FileText, undefined, {
+            ...(onLoadDocuments ? { onClick: onLoadDocuments } : {}),
+          })}
+          {node("search", "Search", "trading", "search", MINT, Search, undefined,
+            searching ? { state: "active" } : {})}
+          {searching && (
+            <div
+              className="pointer-events-none absolute"
+              style={{
+                left: px(BOXES.search.x),
+                top: py(BOXES.search.y + BOXES.search.h + 8),
+                width: px(BOXES.search.w),
+              }}
+            >
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#cfe9df]">
+                <div className="h-full w-1/3 animate-[slide-in-right_1.4s_ease-in-out_infinite] rounded-full bg-[#12312a]" />
+              </div>
+              <p className="mt-1 text-center text-[10px] font-semibold text-foreground">AI and AI+ searching…</p>
+            </div>
+          )}
           {node("offer", "Offer", "trading", "counterparties", CREAM, Tag)}
           {node("choice", "Choice", "trading", "choice", CREAM, Share2)}
           {node("counterOffer", "Counter Offer", "trading", "counterparties", CREAM, RefreshCw)}
@@ -379,7 +416,7 @@ export function MapView({
         </div>
       </div>
 
-      {panel && !readOnly && (
+      {panel && !readOnly && tx && (
         <InlineFrame
           tx={tx}
           stage={panel.stage}
