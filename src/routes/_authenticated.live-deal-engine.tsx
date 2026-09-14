@@ -318,6 +318,15 @@ function LiveDealEngine() {
   const [dbHasChosenParty, setDbHasChosenParty] = useState(false);
   /** Whether the deal map is shown above the stepper — folded away by hand if it isn't wanted. */
   const [mapOpen, setMapOpen] = useState(true);
+  // Screening state is session-local and was never cleared on switching bids, so a fresh bid that
+  // is still only searching could show a previous bid's leftover "online media screening results".
+  useEffect(() => {
+    setScreening(false);
+    setScreeningResults(null);
+    setMediaRunning(false);
+    setMediaResults(null);
+    setMediaProgress(null);
+  }, [dealTx?.id]);
   // Only re-derived when switching to a different deal — not on every step change within the
   // same one. Re-running this on every step change re-queried "chosen" the moment the step moved
   // to online-media (before finalizeChoice has run), always finding none yet, and stomped the
@@ -1528,7 +1537,7 @@ function LiveDealEngine() {
             )}
           >
             <div className="flex shrink-0 items-center justify-between gap-2">
-              <p className="label-caps text-foreground">Izenzo Trade Workflow</p>
+              <p className="label-caps rounded-full bg-[var(--step-pill-bg)] px-2.5 py-1 text-[var(--step-pill-fg)]">Izenzo Trade Workflow</p>
               {/* A switch, not a collapse: closing the map shows the vertical stepper instead, and
                   opening it hides the stepper again. One of the two is always on display. */}
               <div
@@ -1613,7 +1622,7 @@ function LiveDealEngine() {
               appear through it or in the gap above it. */}
           <div className="sticky -top-3 z-20 -mx-3 -mt-3 mb-3 bg-card px-3 pb-3 pt-3 sm:-top-5 sm:-mx-5 sm:-mt-5 sm:px-5 sm:pt-5">
           <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
-            <p className="label-caps rounded-full bg-primary/10 px-2.5 py-1 text-primary">Live Workspace</p>
+            <p className="label-caps rounded-full bg-[var(--step-pill-bg)] px-2.5 py-1 text-[var(--step-pill-fg)]">Live Workspace</p>
             {dealTx && (
               <AlertDialog>
                 <DropdownMenu>
