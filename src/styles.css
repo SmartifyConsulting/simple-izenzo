@@ -54,6 +54,9 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
+  /* Soft pastel blue track every progress bar sits on, with a green bar moving across it. */
+  --color-progress-track: hsl(210 68% 88%);
+
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
   --color-info: var(--info);
