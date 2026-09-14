@@ -40,6 +40,7 @@ export const Route = createFileRoute("/_authenticated/map")({
 });
 
 function MapScreen() {
+  const { tx: txParam, fresh } = Route.useSearch();
   const [selected, setSelected] = useState<string | null>(null);
   /** The Live Workspace pane on the right — opened by the Bid tile, then stays for the deal. */
   const [paneOpen, setPaneOpen] = useState(false);
