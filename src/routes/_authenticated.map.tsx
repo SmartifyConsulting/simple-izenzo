@@ -68,6 +68,7 @@ function MapScreen() {
   /** Pressing Search in the upload window: the window closes, Search pulses with its progress
    * bar, and the results land in the workspace on the right. */
   async function startSearch(txId: string) {
+    if (searching) return;
     setUploadOpen(false);
     setSearching(true);
     try {
@@ -158,7 +159,6 @@ function MapScreen() {
               transactionId={tx.id}
               reference={tx.reference}
               onNext={() => void startSearch(tx.id)}
-              onSubmitted={() => void startSearch(tx.id)}
             />
           )}
         </DialogContent>
