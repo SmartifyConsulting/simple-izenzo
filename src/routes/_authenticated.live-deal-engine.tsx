@@ -31,6 +31,7 @@ import { SubmitterIdentity } from "@/components/canvas/SubmitterIdentity";
 import { MatchResultsPanel } from "@/components/canvas/MatchResultsPanel";
 
 import { ClassicView } from "@/components/canvas/ClassicView";
+import { MapView } from "@/components/canvas/MapView";
 import { DocumentUploadStep } from "@/components/guided/DocumentUploadStep";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -283,6 +284,8 @@ function LiveDealEngine() {
   // already has a chosen counterparty but no signed intent always reopens Intent, whatever step
   // happens to be stored on the row — that is what left users stranded on "Choice recorded".
   const [hasChosen, setHasChosen] = useState(false);
+  /** Whether the deal map is shown above the stepper — folded away by hand if it isn't wanted. */
+  const [mapOpen, setMapOpen] = useState(true);
   useEffect(() => {
     if (!dealTx?.id) return;
     let live = true;
@@ -1345,8 +1348,36 @@ function LiveDealEngine() {
               fillToTaskbar ? "h-full" : "h-[calc((100vh-190px)*0.9)]",
             )}
           >
-            <p className="label-caps shrink-0 text-foreground">Izenzo Trade Workflow</p>
+            <div className="flex shrink-0 items-center justify-between gap-2">
+              <p className="label-caps text-foreground">Izenzo Trade Workflow</p>
+              <button
+                type="button"
+                onClick={() => setMapOpen((v) => !v)}
+                className="label-caps text-muted-foreground transition-colors hover:text-foreground"
+                aria-expanded={mapOpen}
+              >
+                {mapOpen ? "− Map" : "+ Map"}
+              </button>
+            </div>
             <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
+              {/* The map sits above the stepper as the visual "where am I" companion — the same
+                  states, the same click targets, opening the same step frames. */}
+              {/* The diagram needs a legible minimum width, so in this column it scrolls
+                  sideways rather than shrinking its labels into illegibility. */}
+              {mapOpen && (
+                <div className="mb-4 overflow-x-auto border-b border-border pb-4">
+                  <div className="min-w-[1040px]">
+                  <MapView
+                    tx={dealTx ?? null}
+                    reload={() => void reloadDeal()}
+                    readOnly={!dealTx}
+                    onOpenStep={openMapStep}
+                    overrideStates={stepOverrides}
+                    {...(dealTx ? {} : { onBid: startNewDeal })}
+                  />
+                  </div>
+                </div>
+              )}
               <ClassicView
                 tx={dealTx ?? FLOWCHART_PREVIEW_TX}
                 reload={() => void reloadDeal()}
