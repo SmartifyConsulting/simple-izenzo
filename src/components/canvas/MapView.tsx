@@ -313,10 +313,6 @@ export function MapView({
             labelClassName="text-[#12312a]"
           />
           <Frame
-            box={COUNTERPARTY_FRAME}
-            className="border-[#e6d9a8] bg-[#fdf6e0]/60"
-          />
-          <Frame
             box={COMPLIANCE_FRAME}
             className="border-[#8fd3bc] bg-[#e4f6ef]/50"
             label="2. Compliance & Governance Engine"
@@ -324,9 +320,10 @@ export function MapView({
           />
 
           <SideLabel x={415} y={176} text="AI and AI+" className="text-foreground" />
-          <SideLabel x={648} y={726} text="KYC, KYB, PEP, AML" className="text-foreground" />
-          <SideLabel x={648} y={822} text="POI, NDA, MOU, Contract" className="text-foreground" />
-          <SideLabel x={1310} y={1012} text="Payment, Signoff, Handover" className="text-foreground" />
+          <SideLabel x={900} y={792} text="KYC, KYB, PEP, AML" className="text-foreground" />
+          <SideLabel x={900} y={872} text="POI, NDA, MOU, Contract" className="text-foreground" />
+          <SideLabel x={1050} y={1146} text="Payment, Signoff, Handover" className="text-foreground" />
+
 
           {/* Step card between Search and the counterparty group */}
           <div
