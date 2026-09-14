@@ -69,44 +69,35 @@ const BOXES = {
   choice: { x: 570, y: 174, w: 160, h: 56 },
   // Counter Offer sits at the very right edge of the Trading frame, level with Choice and Search.
   counterOffer: { x: 750, y: 170, w: 150, h: 64 },
-  // Wide enough that "Online Media Screening" fits on one line instead of wrapping.
-  // Same width and centre-line as Choice, so the connector between them is straight. A little
-  // extra padding between Step 1's horizontal rows.
-  socialMedia: { x: 570, y: 255, w: 160, h: 64 },
-  // Step 2 (Compliance & Governance) moves further down from Step 1's frame; Step 3/4 shift down
-  // to match so the connector between them (unchanged below) doesn't have to stretch or overlap.
-  // Extra clearance below the frame's floating heading + "Governance" row so Express Intent
-  // never touches either of them.
-  // Widened and centred within the (also widened) Compliance frame.
-  expressIntent: { x: 60, y: 420, w: 280, h: 48 },
-  poi: { x: 60, y: 476, w: 280, h: 48 },
-  withoutADoubt: { x: 60, y: 532, w: 280, h: 54 },
-  wad: { x: 60, y: 594, w: 280, h: 54 },
-  businessDocs: { x: 60, y: 656, w: 280, h: 54 },
+  // Wide enough that "Online Screening" fits on one line instead of wrapping, and only one line
+  // tall — so the Step 1 frame loses the height the two-line tile needed.
+  socialMedia: { x: 550, y: 255, w: 200, h: 48 },
+  // Step 2 (Compliance & Governance) sits below Step 1's frame; Step 3/4 follow beneath it.
+  expressIntent: { x: 60, y: 388, w: 280, h: 48 },
+  poi: { x: 60, y: 444, w: 280, h: 48 },
+  withoutADoubt: { x: 60, y: 500, w: 280, h: 54 },
+  wad: { x: 60, y: 562, w: 280, h: 54 },
+  businessDocs: { x: 60, y: 624, w: 280, h: 54 },
   // Step 3 (Execution, with Entry/Exit beside it) and Step 4 (Finality) sit directly under Step 2,
-  // aligned with the Compliance frame's left edge instead of off to its right.
-  // Moved down ~1cm from Step 2, with even gaps between Execution, Entry/Exit and Finality.
-  execution: { x: 70, y: 778, w: 260, h: 90 },
-  // Centred inside its own frame, which itself sits centred in the gap between Step 3 and Step 4.
-  // Same size as the Search Results tile.
-  entryExit: { x: 410, y: 794, w: 140, h: 62 },
-  finality: { x: 635, y: 778, w: 250, h: 90 },
+  // all 40% flatter than before.
+  execution: { x: 70, y: 740, w: 260, h: 54 },
+  entryExit: { x: 410, y: 748, w: 140, h: 37 },
+  finality: { x: 635, y: 740, w: 250, h: 54 },
 } as const satisfies Record<string, Box>;
 
 // One outer frame holds the whole trading step — Bid, Load Deal Documents, Search, the Search
-// Results card and the counterparty tiles (Offer, Choice, Counter Offer, Online Media Screening),
-// which no longer carry a frame of their own. Trimmed to its actual content height (rather than
-// leaving a tall gap beneath it) so Compliance can sit right below without the diagram needing a
-// scroll.
-const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 932, h: 305 };
-const COMPLIANCE_FRAME: Box = { x: 30, y: 386, w: 340, h: 346 };
+// Results card and the counterparty tiles (Offer, Choice, Counter Offer, Online Screening),
+// trimmed to its actual content height.
+const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 932, h: 273 };
+const COMPLIANCE_FRAME: Box = { x: 30, y: 354, w: 340, h: 346 };
 // Execution and Entry/Exit+Finality get the same bordered, labelled group frame as Steps 1 and
 // 2, instead of sitting as bare tiles with no frame of their own.
-const EXECUTION_FRAME: Box = { x: 30, y: 762, w: 340, h: 122 };
-const FINALITY_FRAME: Box = { x: 590, y: 762, w: 340, h: 122 };
+const EXECUTION_FRAME: Box = { x: 30, y: 730, w: 340, h: 73 };
+const FINALITY_FRAME: Box = { x: 590, y: 730, w: 340, h: 73 };
 // Entry/Exit gets the same bordered frame treatment, centred in the gap between Step 3 and 4.
-const ENTRY_EXIT_FRAME: Box = { x: 390, y: 762, w: 180, h: 122 };
-const MEMORY = { cx: 570, cy: 520, r: 118 };
+const ENTRY_EXIT_FRAME: Box = { x: 390, y: 730, w: 180, h: 73 };
+const MEMORY = { cx: 570, cy: 488, r: 110 };
+
 
 // A connector arriving at a group frame stops this many units short of its border, so the tip
 // points at the frame (and the heading floating on it) instead of touching or crossing into it.
