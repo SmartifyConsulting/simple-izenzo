@@ -77,7 +77,7 @@ const BOXES = {
   // Moved down ~1cm from Step 2, with even gaps between Execution, Entry/Exit and Finality.
   execution: { x: 50, y: 965, w: 260, h: 104 },
   entryExit: { x: 350, y: 989, w: 90, h: 56 },
-  finality: { x: 480, y: 965, w: 110, h: 104 },
+  finality: { x: 575, y: 965, w: 250, h: 104 },
 } as const satisfies Record<string, Box>;
 
 // One outer frame holds the whole trading step — Bid, Load Deal Documents, Search, the Search
@@ -90,7 +90,7 @@ const COMPLIANCE_FRAME: Box = { x: 30, y: 421, w: 340, h: 434 };
 // Execution and Entry/Exit+Finality get the same bordered, labelled group frame as Steps 1 and
 // 2, instead of sitting as bare tiles with no frame of their own.
 const EXECUTION_FRAME: Box = { x: 30, y: 945, w: 290, h: 144 };
-const FINALITY_FRAME: Box = { x: 460, y: 945, w: 150, h: 144 };
+const FINALITY_FRAME: Box = { x: 555, y: 945, w: 290, h: 144 };
 const MEMORY = { cx: 560, cy: 595, r: 127 };
 
 const cx = (b: Box) => b.x + b.w / 2;
