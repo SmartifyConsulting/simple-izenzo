@@ -90,6 +90,7 @@ const STEPS: StepDef[] = [
     label: "Compliance & Governance",
     items: [
       { key: "poi", label: "Proof of Intent", stage: "trading", step: "poi", icon: FileText },
+      { key: "kycKyb", label: "KYC, KYB, PEP, AML", stage: "compliance", step: "wad", icon: UserCheck },
       {
         key: "wad",
         label: "Without a Doubt",
@@ -98,7 +99,6 @@ const STEPS: StepDef[] = [
         icon: ShieldCheck,
         sub: "Hard gate · non-waivable",
       },
-      { key: "kycKyb", label: "KYC, KYB, PEP, AML", stage: "compliance", step: "wad", icon: UserCheck },
       { key: "businessDocs", label: "Business Docs", stage: "execution", step: "business-docs", icon: FolderClosed },
     ],
   },
