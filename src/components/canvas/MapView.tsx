@@ -139,7 +139,7 @@ const ARROWS: string[] = [
   path(topOf(BOXES.counterOffer), { x: cx(BOXES.counterOffer), y: cy(BOXES.offer) }, rightOf(BOXES.offer)),
   line(bottomOf(BOXES.choice), topOf(BOXES.socialMedia)),
   // Out of trading and down into the compliance step.
-  path(bottomOf(BOXES.socialMedia), { x: cx(BOXES.socialMedia), y: 395 }, { x: cx(BOXES.expressIntent), y: 395 }, topOf(BOXES.expressIntent)),
+  path(bottomOf(BOXES.socialMedia), { x: cx(BOXES.socialMedia), y: 366 }, { x: cx(BOXES.expressIntent), y: 366 }, topOf(BOXES.expressIntent)),
   line(bottomOf(BOXES.expressIntent), topOf(BOXES.poi)),
   line(bottomOf(BOXES.poi), topOf(BOXES.withoutADoubt)),
   line(bottomOf(BOXES.withoutADoubt), topOf(BOXES.wad)),
@@ -159,8 +159,8 @@ const ARROWS: string[] = [
   ),
   path(
     { x: cx(BOXES.finality), y: FINALITY_FRAME.y - ARROW_GAP },
-    { x: cx(BOXES.finality), y: 844 },
-    { x: MEMORY.cx, y: 844 },
+    { x: cx(BOXES.finality), y: 716 },
+    { x: MEMORY.cx, y: 716 },
     { x: MEMORY.cx, y: MEMORY.cy + MEMORY.r + ARROW_GAP },
   ),
 ];
@@ -438,7 +438,7 @@ export function MapView({
             }}
           >
             <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
-              <div className="h-full w-1/3 animate-[slide-in-right_1.4s_ease-in-out_infinite] rounded-full bg-primary" />
+              <div className="h-full w-1/3 animate-[slide-in-right_1.4s_ease-in-out_infinite] rounded-full bg-success" />
             </div>
           </div>
         )}

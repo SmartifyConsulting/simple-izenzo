@@ -542,7 +542,7 @@ export function DealCanvas({
                           className={cn(
                             "h-full rounded-full transition-all duration-500",
                             matchProgress.searching
-                              ? "w-1/2 animate-ribbon-sweep bg-primary"
+                              ? "w-1/2 animate-ribbon-sweep bg-success"
                               : "w-full bg-destructive",
                           )}
                         />
@@ -575,7 +575,7 @@ export function DealCanvas({
                         <div
                           className={cn(
                             "h-full rounded-full transition-all duration-500",
-                            mediaProgress.failed ? "bg-destructive" : "bg-info",
+                            mediaProgress.failed ? "bg-destructive" : "bg-success",
                           )}
                           style={{
                             width: `${Math.round((mediaProgress.done / mediaProgress.total) * 100)}%`,
@@ -611,7 +611,7 @@ export function DealCanvas({
                         <div
                           className={cn(
                             "h-full rounded-full transition-all duration-500",
-                            screeningProgress.failed ? "bg-destructive" : "bg-info",
+                            screeningProgress.failed ? "bg-destructive" : "bg-success",
                           )}
                           style={{
                             width: `${Math.round((screeningProgress.done / screeningProgress.total) * 100)}%`,
