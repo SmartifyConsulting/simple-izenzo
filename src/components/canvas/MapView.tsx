@@ -84,6 +84,10 @@ const BOXES = {
 // scroll.
 const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 932, h: 365 };
 const COMPLIANCE_FRAME: Box = { x: 30, y: 511, w: 288, h: 434 };
+// Execution and Entry/Exit+Finality get the same bordered, labelled group frame as Steps 1 and
+// 2, instead of sitting as bare tiles with no frame of their own.
+const EXECUTION_FRAME: Box = { x: 410, y: 925, w: 290, h: 144 };
+const FINALITY_FRAME: Box = { x: 700, y: 925, w: 240, h: 144 };
 const MEMORY = { cx: 560, cy: 685, r: 127 };
 
 const cx = (b: Box) => b.x + b.w / 2;
@@ -314,6 +318,8 @@ export function MapView({
 
         <Frame box={TRADE_ENGINE_FRAME} label="Step 1 · Trading" />
         <Frame box={COMPLIANCE_FRAME} label="Step 2 · Compliance & Governance" />
+        <Frame box={EXECUTION_FRAME} label="Step 3 · Execution" />
+        <Frame box={FINALITY_FRAME} label="Step 4 · Finality" />
 
         {/* What Search actually returns — a placeholder list of results/findings, not steps of
             the workflow, shown as a small card beneath Search. */}
@@ -390,7 +396,7 @@ export function MapView({
         {/* Step 3 — execution */}
         <MapNode
           box={BOXES.execution}
-          label="Step 3 · Execution"
+          label="Execution"
           sub="Concept, Pre-Reqs, Feasibility, Bankability, Project Prep, Implementation"
           state={st("execution", "preparation")}
           lock={lock("execution", "preparation")}
