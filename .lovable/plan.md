@@ -14,7 +14,9 @@ The client wants the map to live with the vertical stepper rather than on its ow
 
 5. **Elegant, straight lines.** Every connector becomes a straight run — vertical or horizontal, with clean right-angle turns where a turn is needed — thin, evenly weighted, with small neat arrowheads that stop on the box edge. No diagonals, no crossings, no doubled-up lines.
 
-6. **Restyled to the sample.** Frames and tiles become thin single-stroke rounded outlines on the app surface rather than filled pastel blocks: mint/teal outline and label, icon to the left of the tile name, group frames labelled with a small caps chip on the frame's top edge (`STEP 1 · TRADING`, `STEP 2 · COMPLIANCE & GOVERNANCE`, and so on), hard-gate notes in orange beneath the tile name (as with Without a Doubt). Cleared tiles read green with a tick, the current tile pulses, locked tiles stay dim with their existing lock reason on hover. Works in both light and dark modes using the app's own tokens.
+6. **Restyled to the sample.** Frames and tiles become thin single-stroke rounded outlines on the app surface rather than filled pastel blocks: mint/teal outline and label, icon to the left of the tile name, group frames labelled with a small caps chip on the frame's top edge (`STEP 1 · TRADING`, `STEP 2 · COMPLIANCE & GOVERNANCE`, and so on), hard-gate notes in orange beneath the tile name (as with Without a Doubt). Cleared tiles read green with a tick, the current tile pulses, locked tiles stay dim with their existing lock reason on hover.
+
+7. **The sample is the dark-mode look.** The teal-on-black treatment in the sample is the black/dark theme. It is drawn with the app's own theme tokens rather than fixed colours, so the cream theme gets the same structure in its own palette — royal blue lines and labels on cream, the same thin outlines, the same orange hard-gate notes — instead of a dark diagram dropped onto a light page.
 
 ## Technical notes
 
