@@ -19,14 +19,11 @@ import { cn } from "@/lib/utils";
 
 // Marketing/auth surfaces where a signed-in visitor could still be browsing — the workspace
 // taskbar is an authenticated-app concept and has no business following them onto the hero page.
-// The Map screen is also excluded: it runs a deal from the diagram itself and shows the site
-// footer in that same bottom strip, so the tab dock would sit on top of it.
 function isMarketingPath(pathname: string) {
   return (
     pathname === "/" ||
     pathname.startsWith("/alpha-bravo") ||
-    pathname.startsWith("/auth") ||
-    pathname === "/map"
+    pathname.startsWith("/auth")
   );
 }
 
