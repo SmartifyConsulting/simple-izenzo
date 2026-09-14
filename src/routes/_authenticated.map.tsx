@@ -65,6 +65,20 @@ function MapScreen() {
     return () => clearInterval(timer);
   }, [paneOpen, refetch]);
 
+  // The bottom tab strip lives app-wide; on the Map, New (or an existing deal tab) opens the
+  // workspace in the pane beside the diagram instead of navigating away.
+  useEffect(() => {
+    function onOpen(e: Event) {
+      const id = (e as CustomEvent<{ tx: string | null }>).detail?.tx ?? null;
+      if (id) setSelected(id);
+      setPaneOpen(true);
+      setPaneKey((k) => k + 1);
+    }
+    window.addEventListener("map:open-workspace", onOpen);
+    return () => window.removeEventListener("map:open-workspace", onOpen);
+  }, []);
+
+
   /** Pressing Search in the upload window: the window closes, Search pulses with its progress
    * bar, and the results land in the workspace on the right. */
   async function startSearch(txId: string) {
@@ -97,7 +111,7 @@ function MapScreen() {
   return (
     <AppShell
       wide
-      compactFooter
+      hideFooter
       title="Deal Map"
       description="Run the deal straight from the map: the pulsing tile is what happens next, cleared tiles are ticked, and locked tiles open once their gate is met."
     >
