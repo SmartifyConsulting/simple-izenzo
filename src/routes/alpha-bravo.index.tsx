@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Banknote, Database, Hammer, ShieldCheck, Sparkles, Target } from "lucide-react";
 import { HeroMatchCard } from "@/components/marketing/HeroMatchCard";
 import { SubmitBidButton } from "@/components/marketing/SubmitBidButton";
+import { AuthTabs } from "@/components/auth/AuthTabs";
+import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/alpha-bravo/")({
   head: () => ({
@@ -56,6 +58,7 @@ const STAGES = [
 ];
 
 function AlphaBravoHome() {
+  const { user } = useAuth();
   return (
     <section className="mx-auto max-w-6xl px-5 py-6 sm:py-8">
       <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
@@ -65,27 +68,35 @@ function AlphaBravoHome() {
         Pre-vetted · Governed marketplace
       </p>
 
-      <div className="mt-3 max-w-4xl">
-        <h1 className="max-w-3xl text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl">
-          Find the right Trade
-          <br />
-          in ~5 minutes.
-        </h1>
-        <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
-          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+      <div className="mt-3 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="max-w-4xl">
+          <h1 className="max-w-3xl text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl">
+            Find the right Trade
+            <br />
+            in ~5 minutes.
+          </h1>
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
             Post your opportunity brief and get matched with verified Responders — fit scores,
             verified contacts, and ready-to-send outreach, all under one cryptographic record.
           </p>
-          <SubmitBidButton size="sm" className="mt-0.5 shrink-0" />
+          <div className="mt-4">
+            <Link
+              to="/alpha-bravo/how-it-works"
+              className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
+            >
+              No subscriptions, pay as you go.
+            </Link>
+          </div>
         </div>
-        <div className="mt-4">
-          <Link
-            to="/alpha-bravo/how-it-works"
-            className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
-          >
-            No subscriptions, pay as you go.
-          </Link>
-        </div>
+
+        {/* The space the CTA used to sit in (now moved above the five-stage frames) goes to a
+            quick inline sign-in/sign-up instead of sitting empty — a signed-in visitor never
+            sees this page anyway (the root route sends them straight to the workspace). */}
+        {!user && (
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <AuthTabs />
+          </div>
+        )}
       </div>
 
       <div className="mt-5 w-full">
@@ -99,23 +110,25 @@ function AlphaBravoHome() {
         <h2 className="max-w-2xl text-2xl tracking-tight text-foreground sm:text-3xl">
           Five stages, one governed flow.
         </h2>
+        {/* Right-aligned so it sits just above the fifth (rightmost) stage frame below. */}
+        <SubmitBidButton size="sm" className="shrink-0" />
       </div>
-      <div className="mt-5 grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {STAGES.map((s) => (
           <div
             key={s.n}
-            className="group relative overflow-hidden rounded-2xl border border-border bg-card p-5 transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5"
+            className="group relative overflow-hidden rounded-2xl border border-border bg-card p-4 transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5"
           >
             <div className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-primary transition-transform duration-300 group-hover:scale-x-100" />
             <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-primary">{s.n}</p>
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors duration-300 group-hover:bg-primary group-hover:text-primary-foreground">
-                <s.icon className="h-4 w-4" />
+              <p className="text-xs font-semibold text-primary">{s.n}</p>
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors duration-300 group-hover:bg-primary group-hover:text-primary-foreground">
+                <s.icon className="h-3.5 w-3.5" />
               </span>
             </div>
-            <h3 className="mt-4 text-base font-medium tracking-tight text-foreground">{s.title}</h3>
-            <p className="mt-1 text-xs font-medium text-primary">{s.tag}</p>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{s.body}</p>
+            <h3 className="mt-2.5 text-sm font-medium tracking-tight text-foreground">{s.title}</h3>
+            <p className="mt-0.5 text-[11px] font-medium text-primary">{s.tag}</p>
+            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{s.body}</p>
           </div>
         ))}
       </div>
