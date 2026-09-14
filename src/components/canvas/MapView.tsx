@@ -28,7 +28,12 @@ type NodeState = "locked" | "open" | "active" | "done";
  * `lockReason`/`stepIndex` logic the step list uses, unchanged. With no deal open yet, only Bid
  * is available and it pulses as the thing to do first. */
 function nodeState(stage: StageKey, step: string, tx: Transaction | null): NodeState {
-  if (!tx) return step === "bid-offer" ? "active" : "locked";
+  // A brand-new workspace already carries its own BID number, so Bid is behind us: Upload Files is
+  // the thing to do next and pulses instead.
+  if (!tx) {
+    if (step === "bid-offer") return "done";
+    return step === "documents" ? "active" : "locked";
+  }
   if (lockReason(stage, step, tx)) return "locked";
   const idx = stepIndex(stage, step);
   const currentIdx = stepIndex(tx.stage, tx.step);
@@ -41,7 +46,7 @@ function nodeState(stage: StageKey, step: string, tx: Transaction | null): NodeS
 // Workspace: everything is placed on this canvas and scaled to the container with percentages, so
 // tiles and their connecting lines always stay aligned however wide that column is.
 const W = 960;
-const H = 1120;
+const H = 950;
 const px = (v: number) => `${(v / W) * 100}%`;
 const py = (v: number) => `${(v / H) * 100}%`;
 
