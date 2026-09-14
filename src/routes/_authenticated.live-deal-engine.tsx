@@ -1899,7 +1899,7 @@ function LiveDealEngine() {
           )}
 
           {activity ? (
-            <div className="mt-2 space-y-2">
+            <div className="mt-1 space-y-2">
                 <div className="flex flex-wrap gap-1.5">
                   {activity.commodity && (
                     <span className="rounded-full bg-foreground px-2.5 py-1 text-[11px] font-semibold text-background">
