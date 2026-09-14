@@ -56,6 +56,8 @@
   "haven't been read yet" line.
 - The button reads Find Counterparties, and when results land Bid Information folds away.
 - The current step unmistakably pulses.
+- Pressing New shows the Bid Registration frame with its bid number, not a bare description bar.
+
 
 ## Technical notes
 
