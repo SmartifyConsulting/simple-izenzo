@@ -39,7 +39,7 @@ function nodeState(stage: StageKey, step: string, tx: Transaction | null): NodeS
 // Workspace: everything is placed on this canvas and scaled to the container with percentages, so
 // tiles and their connecting lines always stay aligned however wide that column is.
 const W = 860;
-const H = 1162;
+const H = 1246;
 const px = (v: number) => `${(v / W) * 100}%`;
 const py = (v: number) => `${(v / H) * 100}%`;
 
@@ -61,14 +61,16 @@ const BOXES = {
   choice: { x: 460, y: 291, w: 160, h: 56 },
   counterOffer: { x: 650, y: 287, w: 150, h: 64 },
   socialMedia: { x: 460, y: 362, w: 160, h: 64 },
-  expressIntent: { x: 60, y: 512, w: 240, h: 54 },
-  poi: { x: 60, y: 590, w: 240, h: 54 },
-  withoutADoubt: { x: 60, y: 668, w: 240, h: 62 },
-  wad: { x: 60, y: 754, w: 240, h: 62 },
-  businessDocs: { x: 60, y: 840, w: 240, h: 62 },
-  execution: { x: 430, y: 912, w: 300, h: 104 },
-  entryExit: { x: 420, y: 1050, w: 140, h: 56 },
-  finality: { x: 578, y: 1026, w: 160, h: 104 },
+  // Step 2 (Compliance) moves down ~1cm from Step 1, so Execution and everything after it shift
+  // down to match and keep the same gap beneath it.
+  expressIntent: { x: 60, y: 596, w: 240, h: 54 },
+  poi: { x: 60, y: 674, w: 240, h: 54 },
+  withoutADoubt: { x: 60, y: 752, w: 240, h: 62 },
+  wad: { x: 60, y: 838, w: 240, h: 62 },
+  businessDocs: { x: 60, y: 924, w: 240, h: 62 },
+  execution: { x: 430, y: 996, w: 300, h: 104 },
+  entryExit: { x: 420, y: 1134, w: 140, h: 56 },
+  finality: { x: 578, y: 1110, w: 160, h: 104 },
 } as const satisfies Record<string, Box>;
 
 // One outer frame holds the whole trading step — Bid, Load Deal Documents, Search, the Search
@@ -77,8 +79,8 @@ const BOXES = {
 // leaving a tall gap beneath it) so Compliance can sit right below without the diagram needing a
 // scroll.
 const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 806, h: 392 };
-const COMPLIANCE_FRAME: Box = { x: 30, y: 478, w: 288, h: 434 };
-const MEMORY = { cx: 560, cy: 702, r: 110 };
+const COMPLIANCE_FRAME: Box = { x: 30, y: 562, w: 288, h: 434 };
+const MEMORY = { cx: 560, cy: 786, r: 110 };
 
 const cx = (b: Box) => b.x + b.w / 2;
 const cy = (b: Box) => b.y + b.h / 2;
@@ -107,7 +109,7 @@ const ARROWS: string[] = [
   path(topOf(BOXES.counterOffer), { x: cx(BOXES.counterOffer), y: cy(BOXES.offer) }, rightOf(BOXES.offer)),
   line(bottomOf(BOXES.choice), topOf(BOXES.socialMedia)),
   // Out of trading and down into the compliance step.
-  path(bottomOf(BOXES.socialMedia), { x: cx(BOXES.socialMedia), y: 452 }, { x: cx(BOXES.expressIntent), y: 452 }, topOf(BOXES.expressIntent)),
+  path(bottomOf(BOXES.socialMedia), { x: cx(BOXES.socialMedia), y: 511 }, { x: cx(BOXES.expressIntent), y: 511 }, topOf(BOXES.expressIntent)),
   line(bottomOf(BOXES.expressIntent), topOf(BOXES.poi)),
   line(bottomOf(BOXES.poi), topOf(BOXES.withoutADoubt)),
   line(bottomOf(BOXES.withoutADoubt), topOf(BOXES.wad)),
@@ -116,7 +118,7 @@ const ARROWS: string[] = [
   path(bottomOf(BOXES.businessDocs), { x: cx(BOXES.businessDocs), y: cy(BOXES.execution) }, leftOf(BOXES.execution)),
   path({ x: cx(BOXES.entryExit), y: BOXES.execution.y + BOXES.execution.h }, topOf(BOXES.entryExit)),
   line(rightOf(BOXES.entryExit), leftOf(BOXES.finality)),
-  path(topOf(BOXES.finality), { x: cx(BOXES.finality), y: 852 }, { x: MEMORY.cx, y: 852 }, { x: MEMORY.cx, y: MEMORY.cy + MEMORY.r }),
+  path(topOf(BOXES.finality), { x: cx(BOXES.finality), y: 936 }, { x: MEMORY.cx, y: 936 }, { x: MEMORY.cx, y: MEMORY.cy + MEMORY.r }),
 ];
 
 const SEARCH_RESULT_CHIPS = ["Result 1", "Result 2", "Result 3", "Result 4", "Result 5"];
