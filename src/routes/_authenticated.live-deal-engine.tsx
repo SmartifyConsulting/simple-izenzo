@@ -1897,7 +1897,7 @@ function LiveDealEngine() {
           )}
 
           {activity && dealTx && flowStep === "searching" && (
-            <div className="mt-2 overflow-hidden rounded-xl border border-warning/40">
+            <div className="mt-2 overflow-hidden rounded-xl border border-border">
               <div className="flex items-center gap-3 bg-[#F1F5F9] px-4 py-3">
                 <p className="text-sm text-warning">Running AI and AI+ search for matching counterparties…</p>
               </div>
