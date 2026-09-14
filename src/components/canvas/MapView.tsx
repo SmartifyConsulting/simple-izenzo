@@ -339,10 +339,30 @@ export function MapView({
             </ul>
           </div>
 
-          {/* 1. Trading engine */}
-          {node("bid", "Bid", "trading", "bid-offer", YELLOW, Gavel)}
-          {node("loadDocs", "Load Deal Documents", "trading", "documents", BLUE, FileText)}
-          {node("search", "Search", "trading", "search", MINT, Search)}
+          {/* 1. Trade engine — Bid and Load Deal Documents drive the workspace beside the map. */}
+          {node("bid", "Bid", "trading", "bid-offer", YELLOW, Gavel, undefined, {
+            ...(onBid ? { onClick: onBid } : {}),
+          })}
+          {node("loadDocs", "Load Deal Documents", "trading", "documents", BLUE, FileText, undefined, {
+            ...(onLoadDocuments ? { onClick: onLoadDocuments } : {}),
+          })}
+          {node("search", "Search", "trading", "search", MINT, Search, undefined,
+            searching ? { state: "active" } : {})}
+          {searching && (
+            <div
+              className="pointer-events-none absolute"
+              style={{
+                left: px(BOXES.search.x),
+                top: py(BOXES.search.y + BOXES.search.h + 8),
+                width: px(BOXES.search.w),
+              }}
+            >
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#cfe9df]">
+                <div className="h-full w-1/3 animate-[slide-in-right_1.4s_ease-in-out_infinite] rounded-full bg-[#12312a]" />
+              </div>
+              <p className="mt-1 text-center text-[10px] font-semibold text-foreground">AI and AI+ searching…</p>
+            </div>
+          )}
           {node("offer", "Offer", "trading", "counterparties", CREAM, Tag)}
           {node("choice", "Choice", "trading", "choice", CREAM, Share2)}
           {node("counterOffer", "Counter Offer", "trading", "counterparties", CREAM, RefreshCw)}
