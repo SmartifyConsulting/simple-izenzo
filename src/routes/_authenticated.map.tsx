@@ -91,8 +91,8 @@ function MapScreen() {
   }
 
   const paneSrc = tx
-    ? `/live-deal-engine?popout=1&tx=${tx.id}`
-    : "/live-deal-engine?popout=1&fresh=1";
+    ? `/live-deal-engine?popout=true&tx=${tx.id}`
+    : "/live-deal-engine?popout=true&fresh=1";
 
   return (
     <AppShell
