@@ -51,8 +51,11 @@ const BOXES = {
   loadDocs: { x: 40, y: 164, w: 200, h: 56 },
   search: { x: 40, y: 248, w: 200, h: 62 },
   offer: { x: 300, y: 80, w: 200, h: 56 },
-  choice: { x: 300, y: 164, w: 200, h: 56 },
-  counterOffer: { x: 530, y: 164, w: 190, h: 56 },
+  // Choice sits level with Search, so the connector between them is a single straight run
+  // instead of a stepped elbow; Counter Offer moves down to match so its loop back to Choice
+  // stays visually attached to it.
+  choice: { x: 300, y: 251, w: 200, h: 56 },
+  counterOffer: { x: 530, y: 251, w: 190, h: 56 },
   socialMedia: { x: 300, y: 332, w: 200, h: 56 },
   expressIntent: { x: 60, y: 600, w: 300, h: 54 },
   poi: { x: 60, y: 678, w: 300, h: 54 },
@@ -87,7 +90,7 @@ const ARROWS: string[] = [
   // Trading step: registration and search down the left, counterparties on the right.
   line(bottomOf(BOXES.bid), topOf(BOXES.loadDocs)),
   line(bottomOf(BOXES.loadDocs), topOf(BOXES.search)),
-  path(rightOf(BOXES.search), { x: 268, y: cy(BOXES.search) }, { x: 268, y: cy(BOXES.offer) }, leftOf(BOXES.offer)),
+  line(rightOf(BOXES.search), leftOf(BOXES.choice)),
   // Counterparty loop: Offer into Choice, Choice out to Counter Offer and back, then Social Media.
   line(bottomOf(BOXES.offer), topOf(BOXES.choice)),
   path({ x: BOXES.choice.x + BOXES.choice.w, y: cy(BOXES.choice) - 11 }, { x: BOXES.counterOffer.x, y: cy(BOXES.choice) - 11 }),
