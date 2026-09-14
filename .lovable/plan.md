@@ -41,7 +41,13 @@
     then folds away the moment results arrive, giving the results list the room. The header stays
     clickable to open it again.
 
+11. **A new workspace already looks like a bid.** Pressing New shows the Bid Registration frame in the
+    Live Workspace exactly as in the second attachment — your name, Verified, Bidder Active Since, and
+    the bid number top right — with the description and file-drop bar inside it. The number is issued
+    the moment New is clicked, so it is on screen before anything is uploaded.
+
 ## How you will check it
+
 
 - "Step 5 · Memory" reads at the same size as the other step labels; Online Screening is one line and
   the Step 1 frame is shorter; Step 3, Step 4 and Entry / Exit are noticeably flatter with no repeated
