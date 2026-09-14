@@ -150,8 +150,8 @@ const ARROWS: string[] = [
   ),
   path(
     { x: cx(BOXES.finality), y: FINALITY_FRAME.y - ARROW_GAP },
-    { x: cx(BOXES.finality), y: 700 },
-    { x: MEMORY.cx, y: 700 },
+    { x: cx(BOXES.finality), y: 668 },
+    { x: MEMORY.cx, y: 668 },
     { x: MEMORY.cx, y: MEMORY.cy + MEMORY.r + ARROW_GAP },
   ),
 ];
