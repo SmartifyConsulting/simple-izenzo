@@ -49,7 +49,7 @@ const BOXES = {
   bid: { x: 35, y: 68, w: 212, h: 78 },
   loadDocs: { x: 35, y: 206, w: 212, h: 86 },
   search: { x: 335, y: 218, w: 286, h: 68 },
-  steps: { x: 670, y: 192, w: 150, h: 178 },
+  steps: { x: 670, y: 196, w: 150, h: 148 },
   offer: { x: 1018, y: 124, w: 206, h: 72 },
   choice: { x: 1018, y: 240, w: 206, h: 70 },
   counterOffer: { x: 1268, y: 226, w: 178, h: 74 },
