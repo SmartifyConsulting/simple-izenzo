@@ -1771,7 +1771,33 @@ function LiveDealEngine() {
               waiting for another click — so a visitor who already searched on the homepage lands
               straight on the summary panel below, never back on this same picker. */}
           {!activity && (
-            <div className="mt-4">
+            <div className="glass-node mt-4 space-y-3 bg-card p-4 [backdrop-filter:none] [background-image:none]">
+              {/* A brand-new workspace already reads as a bid: the same Bid Registration frame,
+                  with the BID number it has been given, around the description/upload bar. */}
+              <p className="label-caps text-muted-foreground">Bid Registration</p>
+              <div className="grid grid-cols-2 items-start gap-3">
+                <div className="min-w-0 space-y-1">
+                  {org?.id && <SubmitterIdentity orgId={org.id} createdBy={null} />}
+                  {(org as unknown as { created_at?: string } | null)?.created_at && (
+                    <p className="text-xs text-muted-foreground">
+                      Bidder Active Since:{" "}
+                      {new Date((org as unknown as { created_at: string }).created_at).toLocaleDateString(
+                        undefined,
+                        { year: "numeric", month: "short", day: "numeric" },
+                      )}
+                    </p>
+                  )}
+                </div>
+                <div className="min-w-0 space-y-1 text-right">
+                  {draftReference && (
+                    <span className="block font-mono text-base font-bold tracking-wide text-foreground">
+                      {draftReference}
+                    </span>
+                  )}
+                  {org?.country && <p className="text-xs text-muted-foreground">{org.country}</p>}
+                </div>
+              </div>
+
               <CanvasStart
                 // Re-keyed on each New press so the starting card remounts and draws its own fresh
                 // BID number rather than reusing the one already on screen.
