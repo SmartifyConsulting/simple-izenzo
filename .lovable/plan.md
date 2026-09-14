@@ -39,7 +39,10 @@ that item reads as complete.
 ## Technical notes
 
 - `src/components/canvas/DealCanvas.tsx`: drop the `ink-grid ... border border-border` wrapper
-  around `startNode` in both the picking and non-picking returns (keep spacing).
+  around `startNode` in both the picking and non-picking returns (keep spacing). On the bar itself:
+  `border-2` -> `border`, `rounded-2xl` -> `rounded-xl`, `p-2` -> `p-1.5`, submit button
+  `h-10 w-10` -> `h-8 w-8`. Dashed drop zone: `border-dashed` -> `border-2 border-dashed` with a
+  stronger idle colour (`border-muted-foreground/70`).
 - `src/components/canvas/MapView.tsx`: swap the `BOXES.withoutADoubt` / `BOXES.wad` y positions
   and the node render order so the KYC/KYB/PEP/AML tile sits above Without a Doubt; connector
   lines follow the same order (`poi -> wad -> withoutADoubt -> businessDocs`). Give the checks
