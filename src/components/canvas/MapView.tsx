@@ -529,7 +529,7 @@ export function MapView({
         <MapNode
           box={BOXES.execution}
           label=""
-          sub="Concept, Pre-Reqs, Feasibility, Bankability, Prep, Implementation"
+          sub="Concept, Pre-feasibility, Feasibility, Bankability, Implementation"
           subSize="xs"
 
           state={st("execution", "preparation")}
