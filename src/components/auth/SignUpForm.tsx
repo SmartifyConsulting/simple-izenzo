@@ -188,7 +188,7 @@ export function SignUpForm({
         </>
       )}
 
-      <div className={cn(compact ? "mb-2.5" : "mb-4", !hideHeader && "mt-7", "flex items-center gap-2")}>
+      <div className={cn(compact ? "mb-2" : "mb-4", !hideHeader && "mt-7", "flex items-center gap-2")}>
         <span
           className={
             "flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold " +
@@ -211,33 +211,35 @@ export function SignUpForm({
         </p>
       </div>
 
-      <div className={compact ? "min-h-[300px]" : "min-h-[420px]"}>
+      <div className={compact ? "min-h-[260px]" : "min-h-[420px]"}>
         {step === 1 ? (
-          <form onSubmit={onContinue} className={compact ? "space-y-2.5" : "space-y-4"}>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="hero-first-name">First name</Label>
+          <form onSubmit={onContinue} className={compact ? "space-y-1.5" : "space-y-4"}>
+            <div className={cn("grid grid-cols-2", compact ? "gap-2" : "gap-3")}>
+              <div className={compact ? "space-y-1" : "space-y-1.5"}>
+                <Label htmlFor="hero-first-name" className={compact ? "text-xs" : undefined}>First name</Label>
                 <Input
                   id="hero-first-name"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   autoComplete="given-name"
                   required
+                  className={compact ? "h-8 text-sm" : undefined}
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="hero-last-name">Last name</Label>
+              <div className={compact ? "space-y-1" : "space-y-1.5"}>
+                <Label htmlFor="hero-last-name" className={compact ? "text-xs" : undefined}>Last name</Label>
                 <Input
                   id="hero-last-name"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   autoComplete="family-name"
                   required
+                  className={compact ? "h-8 text-sm" : undefined}
                 />
               </div>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="hero-email">Email</Label>
+            <div className={compact ? "space-y-1" : "space-y-1.5"}>
+              <Label htmlFor="hero-email" className={compact ? "text-xs" : undefined}>Email</Label>
               <Input
                 id="hero-email"
                 type="email"
@@ -245,24 +247,28 @@ export function SignUpForm({
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
                 required
+                className={compact ? "h-8 text-sm" : undefined}
               />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="hero-password">Password</Label>
+            <div className={compact ? "space-y-1" : "space-y-1.5"}>
+              <Label htmlFor="hero-password" className={compact ? "text-xs" : undefined}>Password</Label>
               <PasswordInput
                 id="hero-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="new-password"
                 required
+                className={compact ? "h-8 text-sm" : undefined}
               />
-              <ul className="mt-2 space-y-1">
-                {rules.map((r) => (
-                  <li key={r.label} className={"text-xs " + (r.ok ? "text-success" : "text-muted-foreground")}>
-                    {r.ok ? "✓" : "•"} {r.label}
-                  </li>
-                ))}
-              </ul>
+              {!compact && (
+                <ul className="mt-2 space-y-1">
+                  {rules.map((r) => (
+                    <li key={r.label} className={"text-xs " + (r.ok ? "text-success" : "text-muted-foreground")}>
+                      {r.ok ? "✓" : "•"} {r.label}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             {message && (
@@ -271,22 +277,22 @@ export function SignUpForm({
               </p>
             )}
 
-            <Button type="submit" className="w-full">
+            <Button type="submit" size={compact ? "sm" : "default"} className="w-full">
               Continue
             </Button>
 
-            <div className={cn("flex items-center gap-3", compact ? "my-3" : "my-5")}>
+            <div className={cn("flex items-center gap-3", compact ? "my-2" : "my-5")}>
               <span className="h-px flex-1 bg-border" />
               <span className="text-xs text-muted-foreground">or</span>
               <span className="h-px flex-1 bg-border" />
             </div>
 
-            <Button type="button" variant="outline" className="w-full" onClick={google} disabled={busy}>
+            <Button type="button" variant="outline" size={compact ? "sm" : "default"} className="w-full" onClick={google} disabled={busy}>
               Continue with Google
             </Button>
           </form>
         ) : (
-          <form onSubmit={onSubmit} className={compact ? "space-y-2.5" : "space-y-4"}>
+          <form onSubmit={onSubmit} className={compact ? "space-y-1.5" : "space-y-4"}>
             <div className="space-y-1.5">
               <Label>Registering as</Label>
               <div className="grid grid-cols-2 gap-2">

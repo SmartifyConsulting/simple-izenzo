@@ -86,13 +86,16 @@ function AlphaBravoHome() {
               No subscriptions, pay as you go.
             </Link>
           </div>
+          <div className="mt-4">
+            <SubmitBidButton size="sm" />
+          </div>
         </div>
 
         {/* Sign in / sign up sits top-right of the hero, level with the badge above the
             headline — a signed-in visitor never sees this page anyway (the root route sends
             them straight to the workspace), so this space would otherwise go empty. */}
         {!user && (
-          <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <div className="rounded-2xl border border-border bg-card p-3.5 shadow-sm">
             <AuthTabs compact />
           </div>
         )}
@@ -105,13 +108,9 @@ function AlphaBravoHome() {
       <p className="mt-8 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
         How a match plays out
       </p>
-      <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
-        <h2 className="max-w-2xl text-2xl tracking-tight text-foreground sm:text-3xl">
-          Five stages, one governed flow.
-        </h2>
-        {/* Right-aligned so it sits just above the fifth (rightmost) stage frame below. */}
-        <SubmitBidButton size="sm" className="shrink-0" />
-      </div>
+      <h2 className="mt-2 max-w-2xl text-2xl tracking-tight text-foreground sm:text-3xl">
+        Five stages, one governed flow.
+      </h2>
       <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {STAGES.map((s) => (
           <div
