@@ -1737,7 +1737,7 @@ function WadStep({ tx, reload }: Props) {
             <Button size="sm" variant="outline" disabled={busy || shortOnTokens} onClick={() => decide("blocked")}>
               Block
             </Button>
-            <Button size="sm" disabled={busy || !allChecked || shortOnTokens} onClick={() => decide("cleared")}>
+            <Button size="sm" disabled={busy || shortOnTokens} onClick={() => decide("cleared")}>
               Clear WaD
             </Button>
           </div>
