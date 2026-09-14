@@ -78,19 +78,19 @@ const BOXES = {
   // Extra clearance below the frame's floating heading + "Governance" row so Express Intent
   // never touches either of them.
   // Widened and centred within the (also widened) Compliance frame.
-  expressIntent: { x: 60, y: 470, w: 280, h: 54 },
-  poi: { x: 60, y: 548, w: 280, h: 54 },
-  withoutADoubt: { x: 60, y: 626, w: 280, h: 62 },
-  wad: { x: 60, y: 712, w: 280, h: 62 },
-  businessDocs: { x: 60, y: 798, w: 280, h: 62 },
+  expressIntent: { x: 60, y: 430, w: 280, h: 50 },
+  poi: { x: 60, y: 492, w: 280, h: 50 },
+  withoutADoubt: { x: 60, y: 554, w: 280, h: 56 },
+  wad: { x: 60, y: 622, w: 280, h: 56 },
+  businessDocs: { x: 60, y: 690, w: 280, h: 56 },
   // Step 3 (Execution, with Entry/Exit beside it) and Step 4 (Finality) sit directly under Step 2,
   // aligned with the Compliance frame's left edge instead of off to its right.
   // Moved down ~1cm from Step 2, with even gaps between Execution, Entry/Exit and Finality.
-  execution: { x: 70, y: 965, w: 260, h: 104 },
+  execution: { x: 70, y: 818, w: 260, h: 94 },
   // Centred inside its own frame, which itself sits centred in the gap between Step 3 and Step 4.
   // Same size as the Search Results tile.
-  entryExit: { x: 410, y: 985, w: 140, h: 64 },
-  finality: { x: 635, y: 965, w: 250, h: 104 },
+  entryExit: { x: 410, y: 834, w: 140, h: 62 },
+  finality: { x: 635, y: 818, w: 250, h: 94 },
 } as const satisfies Record<string, Box>;
 
 // One outer frame holds the whole trading step — Bid, Load Deal Documents, Search, the Search
@@ -99,14 +99,14 @@ const BOXES = {
 // leaving a tall gap beneath it) so Compliance can sit right below without the diagram needing a
 // scroll.
 const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 932, h: 305 };
-const COMPLIANCE_FRAME: Box = { x: 30, y: 421, w: 340, h: 449 };
+const COMPLIANCE_FRAME: Box = { x: 30, y: 386, w: 340, h: 376 };
 // Execution and Entry/Exit+Finality get the same bordered, labelled group frame as Steps 1 and
 // 2, instead of sitting as bare tiles with no frame of their own.
-const EXECUTION_FRAME: Box = { x: 30, y: 945, w: 340, h: 144 };
-const FINALITY_FRAME: Box = { x: 590, y: 945, w: 340, h: 144 };
+const EXECUTION_FRAME: Box = { x: 30, y: 800, w: 340, h: 130 };
+const FINALITY_FRAME: Box = { x: 590, y: 800, w: 340, h: 130 };
 // Entry/Exit gets the same bordered frame treatment, centred in the gap between Step 3 and 4.
-const ENTRY_EXIT_FRAME: Box = { x: 390, y: 945, w: 180, h: 144 };
-const MEMORY = { cx: 560, cy: 595, r: 127 };
+const ENTRY_EXIT_FRAME: Box = { x: 390, y: 800, w: 180, h: 130 };
+const MEMORY = { cx: 570, cy: 520, r: 118 };
 
 // A connector arriving at a group frame stops this many units short of its border, so the tip
 // points at the frame (and the heading floating on it) instead of touching or crossing into it.
