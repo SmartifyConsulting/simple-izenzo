@@ -1617,20 +1617,13 @@ function LiveDealEngine() {
                       );
                     })}
                 </ul>
-              ) : (
+              ) : workspaceDocs.length === 0 && !submittedForThisBid ? (
                 <p className="text-xs text-muted-foreground">
-                  {workspaceDocs.length === 0 && !submittedForThisBid
-                    ? "The AI summary appears here once a document is uploaded."
-                    : "Reading your documents…"}
+                  The AI summary appears here once a document is uploaded.
                 </p>
-              )}
-              {/* Documents attached but never read — say so plainly, with a way to run it again,
-                  instead of leaving a toast that has long since vanished. */}
-              {!documentSummary && workspaceDocs.length > 0 && (
+              ) : readError ? (
                 <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <p className="text-[11px] text-muted-foreground">
-                    {readError ?? "These documents haven't been read yet."}
-                  </p>
+                  <p className="text-[11px] text-muted-foreground">Couldn't read these documents.</p>
                   <Button
                     size="sm"
                     variant="outline"
@@ -1638,10 +1631,20 @@ function LiveDealEngine() {
                     disabled={rereading}
                     onClick={() => void rereadDocuments(dealTx.id)}
                   >
-                    {rereading ? "Reading…" : "Read documents"}
+                    {rereading ? "Reading…" : "Try again"}
                   </Button>
                 </div>
+              ) : (
+                /* Documents are in and the summary isn't saved yet — show the read running as a
+                   progress bar rather than a line of text about it not having happened. */
+                <div className="space-y-1.5 pt-1">
+                  <p className="text-[11px] font-medium text-muted-foreground">Reading your documents…</p>
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-progress-track">
+                    <div className="h-full w-1/3 animate-[slide-in-right_1.4s_ease-in-out_infinite] rounded-full bg-success" />
+                  </div>
+                </div>
               )}
+
 
               {savedAttachments.length > 0 && (
                 <ul className="mt-2 space-y-1 border-t border-border pt-2">
