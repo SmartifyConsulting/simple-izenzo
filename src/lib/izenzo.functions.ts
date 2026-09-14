@@ -434,13 +434,32 @@ export const searchCounterparties = createServerFn({ method: "POST" })
     // it is what used to return nothing.
     const docSummary = (tx.document_summary as string | null) ?? "";
     const typedPrompt = ((tx as { search_prompt?: string | null }).search_prompt ?? "").trim();
-    const subject =
+    let subject =
       tx.commodity?.trim() || typedPrompt.slice(0, 160) || keywordsFromSummary(docSummary);
+    if (!subject) {
+      // Nothing typed and no summary saved yet (documents attached but still unread): fall back to
+      // what the attached filenames say, so the search runs instead of dead-ending the workspace.
+      const { data: docs } = await supabase
+        .from("documents")
+        .select("name")
+        .eq("transaction_id", tx.id)
+        .limit(5);
+      subject = (docs ?? [])
+        .map((d) => (d.name ?? "").replace(/\.[a-z0-9]+$/i, "").replace(/[_\-]+/g, " "))
+        .join(" ")
+        .split(/\s+/)
+        .filter((w) => w.length > 2 && !/^\d+$/.test(w))
+        .slice(0, 12)
+        .join(" ")
+        .slice(0, 160)
+        .trim();
+    }
     if (!subject) {
       throw new Error(
         "There is nothing to search on yet — add the commodity, or attach a document that says what is being traded.",
       );
     }
+
     const searchQuery = [subject, wantedSide, data.region ?? tx.jurisdiction ?? ""]
       .filter(Boolean)
       .join(" ");
