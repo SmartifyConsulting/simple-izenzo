@@ -1614,7 +1614,9 @@ function WadStep({ tx, reload }: Props) {
       "Checks satisfied:",
       ...WAD_CHECKS.map((c) => {
         const s = statusFor(c.key);
-        return `  • ${c.label} — ${s?.text ?? "Confirmed by the compliance reviewer"}`;
+        if (s && s.tone === "ok") return `  • ${c.label} — ${s.text}`;
+        const detail = s ? `${s.text}; ` : "";
+        return `  • ${c.label} — ${detail}cleared by reviewer override`;
       }),
       "",
       notes ? `Case notes: ${notes}` : "",
