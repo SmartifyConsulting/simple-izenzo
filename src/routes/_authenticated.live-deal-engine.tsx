@@ -1197,14 +1197,13 @@ function LiveDealEngine() {
   /** "Find Counterparties" — runs the AI/AI+ search. Online media screening comes later, only once
    * a person has made their choice and continued. */
   async function fetchInterest(txId: string) {
-    setBidInfoCollapsed(txId, false);
     await runSearch(txId);
   }
 
   async function runSearch(txId: string) {
-    // The bid's own details stay in view while the search runs, and only fold away once results
-    // have actually landed (below) — the header stays clickable either way.
-    setBidInfoCollapsed(txId, false);
+    // Bid Information folds away the moment the stage moves to Search — not just once results
+    // land — so the search/results view always has the room, not the bid's own details.
+    setBidInfoCollapsed(txId, true);
     setFlowStep("searching");
 
     setSearchError(null);
