@@ -39,7 +39,7 @@ function nodeState(stage: StageKey, step: string, tx: Transaction | null): NodeS
 // on this canvas and scaled to the container with percentages, so boxes and their connecting
 // arrows always stay aligned however wide the screen is.
 const W = 1600;
-const H = 1060;
+const H = 1180;
 const px = (v: number) => `${(v / W) * 100}%`;
 const py = (v: number) => `${(v / H) * 100}%`;
 
@@ -54,22 +54,24 @@ const BOXES = {
   choice: { x: 1018, y: 240, w: 206, h: 70 },
   counterOffer: { x: 1268, y: 226, w: 178, h: 74 },
   socialMedia: { x: 1018, y: 360, w: 256, h: 70 },
-  expressIntent: { x: 335, y: 444, w: 280, h: 62 },
-  poi: { x: 335, y: 524, w: 280, h: 62 },
-  withoutADoubt: { x: 335, y: 622, w: 280, h: 62 },
-  wad: { x: 335, y: 714, w: 280, h: 62 },
-  businessDocs: { x: 335, y: 810, w: 280, h: 62 },
-  execution: { x: 775, y: 892, w: 308, h: 142 },
-  entryExit: { x: 1128, y: 906, w: 182, h: 68 },
-  finality: { x: 1350, y: 902, w: 196, h: 78 },
+  expressIntent: { x: 609, y: 540, w: 280, h: 62 },
+  poi: { x: 609, y: 620, w: 280, h: 62 },
+  withoutADoubt: { x: 609, y: 700, w: 280, h: 62 },
+  wad: { x: 609, y: 780, w: 280, h: 62 },
+  businessDocs: { x: 609, y: 860, w: 280, h: 62 },
+  execution: { x: 500, y: 1006, w: 308, h: 142 },
+  entryExit: { x: 858, y: 1042, w: 182, h: 68 },
+  finality: { x: 1090, y: 1036, w: 196, h: 78 },
 } as const satisfies Record<string, Box>;
 
-// Group frames. Bid, Load Deal Documents, Search and the Step 1–5 card all live inside one
-// outer frame — the trade engine — rather than the search box carrying a small frame of its own.
-const TRADE_ENGINE_FRAME: Box = { x: 14, y: 26, w: 838, h: 322 };
-const COUNTERPARTY_FRAME: Box = { x: 990, y: 88, w: 478, h: 370 };
-const COMPLIANCE_FRAME: Box = { x: 313, y: 352, w: 330, h: 542 };
-const MEMORY = { cx: 1196, cy: 655, r: 150 };
+// Group frames. The trade engine frame carries the whole trading row — Bid, Load Deal Documents,
+// Search, the Step 1–5 card and the Offer / Choice / Counter Offer / Social Media tiles — so the
+// separate cream counterparty frame is gone. The compliance frame sits below it with clear
+// padding, twice as wide as before and centred on the trade engine frame.
+const TRADE_ENGINE_FRAME: Box = { x: 14, y: 26, w: 1470, h: 434 };
+const COMPLIANCE_FRAME: Box = { x: 419, y: 490, w: 660, h: 462 };
+const MEMORY = { cx: 1250, cy: 690, r: 150 };
+
 
 const cx = (b: Box) => b.x + b.w / 2;
 const cy = (b: Box) => b.y + b.h / 2;
