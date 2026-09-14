@@ -17,6 +17,9 @@ function About() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
             About Izenzo
           </p>
+          <h1 className="mt-6 text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl">
+            What Makes Us Different
+          </h1>
           <p className="mt-6 leading-relaxed text-muted-foreground">
             From initial search to final agreement, the platform builds a permanent, verified audit
             trail—giving you pre-vetted options so you can close trade deals faster with
@@ -47,7 +50,7 @@ function About() {
           </div>
         </div>
 
-        <div className="space-y-6 lg:pl-8 lg:pt-[165px]">
+        <div className="space-y-6 lg:pl-8 lg:pt-[115px]">
           {INSIGHT_ARTICLES.map((a) => (
             <Link key={a.slug} to="/alpha-bravo/about/$slug" params={{ slug: a.slug }} className="block group">
               <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
