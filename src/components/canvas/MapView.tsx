@@ -61,11 +61,11 @@ const BOXES = {
   choice: { x: 460, y: 291, w: 160, h: 56 },
   counterOffer: { x: 650, y: 287, w: 150, h: 64 },
   socialMedia: { x: 460, y: 362, w: 160, h: 64 },
-  expressIntent: { x: 60, y: 512, w: 300, h: 54 },
-  poi: { x: 60, y: 590, w: 300, h: 54 },
-  withoutADoubt: { x: 60, y: 668, w: 300, h: 62 },
-  wad: { x: 60, y: 754, w: 300, h: 62 },
-  businessDocs: { x: 60, y: 840, w: 300, h: 62 },
+  expressIntent: { x: 60, y: 512, w: 240, h: 54 },
+  poi: { x: 60, y: 590, w: 240, h: 54 },
+  withoutADoubt: { x: 60, y: 668, w: 240, h: 62 },
+  wad: { x: 60, y: 754, w: 240, h: 62 },
+  businessDocs: { x: 60, y: 840, w: 240, h: 62 },
   execution: { x: 430, y: 912, w: 300, h: 104 },
   entryExit: { x: 420, y: 1050, w: 140, h: 56 },
   finality: { x: 578, y: 1026, w: 160, h: 104 },
@@ -77,7 +77,7 @@ const BOXES = {
 // leaving a tall gap beneath it) so Compliance can sit right below without the diagram needing a
 // scroll.
 const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 806, h: 392 };
-const COMPLIANCE_FRAME: Box = { x: 30, y: 478, w: 360, h: 434 };
+const COMPLIANCE_FRAME: Box = { x: 30, y: 478, w: 288, h: 434 };
 const MEMORY = { cx: 560, cy: 702, r: 110 };
 
 const cx = (b: Box) => b.x + b.w / 2;
