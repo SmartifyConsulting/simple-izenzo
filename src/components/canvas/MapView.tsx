@@ -44,8 +44,9 @@ function nodeState(stage: StageKey, step: string, tx: Transaction | null): NodeS
 // Workspace: everything is placed on this canvas and scaled to the container with percentages, so
 // tiles and their connecting lines always stay aligned however wide that column is.
 const W = 960;
-// Grown again to hold Step 2's taller frame and the Step 3/4 row pushed down beneath it.
-const H = 960;
+// Shrunk again now Step 1 sits higher and Step 2's checks are packed tighter, so the whole
+// diagram fits on the canvas without scrolling.
+const H = 890;
 const px = (v: number) => `${(v / W) * 100}%`;
 const py = (v: number) => `${(v / H) * 100}%`;
 
@@ -53,58 +54,62 @@ type Box = { x: number; y: number; w: number; h: number };
 
 /** Rows and columns are aligned so every connector is a straight horizontal or vertical run. */
 const BOXES = {
-  bid: { x: 40, y: 80, w: 160, h: 56 },
-  loadDocs: { x: 40, y: 174, w: 160, h: 56 },
+  // Raised (was 80) so Step 1's frame starts level with the Bid Registration frame in the Live
+  // Workspace column beside it, instead of sitting lower with a bigger gap above it.
+  bid: { x: 40, y: 58, w: 160, h: 56 },
+  loadDocs: { x: 40, y: 152, w: 160, h: 56 },
   // Search sits level with Load Deal Documents (same centre-line, for a straight connector), and
   // the Search Results card sits directly beneath Search — now a single compact line of results
   // rather than a tall stacked list, so Choice/Counter Offer/Online Media Screening can all sit
   // higher, letting the rest of the diagram move up to fit without scrolling.
-  search: { x: 230, y: 171, w: 160, h: 62 },
+  search: { x: 230, y: 149, w: 160, h: 62 },
   // Search Results now sits in line between Search and Choice, all on the same row.
-  steps: { x: 410, y: 170, w: 140, h: 64 },
+  steps: { x: 410, y: 148, w: 140, h: 64 },
   // Offer/Choice/Counter Offer/Online Media Screening move further right to leave room for the
   // Search Results card between Search and Choice.
-  offer: { x: 570, y: 80, w: 160, h: 56 },
-  choice: { x: 570, y: 174, w: 160, h: 56 },
+  offer: { x: 570, y: 58, w: 160, h: 56 },
+  choice: { x: 570, y: 152, w: 160, h: 56 },
   // Counter Offer sits at the very right edge of the Trading frame, level with Choice and Search.
-  counterOffer: { x: 750, y: 170, w: 150, h: 64 },
+  counterOffer: { x: 750, y: 148, w: 150, h: 64 },
   // Wide enough that "Online Screening" fits on one line instead of wrapping, and only one line
   // tall — so the Step 1 frame loses the height the two-line tile needed.
-  socialMedia: { x: 550, y: 255, w: 200, h: 48 },
+  socialMedia: { x: 550, y: 233, w: 200, h: 48 },
   // Express Intent now lives inside Step 1's own frame, directly under Online Screening — it's
   // the "Steps" list order (Choice, Online Media Screening, Intent) mirrored on the map, instead
   // of visually grouped with Step 2's checks even though it advances the same trading stage.
-  expressIntent: { x: 510, y: 323, w: 280, h: 48 },
-  // Step 2 (GRC)'s remaining checks, spaced far enough apart that the connecting arrow between
-  // each pair is clearly visible; Step 3/4 follow well beneath it.
-  poi: { x: 60, y: 479, w: 280, h: 48 },
-  withoutADoubt: { x: 60, y: 559, w: 280, h: 54 },
-  wad: { x: 60, y: 639, w: 280, h: 54 },
-  businessDocs: { x: 60, y: 719, w: 280, h: 54 },
+  expressIntent: { x: 510, y: 301, w: 280, h: 48 },
+  // Step 2 (GRC)'s remaining checks — packed tighter than before (was 80 apart) so the whole
+  // diagram fits on the canvas without scrolling, while still leaving each connecting arrow
+  // visible; Step 3/4 follow well beneath it.
+  poi: { x: 60, y: 457, w: 280, h: 48 },
+  withoutADoubt: { x: 60, y: 521, w: 280, h: 54 },
+  wad: { x: 60, y: 585, w: 280, h: 54 },
+  businessDocs: { x: 60, y: 649, w: 280, h: 54 },
   // Step 3 (Execution, with Entry/Exit beside it) and Step 4 (Finality) sit well clear of Step 2,
   // all 40% flatter than before — and wider, so their detail lines still fit.
-  execution: { x: 45, y: 861, w: 310, h: 58 },
+  execution: { x: 45, y: 791, w: 310, h: 58 },
   // Width trimmed 20% (was 140) and re-centred on the same midpoint.
-  entryExit: { x: 424, y: 871, w: 112, h: 37 },
-  finality: { x: 605, y: 861, w: 310, h: 58 },
+  entryExit: { x: 424, y: 801, w: 112, h: 37 },
+  finality: { x: 605, y: 791, w: 310, h: 58 },
 
 } as const satisfies Record<string, Box>;
 
 // One outer frame holds the whole trading step — Bid, Load Deal Documents, Search, the Search
 // Results card, the counterparty tiles (Offer, Choice, Counter Offer, Online Screening) and now
-// Express Intent — trimmed to its actual content height.
-const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 932, h: 343 };
-// Shorter than before (Express Intent moved up into Step 1) but still spaced for a visible arrow
-// between each of its four remaining checks.
-const COMPLIANCE_FRAME: Box = { x: 30, y: 439, w: 340, h: 364 };
+// Express Intent — trimmed to its actual content height, and raised (was y: 46) to align with
+// the Bid Registration frame beside it.
+const TRADE_ENGINE_FRAME: Box = { x: 14, y: 24, w: 932, h: 343 };
+// More compact than before (its four checks are packed tighter) so the whole map fits on the
+// canvas without scrolling.
+const COMPLIANCE_FRAME: Box = { x: 30, y: 417, w: 340, h: 316 };
 // Execution and Entry/Exit+Finality get the same bordered, labelled group frame as Steps 1 and
-// 2, pushed further down to clear Step 2's taller frame.
-const EXECUTION_FRAME: Box = { x: 30, y: 853, w: 340, h: 73 };
-const FINALITY_FRAME: Box = { x: 590, y: 853, w: 340, h: 73 };
+// 2, pulled back up to sit just clear of Step 2's now-shorter frame.
+const EXECUTION_FRAME: Box = { x: 30, y: 783, w: 340, h: 73 };
+const FINALITY_FRAME: Box = { x: 590, y: 783, w: 340, h: 73 };
 // Width trimmed 20% (was 180), centred in the same gap between Step 3 and 4.
-const ENTRY_EXIT_FRAME: Box = { x: 408, y: 853, w: 144, h: 73 };
+const ENTRY_EXIT_FRAME: Box = { x: 408, y: 783, w: 144, h: 73 };
 // Kept beside Step 2 (not stacked under it) and re-centred on GRC's now-shorter frame.
-const MEMORY = { cx: 570, cy: 621, r: 110 };
+const MEMORY = { cx: 570, cy: 575, r: 110 };
 
 
 // A connector arriving at a group frame stops this many units short of its border, so the tip
