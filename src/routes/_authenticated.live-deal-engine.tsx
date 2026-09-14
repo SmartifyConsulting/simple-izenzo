@@ -1362,11 +1362,11 @@ function LiveDealEngine() {
             <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
               {/* The map sits above the stepper as the visual "where am I" companion — the same
                   states, the same click targets, opening the same step frames. */}
-              {/* The diagram needs a legible minimum width, so in this column it scrolls
+              {/* The diagram keeps a legible minimum width; on a very narrow column it scrolls
                   sideways rather than shrinking its labels into illegibility. */}
               {mapOpen && (
                 <div className="mb-4 overflow-x-auto border-b border-border pb-4">
-                  <div className="min-w-[1040px]">
+                  <div className="min-w-[420px]">
                   <MapView
                     tx={dealTx ?? null}
                     reload={() => void reloadDeal()}
