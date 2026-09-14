@@ -298,7 +298,12 @@ export function MapView({
           <ArrowLayer />
 
           {/* Engine frames */}
-          <Frame box={TRADING_SEARCH_FRAME} className="border-[#8fd3bc] bg-[#e4f6ef]/50" />
+          <Frame
+            box={TRADE_ENGINE_FRAME}
+            className="border-[#8fd3bc] bg-[#e4f6ef]/40"
+            label="1. Trade Engine"
+            labelClassName="text-[#12312a]"
+          />
           <Frame
             box={COUNTERPARTY_FRAME}
             className="border-[#e6d9a8] bg-[#fdf6e0]/60"
@@ -310,8 +315,7 @@ export function MapView({
             labelClassName="text-[#12312a]"
           />
 
-          <SideLabel x={30} y={20} text="1. Trading Engine" className="uppercase text-foreground" />
-          <SideLabel x={415} y={158} text="AI and AI+" className="text-foreground" />
+          <SideLabel x={415} y={176} text="AI and AI+" className="text-foreground" />
           <SideLabel x={648} y={726} text="KYC, KYB, PEP, AML" className="text-foreground" />
           <SideLabel x={648} y={822} text="POI, NDA, MOU, Contract" className="text-foreground" />
           <SideLabel x={1310} y={1012} text="Payment, Signoff, Handover" className="text-foreground" />
