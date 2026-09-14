@@ -6,6 +6,10 @@ In the Live Workspace, the description + upload bar currently sits inside a seco
 textured panel within the Bid Registration frame. That inner panel goes away, so the bar sits
 directly inside the Bid Registration frame — nothing else about the bar changes.
 
+The bar itself also gets slimmer and less chunky: a lighter single-hairline outline, softer
+corners, tighter padding and a smaller round submit button. The dashed "Drop files here" outline
+becomes noticeably clearer — a stronger dash colour and thicker dashes — so it is easy to see.
+
 ## 2. Put KYC, KYB, PEP, AML before Without a Doubt
 
 In Step 2 the order becomes:
@@ -35,7 +39,10 @@ that item reads as complete.
 ## Technical notes
 
 - `src/components/canvas/DealCanvas.tsx`: drop the `ink-grid ... border border-border` wrapper
-  around `startNode` in both the picking and non-picking returns (keep spacing).
+  around `startNode` in both the picking and non-picking returns (keep spacing). On the bar itself:
+  `border-2` -> `border`, `rounded-2xl` -> `rounded-xl`, `p-2` -> `p-1.5`, submit button
+  `h-10 w-10` -> `h-8 w-8`. Dashed drop zone: `border-dashed` -> `border-2 border-dashed` with a
+  stronger idle colour (`border-muted-foreground/70`).
 - `src/components/canvas/MapView.tsx`: swap the `BOXES.withoutADoubt` / `BOXES.wad` y positions
   and the node render order so the KYC/KYB/PEP/AML tile sits above Without a Doubt; connector
   lines follow the same order (`poi -> wad -> withoutADoubt -> businessDocs`). Give the checks
