@@ -1770,6 +1770,7 @@ export function CanvasStart({
   initialDirection,
   initialPrompt,
   initialFiles,
+  initialReference,
 }: {
   /** `seed` carries whatever the visitor already typed/dropped on the starting card, so the
    * caller can hand it straight to the real upload step instead of making them repeat it. */
@@ -1796,6 +1797,9 @@ export function CanvasStart({
   /** Files already dropped/selected on the marketing homepage before signing in — carried the
    * same way `initialPrompt` is, so they aren't silently dropped on the floor. */
   initialFiles?: File[] | undefined;
+  /** A BID number the caller has already drawn and shown (on the map's Bid tile, say) — used as
+   * this card's own reference instead of drawing a second, different-looking one. */
+  initialReference?: string | null | undefined;
 }) {
   const { org, orgs, user, profile, refresh } = useAuth();
   // Which company this bid/offer is traded as — only shown as a choice when the user belongs to
@@ -1804,7 +1808,7 @@ export function CanvasStart({
   // Generated the moment picking starts (not at final submit) so the workspace can show a real
   // BID/OFF id immediately — reused as-is at submit time rather than generating a second,
   // different-looking one.
-  const [draftReference, setDraftReference] = useState<string | null>(null);
+  const [draftReference, setDraftReference] = useState<string | null>(initialReference ?? null);
   const activeCompanyId = companyId ?? org?.id ?? null;
   const [picking, setPickingState] = useState(Boolean(initialDirection));
   const setPicking = (v: boolean) => {

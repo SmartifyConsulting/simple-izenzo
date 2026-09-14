@@ -21,6 +21,7 @@ import {
 import { AppShell } from "@/components/layout/AppShell";
 import {
   CanvasStart,
+  claimReference,
   CounterpartyRecord,
   InlineFrame,
   FLOWCHART_PREVIEW_TX,
@@ -1084,6 +1085,19 @@ function LiveDealEngine() {
     }
   }, [fresh, freshNonce]);
 
+  // An empty workspace still gets its BID number up front, so the map's Bid tile can show the
+  // number the bid will be recorded under rather than waiting for the first upload.
+  useEffect(() => {
+    if (dealTx || draftReference) return;
+    let cancelled = false;
+    void claimReference("bid").then((ref) => {
+      if (!cancelled) setDraftReference(ref);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [dealTx, draftReference]);
+
   // Keeps the Search dialog's "Recent" shortcuts up to date with whatever deal is actually on
   // screen, however it got there (resumed, opened from the trades list, or just recorded).
   useEffect(() => {
@@ -1735,6 +1749,7 @@ function LiveDealEngine() {
                 initialDirection={pendingDirection}
                 initialPrompt={seed}
                 initialFiles={seedFilesFromHome}
+                initialReference={draftReference}
                 onDraftReference={setDraftReference}
                 onCreated={(tx, recorded, seed) => {
                   setPicking(false);
