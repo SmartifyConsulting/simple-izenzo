@@ -103,8 +103,14 @@ const ARROWS: string[] = [
   line(leftOf(BOXES.counterOffer), rightOf(BOXES.choice)),
   `M ${cx(BOXES.counterOffer)} ${BOXES.counterOffer.y} L ${cx(BOXES.counterOffer)} ${BOXES.offer.y + 22} L ${BOXES.offer.x + BOXES.offer.w} ${BOXES.offer.y + 22}`,
   line(bottomOf(BOXES.choice), topOf(BOXES.socialMedia)),
+  // Social Media hands the deal down into the compliance engine (frame 2).
+  elbow(
+    bottomOf(BOXES.socialMedia),
+    { x: COMPLIANCE_FRAME.x + COMPLIANCE_FRAME.w, y: cy(BOXES.expressIntent) },
+    "y",
+  ),
   // Compliance engine chain.
-  line(rightOf(BOXES.expressIntent), { x: COUNTERPARTY_FRAME.x, y: cy(BOXES.socialMedia) - 22 }),
+
   line(bottomOf(BOXES.expressIntent), topOf(BOXES.poi)),
   line(bottomOf(BOXES.poi), topOf(BOXES.withoutADoubt)),
   line(bottomOf(BOXES.withoutADoubt), topOf(BOXES.wad)),
