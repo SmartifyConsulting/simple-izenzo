@@ -39,7 +39,7 @@ function nodeState(stage: StageKey, step: string, tx: Transaction | null): NodeS
 // Workspace: everything is placed on this canvas and scaled to the container with percentages, so
 // tiles and their connecting lines always stay aligned however wide that column is.
 const W = 960;
-const H = 1030;
+const H = 1090;
 const px = (v: number) => `${(v / W) * 100}%`;
 const py = (v: number) => `${(v / H) * 100}%`;
 
@@ -63,17 +63,18 @@ const BOXES = {
   choice: { x: 460, y: 252, w: 160, h: 56 },
   counterOffer: { x: 650, y: 248, w: 150, h: 64 },
   socialMedia: { x: 460, y: 323, w: 160, h: 64 },
-  // Step 2 (Compliance & Governance) sits a little below Step 1's now-shorter frame.
-  expressIntent: { x: 60, y: 485, w: 240, h: 54 },
-  poi: { x: 60, y: 563, w: 240, h: 54 },
-  withoutADoubt: { x: 60, y: 641, w: 240, h: 62 },
-  wad: { x: 60, y: 727, w: 240, h: 62 },
-  businessDocs: { x: 60, y: 813, w: 240, h: 62 },
+  // Step 2 (Compliance & Governance) moves further down from Step 1's frame; Step 3/4 shift down
+  // to match so the connector between them (unchanged below) doesn't have to stretch or overlap.
+  expressIntent: { x: 60, y: 545, w: 240, h: 54 },
+  poi: { x: 60, y: 623, w: 240, h: 54 },
+  withoutADoubt: { x: 60, y: 701, w: 240, h: 62 },
+  wad: { x: 60, y: 787, w: 240, h: 62 },
+  businessDocs: { x: 60, y: 873, w: 240, h: 62 },
   // Step 3 (Execution) and Step 4 (Entry/Exit, Finality) now share one row instead of stacking,
   // flush with the bottom of the Compliance frame.
-  execution: { x: 430, y: 885, w: 260, h: 104 },
-  entryExit: { x: 705, y: 909, w: 90, h: 56 },
-  finality: { x: 810, y: 885, w: 110, h: 104 },
+  execution: { x: 430, y: 945, w: 260, h: 104 },
+  entryExit: { x: 705, y: 969, w: 90, h: 56 },
+  finality: { x: 810, y: 945, w: 110, h: 104 },
 } as const satisfies Record<string, Box>;
 
 // One outer frame holds the whole trading step — Bid, Load Deal Documents, Search, the Search
@@ -81,9 +82,9 @@ const BOXES = {
 // which no longer carry a frame of their own. Trimmed to its actual content height (rather than
 // leaving a tall gap beneath it) so Compliance can sit right below without the diagram needing a
 // scroll.
-const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 806, h: 365 };
-const COMPLIANCE_FRAME: Box = { x: 30, y: 451, w: 288, h: 434 };
-const MEMORY = { cx: 560, cy: 685, r: 110 };
+const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 932, h: 365 };
+const COMPLIANCE_FRAME: Box = { x: 30, y: 511, w: 288, h: 434 };
+const MEMORY = { cx: 560, cy: 685, r: 127 };
 
 const cx = (b: Box) => b.x + b.w / 2;
 const cy = (b: Box) => b.y + b.h / 2;
@@ -112,7 +113,7 @@ const ARROWS: string[] = [
   path(topOf(BOXES.counterOffer), { x: cx(BOXES.counterOffer), y: cy(BOXES.offer) }, rightOf(BOXES.offer)),
   line(bottomOf(BOXES.choice), topOf(BOXES.socialMedia)),
   // Out of trading and down into the compliance step.
-  path(bottomOf(BOXES.socialMedia), { x: cx(BOXES.socialMedia), y: 436 }, { x: cx(BOXES.expressIntent), y: 436 }, topOf(BOXES.expressIntent)),
+  path(bottomOf(BOXES.socialMedia), { x: cx(BOXES.socialMedia), y: 466 }, { x: cx(BOXES.expressIntent), y: 466 }, topOf(BOXES.expressIntent)),
   line(bottomOf(BOXES.expressIntent), topOf(BOXES.poi)),
   line(bottomOf(BOXES.poi), topOf(BOXES.withoutADoubt)),
   line(bottomOf(BOXES.withoutADoubt), topOf(BOXES.wad)),
@@ -127,7 +128,7 @@ const ARROWS: string[] = [
   // Execution, Entry/Exit and Finality now share one row.
   line(rightOf(BOXES.execution), leftOf(BOXES.entryExit)),
   line(rightOf(BOXES.entryExit), leftOf(BOXES.finality)),
-  path(topOf(BOXES.finality), { x: cx(BOXES.finality), y: 840 }, { x: MEMORY.cx, y: 840 }, { x: MEMORY.cx, y: MEMORY.cy + MEMORY.r }),
+  path(topOf(BOXES.finality), { x: cx(BOXES.finality), y: 900 }, { x: MEMORY.cx, y: 900 }, { x: MEMORY.cx, y: MEMORY.cy + MEMORY.r }),
 ];
 
 const SEARCH_RESULT_CHIPS = ["Result 1", "Result 2", "Result 3", "Result 4", "Result 5"];
