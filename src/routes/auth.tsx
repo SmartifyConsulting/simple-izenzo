@@ -4,12 +4,17 @@ import { AuthTabs } from "@/components/auth/AuthTabs";
 import { useAuth } from "@/lib/auth";
 import { applyCurrentStylePreset } from "@/lib/stylePreset";
 
-type Search = { mode?: "signin" | "signup" | undefined; next?: string | undefined };
+type Search = {
+  mode?: "signin" | "signup" | undefined;
+  next?: string | undefined;
+  expired?: boolean | undefined;
+};
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (search: Record<string, unknown>): Search => ({
     mode: search["mode"] === "signup" ? "signup" : "signin",
     next: typeof search["next"] === "string" ? (search["next"] as string) : undefined,
+    expired: search["expired"] === true || search["expired"] === "true" ? true : undefined,
   }),
   head: () => ({
     meta: [
