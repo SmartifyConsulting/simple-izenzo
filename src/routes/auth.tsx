@@ -46,7 +46,12 @@ function AuthPage() {
   }, [loading, session, next, navigate]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 px-5 py-12">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-muted/40 px-5 py-12">
+      {expired && (
+        <p className="w-full max-w-sm rounded-xl border border-border bg-background px-4 py-3 text-xs text-muted-foreground">
+          Your session expired — please sign in again to continue.
+        </p>
+      )}
       <AuthTabs next={next} defaultTab="signin" className="w-full max-w-sm rounded-2xl border border-border bg-background p-8 shadow-sm" />
     </div>
   );
