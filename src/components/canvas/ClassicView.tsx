@@ -98,7 +98,7 @@ const STEPS: StepDef[] = [
         icon: ShieldCheck,
         sub: "Hard gate · non-waivable",
       },
-      { key: "kycKyb", label: "KYC/KYB", stage: "compliance", step: "wad", icon: UserCheck },
+      { key: "kycKyb", label: "KYC, KYB, PEP, AML", stage: "compliance", step: "wad", icon: UserCheck },
       { key: "businessDocs", label: "Business Docs", stage: "execution", step: "entry", icon: FolderClosed },
     ],
   },
