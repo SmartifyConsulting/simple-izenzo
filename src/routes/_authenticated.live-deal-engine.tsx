@@ -157,9 +157,7 @@ const ACTIVE_DEAL_KEY = "izenzo:active-deal";
 // keeping, but that placeholder shouldn't surface as if it were a real deal name in this picker.
 const GENERIC_TITLES = new Set(["New Bid", "New Offer"]);
 
-// Temporarily off while the map alone carries the "where am I" job — flip back on to restore
-// the vertical stepper beneath it.
-const SHOW_VERTICAL_STEPPER = false;
+
 
 function OpenDealsPicker({ currentId, hasAttachment }: { currentId: string | null; hasAttachment?: boolean }) {
   const { org } = useAuth();
@@ -1445,22 +1443,48 @@ function LiveDealEngine() {
           >
             <div className="flex shrink-0 items-center justify-between gap-2">
               <p className="label-caps text-foreground">Izenzo Trade Workflow</p>
-              <button
-                type="button"
-                onClick={() => setMapOpen((v) => !v)}
-                className="label-caps text-muted-foreground transition-colors hover:text-foreground"
-                aria-expanded={mapOpen}
+              {/* A switch, not a collapse: closing the map shows the vertical stepper instead, and
+                  opening it hides the stepper again. One of the two is always on display. */}
+              <div
+                role="group"
+                aria-label="Workflow view"
+                className="flex items-center gap-0.5 rounded-full border border-border p-0.5"
               >
-                {mapOpen ? "− Map" : "+ Map"}
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setMapOpen(true)}
+                  aria-pressed={mapOpen}
+                  className={cn(
+                    "label-caps rounded-full px-2 py-0.5 transition-colors",
+                    mapOpen
+                      ? "bg-primary/15 text-primary"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  Map
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMapOpen(false)}
+                  aria-pressed={!mapOpen}
+                  className={cn(
+                    "label-caps rounded-full px-2 py-0.5 transition-colors",
+                    !mapOpen
+                      ? "bg-primary/15 text-primary"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  Steps
+                </button>
+              </div>
             </div>
             <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
-              {/* The map sits above the stepper as the visual "where am I" companion — the same
-                  states, the same click targets, opening the same step frames. */}
+              {/* The map is the visual "where am I" companion — the same states, the same click
+                  targets, opening the same step frames as the stepper. */}
               {/* The diagram keeps a legible minimum width; on a very narrow column it scrolls
                   sideways rather than shrinking its labels into illegibility. */}
-              {mapOpen && (
-                <div className="mb-4 overflow-x-auto">
+              {mapOpen ? (
+                <div className="overflow-x-auto">
                   <div className="min-w-[420px]">
                   <MapView
                     tx={dealTx ?? null}
@@ -1473,10 +1497,7 @@ function LiveDealEngine() {
                   />
                   </div>
                 </div>
-              )}
-              {/* Hidden for now — the map above is carrying the "where am I" job on its own while
-                  this is being tried out. Flip SHOW_VERTICAL_STEPPER back on to restore it. */}
-              {SHOW_VERTICAL_STEPPER && (
+              ) : (
                 <ClassicView
                   tx={dealTx ?? FLOWCHART_PREVIEW_TX}
                   reload={() => void reloadDeal()}
@@ -1486,6 +1507,7 @@ function LiveDealEngine() {
                   overrideStates={stepOverrides}
                 />
               )}
+
             </div>
           </div>
 
