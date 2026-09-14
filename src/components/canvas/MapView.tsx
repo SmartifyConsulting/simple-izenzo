@@ -407,20 +407,23 @@ export function MapView({
   reference?: string | null | undefined;
   /** When given, a tile hands the (stage, step) to the caller instead of opening its own inline
    * frame — used when the map sits beside the Live Workspace. */
-  onOpenStep?: ((stage: StageKey, step: string) => void) | undefined;
+  onOpenStep?: ((stage: StageKey, step: string, viewOnly: boolean) => void) | undefined;
   /** The same override map the step list uses, keyed by its row names, so the map pulses on
    * exactly the same activity the stepper does. */
   overrideStates?: Record<string, NodeState> | undefined;
 }) {
-  const [panel, setPanel] = useState<{ stage: StageKey; step: string } | null>(null);
+  const [panel, setPanel] = useState<{ stage: StageKey; step: string; viewOnly: boolean } | null>(null);
 
-  const open = (stage: StageKey, step: string) => {
+  // A "done" tile is a past stage — its data can no longer be changed once the workflow has moved
+  // on (most concretely: once a counterparty is chosen), so clicking it opens a read-only view
+  // instead of jumping back into the live, editable flow for that step.
+  const open = (stage: StageKey, step: string, viewOnly = false) => {
     if (readOnly || !tx) return;
     if (onOpenStep) {
-      onOpenStep(stage, step);
+      onOpenStep(stage, step, viewOnly);
       return;
     }
-    setPanel((p) => (p?.stage === stage && p?.step === step ? null : { stage, step }));
+    setPanel((p) => (p?.stage === stage && p?.step === step ? null : { stage, step, viewOnly }));
   };
   const st = (stage: StageKey, step: string, overrideKey?: string): NodeState =>
     (overrideKey ? overrideStates?.[overrideKey] : undefined) ?? nodeState(stage, step, tx);
@@ -452,7 +455,9 @@ export function MapView({
       {...(opts?.subSize ? { subSize: opts.subSize } : {})}
       state={opts?.state ?? st(stage, step, opts?.overrideKey)}
       lock={lock(stage, step)}
-      onClick={opts?.onClick ?? (() => open(stage, step))}
+      onClick={
+        opts?.onClick ?? (() => open(stage, step, (opts?.state ?? st(stage, step, opts?.overrideKey)) === "done"))
+      }
     />
   );
 
@@ -596,6 +601,7 @@ export function MapView({
           step={panel.step}
           reload={reload}
           onClose={() => setPanel(null)}
+          viewOnly={panel.viewOnly}
         />
       )}
     </div>

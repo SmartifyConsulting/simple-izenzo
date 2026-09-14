@@ -245,7 +245,7 @@ export function ClassicView({
   onRegister?: () => void;
   /** When given, clicking an item hands the (stage, step) to the caller instead of opening an
    * inline panel here — used to show the step in a Workspace panel alongside the stepper. */
-  onOpenStep?: (stage: StageKey, step: string) => void;
+  onOpenStep?: (stage: StageKey, step: string, viewOnly: boolean) => void;
 }) {
   const [panel, setPanel] = useState<{ stage: StageKey; step: string } | null>(null);
   const activeStep = currentStepNumber(tx);
@@ -264,10 +264,10 @@ export function ClassicView({
     setCollapsed((c) => ({ ...c, [previous]: true, [activeStep]: false }));
   }, [activeStep]);
 
-  const open = (stage: StageKey, step: string) => {
+  const open = (stage: StageKey, step: string, viewOnly = false) => {
     if (readOnly) return;
     if (onOpenStep) {
-      onOpenStep(stage, step);
+      onOpenStep(stage, step, viewOnly);
       return;
     }
     setPanel((p) => (p?.stage === stage && p?.step === step ? null : { stage, step }));
@@ -387,7 +387,14 @@ export function ClassicView({
                           collapsed={Boolean(collapsedHeadings[item.key])}
                           onToggle={() => toggleHeading(item.key)}
                           onClick={
-                            item.isEntry ? () => onRegister?.() : () => open(item.stage, item.step)
+                            item.isEntry
+                              ? () => onRegister?.()
+                              : () =>
+                                  open(
+                                    item.stage,
+                                    item.step,
+                                    (allDone && !item.heading ? "done" : stateOf(item)) === "done",
+                                  )
                           }
                         />
                       ))}

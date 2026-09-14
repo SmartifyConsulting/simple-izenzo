@@ -305,7 +305,7 @@ function LiveDealEngine() {
   }, [stagePanel]);
   /** Set when a Map node outside the Workspace's own step-specific UI is clicked — shows a
    * generic inline detail panel for that (stage, step) in the Workspace instead. */
-  const [mapPanel, setMapPanel] = useState<{ stage: StageKey; step: string } | null>(null);
+  const [mapPanel, setMapPanel] = useState<{ stage: StageKey; step: string; viewOnly?: boolean } | null>(null);
   // Coming back to a deal that is already mid-gate reopens the step it stopped on. A deal that
   // already has a chosen counterparty but no signed intent always reopens Intent, whatever step
   // happens to be stored on the row — that is what left users stranded on "Choice recorded".
@@ -1057,7 +1057,15 @@ function LiveDealEngine() {
   /** Clicking a node on the Engine Map that isn't already covered by the Workspace's own
    * step-specific UI (documents, search, choice, POI, WaD) — opens a generic inline detail panel
    * in the Workspace instead, so the Map never navigates away from this screen. */
-  function openMapStep(stage: StageKey, step: string) {
+  function openMapStep(stage: StageKey, step: string, viewOnly = false) {
+    // A past, already-completed stage is shown as a frozen read-only snapshot instead of jumping
+    // back into whichever live, editable UI normally owns that step — its data can't change
+    // anymore, so it should never feel like the current step you're re-doing.
+    if (viewOnly) {
+      setStagePanel(null);
+      setMapPanel({ stage, step, viewOnly: true });
+      return;
+    }
     if (stage === "trading" && step === "documents") {
       setStagePanel(null);
       setMapPanel(null);
@@ -1537,7 +1545,7 @@ function LiveDealEngine() {
             )}
           >
             <div className="flex shrink-0 items-center justify-between gap-2">
-              <p className="label-caps rounded-full bg-[var(--step-pill-bg)] px-2.5 py-1 text-[var(--step-pill-fg)]">Izenzo Trade Workflow</p>
+              <p className="label-caps text-gray-600">Izenzo Trade Workflow</p>
               {/* A switch, not a collapse: closing the map shows the vertical stepper instead, and
                   opening it hides the stepper again. One of the two is always on display. */}
               <div
@@ -1622,7 +1630,7 @@ function LiveDealEngine() {
               appear through it or in the gap above it. */}
           <div className="sticky -top-3 z-20 -mx-3 -mt-3 mb-3 bg-card px-3 pb-3 pt-3 sm:-top-5 sm:-mx-5 sm:-mt-5 sm:px-5 sm:pt-5">
           <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
-            <p className="label-caps rounded-full bg-[var(--step-pill-bg)] px-2.5 py-1 text-[var(--step-pill-fg)]">Live Workspace</p>
+            <p className="label-caps text-gray-600">Live Workspace</p>
             {dealTx && (
               <AlertDialog>
                 <DropdownMenu>
@@ -2093,6 +2101,7 @@ function LiveDealEngine() {
                 step={mapPanel.step}
                 reload={() => void reloadDeal()}
                 onClose={() => setMapPanel(null)}
+                viewOnly={mapPanel.viewOnly}
               />
             </div>
           )}

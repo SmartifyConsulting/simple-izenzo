@@ -773,6 +773,7 @@ export function InlineFrame({
   reload,
   onClose,
   onChangeParty,
+  viewOnly,
 }: {
   tx: Transaction;
   stage: StageKey;
@@ -782,11 +783,14 @@ export function InlineFrame({
   /** Offered on Intent and Proof of Intent (before the seal is paid for) so a user who changes
    * their mind can reopen the counterparty choice instead of being stuck with their first pick. */
   onChangeParty?: (() => void) | undefined;
+  /** True when this is a past, already-completed stage opened from the map — shown as a frozen
+   * snapshot rather than the live, editable step, since its data can't be changed anymore. */
+  viewOnly?: boolean | undefined;
 }) {
   const def = stepDef(stage, step);
   const locked = lockReason(stage, step, tx);
   const canChangeParty =
-    Boolean(onChangeParty) && !tx.poi_sealed_at && (step === "intent" || step === "poi");
+    !viewOnly && Boolean(onChangeParty) && !tx.poi_sealed_at && (step === "intent" || step === "poi");
   return (
     <div className="glass-node animate-node-rise mt-1 p-5 sm:p-6">
       <div className="mb-4 flex items-start justify-between gap-4">
@@ -798,6 +802,11 @@ export function InlineFrame({
             {def?.label ?? step}
           </p>
           {def?.blurb && <p className="mt-1 text-[13px] text-muted-foreground">{def.blurb}</p>}
+          {viewOnly && (
+            <p className="mt-1 text-[13px] font-medium text-muted-foreground">
+              Read-only — this step is already complete.
+            </p>
+          )}
         </div>
         <button
           type="button"
@@ -809,6 +818,10 @@ export function InlineFrame({
       </div>
       {locked ? (
         <p className="rounded-xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">{locked}.</p>
+      ) : viewOnly ? (
+        <div className="pointer-events-none select-text opacity-80" aria-readonly>
+          <StepScreen tx={tx} stage={stage} step={step} reload={reload} />
+        </div>
       ) : (
         <StepScreen tx={tx} stage={stage} step={step} reload={reload} />
       )}
