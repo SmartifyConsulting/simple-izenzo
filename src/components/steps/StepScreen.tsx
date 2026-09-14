@@ -1759,6 +1759,16 @@ function WadStep({ tx, reload }: Props) {
           compliance gate on its own.
         </div>
       )}
+      {!allChecked && (
+        <div className="mb-4 rounded-md border border-[#F97316]/30 bg-[#F97316]/10 p-3 text-xs text-[#F97316]">
+          Still outstanding:{" "}
+          {WAD_CHECKS.filter((c) => !checks[c.key])
+            .map((c) => c.label)
+            .join("; ")}
+          . Clearing now is recorded against this deal as a reviewer override and appears on the
+          clearance certificate.
+        </div>
+      )}
 
       {priorChecks.length > 0 && (
         <div className="mb-4 rounded-lg border border-border p-3">
