@@ -45,7 +45,7 @@ function nodeState(stage: StageKey, step: string, tx: Transaction | null): NodeS
 // tiles and their connecting lines always stay aligned however wide that column is.
 const W = 960;
 // Grown again to hold Step 2's taller frame and the Step 3/4 row pushed down beneath it.
-const H = 956;
+const H = 960;
 const px = (v: number) => `${(v / W) * 100}%`;
 const py = (v: number) => `${(v / H) * 100}%`;
 
@@ -71,35 +71,40 @@ const BOXES = {
   // Wide enough that "Online Screening" fits on one line instead of wrapping, and only one line
   // tall — so the Step 1 frame loses the height the two-line tile needed.
   socialMedia: { x: 550, y: 255, w: 200, h: 48 },
-  // Step 2 (GRC) sits below Step 1's frame, its five checks spaced far enough apart that the
-  // connecting arrow between each pair is clearly visible; Step 3/4 follow well beneath it.
-  expressIntent: { x: 60, y: 409, w: 280, h: 48 },
-  poi: { x: 60, y: 489, w: 280, h: 48 },
-  withoutADoubt: { x: 60, y: 569, w: 280, h: 54 },
-  wad: { x: 60, y: 649, w: 280, h: 54 },
-  businessDocs: { x: 60, y: 729, w: 280, h: 54 },
+  // Express Intent now lives inside Step 1's own frame, directly under Online Screening — it's
+  // the "Steps" list order (Choice, Online Media Screening, Intent) mirrored on the map, instead
+  // of visually grouped with Step 2's checks even though it advances the same trading stage.
+  expressIntent: { x: 510, y: 323, w: 280, h: 48 },
+  // Step 2 (GRC)'s remaining checks, spaced far enough apart that the connecting arrow between
+  // each pair is clearly visible; Step 3/4 follow well beneath it.
+  poi: { x: 60, y: 479, w: 280, h: 48 },
+  withoutADoubt: { x: 60, y: 559, w: 280, h: 54 },
+  wad: { x: 60, y: 639, w: 280, h: 54 },
+  businessDocs: { x: 60, y: 719, w: 280, h: 54 },
   // Step 3 (Execution, with Entry/Exit beside it) and Step 4 (Finality) sit well clear of Step 2,
   // all 40% flatter than before — and wider, so their detail lines still fit.
-  execution: { x: 45, y: 871, w: 310, h: 58 },
-  entryExit: { x: 410, y: 881, w: 140, h: 37 },
-  finality: { x: 605, y: 871, w: 310, h: 58 },
+  execution: { x: 45, y: 861, w: 310, h: 58 },
+  // Width trimmed 20% (was 140) and re-centred on the same midpoint.
+  entryExit: { x: 424, y: 871, w: 112, h: 37 },
+  finality: { x: 605, y: 861, w: 310, h: 58 },
 
 } as const satisfies Record<string, Box>;
 
 // One outer frame holds the whole trading step — Bid, Load Deal Documents, Search, the Search
-// Results card and the counterparty tiles (Offer, Choice, Counter Offer, Online Screening),
-// trimmed to its actual content height.
-const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 932, h: 273 };
-// Taller than before so its five checks sit with real air (and a visible arrow) between them.
-const COMPLIANCE_FRAME: Box = { x: 30, y: 369, w: 340, h: 444 };
+// Results card, the counterparty tiles (Offer, Choice, Counter Offer, Online Screening) and now
+// Express Intent — trimmed to its actual content height.
+const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 932, h: 343 };
+// Shorter than before (Express Intent moved up into Step 1) but still spaced for a visible arrow
+// between each of its four remaining checks.
+const COMPLIANCE_FRAME: Box = { x: 30, y: 439, w: 340, h: 364 };
 // Execution and Entry/Exit+Finality get the same bordered, labelled group frame as Steps 1 and
 // 2, pushed further down to clear Step 2's taller frame.
-const EXECUTION_FRAME: Box = { x: 30, y: 863, w: 340, h: 73 };
-const FINALITY_FRAME: Box = { x: 590, y: 863, w: 340, h: 73 };
-// Entry/Exit gets the same bordered frame treatment, centred in the gap between Step 3 and 4.
-const ENTRY_EXIT_FRAME: Box = { x: 390, y: 863, w: 180, h: 73 };
-// Kept beside Step 2 (not stacked under it) and re-centred on GRC's taller frame.
-const MEMORY = { cx: 570, cy: 591, r: 110 };
+const EXECUTION_FRAME: Box = { x: 30, y: 853, w: 340, h: 73 };
+const FINALITY_FRAME: Box = { x: 590, y: 853, w: 340, h: 73 };
+// Width trimmed 20% (was 180), centred in the same gap between Step 3 and 4.
+const ENTRY_EXIT_FRAME: Box = { x: 408, y: 853, w: 144, h: 73 };
+// Kept beside Step 2 (not stacked under it) and re-centred on GRC's now-shorter frame.
+const MEMORY = { cx: 570, cy: 621, r: 110 };
 
 
 // A connector arriving at a group frame stops this many units short of its border, so the tip
@@ -132,9 +137,17 @@ const ARROWS: string[] = [
   path({ x: BOXES.counterOffer.x, y: cy(BOXES.choice) + 11 }, { x: BOXES.choice.x + BOXES.choice.w, y: cy(BOXES.choice) + 11 }),
   path(topOf(BOXES.counterOffer), { x: cx(BOXES.counterOffer), y: cy(BOXES.offer) }, rightOf(BOXES.offer)),
   line(bottomOf(BOXES.choice), topOf(BOXES.socialMedia)),
-  // Out of trading and down into the compliance step.
-  path(bottomOf(BOXES.socialMedia), { x: cx(BOXES.socialMedia), y: 334 }, { x: cx(BOXES.expressIntent), y: 334 }, topOf(BOXES.expressIntent)),
-  line(bottomOf(BOXES.expressIntent), topOf(BOXES.poi)),
+  // Straight down into Express Intent — both tiles share the same centre-line now that it sits
+  // directly under Online Screening inside Step 1's own frame.
+  line(bottomOf(BOXES.socialMedia), topOf(BOXES.expressIntent)),
+  // Out of Step 1 and into Step 2's checks: down, then left to Proof of Intent's centre-line,
+  // stopping just short of the GRC frame's edge (matching the Step 2 → Step 3 connector below).
+  path(
+    bottomOf(BOXES.expressIntent),
+    { x: cx(BOXES.expressIntent), y: (TRADE_ENGINE_FRAME.y + TRADE_ENGINE_FRAME.h + COMPLIANCE_FRAME.y) / 2 },
+    { x: cx(BOXES.poi), y: (TRADE_ENGINE_FRAME.y + TRADE_ENGINE_FRAME.h + COMPLIANCE_FRAME.y) / 2 },
+    { x: cx(BOXES.poi), y: COMPLIANCE_FRAME.y - ARROW_GAP },
+  ),
   line(bottomOf(BOXES.poi), topOf(BOXES.withoutADoubt)),
   line(bottomOf(BOXES.withoutADoubt), topOf(BOXES.wad)),
   line(bottomOf(BOXES.wad), topOf(BOXES.businessDocs)),
@@ -461,7 +474,6 @@ export function MapView({
         {/* Step 1 — trading. Bid and Load Deal Documents drive the workspace beside the map. */}
         {node("bid", "Bid", "trading", "bid-offer", Gavel, {
           overrideKey: "bidRegistration",
-          ...(reference ? { sub: reference, subTone: "id" as const } : {}),
           ...(onBid ? { onClick: onBid } : {}),
         })}
         {node("loadDocs", "Upload Files", "trading", "documents", FileText, {
