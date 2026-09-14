@@ -2000,16 +2000,8 @@ function LiveDealEngine() {
                       initialPrompt={seedPrompt}
                       initialFiles={seedFiles}
                     />
-                  ) : interestCount === 0 ? (
-                    /* Documents are in — the AI/AI+ search and online media screening start
-                       themselves (see the auto-search effect above) and both pulse in the
-                       workflow while they run. The upload frame never comes back once a file
-                       exists. */
-                    /* The "Finding counterparties…" note lives inline on the search bar below
-                       rather than on a line of its own here. */
-                    null
-
                   ) : null}
+
 
                 </div>
               </div>
