@@ -111,7 +111,7 @@ function MapScreen() {
   return (
     <AppShell
       wide
-      compactFooter
+      hideFooter
       title="Deal Map"
       description="Run the deal straight from the map: the pulsing tile is what happens next, cleared tiles are ticked, and locked tiles open once their gate is met."
     >
