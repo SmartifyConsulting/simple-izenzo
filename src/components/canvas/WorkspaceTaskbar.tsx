@@ -83,7 +83,7 @@ function DealSearchDialog({
                   value={`${d.reference} ${d.name}`}
                   onSelect={() => {
                     onOpenChange(false);
-                    void navigate({ to: "/live-deal-engine", search: { tx: d.id } });
+                    onPick(d.id);
                   }}
                 >
                   <span className="font-mono font-semibold">{d.reference}</span>
