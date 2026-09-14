@@ -63,6 +63,7 @@ import { readDocument } from "@/lib/documents.functions";
 import { pushRecentDeal } from "@/lib/recentDeals";
 import { useDealWindows } from "@/lib/dealWindows";
 import { peekStashedHeroFiles, clearStashedHeroFiles } from "@/lib/heroSearchContext";
+import { playStepAdvanceChime } from "@/lib/sound";
 
 import { cn } from "@/lib/utils";
 
@@ -581,6 +582,21 @@ function LiveDealEngine() {
     autoSearchStarted.current = dealTx.id;
     void fetchInterest(dealTx.id);
   }, [dealTx?.id, workspaceDocsPending, workspaceDocs.length, interestCount, screening, mediaRunning, flowStep]);
+
+  // A short chime whenever the workflow moves itself on to the next step — search finishing,
+  // media screening completing, an auto-advance firing — so a step change is audible even when
+  // this tab isn't the one being watched. Keyed per-deal so switching bids doesn't fire a stale
+  // chime for the step the newly-opened bid happens to already be on.
+  const lastChimedStep = useRef<string | null>(null);
+  useEffect(() => {
+    if (!dealTx) return;
+    const key = `${dealTx.id}:${dealTx.stage}:${dealTx.step}`;
+    const dealChanged = lastChimedStep.current !== null && !lastChimedStep.current.startsWith(`${dealTx.id}:`);
+    if (lastChimedStep.current !== null && lastChimedStep.current !== key && !dealChanged) {
+      playStepAdvanceChime();
+    }
+    lastChimedStep.current = key;
+  }, [dealTx?.id, dealTx?.stage, dealTx?.step]);
 
   /** Which workflow item is genuinely current right now — the stored stage/step can't tell
    * "searching" apart from "results are in", so the page says it outright. Search AI + AI+ and
