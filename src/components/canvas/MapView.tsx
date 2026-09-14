@@ -478,7 +478,7 @@ export function MapView({
               width: px(BOXES.search.w),
             }}
           >
-            <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
+            <div className="h-1 w-full overflow-hidden rounded-full bg-progress-track">
               <div className="h-full w-1/3 animate-[slide-in-right_1.4s_ease-in-out_infinite] rounded-full bg-success" />
             </div>
           </div>
