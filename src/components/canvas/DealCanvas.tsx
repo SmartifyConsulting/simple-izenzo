@@ -537,7 +537,7 @@ export function DealCanvas({
                       once it's registered — so the bar clears rather than lingering under it. */}
                   {matchProgress && (matchProgress.searching || matchProgress.error) && (
                     <div className="mt-1.5 space-y-1">
-                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-progress-track">
                         <div
                           className={cn(
                             "h-full rounded-full transition-all duration-500",
@@ -571,7 +571,7 @@ export function DealCanvas({
                   )}
                   {mediaProgress && mediaProgress.total > 0 && (
                     <div className="mt-1.5 space-y-1">
-                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-progress-track">
                         <div
                           className={cn(
                             "h-full rounded-full transition-all duration-500",
@@ -607,7 +607,7 @@ export function DealCanvas({
                   )}
                   {screeningProgress && screeningProgress.total > 0 && (
                     <div className="mt-1.5 space-y-1">
-                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-progress-track">
                         <div
                           className={cn(
                             "h-full rounded-full transition-all duration-500",
