@@ -57,14 +57,14 @@ const BOXES = {
   steps: { x: 230, y: 248, w: 160, h: 64 },
   // Offer/Choice/Counter Offer/Online Media Screening spread out further right, using the
   // frame's full width instead of clustering against Search's column.
-  offer: { x: 460, y: 80, w: 160, h: 56 },
-  // Choice sits level with the (now shorter) Search Results card, so that connector is a single
-  // straight run; Counter Offer matches it so its loop back to Choice stays attached.
-  choice: { x: 460, y: 252, w: 160, h: 56 },
-  // Counter Offer sits at the very right edge of the Trading frame; it, Choice and Search
-  // Results all share the same centre-line.
-  counterOffer: { x: 776, y: 248, w: 150, h: 64 },
-  socialMedia: { x: 460, y: 323, w: 160, h: 64 },
+  offer: { x: 520, y: 80, w: 160, h: 56 },
+  // Choice and Counter Offer are lifted to sit level with Search instead of the Search Results
+  // card beneath it.
+  choice: { x: 520, y: 164, w: 160, h: 56 },
+  // Counter Offer sits at the very right edge of the Trading frame, level with Choice and Search.
+  counterOffer: { x: 776, y: 160, w: 150, h: 64 },
+  // Wide enough that "Online Media Screening" fits on one line instead of wrapping.
+  socialMedia: { x: 520, y: 235, w: 220, h: 56 },
   // Step 2 (Compliance & Governance) moves further down from Step 1's frame; Step 3/4 shift down
   // to match so the connector between them (unchanged below) doesn't have to stretch or overlap.
   expressIntent: { x: 60, y: 545, w: 240, h: 54 },
@@ -110,8 +110,14 @@ const ARROWS: string[] = [
   line(bottomOf(BOXES.bid), topOf(BOXES.loadDocs)),
   line(rightOf(BOXES.loadDocs), leftOf(BOXES.search)),
   line(bottomOf(BOXES.search), topOf(BOXES.steps)),
-  // Choice sits level with the Search Results card, so this is one straight run.
-  line(rightOf(BOXES.steps), leftOf(BOXES.choice)),
+  // Choice now sits level with Search rather than the Search Results card beneath it, so this is
+  // a short elbow instead of a single straight run.
+  path(
+    rightOf(BOXES.steps),
+    { x: (BOXES.steps.x + BOXES.steps.w + BOXES.choice.x) / 2, y: cy(BOXES.steps) },
+    { x: (BOXES.steps.x + BOXES.steps.w + BOXES.choice.x) / 2, y: cy(BOXES.choice) },
+    leftOf(BOXES.choice),
+  ),
   // Counterparty loop: Offer into Choice, Choice out to Counter Offer and back, then Social Media.
   line(bottomOf(BOXES.offer), topOf(BOXES.choice)),
   path({ x: BOXES.choice.x + BOXES.choice.w, y: cy(BOXES.choice) - 11 }, { x: BOXES.counterOffer.x, y: cy(BOXES.choice) - 11 }),
