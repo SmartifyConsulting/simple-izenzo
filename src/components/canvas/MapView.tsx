@@ -38,7 +38,7 @@ function nodeState(stage: StageKey, step: string, tx: Transaction | null): NodeS
 // Fixed diagram coordinate system, proportioned for the workflow column beside the Live
 // Workspace: everything is placed on this canvas and scaled to the container with percentages, so
 // tiles and their connecting lines always stay aligned however wide that column is.
-const W = 760;
+const W = 800;
 const H = 1250;
 const px = (v: number) => `${(v / W) * 100}%`;
 const py = (v: number) => `${(v / H) * 100}%`;
@@ -47,19 +47,17 @@ type Box = { x: number; y: number; w: number; h: number };
 
 /** Rows and columns are aligned so every connector is a straight horizontal or vertical run. */
 const BOXES = {
-  bid: { x: 40, y: 80, w: 200, h: 56 },
-  loadDocs: { x: 40, y: 164, w: 200, h: 56 },
+  bid: { x: 40, y: 80, w: 160, h: 56 },
+  loadDocs: { x: 40, y: 164, w: 160, h: 56 },
   // The five-step chip card sits in the same column, below Load Deal Documents; Search moves
   // beside Load Deal Documents instead of underneath it.
-  steps: { x: 40, y: 248, w: 200, h: 142 },
-  search: { x: 300, y: 164, w: 200, h: 62 },
-  offer: { x: 300, y: 80, w: 200, h: 56 },
-  // Choice sits level with Search, so the connector between them is a single straight run
-  // instead of a stepped elbow; Counter Offer moves down to match so its loop back to Choice
-  // stays visually attached to it.
-  choice: { x: 300, y: 251, w: 200, h: 56 },
-  counterOffer: { x: 530, y: 251, w: 190, h: 56 },
-  socialMedia: { x: 300, y: 332, w: 200, h: 56 },
+  steps: { x: 40, y: 248, w: 160, h: 142 },
+  search: { x: 220, y: 164, w: 160, h: 62 },
+  // Offer/Choice/Counter Offer/Social Media move right of Search, in their own two columns.
+  offer: { x: 400, y: 80, w: 160, h: 56 },
+  choice: { x: 400, y: 251, w: 160, h: 56 },
+  counterOffer: { x: 580, y: 251, w: 150, h: 64 },
+  socialMedia: { x: 400, y: 332, w: 160, h: 56 },
   expressIntent: { x: 60, y: 600, w: 300, h: 54 },
   poi: { x: 60, y: 678, w: 300, h: 54 },
   withoutADoubt: { x: 60, y: 756, w: 300, h: 62 },
@@ -73,7 +71,7 @@ const BOXES = {
 // One outer frame holds the whole trading step — Bid, Load Deal Documents, Search, the Step 1–5
 // card and the counterparty tiles (Offer, Choice, Counter Offer, Social Media), which no longer
 // carry a frame of their own. A generous gap separates it from the compliance frame below.
-const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 732, h: 442 };
+const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 760, h: 442 };
 const COMPLIANCE_FRAME: Box = { x: 30, y: 566, w: 360, h: 434 };
 const MEMORY = { cx: 560, cy: 790, r: 110 };
 
@@ -95,7 +93,14 @@ const ARROWS: string[] = [
   line(bottomOf(BOXES.bid), topOf(BOXES.loadDocs)),
   line(bottomOf(BOXES.loadDocs), topOf(BOXES.steps)),
   line(rightOf(BOXES.loadDocs), leftOf(BOXES.search)),
-  line(bottomOf(BOXES.search), topOf(BOXES.choice)),
+  // Search sits higher and further left than Choice now that Offer/Choice moved right, so this
+  // is a short elbow rather than a single straight run.
+  path(
+    rightOf(BOXES.search),
+    { x: (BOXES.search.x + BOXES.search.w + BOXES.choice.x) / 2, y: cy(BOXES.search) },
+    { x: (BOXES.search.x + BOXES.search.w + BOXES.choice.x) / 2, y: cy(BOXES.choice) },
+    leftOf(BOXES.choice),
+  ),
   // Counterparty loop: Offer into Choice, Choice out to Counter Offer and back, then Social Media.
   line(bottomOf(BOXES.offer), topOf(BOXES.choice)),
   path({ x: BOXES.choice.x + BOXES.choice.w, y: cy(BOXES.choice) - 11 }, { x: BOXES.counterOffer.x, y: cy(BOXES.choice) - 11 }),
@@ -323,7 +328,7 @@ export function MapView({
           overrideKey: "bidRegistration",
           ...(onBid ? { onClick: onBid } : {}),
         })}
-        {node("loadDocs", "Load Deal Documents", "trading", "documents", FileText, {
+        {node("loadDocs", "Upload Files", "trading", "documents", FileText, {
           overrideKey: "docSubmission",
           ...(onLoadDocuments ? { onClick: onLoadDocuments } : {}),
         })}
