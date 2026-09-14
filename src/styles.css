@@ -489,10 +489,14 @@
 @keyframes throb-aqua {
   0%,
   100% {
-    box-shadow: 0 0 0 0 color-mix(in oklab, var(--throb-accent) 45%, transparent);
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--throb-accent) 85%, transparent);
+    background-color: color-mix(in oklab, var(--throb-accent) 14%, transparent);
+    border-color: color-mix(in oklab, var(--throb-accent) 95%, transparent);
   }
   50% {
-    box-shadow: 0 0 0 8px color-mix(in oklab, var(--throb-accent) 0%, transparent);
+    box-shadow: 0 0 0 14px color-mix(in oklab, var(--throb-accent) 0%, transparent);
+    background-color: color-mix(in oklab, var(--throb-accent) 4%, transparent);
+    border-color: color-mix(in oklab, var(--throb-accent) 55%, transparent);
   }
 }
 
@@ -500,9 +504,11 @@
  * current skin uses (aqua on the dark canvas, royal blue on the cream ground) — used on the
  * Classic view's active-step nodes, which needed to stand out more clearly than the default. */
 @utility animate-throb-aqua {
-  animation: throb-aqua 2.1s ease-in-out infinite;
-  border-color: color-mix(in oklab, var(--throb-accent) 75%, transparent);
+  animation: throb-aqua 1.8s ease-in-out infinite;
+  border-width: 2px;
+  border-color: color-mix(in oklab, var(--throb-accent) 95%, transparent);
 }
+
 
 
 @utility animate-beam-sweep {
