@@ -92,8 +92,8 @@ function AlphaBravoHome() {
             headline — a signed-in visitor never sees this page anyway (the root route sends
             them straight to the workspace), so this space would otherwise go empty. */}
         {!user && (
-          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-            <AuthTabs />
+          <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+            <AuthTabs compact />
           </div>
         )}
       </div>

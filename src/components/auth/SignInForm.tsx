@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/PasswordInput";
 import { mapAuthError } from "@/lib/auth";
+import { cn } from "@/lib/utils";
 
 function safeNext(next: string | undefined) {
   if (next && next.startsWith("/") && !next.startsWith("//")) return next;
@@ -20,11 +21,15 @@ export function SignInForm({
   className,
   hideHeader = false,
   hideFooterLink = false,
+  compact = false,
 }: {
   next?: string | undefined;
   className?: string | undefined;
   hideHeader?: boolean;
   hideFooterLink?: boolean;
+  /** Tighter spacing throughout — used when this form sits in a small space (the home page
+   * hero) rather than the standalone /auth page. */
+  compact?: boolean;
 }) {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -72,7 +77,7 @@ export function SignInForm({
         </>
       )}
 
-      <form onSubmit={onSubmit} className={hideHeader ? "space-y-4" : "mt-7 space-y-4"}>
+      <form onSubmit={onSubmit} className={cn(compact ? "space-y-2.5" : "space-y-4", !hideHeader && "mt-7")}>
         <div className="space-y-1.5">
           <Label htmlFor="signin-email">Email</Label>
           <Input
@@ -111,7 +116,7 @@ export function SignInForm({
         </Button>
       </form>
 
-      <div className="my-5 flex items-center gap-3">
+      <div className={cn("flex items-center gap-3", compact ? "my-3" : "my-5")}>
         <span className="h-px flex-1 bg-border" />
         <span className="text-xs text-muted-foreground">or</span>
         <span className="h-px flex-1 bg-border" />
@@ -121,13 +126,14 @@ export function SignInForm({
         Continue with Google
       </Button>
 
-      <p className="mt-3 text-center text-xs text-muted-foreground">
-        Just checking on your bids? Sign in — there's nothing to upload.
-      </p>
-
+      {!compact && (
+        <p className="mt-3 text-center text-xs text-muted-foreground">
+          Just checking on your bids? Sign in — there's nothing to upload.
+        </p>
+      )}
 
       {!hideFooterLink && (
-        <p className="mt-6 text-center text-sm text-muted-foreground">
+        <p className={cn("text-center text-sm text-muted-foreground", compact ? "mt-3" : "mt-6")}>
           No account yet?{" "}
           <Link to="/auth" search={{ mode: "signup", next }} className="font-medium text-foreground hover:underline">
             Create one

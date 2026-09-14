@@ -11,6 +11,7 @@ import { PasswordInput } from "@/components/PasswordInput";
 import { mapAuthError } from "@/lib/auth";
 import { generateOrgBrief } from "@/lib/orgBrief.functions";
 import { COUNTRIES } from "@/lib/countries";
+import { cn } from "@/lib/utils";
 
 const SECTORS = [
   "Agriculture",
@@ -38,11 +39,15 @@ export function SignUpForm({
   className,
   hideHeader = false,
   hideFooterLink = false,
+  compact = false,
 }: {
   next?: string | undefined;
   className?: string | undefined;
   hideHeader?: boolean;
   hideFooterLink?: boolean;
+  /** Tighter spacing and a shorter min-height — used when this form sits in a small space (the
+   * home page hero) rather than the standalone /auth page. */
+  compact?: boolean;
 }) {
   const navigate = useNavigate();
   const [step, setStep] = useState<1 | 2>(1);
@@ -183,7 +188,7 @@ export function SignUpForm({
         </>
       )}
 
-      <div className={hideHeader ? "mb-4 flex items-center gap-2" : "mb-4 mt-7 flex items-center gap-2"}>
+      <div className={cn(compact ? "mb-2.5" : "mb-4", !hideHeader && "mt-7", "flex items-center gap-2")}>
         <span
           className={
             "flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold " +
@@ -206,9 +211,9 @@ export function SignUpForm({
         </p>
       </div>
 
-      <div className="min-h-[420px]">
+      <div className={compact ? "min-h-[300px]" : "min-h-[420px]"}>
         {step === 1 ? (
-          <form onSubmit={onContinue} className="space-y-4">
+          <form onSubmit={onContinue} className={compact ? "space-y-2.5" : "space-y-4"}>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="hero-first-name">First name</Label>
@@ -270,7 +275,7 @@ export function SignUpForm({
               Continue
             </Button>
 
-            <div className="my-5 flex items-center gap-3">
+            <div className={cn("flex items-center gap-3", compact ? "my-3" : "my-5")}>
               <span className="h-px flex-1 bg-border" />
               <span className="text-xs text-muted-foreground">or</span>
               <span className="h-px flex-1 bg-border" />
@@ -281,7 +286,7 @@ export function SignUpForm({
             </Button>
           </form>
         ) : (
-          <form onSubmit={onSubmit} className="space-y-4">
+          <form onSubmit={onSubmit} className={compact ? "space-y-2.5" : "space-y-4"}>
             <div className="space-y-1.5">
               <Label>Registering as</Label>
               <div className="grid grid-cols-2 gap-2">
@@ -438,7 +443,7 @@ export function SignUpForm({
       </div>
 
       {!hideFooterLink && (
-        <p className="mt-6 text-center text-sm text-muted-foreground">
+        <p className={cn("text-center text-sm text-muted-foreground", compact ? "mt-3" : "mt-6")}>
           Already have an account?{" "}
           <Link to="/auth" search={{ mode: "signin", next }} className="font-medium text-foreground hover:underline">
             Sign in
