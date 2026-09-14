@@ -67,11 +67,13 @@ const BOXES = {
   socialMedia: { x: 540, y: 235, w: 220, h: 56 },
   // Step 2 (Compliance & Governance) moves further down from Step 1's frame; Step 3/4 shift down
   // to match so the connector between them (unchanged below) doesn't have to stretch or overlap.
-  expressIntent: { x: 60, y: 455, w: 240, h: 54 },
-  poi: { x: 60, y: 533, w: 240, h: 54 },
-  withoutADoubt: { x: 60, y: 611, w: 240, h: 62 },
-  wad: { x: 60, y: 697, w: 240, h: 62 },
-  businessDocs: { x: 60, y: 783, w: 240, h: 62 },
+  // Extra clearance below the frame's floating heading + "Governance" row so Express Intent
+  // never touches either of them.
+  expressIntent: { x: 60, y: 470, w: 240, h: 54 },
+  poi: { x: 60, y: 548, w: 240, h: 54 },
+  withoutADoubt: { x: 60, y: 626, w: 240, h: 62 },
+  wad: { x: 60, y: 712, w: 240, h: 62 },
+  businessDocs: { x: 60, y: 798, w: 240, h: 62 },
   // Step 3 (Execution, with Entry/Exit beside it) and Step 4 (Finality) sit directly under Step 2,
   // aligned with the Compliance frame's left edge instead of off to its right.
   // Moved down ~1cm from Step 2, with even gaps between Execution, Entry/Exit and Finality.
@@ -86,7 +88,7 @@ const BOXES = {
 // leaving a tall gap beneath it) so Compliance can sit right below without the diagram needing a
 // scroll.
 const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 932, h: 275 };
-const COMPLIANCE_FRAME: Box = { x: 30, y: 421, w: 340, h: 434 };
+const COMPLIANCE_FRAME: Box = { x: 30, y: 421, w: 340, h: 449 };
 // Execution and Entry/Exit+Finality get the same bordered, labelled group frame as Steps 1 and
 // 2, instead of sitting as bare tiles with no frame of their own.
 const EXECUTION_FRAME: Box = { x: 30, y: 945, w: 290, h: 144 };
@@ -153,7 +155,10 @@ function ArrowLayer() {
           d={`M ${MEMORY.cx - MEMORY.r} ${MEMORY.cy} A ${MEMORY.r} ${MEMORY.r} 0 0 1 ${MEMORY.cx + MEMORY.r} ${MEMORY.cy}`}
         />
       </defs>
-      <text className="label-caps fill-primary" textAnchor="middle">
+      <text
+        className="fill-primary text-[13px] font-semibold uppercase tracking-[0.09em]"
+        textAnchor="middle"
+      >
         <textPath href="#memory-arc" startOffset="50%">
           Step 5 · Memory
         </textPath>
@@ -452,11 +457,13 @@ export function MapView({
             height: py(MEMORY.r * 2),
           }}
           className={cn(
-            "absolute flex flex-col items-center justify-center gap-1 rounded-full border bg-card/40 px-5 text-center font-sans transition-colors",
-            memoryState === "open" && "border-border text-foreground hover:border-primary/60",
+            // Border always reads like the other steps' group frames (a steady border-border)
+            // rather than dimming when locked — only the text/icon show that state.
+            "absolute flex flex-col items-center justify-center gap-1 rounded-full border border-border bg-card/40 px-5 text-center font-sans transition-colors",
+            memoryState === "open" && "text-foreground hover:border-primary/60",
             memoryState === "done" && "border-success/70 text-success",
             memoryState === "active" && "animate-throb-aqua border-primary text-primary",
-            memoryState === "locked" && "cursor-not-allowed border-border/50 text-muted-foreground opacity-50",
+            memoryState === "locked" && "cursor-not-allowed text-muted-foreground opacity-50",
           )}
         >
           <Database className={cn("h-4 w-4", memoryState === "open" && "text-primary")} />
