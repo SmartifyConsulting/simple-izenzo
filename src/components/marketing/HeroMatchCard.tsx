@@ -160,7 +160,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
 
       {!searched && !searching && (
         <>
-          <p className="mb-4 text-center text-lg font-medium text-foreground">Ready when you are.</p>
+          <p className="mb-2 text-center text-base font-medium text-foreground">Ready when you are.</p>
 
           <div className="flex items-stretch gap-2 rounded-2xl border-2 border-border bg-background p-2 shadow-sm transition-colors focus-within:border-primary">
             {/* Left half: the typed description. */}
