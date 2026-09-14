@@ -39,7 +39,7 @@ function nodeState(stage: StageKey, step: string, tx: Transaction | null): NodeS
 // Workspace: everything is placed on this canvas and scaled to the container with percentages, so
 // tiles and their connecting lines always stay aligned however wide that column is.
 const W = 960;
-const H = 1090;
+const H = 1160;
 const px = (v: number) => `${(v / W) * 100}%`;
 const py = (v: number) => `${(v / H) * 100}%`;
 
@@ -70,11 +70,11 @@ const BOXES = {
   withoutADoubt: { x: 60, y: 701, w: 240, h: 62 },
   wad: { x: 60, y: 787, w: 240, h: 62 },
   businessDocs: { x: 60, y: 873, w: 240, h: 62 },
-  // Step 3 (Execution) and Step 4 (Entry/Exit, Finality) now share one row instead of stacking,
-  // flush with the bottom of the Compliance frame.
-  execution: { x: 430, y: 945, w: 260, h: 104 },
-  entryExit: { x: 705, y: 969, w: 90, h: 56 },
-  finality: { x: 810, y: 945, w: 110, h: 104 },
+  // Step 3 (Execution, with Entry/Exit beneath it) and Step 4 (Finality) sit flush with the
+  // bottom of the Compliance frame.
+  execution: { x: 360, y: 945, w: 260, h: 104 },
+  entryExit: { x: 445, y: 1064, w: 90, h: 56 },
+  finality: { x: 740, y: 945, w: 110, h: 104 },
 } as const satisfies Record<string, Box>;
 
 // One outer frame holds the whole trading step — Bid, Load Deal Documents, Search, the Search
@@ -86,8 +86,8 @@ const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 932, h: 365 };
 const COMPLIANCE_FRAME: Box = { x: 30, y: 511, w: 288, h: 434 };
 // Execution and Entry/Exit+Finality get the same bordered, labelled group frame as Steps 1 and
 // 2, instead of sitting as bare tiles with no frame of their own.
-const EXECUTION_FRAME: Box = { x: 410, y: 925, w: 290, h: 144 };
-const FINALITY_FRAME: Box = { x: 700, y: 925, w: 240, h: 144 };
+const EXECUTION_FRAME: Box = { x: 340, y: 925, w: 290, h: 210 };
+const FINALITY_FRAME: Box = { x: 630, y: 925, w: 240, h: 144 };
 const MEMORY = { cx: 560, cy: 685, r: 127 };
 
 const cx = (b: Box) => b.x + b.w / 2;
@@ -122,16 +122,12 @@ const ARROWS: string[] = [
   line(bottomOf(BOXES.poi), topOf(BOXES.withoutADoubt)),
   line(bottomOf(BOXES.withoutADoubt), topOf(BOXES.wad)),
   line(bottomOf(BOXES.wad), topOf(BOXES.businessDocs)),
-  // Step 2 into Step 3: off the right edge of the Compliance frame itself, level with Business
-  // Docs, rather than out of the Business Docs tile directly.
-  path(
-    { x: COMPLIANCE_FRAME.x + COMPLIANCE_FRAME.w, y: cy(BOXES.businessDocs) },
-    { x: cx(BOXES.execution), y: cy(BOXES.businessDocs) },
-    topOf(BOXES.execution),
-  ),
-  // Execution, Entry/Exit and Finality now share one row.
-  line(rightOf(BOXES.execution), leftOf(BOXES.entryExit)),
-  line(rightOf(BOXES.entryExit), leftOf(BOXES.finality)),
+  // Step 2 into Step 3: straight down out of Business Docs, then a right angle across into
+  // Execution's left edge.
+  path(bottomOf(BOXES.businessDocs), { x: cx(BOXES.businessDocs), y: cy(BOXES.execution) }, leftOf(BOXES.execution)),
+  // Entry/Exit sits beneath Execution; from there, right and up into Finality.
+  line(bottomOf(BOXES.execution), topOf(BOXES.entryExit)),
+  path(rightOf(BOXES.entryExit), { x: cx(BOXES.finality), y: cy(BOXES.entryExit) }, bottomOf(BOXES.finality)),
   path(topOf(BOXES.finality), { x: cx(BOXES.finality), y: 900 }, { x: MEMORY.cx, y: 900 }, { x: MEMORY.cx, y: MEMORY.cy + MEMORY.r }),
 ];
 
@@ -167,7 +163,18 @@ function ArrowLayer() {
 
 /** A group frame: a hairline rounded outline with its name set into the top edge — drawn from the
  * theme's own colours, so it reads the same way on cream as it does on black. */
-function Frame({ box, label }: { box: Box; label?: string | undefined }) {
+function Frame({
+  box,
+  label,
+  subLabel,
+}: {
+  box: Box;
+  label?: string | undefined;
+  /** A second line that wraps onto its own row sitting inside the frame's top edge, rather than
+   * floating on the border with the main label — used to split a long name like "Compliance &
+   * Governance" across two rows instead of squeezing it onto the one that floats on the line. */
+  subLabel?: string | undefined;
+}) {
   return (
     <div
       className="pointer-events-none absolute rounded-3xl border border-border"
@@ -176,6 +183,11 @@ function Frame({ box, label }: { box: Box; label?: string | undefined }) {
       {label && (
         <span className="label-caps absolute -top-2 left-5 whitespace-nowrap bg-background px-2 text-primary">
           {label}
+        </span>
+      )}
+      {subLabel && (
+        <span className="label-caps absolute left-5 top-3 whitespace-nowrap text-primary">
+          {subLabel}
         </span>
       )}
     </div>
@@ -317,7 +329,7 @@ export function MapView({
         <ArrowLayer />
 
         <Frame box={TRADE_ENGINE_FRAME} label="Step 1 · Trading" />
-        <Frame box={COMPLIANCE_FRAME} label="Step 2 · Compliance & Governance" />
+        <Frame box={COMPLIANCE_FRAME} label="Step 2 · Compliance" subLabel="Governance" />
         <Frame box={EXECUTION_FRAME} label="Step 3 · Execution" />
         <Frame box={FINALITY_FRAME} label="Step 4 · Finality" />
 
