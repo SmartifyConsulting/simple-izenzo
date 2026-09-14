@@ -39,7 +39,7 @@ function nodeState(stage: StageKey, step: string, tx: Transaction | null): NodeS
 // Workspace: everything is placed on this canvas and scaled to the container with percentages, so
 // tiles and their connecting lines always stay aligned however wide that column is.
 const W = 860;
-const H = 1250;
+const H = 1140;
 const px = (v: number) => `${(v / W) * 100}%`;
 const py = (v: number) => `${(v / H) * 100}%`;
 
@@ -59,22 +59,23 @@ const BOXES = {
   choice: { x: 460, y: 251, w: 160, h: 56 },
   counterOffer: { x: 650, y: 251, w: 150, h: 64 },
   socialMedia: { x: 460, y: 332, w: 160, h: 56 },
-  expressIntent: { x: 60, y: 600, w: 300, h: 54 },
-  poi: { x: 60, y: 678, w: 300, h: 54 },
-  withoutADoubt: { x: 60, y: 756, w: 300, h: 62 },
-  wad: { x: 60, y: 842, w: 300, h: 62 },
-  businessDocs: { x: 60, y: 928, w: 300, h: 62 },
-  execution: { x: 430, y: 1000, w: 300, h: 104 },
-  entryExit: { x: 420, y: 1138, w: 140, h: 56 },
-  finality: { x: 578, y: 1114, w: 160, h: 104 },
+  expressIntent: { x: 60, y: 490, w: 300, h: 54 },
+  poi: { x: 60, y: 568, w: 300, h: 54 },
+  withoutADoubt: { x: 60, y: 646, w: 300, h: 62 },
+  wad: { x: 60, y: 732, w: 300, h: 62 },
+  businessDocs: { x: 60, y: 818, w: 300, h: 62 },
+  execution: { x: 430, y: 890, w: 300, h: 104 },
+  entryExit: { x: 420, y: 1028, w: 140, h: 56 },
+  finality: { x: 578, y: 1004, w: 160, h: 104 },
 } as const satisfies Record<string, Box>;
 
-// One outer frame holds the whole trading step — Bid, Load Deal Documents, Search, the Step 1–5
-// card and the counterparty tiles (Offer, Choice, Counter Offer, Social Media), which no longer
-// carry a frame of their own. A generous gap separates it from the compliance frame below.
-const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 806, h: 442 };
-const COMPLIANCE_FRAME: Box = { x: 30, y: 566, w: 360, h: 434 };
-const MEMORY = { cx: 560, cy: 790, r: 110 };
+// One outer frame holds the whole trading step — Bid, Load Deal Documents, Search, the Search
+// Results card and the counterparty tiles (Offer, Choice, Counter Offer, Social Media), which no
+// longer carry a frame of their own. Trimmed to its actual content height (rather than leaving a
+// tall gap beneath it) so Compliance can sit right below without the diagram needing a scroll.
+const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 806, h: 370 };
+const COMPLIANCE_FRAME: Box = { x: 30, y: 456, w: 360, h: 434 };
+const MEMORY = { cx: 560, cy: 680, r: 110 };
 
 const cx = (b: Box) => b.x + b.w / 2;
 const cy = (b: Box) => b.y + b.h / 2;
@@ -107,7 +108,7 @@ const ARROWS: string[] = [
   path(topOf(BOXES.counterOffer), { x: cx(BOXES.counterOffer), y: cy(BOXES.offer) }, rightOf(BOXES.offer)),
   line(bottomOf(BOXES.choice), topOf(BOXES.socialMedia)),
   // Out of trading and down into the compliance step.
-  path(bottomOf(BOXES.socialMedia), { x: cx(BOXES.socialMedia), y: 540 }, { x: cx(BOXES.expressIntent), y: 540 }, topOf(BOXES.expressIntent)),
+  path(bottomOf(BOXES.socialMedia), { x: cx(BOXES.socialMedia), y: 430 }, { x: cx(BOXES.expressIntent), y: 430 }, topOf(BOXES.expressIntent)),
   line(bottomOf(BOXES.expressIntent), topOf(BOXES.poi)),
   line(bottomOf(BOXES.poi), topOf(BOXES.withoutADoubt)),
   line(bottomOf(BOXES.withoutADoubt), topOf(BOXES.wad)),
@@ -116,10 +117,10 @@ const ARROWS: string[] = [
   path(bottomOf(BOXES.businessDocs), { x: cx(BOXES.businessDocs), y: cy(BOXES.execution) }, leftOf(BOXES.execution)),
   path({ x: cx(BOXES.entryExit), y: BOXES.execution.y + BOXES.execution.h }, topOf(BOXES.entryExit)),
   line(rightOf(BOXES.entryExit), leftOf(BOXES.finality)),
-  path(topOf(BOXES.finality), { x: cx(BOXES.finality), y: 940 }, { x: MEMORY.cx, y: 940 }, { x: MEMORY.cx, y: MEMORY.cy + MEMORY.r }),
+  path(topOf(BOXES.finality), { x: cx(BOXES.finality), y: 830 }, { x: MEMORY.cx, y: 830 }, { x: MEMORY.cx, y: MEMORY.cy + MEMORY.r }),
 ];
 
-const STEP_CHIPS = ["+ Step 1", "+ Step 2", "+ Step 3", "+ Step 4", "+ Step 5"];
+const SEARCH_RESULT_CHIPS = ["Result 1", "Result 2", "Result 3", "Result 4", "Result 5"];
 
 function ArrowLayer() {
   return (
@@ -303,7 +304,8 @@ export function MapView({
         <Frame box={TRADE_ENGINE_FRAME} label="Step 1 · Trading" />
         <Frame box={COMPLIANCE_FRAME} label="Step 2 · Compliance" />
 
-        {/* The five collapsible steps of the workflow, as a card inside the trading frame. */}
+        {/* What Search actually returns — a placeholder list of results/findings, not steps of
+            the workflow, shown as a small card beneath Search. */}
         <div
           className="pointer-events-none absolute overflow-hidden rounded-xl border border-border bg-card/40 px-3 py-2"
           style={{
@@ -313,9 +315,13 @@ export function MapView({
             height: py(BOXES.steps.h),
           }}
         >
-          <ul className="flex h-full flex-col justify-center gap-1">
-            {STEP_CHIPS.map((s) => (
-              <li key={s} className="text-[9px] font-medium leading-tight text-muted-foreground">
+          <p className="text-[8px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+            Search Results
+          </p>
+          <ul className="mt-1 flex flex-col gap-1">
+            {SEARCH_RESULT_CHIPS.map((s) => (
+              <li key={s} className="flex items-center gap-1 text-[9px] font-medium leading-tight text-muted-foreground">
+                <span aria-hidden className="h-1 w-1 shrink-0 rounded-full bg-muted-foreground/60" />
                 {s}
               </li>
             ))}
