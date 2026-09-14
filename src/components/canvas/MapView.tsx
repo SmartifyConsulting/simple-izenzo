@@ -50,7 +50,6 @@ const BOXES = {
   bid: { x: 40, y: 80, w: 200, h: 56 },
   loadDocs: { x: 40, y: 164, w: 200, h: 56 },
   search: { x: 40, y: 248, w: 200, h: 62 },
-  steps: { x: 40, y: 336, w: 200, h: 142 },
   offer: { x: 300, y: 80, w: 200, h: 56 },
   choice: { x: 300, y: 164, w: 200, h: 56 },
   counterOffer: { x: 530, y: 164, w: 190, h: 56 },
@@ -88,8 +87,7 @@ const ARROWS: string[] = [
   // Trading step: registration and search down the left, counterparties on the right.
   line(bottomOf(BOXES.bid), topOf(BOXES.loadDocs)),
   line(bottomOf(BOXES.loadDocs), topOf(BOXES.search)),
-  line(bottomOf(BOXES.search), topOf(BOXES.steps)),
-  path(rightOf(BOXES.steps), { x: 268, y: cy(BOXES.steps) }, { x: 268, y: cy(BOXES.offer) }, leftOf(BOXES.offer)),
+  path(rightOf(BOXES.search), { x: 268, y: cy(BOXES.search) }, { x: 268, y: cy(BOXES.offer) }, leftOf(BOXES.offer)),
   // Counterparty loop: Offer into Choice, Choice out to Counter Offer and back, then Social Media.
   line(bottomOf(BOXES.offer), topOf(BOXES.choice)),
   path({ x: BOXES.choice.x + BOXES.choice.w, y: cy(BOXES.choice) - 11 }, { x: BOXES.counterOffer.x, y: cy(BOXES.choice) - 11 }),
@@ -108,8 +106,6 @@ const ARROWS: string[] = [
   line(rightOf(BOXES.entryExit), leftOf(BOXES.finality)),
   path(topOf(BOXES.finality), { x: cx(BOXES.finality), y: 940 }, { x: MEMORY.cx, y: 940 }, { x: MEMORY.cx, y: MEMORY.cy + MEMORY.r }),
 ];
-
-const STEP_CHIPS = ["+ Step 1", "+ Step 2", "+ Step 3", "+ Step 4", "+ Step 5"];
 
 function ArrowLayer() {
   return (
@@ -292,25 +288,6 @@ export function MapView({
 
         <Frame box={TRADE_ENGINE_FRAME} label="Step 1 · Trading" />
         <Frame box={COMPLIANCE_FRAME} label="Step 2 · Compliance" />
-
-        {/* The five collapsible steps of the workflow, as a card inside the trading frame. */}
-        <div
-          className="pointer-events-none absolute overflow-hidden rounded-xl border border-border bg-card/40 px-3 py-2"
-          style={{
-            left: px(BOXES.steps.x),
-            top: py(BOXES.steps.y),
-            width: px(BOXES.steps.w),
-            height: py(BOXES.steps.h),
-          }}
-        >
-          <ul className="flex h-full flex-col justify-center gap-1">
-            {STEP_CHIPS.map((s) => (
-              <li key={s} className="text-[9px] font-medium leading-tight text-muted-foreground">
-                {s}
-              </li>
-            ))}
-          </ul>
-        </div>
 
         {/* Step 1 — trading. Bid and Load Deal Documents drive the workspace beside the map. */}
         {node("bid", "Bid", "trading", "bid-offer", Gavel, {
