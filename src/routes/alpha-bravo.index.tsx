@@ -61,16 +61,15 @@ function AlphaBravoHome() {
   const { user } = useAuth();
   return (
     <section className="mx-auto max-w-6xl px-5 py-6 sm:py-8">
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-        <Sparkles className="h-3.5 w-3.5" /> AI-Powered Trade Matching
-      </span>
-      <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-        Pre-vetted · Governed marketplace
-      </p>
-
-      <div className="mt-3 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="max-w-4xl">
-          <h1 className="max-w-3xl text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+            <Sparkles className="h-3.5 w-3.5" /> AI-Powered Trade Matching
+          </span>
+          <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+            Pre-vetted · Governed marketplace
+          </p>
+          <h1 className="mt-3 max-w-3xl text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl">
             Find the right Trade
             <br />
             in ~5 minutes.
@@ -89,9 +88,9 @@ function AlphaBravoHome() {
           </div>
         </div>
 
-        {/* The space the CTA used to sit in (now moved above the five-stage frames) goes to a
-            quick inline sign-in/sign-up instead of sitting empty — a signed-in visitor never
-            sees this page anyway (the root route sends them straight to the workspace). */}
+        {/* Sign in / sign up sits top-right of the hero, level with the badge above the
+            headline — a signed-in visitor never sees this page anyway (the root route sends
+            them straight to the workspace), so this space would otherwise go empty. */}
         {!user && (
           <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
             <AuthTabs />
