@@ -1735,11 +1735,31 @@ export type RecordedActivity = {
 
 const BID_REFERENCE_BASE = 9088778;
 const OFFER_REFERENCE_BASE = 8979667;
+// Wide enough that two bids drawing at random practically never land on the same number — the old
+// span of 1000 was small enough that repeats did happen, leaving two bids sharing one BID id.
+const REFERENCE_SPAN = 900000;
 
 export function nextReference(direction: "bid" | "offer") {
   const base = direction === "bid" ? BID_REFERENCE_BASE : OFFER_REFERENCE_BASE;
-  const unique = base + Math.floor(Math.random() * 1000);
+  const unique = base + Math.floor(Math.random() * REFERENCE_SPAN);
   return `${direction === "bid" ? "BID" : "OFF"}${unique}`;
+}
+
+/** Draws a bid/offer number that isn't already in use — checked against the numbers on file before
+ * it's handed out, so two deals can never end up sharing one. */
+export async function claimReference(direction: "bid" | "offer") {
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const candidate = nextReference(direction);
+    const { data, error } = await supabase
+      .from("transactions")
+      .select("id")
+      .eq("reference", candidate)
+      .limit(1);
+    // Can't check (offline, or the column isn't there yet) — use it rather than block the bid.
+    if (error) return candidate;
+    if (!data || data.length === 0) return candidate;
+  }
+  return nextReference(direction);
 }
 
 export function CanvasStart({

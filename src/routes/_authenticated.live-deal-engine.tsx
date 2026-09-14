@@ -1729,6 +1729,9 @@ function LiveDealEngine() {
           {!activity && (
             <div className="mt-4">
               <CanvasStart
+                // Re-keyed on each New press so the starting card remounts and draws its own fresh
+                // BID number rather than reusing the one already on screen.
+                key={freshNonce ?? "new"}
                 initialDirection={pendingDirection}
                 initialPrompt={seed}
                 initialFiles={seedFilesFromHome}
