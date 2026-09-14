@@ -2172,7 +2172,11 @@ function LiveDealEngine() {
                   />
                 )}
 
-                {dealTx?.wad_completed_at && <TradeSummary tx={dealTx} />}
+                {/* Only once Step 2's own documents (Business Docs) are in — not the moment the
+                    compliance checks clear. */}
+                {dealTx?.wad_completed_at && stepOverrides["businessDocs"] === "done" && (
+                  <TradeSummary tx={dealTx} />
+                )}
               </div>
             ) : null}
         </div>
