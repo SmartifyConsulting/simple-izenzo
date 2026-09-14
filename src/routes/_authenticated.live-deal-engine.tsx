@@ -1755,8 +1755,9 @@ function LiveDealEngine() {
                       onClick={() => void fetchInterest(dealTx.id)}
                     >
                       {screening || mediaRunning || flowStep === "searching"
-                        ? "Fetching interest…"
-                        : "Fetch Interest"}
+                        ? "Finding counterparties…"
+                        : "Find Counterparties"}
+
                     </Button>
                   ) : null}
 
