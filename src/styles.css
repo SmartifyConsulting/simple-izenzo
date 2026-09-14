@@ -104,6 +104,10 @@
   --destructive-foreground: oklch(0.98 0 0);
   --success: oklch(0.71 0.13 172);
   --success-foreground: oklch(0.16 0.02 200);
+  /* Active workspace tab on the black stylesheet: black frame, green writing and border. */
+  --taskbar-active-bg: oklch(0 0 0);
+  --taskbar-active-fg: oklch(0.71 0.13 172);
+  --taskbar-active-border: oklch(0.71 0.13 172);
   --warning: oklch(0.78 0.14 78);
   --warning-foreground: oklch(0.18 0.02 250);
   --info: oklch(0.68 0.11 220);
@@ -171,6 +175,10 @@
   --destructive-foreground: hsl(0 0% 100%);
   --success: hsl(160 84% 39%);
   --success-foreground: hsl(0 0% 100%);
+  /* Active workspace tab on the cream stylesheet: green frame, black writing. */
+  --taskbar-active-bg: hsl(160 84% 39%);
+  --taskbar-active-fg: hsl(0 0% 0%);
+  --taskbar-active-border: hsl(160 84% 39%);
   --warning: hsl(43 96% 56%);
   --warning-foreground: hsl(0 0% 0%);
   --info: hsl(210 90% 45%);
@@ -232,6 +240,10 @@
   --destructive-foreground: oklch(1 0 0);
   --success: oklch(0.63 0.15 155);
   --success-foreground: oklch(1 0 0);
+  /* Active workspace tab on the cream stylesheet: green frame, black writing. */
+  --taskbar-active-bg: oklch(0.63 0.15 155);
+  --taskbar-active-fg: oklch(0 0 0);
+  --taskbar-active-border: oklch(0.63 0.15 155);
   --warning: oklch(0.78 0.14 78);
   --warning-foreground: oklch(0.18 0.02 250);
   --info: oklch(0.51 0.24 265);

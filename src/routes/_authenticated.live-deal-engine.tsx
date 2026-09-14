@@ -295,6 +295,13 @@ function LiveDealEngine() {
   const [finalizing, setFinalizing] = useState(false);
   /** Which gate step the right-hand panel is currently asking the user to complete. */
   const [stagePanel, setStagePanel] = useState<"intent" | "poi" | "wad" | null>(null);
+  // Closing the Intent frame without confirming isn't the same as confirming it — the workflow
+  // pulse goes back to Online Media Screening (the last real completed step) rather than sitting
+  // on Intent, which is now hidden. Cleared again the moment Intent is reopened.
+  const [intentDismissed, setIntentDismissed] = useState(false);
+  useEffect(() => {
+    if (stagePanel === "intent") setIntentDismissed(false);
+  }, [stagePanel]);
   /** Set when a Map node outside the Workspace's own step-specific UI is clicked — shows a
    * generic inline detail panel for that (stage, step) in the Workspace instead. */
   const [mapPanel, setMapPanel] = useState<{ stage: StageKey; step: string } | null>(null);
@@ -659,6 +666,13 @@ function LiveDealEngine() {
       o["intent"] = "open";
       return o;
     }
+    // Intent was opened and then closed by hand without confirming it — the pulse goes back to
+    // Online Media Screening rather than sitting on the now-hidden Intent panel.
+    if (intentDismissed && !dealTx.intent_confirmed_at) {
+      o["onlineMedia"] = "active";
+      o["intent"] = "open";
+      return o;
+    }
     o["onlineMedia"] = "done";
 
     o["intent"] = dealTx.intent_confirmed_at ? "done" : "active";
@@ -675,6 +689,7 @@ function LiveDealEngine() {
     screening,
     screeningResults,
     hasChosen,
+    intentDismissed,
     workspaceDocs.length,
   ]);
 
@@ -907,6 +922,7 @@ function LiveDealEngine() {
       );
       setHasChosen(false);
       setDbHasChosenParty(false);
+      setIntentDismissed(false);
       setStagePanel(null);
       setMediaRunning(false);
       setMediaResults(null);
@@ -976,6 +992,7 @@ function LiveDealEngine() {
     setStagePanel(null);
     setHasChosen(false);
     setDbHasChosenParty(false);
+      setIntentDismissed(false);
     setMapPanel(null);
     setPendingDirection(null);
     setDraftReference(null);
@@ -1054,6 +1071,7 @@ function LiveDealEngine() {
         setMediaProgress(null);
         setHasChosen(false);
         setDbHasChosenParty(false);
+      setIntentDismissed(false);
         setDocumentSummary((tx as unknown as { document_summary: string | null }).document_summary ?? null);
         setFlowStep(tx.step === "documents" ? "documents" : "results");
         const { data: docs } = await supabase
@@ -1116,6 +1134,7 @@ function LiveDealEngine() {
         setMediaProgress(null);
         setHasChosen(false);
         setDbHasChosenParty(false);
+      setIntentDismissed(false);
         setDocumentSummary((tx as unknown as { document_summary: string | null }).document_summary ?? null);
         setFlowStep(tx.step === "documents" ? "documents" : "results");
         const { data: docs } = await supabase
@@ -1985,7 +2004,10 @@ function LiveDealEngine() {
                     stage={stagePanel === "wad" ? "compliance" : "trading"}
                     step={stagePanel}
                     reload={() => void reloadDeal()}
-                    onClose={() => setStagePanel(null)}
+                    onClose={() => {
+                      setStagePanel(null);
+                      if (stagePanel === "intent" && !dealTx.intent_confirmed_at) setIntentDismissed(true);
+                    }}
                     onChangeParty={() => void reopenChoice()}
 
                   />

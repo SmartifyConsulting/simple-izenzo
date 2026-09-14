@@ -189,7 +189,7 @@ export function WorkspaceTaskbar() {
             className={cn(
               "group flex w-36 shrink-0 cursor-grab items-center gap-2 rounded-t-md border px-3 py-1.5 text-xs font-medium transition-colors active:cursor-grabbing",
               active
-                ? "border-[#F59E0B] border-b-transparent bg-[#F59E0B]/15 text-foreground"
+                ? "border-[var(--taskbar-active-border)] border-b-transparent bg-[var(--taskbar-active-bg)] text-[var(--taskbar-active-fg)]"
                 : "border-border border-b-transparent bg-transparent text-muted-foreground hover:bg-card/50 hover:text-foreground",
               draggedId === w.id && "opacity-40",
               overId === w.id && draggedId !== w.id && "border-l-2 border-l-primary",
