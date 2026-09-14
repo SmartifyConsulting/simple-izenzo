@@ -39,7 +39,6 @@ function DealSearchDialog({
   onPick: (txId: string) => void;
 }) {
   const { org } = useAuth();
-  const navigate = useNavigate();
   const { data: deals = [] } = useQuery({
     queryKey: ["searchable-deals", org?.id],
     enabled: Boolean(org?.id) && open,
