@@ -16,8 +16,8 @@ export const Route = createFileRoute("/alpha-bravo/bidders")({
 
 const TOOLS = [
   {
-    title: "Responder Match",
-    body: "Upload your opportunity and get the best-fit verified Responders, plus how to reach them.",
+    title: "Counterparty Match",
+    body: "Upload your opportunity and get the best-fit verified Counterparties, plus how to reach them.",
   },
   {
     title: "WaD Readiness Check",
@@ -29,7 +29,7 @@ const TOOLS = [
   },
   {
     title: "Deal Structuring Assistant",
-    body: "Turn a rough opportunity into a structured brief a Responder can act on.",
+    body: "Turn a rough opportunity into a structured brief a Counterparty can act on.",
   },
 ];
 
@@ -40,7 +40,7 @@ const FAQS = [
   },
   {
     q: "What do you require before matching?",
-    a: "Just your Bid/Offer terms and any supporting documents (attached with a fingerprint). Full verification isn't required to be matched — it happens later, once you and a Responder choose to move forward.",
+    a: "Just your Bid/Offer terms and any supporting documents (attached with a fingerprint). Full verification isn't required to be matched — it happens later, once you and a Counterparty choose to move forward.",
   },
   {
     q: "How do I get verified?",
@@ -59,7 +59,7 @@ function Bidders() {
         Bidders
       </p>
       <h1 className="mt-4 max-w-2xl text-4xl tracking-tight text-foreground sm:text-5xl">
-        Post an opportunity, get matched with verified Responders.
+        Post an opportunity, get matched with verified Counterparties.
       </h1>
       <p className="mt-6 max-w-2xl leading-relaxed text-muted-foreground">
         Whether or not you're ready to transact today, use our free tools to get your

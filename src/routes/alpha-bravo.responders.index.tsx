@@ -4,7 +4,7 @@ import { ResponderDirectory, ResponderFacetLinks } from "@/components/marketing/
 
 export const Route = createFileRoute("/alpha-bravo/responders/")({
   head: () => ({
-    meta: [{ title: "Responders — Izenzo Alpha-Bravo" }],
+    meta: [{ title: "Counterparties — Izenzo Alpha-Bravo" }],
   }),
   component: Responders,
 });
@@ -36,7 +36,7 @@ const STEPS = [
 const WHY = [
   "Works across Agriculture, Logistics, Metals, Energy, and Manufacturing",
   "Fit scoring on every incoming opportunity",
-  "Public Responder profile Bidders can see",
+  "Public Counterparty profile Bidders can see",
   "Match tracking and outreach history",
   "No spam — only Bidders who match your criteria",
 ];
@@ -45,7 +45,7 @@ function Responders() {
   return (
     <section className="mx-auto max-w-5xl px-5 py-20 sm:py-24">
       <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-        Responders
+        Counterparties
       </p>
       <h1 className="mt-4 max-w-2xl text-4xl tracking-tight text-foreground sm:text-5xl">
         Curated opportunity flow that actually matches what you supply.
@@ -86,7 +86,7 @@ function Responders() {
       </p>
 
       <p className="mt-16 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-        Built for how Responders actually source
+        Built for how Counterparties actually source
       </p>
       <div className="mt-8 grid gap-6 sm:grid-cols-3">
         {FEATURES.map((f) => (
@@ -125,10 +125,10 @@ function Responders() {
         The directory
       </p>
       <h2 className="mt-3 max-w-2xl text-3xl tracking-tight text-foreground sm:text-4xl">
-        Verified Responders in our network.
+        Verified Counterparties in our network.
       </h2>
       <p className="mt-4 max-w-2xl leading-relaxed text-muted-foreground">
-        Browse Responders that have cleared Izenzo's compliance screening — every record here is
+        Browse Counterparties that have cleared Izenzo's compliance screening — every record here is
         live from our database, not a static list.
       </p>
       <ResponderFacetLinks />

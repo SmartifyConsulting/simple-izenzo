@@ -255,7 +255,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
         <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
           <p className="text-sm font-medium text-foreground">Searching for matches…</p>
-          <p className="text-xs text-muted-foreground">Cross-referencing verified Responders</p>
+          <p className="text-xs text-muted-foreground">Cross-referencing verified Counterparties</p>
         </div>
       )}
 
@@ -268,10 +268,10 @@ export function HeroMatchCard({ className }: { className?: string }) {
                   {total} match{total === 1 ? "" : "es"} found
                 </span>
                 {total > 5 ? " — showing your top 5. " : ". "}
-                Real Responder records, sign up to unlock full contacts.
+                Real Counterparty records, sign up to unlock full contacts.
               </>
             ) : (
-              "Your top 5 — real Responder records, sign up to unlock full contacts."
+              "Your top 5 — real Counterparty records, sign up to unlock full contacts."
             )}
           </p>
 
@@ -281,7 +281,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
 
             {!isLoading && (!matches || matches.length === 0) && (
               <p className="text-sm text-muted-foreground">
-                No Responders on file yet — sign up and be the first match.
+                No Counterparties on file yet — sign up and be the first match.
               </p>
             )}
 

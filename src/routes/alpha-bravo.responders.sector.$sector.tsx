@@ -8,7 +8,7 @@ import {
 
 export const Route = createFileRoute("/alpha-bravo/responders/sector/$sector")({
   head: () => ({
-    meta: [{ title: "Responders by Sector — Izenzo Alpha-Bravo" }],
+    meta: [{ title: "Counterparties by Sector — Izenzo Alpha-Bravo" }],
   }),
   component: RespondersBySector,
 });
@@ -24,23 +24,23 @@ function RespondersBySector() {
         to="/alpha-bravo/responders"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
       >
-        <ArrowLeft className="h-3.5 w-3.5" /> All Responders
+        <ArrowLeft className="h-3.5 w-3.5" /> All Counterparties
       </Link>
 
       <p className="mt-8 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-        Responders · {sector ?? sectorSlug}
+        Counterparties · {sector ?? sectorSlug}
       </p>
       <h1 className="mt-4 max-w-2xl text-4xl tracking-tight text-foreground sm:text-5xl">
-        Verified {sector ?? sectorSlug} Responders in our network.
+        Verified {sector ?? sectorSlug} Counterparties in our network.
       </h1>
       <p className="mt-6 max-w-2xl leading-relaxed text-muted-foreground">
-        Responders that have cleared Izenzo's compliance screening in this sector — live from our
+        Counterparties that have cleared Izenzo's compliance screening in this sector — live from our
         database.
       </p>
 
       {!isLoading && !sector && (
         <p className="mt-10 text-sm text-muted-foreground">
-          No Responders on file yet for this sector.
+          No Counterparties on file yet for this sector.
         </p>
       )}
       {sector && <ResponderDirectory sector={sector} />}

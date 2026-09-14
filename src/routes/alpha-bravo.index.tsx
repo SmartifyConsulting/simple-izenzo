@@ -8,11 +8,11 @@ import { useAuth } from "@/lib/auth";
 export const Route = createFileRoute("/alpha-bravo/")({
   head: () => ({
     meta: [
-      { title: "Izenzo Alpha-Bravo | Matching Bidders with Responders" },
+      { title: "Izenzo Alpha-Bravo | Matching Bidders with Counterparties" },
       {
         name: "description",
         content:
-          "Izenzo is a governance-first marketplace matching Bidders with the right Responders — verified, risk-assessed, and executed under one cryptographic record.",
+          "Izenzo is a governance-first marketplace matching Bidders with the right Counterparties — verified, risk-assessed, and executed under one cryptographic record.",
       },
     ],
   }),
@@ -25,7 +25,7 @@ const STAGES = [
     title: "Trading",
     tag: "Find, Match & Verify",
     icon: Target,
-    body: "Post your opportunity, get matched with the right Responder, and see each candidate checked for identity, ownership, and sanctions/watchlist exposure before you choose. Verification can't be skipped.",
+    body: "Post your opportunity, get matched with the right Counterparty, and see each candidate checked for identity, ownership, and sanctions/watchlist exposure before you choose. Verification is mandatory.",
   },
   {
     n: "02",
@@ -76,7 +76,7 @@ function AlphaBravoHome() {
             in ~5 minutes.
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-            Post your opportunity brief and get matched with verified Responders — fit scores,
+            Post your opportunity brief and get matched with verified Counterparties — fit scores,
             verified contacts, and ready-to-send outreach, all under one cryptographic record.
           </p>
           <div className="mt-4">

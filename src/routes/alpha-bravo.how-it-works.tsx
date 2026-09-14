@@ -42,7 +42,7 @@ const STAGE_COPY: Record<(typeof SPINE)[number]["key"], { heading: string; tag: 
 };
 
 const THESIS = [
-  "The best outcomes come from pairing the right Bidder with the right Responder — not just the fastest one.",
+  "The best outcomes come from pairing the right Bidder with the right Counterparty — not just the fastest one.",
   "Every match clears KYC/KYB and a non-waivable risk gate before a cent changes hands.",
   "Every completed match becomes reusable intelligence for the next opportunity.",
 ];

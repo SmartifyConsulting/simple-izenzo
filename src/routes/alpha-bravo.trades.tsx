@@ -55,7 +55,7 @@ function Trades() {
         <SubmitBidButton size="sm" className="shrink-0" />
       </div>
       <h1 className="mt-3 max-w-2xl text-3xl tracking-tight text-foreground sm:text-4xl">
-        Bidders and Responders we've matched.
+        Bidders and Counterparties we've matched.
       </h1>
       <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
         Live and completed matches across Trading, Compliance, Execution and Finality.
@@ -110,7 +110,7 @@ function Trades() {
       <div className="mt-10 rounded-xl border border-border bg-card p-6 text-center">
         <h2 className="text-lg font-medium tracking-tight text-foreground">Want to be matched?</h2>
         <p className="mt-1.5 text-sm text-muted-foreground">
-          Post an opportunity and get verified Responders.
+          Post an opportunity and get verified Counterparties.
         </p>
         <div className="mt-4 inline-block">
           <SubmitBidButton size="sm" />

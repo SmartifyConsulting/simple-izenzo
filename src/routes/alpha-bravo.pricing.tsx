@@ -58,7 +58,7 @@ function Pricing() {
               Pay-as-you-go
             </p>
             <h2 className="mt-1 text-base font-medium tracking-tight text-foreground">
-              Bidders &amp; Responders
+              Bidders &amp; Counterparties
             </h2>
             <p className="mt-1 text-xs text-muted-foreground">
               For anyone posting or responding to a trade opportunity.

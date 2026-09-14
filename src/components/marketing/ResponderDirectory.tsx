@@ -124,12 +124,12 @@ export function ResponderDirectory({
         ))}
       </div>
 
-      {isLoading && <p className="mt-10 text-sm text-muted-foreground">Loading Responders…</p>}
+      {isLoading && <p className="mt-10 text-sm text-muted-foreground">Loading Counterparties…</p>}
 
       {!isLoading && visible.length === 0 && (
         <div className="mt-10 rounded-2xl border border-border bg-card p-6">
           <p className="text-sm text-foreground">
-            No Responders listed here yet
+            No Counterparties listed here yet
             {sector ? ` in ${sector}` : ""}
             {jurisdiction ? ` in ${jurisdiction}` : ""}.
           </p>
