@@ -461,21 +461,10 @@ export function MapView({
         <Frame box={ENTRY_EXIT_FRAME} />
         <Frame box={FINALITY_FRAME} label="Step 4 · Finality" />
 
-        {/* A placeholder for what Search returns — just labelled, no results content shown. */}
-        <div
-          className="pointer-events-none absolute flex items-center justify-center overflow-hidden rounded-xl border border-border bg-card/40 px-3 py-2"
-          style={{
-            left: px(BOXES.steps.x),
-            top: py(BOXES.steps.y),
-            width: px(BOXES.steps.w),
-            height: py(BOXES.steps.h),
-          }}
-        >
-          <p className="flex items-center justify-center gap-1.5 text-[10px] font-semibold tracking-wide text-muted-foreground">
-            <ListChecks className="h-3.5 w-3.5 shrink-0" />
-            Search Results
-          </p>
-        </div>
+        {/* Mirrors Search's own state (same overrideKey) — once the pulse has moved on to Choice,
+            the search is done, so its results read as green/ticked here too, not a plain
+            placeholder forever. */}
+        {node("steps", "Search Results", "trading", "search", ListChecks, { overrideKey: "search" })}
 
         {/* Step 1 — trading. Bid and Load Deal Documents drive the workspace beside the map. */}
         {node("bid", "Bid", "trading", "bid-offer", Gavel, {

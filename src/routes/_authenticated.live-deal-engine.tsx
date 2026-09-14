@@ -665,6 +665,21 @@ function LiveDealEngine() {
     }
     o["search"] = "done";
 
+    // Trust a persisted, unambiguous fact over this session's own local flow flags — hasChosen,
+    // mediaResults and intentDismissed are plain React state that start back at their initial
+    // values on every fresh page load, so a deal that has genuinely confirmed Intent (or gone
+    // further) in an *earlier* session read as if none of that had happened yet, sending the
+    // pulse backward to Choice/Online Media Screening/Express Intent the moment WaD (or POI) was
+    // then cleared in the new session.
+    if (dealTx.intent_confirmed_at) {
+      o["choice"] = "done";
+      o["onlineMedia"] = "done";
+      o["intent"] = "done";
+      o["poi"] = dealTx.poi_sealed_at ? "done" : "active";
+      if (dealTx.poi_sealed_at) o["wad"] = dealTx.wad_completed_at ? "done" : "active";
+      return o;
+    }
+
     // Choice comes first now: nothing below it can start until a person has picked.
     if (!hasChosen) {
       o["choice"] = flowStep === "results" ? "active" : "open";
