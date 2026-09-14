@@ -161,7 +161,7 @@ export function WorkspaceTaskbar() {
           New
         </button>
       </div>
-      <DealSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+      <DealSearchDialog open={searchOpen} onOpenChange={setSearchOpen} onPick={openDeal} />
 
       <div className="flex items-end gap-1 overflow-x-auto">
       {deals.map((w) => {
