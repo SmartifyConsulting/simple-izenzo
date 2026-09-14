@@ -168,22 +168,7 @@ function ArrowLayer() {
         <marker id="map-arrowhead" markerWidth="7" markerHeight="7" refX="6.5" refY="3.5" orient="auto">
           <path d="M0,0 L7,3.5 L0,7 Z" className="fill-muted-foreground" />
         </marker>
-        {/* The upper semicircle of the Memory circle's own outline, so "Step 5 · Memory" can run
-            along its circumference instead of sitting as a flat line inside it. */}
-        <path
-          id="memory-arc"
-          fill="none"
-          d={`M ${MEMORY.cx - MEMORY.r} ${MEMORY.cy} A ${MEMORY.r} ${MEMORY.r} 0 0 1 ${MEMORY.cx + MEMORY.r} ${MEMORY.cy}`}
-        />
       </defs>
-      <text
-        className="fill-primary text-[11px] font-semibold uppercase tracking-[0.09em]"
-        textAnchor="middle"
-      >
-        <textPath href="#memory-arc" startOffset="50%">
-          Step 5 · Memory
-        </textPath>
-      </text>
       {ARROWS.map((d, i) => (
         <path
           key={i}
@@ -198,6 +183,60 @@ function ArrowLayer() {
     </svg>
   );
 }
+
+/**
+ * "Step 5 · Memory" set along the top of the Memory circle. It lives on its own layer measured in
+ * real CSS pixels — the diagram layer is stretched to the container, which would squeeze the label
+ * well below 11px however it is sized.
+ */
+function MemoryArcLabel() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ w: 0, h: 0 });
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => setSize({ w: el.clientWidth, h: el.clientHeight });
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const sx = size.w ? size.w / W : 0;
+  const sy = size.h ? size.h / H : 0;
+  const arcCx = MEMORY.cx * sx;
+  const arcCy = MEMORY.cy * sy;
+  const rx = MEMORY.r * sx;
+  const ry = MEMORY.r * sy;
+
+  return (
+    <div ref={ref} className="pointer-events-none absolute inset-0" aria-hidden>
+      {sx > 0 && (
+        <svg className="absolute inset-0 h-full w-full overflow-visible">
+          <defs>
+            <path
+              id="memory-arc-px"
+              fill="none"
+              d={`M ${arcCx - rx} ${arcCy} A ${rx} ${ry} 0 0 1 ${arcCx + rx} ${arcCy}`}
+            />
+          </defs>
+          <text
+            className="fill-primary font-semibold uppercase"
+            fontSize={11}
+            letterSpacing="0.09em"
+            textAnchor="middle"
+          >
+            <textPath href="#memory-arc-px" startOffset="50%">
+              Step 5 · Memory
+            </textPath>
+          </text>
+        </svg>
+      )}
+    </div>
+  );
+}
+
 
 /** A group frame: a hairline rounded outline with its name set into the top edge — drawn from the
  * theme's own colours, so it reads the same way on cream as it does on black. */
