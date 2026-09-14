@@ -46,8 +46,8 @@ const py = (v: number) => `${(v / H) * 100}%`;
 type Box = { x: number; y: number; w: number; h: number };
 
 const BOXES = {
-  bid: { x: 35, y: 84, w: 212, h: 78 },
-  loadDocs: { x: 35, y: 214, w: 212, h: 86 },
+  bid: { x: 35, y: 100, w: 212, h: 76 },
+  loadDocs: { x: 35, y: 222, w: 212, h: 82 },
   search: { x: 335, y: 218, w: 286, h: 68 },
   steps: { x: 670, y: 178, w: 150, h: 164 },
   offer: { x: 1018, y: 124, w: 206, h: 72 },
@@ -322,7 +322,7 @@ export function MapView({
 
           {/* Step card between Search and the counterparty group */}
           <div
-            className="pointer-events-none absolute rounded-lg border-2 border-[#3f5bd9] bg-[#fdf6e0] px-2 py-2"
+            className="pointer-events-none absolute overflow-hidden rounded-lg border-2 border-[#3f5bd9] bg-[#fdf6e0] px-2 py-1"
             style={{
               left: px(BOXES.steps.x),
               top: py(BOXES.steps.y),
@@ -330,9 +330,9 @@ export function MapView({
               height: py(BOXES.steps.h),
             }}
           >
-            <ul className="flex h-full flex-col justify-between">
+            <ul className="flex h-full flex-col justify-center gap-0.5">
               {STEP_CHIPS.map((s) => (
-                <li key={s} className="text-[10px] font-semibold text-[#1c1c2b] sm:text-[11px]">
+                <li key={s} className="text-[8px] font-semibold leading-tight text-[#1c1c2b] sm:text-[10px]">
                   {s}
                 </li>
               ))}
