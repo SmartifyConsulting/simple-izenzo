@@ -41,7 +41,13 @@
     then folds away the moment results arrive, giving the results list the room. The header stays
     clickable to open it again.
 
+11. **A new workspace already looks like a bid.** Pressing New shows the Bid Registration frame in the
+    Live Workspace exactly as in the second attachment — your name, Verified, Bidder Active Since, and
+    the bid number top right — with the description and file-drop bar inside it. The number is issued
+    the moment New is clicked, so it is on screen before anything is uploaded.
+
 ## How you will check it
+
 
 - "Step 5 · Memory" reads at the same size as the other step labels; Online Screening is one line and
   the Step 1 frame is shorter; Step 3, Step 4 and Entry / Exit are noticeably flatter with no repeated
@@ -50,6 +56,8 @@
   "haven't been read yet" line.
 - The button reads Find Counterparties, and when results land Bid Information folds away.
 - The current step unmistakably pulses.
+- Pressing New shows the Bid Registration frame with its bid number, not a bare description bar.
+
 
 ## Technical notes
 
@@ -72,3 +80,7 @@
   keeping the retry button only when `readError` is set; rename the Fetch Interest button and its busy
   label (and the `MatchResultsPanel` copy); in `fetchInterest`/`runSearch` collapse Bid Information
   after matches are saved (`interestCount > 0`) rather than at kickoff.
+- New workspace: render the Bid Registration header block (identity, Verified badge, bidder-since and
+  the `draftReference` claimed on mount) around `CanvasStart`'s prompt/upload bar, reusing the same
+  frame markup the registered-bid state uses.
+
