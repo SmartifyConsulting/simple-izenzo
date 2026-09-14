@@ -508,10 +508,11 @@ export function MapView({
           sub: "POI, NDA, MOU, Contract",
         })}
 
-        {/* Step 3 — execution. No border of its own — it sits directly inside the Step 3 frame. */}
+        {/* Step 3 — execution. The word "Execution" is the frame's heading, so the tile carries only
+            its icon and detail line. */}
         <MapNode
           box={BOXES.execution}
-          label="Execution"
+          label=""
           icon={Briefcase}
           sub="Concept, Pre-Reqs, Feasibility, Bankability, Project Prep, Implementation"
           subSize="sm"
@@ -522,12 +523,13 @@ export function MapView({
         />
         {/* Entry/Exit sits between the Step 3 and Step 4 frames, on its own. */}
         {node("entryExit", "Entry / Exit", "execution", "stakeholders", LogIn, { plain: true })}
-        {/* Step 4 — finality. No border of its own — it sits directly inside the Step 4 frame. */}
-        {node("finality", "Finality", "finality", "entry", Banknote, {
+        {/* Step 4 — finality. "Finality" is the frame heading, so the tile shows only its detail. */}
+        {node("finality", "", "finality", "entry", Banknote, {
           sub: "Payment, Signoff, Handover",
           subSize: "sm",
           plain: true,
         })}
+
 
         {/* Step 5 — memory */}
         <button
