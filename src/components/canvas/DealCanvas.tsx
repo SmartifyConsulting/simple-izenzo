@@ -1963,7 +1963,7 @@ export function CanvasStart({
 
   const startNode = (
     <div className="mx-auto w-full max-w-2xl space-y-3">
-      <div className="flex items-stretch gap-2 rounded-2xl border-2 border-border bg-background p-2 shadow-sm transition-colors focus-within:border-primary">
+      <div className="flex items-stretch gap-2 rounded-xl border border-border bg-background p-1.5 shadow-sm transition-colors focus-within:border-primary">
         <input
           type="text"
           value={prompt}
@@ -1995,10 +1995,10 @@ export function CanvasStart({
           }}
           aria-label="Drop files here or click to browse"
           className={cn(
-            "flex min-w-0 flex-1 basis-1/2 items-center justify-center gap-2 rounded-xl border border-dashed px-2 text-xs transition-colors",
+            "flex min-w-0 flex-1 basis-1/2 items-center justify-center gap-2 rounded-lg border-2 border-dashed px-2 py-1.5 text-xs transition-colors",
             dragOver
               ? "border-primary bg-primary/5 text-foreground"
-              : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground",
+              : "border-muted-foreground/70 text-muted-foreground hover:border-primary/60 hover:text-foreground",
           )}
         >
           <UploadCloud className="h-4 w-4 shrink-0" />
@@ -2027,9 +2027,9 @@ export function CanvasStart({
           onClick={() => void beginPicking()}
           disabled={!canBeginPicking}
           aria-label="Start"
-          className="flex h-10 w-10 shrink-0 items-center justify-center self-center rounded-full bg-primary text-primary-foreground transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex h-8 w-8 shrink-0 items-center justify-center self-center rounded-full bg-primary text-primary-foreground transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
         >
-          <ArrowUp className="h-4 w-4" />
+          <ArrowUp className="h-3.5 w-3.5" />
         </button>
       </div>
 
@@ -2059,7 +2059,7 @@ export function CanvasStart({
 
   if (!picking) {
     return (
-      <div className="ink-grid relative rounded-3xl border border-border p-4 sm:p-6">
+      <div className="relative">
         {startNode}
       </div>
     );
@@ -2068,7 +2068,7 @@ export function CanvasStart({
   // Creating the deal is near-instant, so this is just a brief in-between state on the way to the
   // real document-upload step — not a screen anyone needs to act on.
   return (
-    <div className="ink-grid relative rounded-3xl border border-border p-4 sm:p-6">
+    <div className="relative">
       <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
         <Loader2 className="h-5 w-5 animate-spin text-primary" />
         <p className="text-sm text-muted-foreground">Setting up your workspace…</p>
