@@ -61,7 +61,9 @@ const BOXES = {
   // Choice sits level with the (now shorter) Search Results card, so that connector is a single
   // straight run; Counter Offer matches it so its loop back to Choice stays attached.
   choice: { x: 460, y: 252, w: 160, h: 56 },
-  counterOffer: { x: 650, y: 248, w: 150, h: 64 },
+  // Counter Offer sits at the very right edge of the Trading frame; it, Choice and Search
+  // Results all share the same centre-line.
+  counterOffer: { x: 776, y: 248, w: 150, h: 64 },
   socialMedia: { x: 460, y: 323, w: 160, h: 64 },
   // Step 2 (Compliance & Governance) moves further down from Step 1's frame; Step 3/4 shift down
   // to match so the connector between them (unchanged below) doesn't have to stretch or overlap.
