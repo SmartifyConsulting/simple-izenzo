@@ -142,6 +142,10 @@ const ACTIVE_DEAL_KEY = "izenzo:active-deal";
 // keeping, but that placeholder shouldn't surface as if it were a real deal name in this picker.
 const GENERIC_TITLES = new Set(["New Bid", "New Offer"]);
 
+// Temporarily off while the map alone carries the "where am I" job — flip back on to restore
+// the vertical stepper beneath it.
+const SHOW_VERTICAL_STEPPER = false;
+
 function OpenDealsPicker({ currentId, hasAttachment }: { currentId: string | null; hasAttachment?: boolean }) {
   const { org } = useAuth();
   const navigate = useNavigate();
@@ -1378,14 +1382,18 @@ function LiveDealEngine() {
                   </div>
                 </div>
               )}
-              <ClassicView
-                tx={dealTx ?? FLOWCHART_PREVIEW_TX}
-                reload={() => void reloadDeal()}
-                readOnly={!dealTx}
-                onRegister={startNewDeal}
-                onOpenStep={openMapStep}
-                overrideStates={stepOverrides}
-              />
+              {/* Hidden for now — the map above is carrying the "where am I" job on its own while
+                  this is being tried out. Flip SHOW_VERTICAL_STEPPER back on to restore it. */}
+              {SHOW_VERTICAL_STEPPER && (
+                <ClassicView
+                  tx={dealTx ?? FLOWCHART_PREVIEW_TX}
+                  reload={() => void reloadDeal()}
+                  readOnly={!dealTx}
+                  onRegister={startNewDeal}
+                  onOpenStep={openMapStep}
+                  overrideStates={stepOverrides}
+                />
+              )}
             </div>
           </div>
 

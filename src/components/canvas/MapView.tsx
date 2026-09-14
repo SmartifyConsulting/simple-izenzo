@@ -39,7 +39,7 @@ function nodeState(stage: StageKey, step: string, tx: Transaction | null): NodeS
 // Workspace: everything is placed on this canvas and scaled to the container with percentages, so
 // tiles and their connecting lines always stay aligned however wide that column is.
 const W = 860;
-const H = 1140;
+const H = 1162;
 const px = (v: number) => `${(v / W) * 100}%`;
 const py = (v: number) => `${(v / H) * 100}%`;
 
@@ -56,26 +56,29 @@ const BOXES = {
   // Offer/Choice/Counter Offer/Social Media spread out further right, using the frame's full
   // width instead of clustering against Search's column.
   offer: { x: 460, y: 80, w: 160, h: 56 },
-  choice: { x: 460, y: 251, w: 160, h: 56 },
-  counterOffer: { x: 650, y: 251, w: 150, h: 64 },
-  socialMedia: { x: 460, y: 332, w: 160, h: 56 },
-  expressIntent: { x: 60, y: 490, w: 300, h: 54 },
-  poi: { x: 60, y: 568, w: 300, h: 54 },
-  withoutADoubt: { x: 60, y: 646, w: 300, h: 62 },
-  wad: { x: 60, y: 732, w: 300, h: 62 },
-  businessDocs: { x: 60, y: 818, w: 300, h: 62 },
-  execution: { x: 430, y: 890, w: 300, h: 104 },
-  entryExit: { x: 420, y: 1028, w: 140, h: 56 },
-  finality: { x: 578, y: 1004, w: 160, h: 104 },
+  // Choice sits level with the Search Results card (same centre-line), so that connector is a
+  // single straight run; Counter Offer matches it so its loop back to Choice stays attached.
+  choice: { x: 460, y: 291, w: 160, h: 56 },
+  counterOffer: { x: 650, y: 287, w: 150, h: 64 },
+  socialMedia: { x: 460, y: 362, w: 160, h: 64 },
+  expressIntent: { x: 60, y: 512, w: 300, h: 54 },
+  poi: { x: 60, y: 590, w: 300, h: 54 },
+  withoutADoubt: { x: 60, y: 668, w: 300, h: 62 },
+  wad: { x: 60, y: 754, w: 300, h: 62 },
+  businessDocs: { x: 60, y: 840, w: 300, h: 62 },
+  execution: { x: 430, y: 912, w: 300, h: 104 },
+  entryExit: { x: 420, y: 1050, w: 140, h: 56 },
+  finality: { x: 578, y: 1026, w: 160, h: 104 },
 } as const satisfies Record<string, Box>;
 
 // One outer frame holds the whole trading step — Bid, Load Deal Documents, Search, the Search
-// Results card and the counterparty tiles (Offer, Choice, Counter Offer, Social Media), which no
-// longer carry a frame of their own. Trimmed to its actual content height (rather than leaving a
-// tall gap beneath it) so Compliance can sit right below without the diagram needing a scroll.
-const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 806, h: 370 };
-const COMPLIANCE_FRAME: Box = { x: 30, y: 456, w: 360, h: 434 };
-const MEMORY = { cx: 560, cy: 680, r: 110 };
+// Results card and the counterparty tiles (Offer, Choice, Counter Offer, Online Media Screening),
+// which no longer carry a frame of their own. Trimmed to its actual content height (rather than
+// leaving a tall gap beneath it) so Compliance can sit right below without the diagram needing a
+// scroll.
+const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 806, h: 392 };
+const COMPLIANCE_FRAME: Box = { x: 30, y: 478, w: 360, h: 434 };
+const MEMORY = { cx: 560, cy: 702, r: 110 };
 
 const cx = (b: Box) => b.x + b.w / 2;
 const cy = (b: Box) => b.y + b.h / 2;
@@ -95,12 +98,8 @@ const ARROWS: string[] = [
   line(bottomOf(BOXES.bid), topOf(BOXES.loadDocs)),
   line(rightOf(BOXES.loadDocs), leftOf(BOXES.search)),
   line(bottomOf(BOXES.search), topOf(BOXES.steps)),
-  path(
-    rightOf(BOXES.steps),
-    { x: (BOXES.steps.x + BOXES.steps.w + BOXES.choice.x) / 2, y: cy(BOXES.steps) },
-    { x: (BOXES.steps.x + BOXES.steps.w + BOXES.choice.x) / 2, y: cy(BOXES.choice) },
-    leftOf(BOXES.choice),
-  ),
+  // Choice sits level with the Search Results card, so this is one straight run.
+  line(rightOf(BOXES.steps), leftOf(BOXES.choice)),
   // Counterparty loop: Offer into Choice, Choice out to Counter Offer and back, then Social Media.
   line(bottomOf(BOXES.offer), topOf(BOXES.choice)),
   path({ x: BOXES.choice.x + BOXES.choice.w, y: cy(BOXES.choice) - 11 }, { x: BOXES.counterOffer.x, y: cy(BOXES.choice) - 11 }),
@@ -108,7 +107,7 @@ const ARROWS: string[] = [
   path(topOf(BOXES.counterOffer), { x: cx(BOXES.counterOffer), y: cy(BOXES.offer) }, rightOf(BOXES.offer)),
   line(bottomOf(BOXES.choice), topOf(BOXES.socialMedia)),
   // Out of trading and down into the compliance step.
-  path(bottomOf(BOXES.socialMedia), { x: cx(BOXES.socialMedia), y: 430 }, { x: cx(BOXES.expressIntent), y: 430 }, topOf(BOXES.expressIntent)),
+  path(bottomOf(BOXES.socialMedia), { x: cx(BOXES.socialMedia), y: 452 }, { x: cx(BOXES.expressIntent), y: 452 }, topOf(BOXES.expressIntent)),
   line(bottomOf(BOXES.expressIntent), topOf(BOXES.poi)),
   line(bottomOf(BOXES.poi), topOf(BOXES.withoutADoubt)),
   line(bottomOf(BOXES.withoutADoubt), topOf(BOXES.wad)),
@@ -117,7 +116,7 @@ const ARROWS: string[] = [
   path(bottomOf(BOXES.businessDocs), { x: cx(BOXES.businessDocs), y: cy(BOXES.execution) }, leftOf(BOXES.execution)),
   path({ x: cx(BOXES.entryExit), y: BOXES.execution.y + BOXES.execution.h }, topOf(BOXES.entryExit)),
   line(rightOf(BOXES.entryExit), leftOf(BOXES.finality)),
-  path(topOf(BOXES.finality), { x: cx(BOXES.finality), y: 830 }, { x: MEMORY.cx, y: 830 }, { x: MEMORY.cx, y: MEMORY.cy + MEMORY.r }),
+  path(topOf(BOXES.finality), { x: cx(BOXES.finality), y: 852 }, { x: MEMORY.cx, y: 852 }, { x: MEMORY.cx, y: MEMORY.cy + MEMORY.r }),
 ];
 
 const SEARCH_RESULT_CHIPS = ["Result 1", "Result 2", "Result 3", "Result 4", "Result 5"];
@@ -359,7 +358,7 @@ export function MapView({
         {node("offer", "Offer", "trading", "counterparties", Tag)}
         {node("choice", "Choice", "trading", "choice", Share2, { overrideKey: "choice" })}
         {node("counterOffer", "Counter Offer", "trading", "counterparties", RefreshCw)}
-        {node("socialMedia", "Social Media", "trading", "online-media", Users, {
+        {node("socialMedia", "Online Media Screening", "trading", "online-media", Users, {
           overrideKey: "onlineMedia",
         })}
 
