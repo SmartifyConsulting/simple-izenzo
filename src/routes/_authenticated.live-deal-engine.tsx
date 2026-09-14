@@ -688,7 +688,10 @@ function LiveDealEngine() {
       o["intent"] = "done";
       o["poi"] = dealTx.poi_sealed_at ? "done" : "active";
       if (dealTx.poi_sealed_at) {
-        o["wad"] = dealTx.wad_completed_at ? "done" : "active";
+        // The KYC/KYB/PEP/AML checks now run before Without a Doubt: the pulse sits on the
+        // checks row while they are outstanding, and the gate row only turns green with them.
+        o["kycKyb"] = dealTx.wad_completed_at ? "done" : "active";
+        o["wad"] = dealTx.wad_completed_at ? "done" : "open";
         if (dealTx.wad_completed_at) o["businessDocs"] = dealTx.step === "business-docs" ? "active" : "done";
       }
       return o;
@@ -729,7 +732,8 @@ function LiveDealEngine() {
     if (dealTx.intent_confirmed_at) {
       o["poi"] = dealTx.poi_sealed_at ? "done" : "active";
       if (dealTx.poi_sealed_at) {
-        o["wad"] = dealTx.wad_completed_at ? "done" : "active";
+        o["kycKyb"] = dealTx.wad_completed_at ? "done" : "active";
+        o["wad"] = dealTx.wad_completed_at ? "done" : "open";
         if (dealTx.wad_completed_at) o["businessDocs"] = dealTx.step === "business-docs" ? "active" : "done";
       }
     }
