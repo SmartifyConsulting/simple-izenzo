@@ -794,7 +794,7 @@ export function InlineFrame({
           {/* Same heading treatment as the Bid Registration / Bid Information frames: small
               caps, muted — Intent and WaD previously read a size larger than the rest of the
               workspace. */}
-          <p className="label-caps inline-block truncate rounded-full bg-primary/10 px-2.5 py-1 font-sans text-primary">
+          <p className="label-caps inline-block truncate rounded-full bg-[var(--step-pill-bg)] px-2.5 py-1 font-sans text-[var(--step-pill-fg)]">
             {def?.label ?? step}
           </p>
           {def?.blurb && <p className="mt-1 text-[13px] text-muted-foreground">{def.blurb}</p>}
