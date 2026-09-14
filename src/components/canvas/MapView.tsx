@@ -71,18 +71,18 @@ const BOXES = {
   // Wide enough that "Online Screening" fits on one line instead of wrapping, and only one line
   // tall — so the Step 1 frame loses the height the two-line tile needed.
   socialMedia: { x: 550, y: 255, w: 200, h: 48 },
-  // Step 2 (GRC) sits below Step 1's frame, its five checks spaced further apart than before to
-  // stop the stack reading as one cluttered block; Step 3/4 follow with a wider gap beneath it.
+  // Step 2 (GRC) sits below Step 1's frame, its five checks spaced far enough apart that the
+  // connecting arrow between each pair is clearly visible; Step 3/4 follow well beneath it.
   expressIntent: { x: 60, y: 409, w: 280, h: 48 },
-  poi: { x: 60, y: 473, w: 280, h: 48 },
-  withoutADoubt: { x: 60, y: 537, w: 280, h: 54 },
-  wad: { x: 60, y: 601, w: 280, h: 54 },
-  businessDocs: { x: 60, y: 665, w: 280, h: 54 },
+  poi: { x: 60, y: 489, w: 280, h: 48 },
+  withoutADoubt: { x: 60, y: 569, w: 280, h: 54 },
+  wad: { x: 60, y: 649, w: 280, h: 54 },
+  businessDocs: { x: 60, y: 729, w: 280, h: 54 },
   // Step 3 (Execution, with Entry/Exit beside it) and Step 4 (Finality) sit well clear of Step 2,
   // all 40% flatter than before — and wider, so their detail lines still fit.
-  execution: { x: 45, y: 807, w: 310, h: 58 },
-  entryExit: { x: 410, y: 817, w: 140, h: 37 },
-  finality: { x: 605, y: 807, w: 310, h: 58 },
+  execution: { x: 45, y: 871, w: 310, h: 58 },
+  entryExit: { x: 410, y: 881, w: 140, h: 37 },
+  finality: { x: 605, y: 871, w: 310, h: 58 },
 
 } as const satisfies Record<string, Box>;
 
@@ -90,19 +90,16 @@ const BOXES = {
 // Results card and the counterparty tiles (Offer, Choice, Counter Offer, Online Screening),
 // trimmed to its actual content height.
 const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 932, h: 273 };
-// Gap to Step 1 widened (was 35) and the frame itself grown to fit the more spread-out checks
-// inside it.
-const COMPLIANCE_FRAME: Box = { x: 30, y: 369, w: 340, h: 380 };
+// Taller than before so its five checks sit with real air (and a visible arrow) between them.
+const COMPLIANCE_FRAME: Box = { x: 30, y: 369, w: 340, h: 444 };
 // Execution and Entry/Exit+Finality get the same bordered, labelled group frame as Steps 1 and
-// 2, instead of sitting as bare tiles with no frame of their own. Pushed further down (was 730)
-// to open real air between this row and Step 2/Memory above it.
-const EXECUTION_FRAME: Box = { x: 30, y: 799, w: 340, h: 73 };
-const FINALITY_FRAME: Box = { x: 590, y: 799, w: 340, h: 73 };
+// 2, pushed further down to clear Step 2's taller frame.
+const EXECUTION_FRAME: Box = { x: 30, y: 863, w: 340, h: 73 };
+const FINALITY_FRAME: Box = { x: 590, y: 863, w: 340, h: 73 };
 // Entry/Exit gets the same bordered frame treatment, centred in the gap between Step 3 and 4.
-const ENTRY_EXIT_FRAME: Box = { x: 390, y: 799, w: 180, h: 73 };
-// Kept beside Step 2 (not stacked under it) but re-centred on GRC's taller frame so it doesn't
-// crowd Step 3/4 below.
-const MEMORY = { cx: 570, cy: 559, r: 110 };
+const ENTRY_EXIT_FRAME: Box = { x: 390, y: 863, w: 180, h: 73 };
+// Kept beside Step 2 (not stacked under it) and re-centred on GRC's taller frame.
+const MEMORY = { cx: 570, cy: 591, r: 110 };
 
 
 // A connector arriving at a group frame stops this many units short of its border, so the tip
