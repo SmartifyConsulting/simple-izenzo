@@ -39,7 +39,7 @@ function nodeState(stage: StageKey, step: string, tx: Transaction | null): NodeS
 // Workspace: everything is placed on this canvas and scaled to the container with percentages, so
 // tiles and their connecting lines always stay aligned however wide that column is.
 const W = 760;
-const H = 1240;
+const H = 1250;
 const px = (v: number) => `${(v / W) * 100}%`;
 const py = (v: number) => `${(v / H) * 100}%`;
 
@@ -50,7 +50,7 @@ const BOXES = {
   bid: { x: 40, y: 80, w: 200, h: 56 },
   loadDocs: { x: 40, y: 164, w: 200, h: 56 },
   search: { x: 40, y: 248, w: 200, h: 62 },
-  steps: { x: 40, y: 340, w: 200, h: 120 },
+  steps: { x: 40, y: 336, w: 200, h: 142 },
   offer: { x: 300, y: 80, w: 200, h: 56 },
   choice: { x: 300, y: 164, w: 200, h: 56 },
   counterOffer: { x: 530, y: 164, w: 190, h: 56 },
@@ -62,7 +62,7 @@ const BOXES = {
   businessDocs: { x: 60, y: 928, w: 300, h: 62 },
   execution: { x: 430, y: 1000, w: 300, h: 104 },
   entryExit: { x: 420, y: 1138, w: 140, h: 56 },
-  finality: { x: 580, y: 1122, w: 155, h: 88 },
+  finality: { x: 578, y: 1114, w: 160, h: 104 },
 } as const satisfies Record<string, Box>;
 
 // One outer frame holds the whole trading step — Bid, Load Deal Documents, Search, the Step 1–5
@@ -305,7 +305,7 @@ export function MapView({
         >
           <ul className="flex h-full flex-col justify-center gap-1">
             {STEP_CHIPS.map((s) => (
-              <li key={s} className="text-[10px] font-medium leading-tight text-muted-foreground">
+              <li key={s} className="text-[9px] font-medium leading-tight text-muted-foreground">
                 {s}
               </li>
             ))}
@@ -375,7 +375,7 @@ export function MapView({
           onClick={() => open("execution", "preparation")}
         />
         {node("entryExit", "Entry / Exit", "execution", "stakeholders", LogIn)}
-        {node("finality", "Step 4 · Finality", "finality", "entry", Banknote, {
+        {node("finality", "Finality", "finality", "entry", Banknote, {
           sub: "Payment, Signoff, Handover",
         })}
 
