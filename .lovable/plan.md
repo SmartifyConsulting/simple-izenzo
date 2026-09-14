@@ -7,7 +7,7 @@
 3. **Every "Start a Trade" button goes to the Live Workspace.** Signed in: straight there (as now). Signed out: the sign-in pop-up opens, and the moment sign-in succeeds they land on the Live Workspace. The upload/preview card that used to open instead is no longer used by that button.
 4. **"Finding counterparties…" moves inline.** It now sits on the same bar as "Running AI and AI+ search for matching counterparties…", to the right of that text, instead of on its own line above.
 5. **Smaller wording on that bar.** "Running AI and AI+ search for matching counterparties…" is reduced to the smaller size used elsewhere in the workspace, and "Finding counterparties…" is set slightly smaller still as muted text.
-6. **Sign-in not being remembered** — investigated first, then fixed. The likely cause is the preview surface sharing the session with the editor; it will be confirmed in the browser (which storage key holds the session, and whether it survives a refresh) before any change is made. The fix will keep the session stored so a refresh or a return visit stays signed in.
+6. **No profile picture after signing in** — investigated, then fixed. Sign-in itself succeeds (the backend records the login), so the fault is on the screen: the profile circle in the top bar isn't appearing once signed in. This will be reproduced in the browser first to see whether the profile record is loading, and then fixed so the profile circle (picture or initials) shows on every screen straight after signing in.
 
 ## Unchanged
 
