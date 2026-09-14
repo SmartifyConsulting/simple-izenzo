@@ -1726,7 +1726,7 @@ function WadStep({ tx, reload }: Props) {
   return (
     <Panel
       title="Without a Doubt"
-      description={`KYC, KYB, UBO, sanctions and PEP. Costs ${WAD_COST} tokens (USD 30) on decision.`}
+      description={`Costs ${WAD_COST} tokens (USD 30) on decision.`}
       footer={
         <div className="flex flex-wrap items-center justify-between gap-3">
           <TokenGateFooter cost={WAD_COST} />
@@ -1790,19 +1790,18 @@ function WadStep({ tx, reload }: Props) {
         {WAD_CHECKS.map((c) => {
           const route = c.key === "kyc" ? routeIdentityVerification(tx.jurisdiction) : null;
           const status = statusFor(c.key);
+          const passed = Boolean(checks[c.key]);
           return (
             <li key={c.key} className="text-xs">
+              {/* Already verified when the parties registered — this reads as a result, not
+                  another checklist for a person to tick off again. */}
               <div className="flex items-center gap-2.5">
-                <Checkbox
-                  checked={Boolean(checks[c.key])}
-                  onCheckedChange={(v) => setChecks({ ...checks, [c.key]: Boolean(v) })}
-                />
-                {c.label}
-                {!WAD_CHECK_SOURCE[c.key] && (
-                  <Badge variant="secondary" className="text-[10px] font-normal">
-                    manual
-                  </Badge>
+                {passed ? (
+                  <Check className="h-4 w-4 shrink-0 text-emerald-500" />
+                ) : (
+                  <span className="h-2 w-2 shrink-0 rounded-full bg-muted-foreground/40" />
                 )}
+                {c.label}
               </div>
               {status && (
                 <p
@@ -1829,12 +1828,6 @@ function WadStep({ tx, reload }: Props) {
           );
         })}
       </ul>
-      <div className="mt-5">
-        <Field label="Case notes">
-          <Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
-        </Field>
-      </div>
-
     </Panel>
   );
 }

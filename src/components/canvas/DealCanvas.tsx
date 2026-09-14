@@ -1168,7 +1168,117 @@ export function CounterpartyRecord({
     <div
       className="rounded-2xl border-2 border-primary bg-slate-100 p-4"
     >
-      <div className="flex items-center justify-between gap-2">
+      {mediaResults && mediaResults.length > 0 && (
+        <div className="space-y-2.5 pb-3">
+          <button
+            type="button"
+            onClick={() => setMediaExpanded((v) => !v)}
+            className="flex w-full items-center justify-between gap-2"
+          >
+            <span className="label-caps text-slate-600">Online media screening results</span>
+            <ChevronDown
+              className={cn(
+                "h-3.5 w-3.5 shrink-0 text-slate-500 transition-transform",
+                mediaExpanded && "rotate-180",
+              )}
+            />
+          </button>
+          {mediaExpanded && (
+          <RadioGroup value={pickedId ?? ""} onValueChange={setPickedId} disabled={!screeningDone} asChild>
+          <div className="space-y-2.5">
+          {mediaResults.map((m) => {
+            const coOpen = expandedMediaCos.has(m.counterpartyId);
+            const cand = candidates.find((c) => c.id === m.counterpartyId);
+            return (
+            <div key={m.counterpartyId} className="rounded-xl border border-slate-300 bg-white p-3">
+              <div className="flex w-full items-start gap-2.5">
+                {/* Same circle/checkbox the top list used to show, now living on the accordion
+                    record itself instead of duplicated in a separate list above. */}
+                {screeningDone ? (
+                  <RadioGroupItem id={`media-pick-${m.counterpartyId}`} value={m.counterpartyId} className="mt-0.5 shrink-0" />
+                ) : (
+                  <Checkbox
+                    id={`media-pick-${m.counterpartyId}`}
+                    checked={Boolean(cand?.shortlisted)}
+                    onCheckedChange={(v) => cand && toggle(cand, Boolean(v))}
+                    className="mt-0.5 shrink-0"
+                  />
+                )}
+                <button
+                  type="button"
+                  onClick={() => toggleCo(expandedMediaCos, setExpandedMediaCos, m.counterpartyId)}
+                  className="flex min-w-0 flex-1 items-start justify-between gap-2 text-left"
+                >
+                  <span className="min-w-0">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-semibold text-slate-900">{m.name}</span>
+                      {cand?.score != null && (
+                        <span className="shrink-0 rounded-full border border-foreground bg-foreground px-2 py-0.5 text-[11px] font-semibold text-background">
+                          {cand.score}% match
+                        </span>
+                      )}
+                    </span>
+                    {cand && (cand.jurisdiction || cand.sector) && (
+                      <span className="block text-[11px] text-slate-500">
+                        {[cand.jurisdiction, cand.sector].filter(Boolean).join(" · ")}
+                      </span>
+                    )}
+                  </span>
+                  <ChevronDown
+                    className={cn(
+                      "mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500 transition-transform",
+                      coOpen && "rotate-180",
+                    )}
+                  />
+                </button>
+              </div>
+              {coOpen && (
+              <ul className="mt-2 divide-y divide-slate-200">
+                {m.findings.map((f) => (
+                  <li key={f.source} className="py-1.5 first:pt-0 last:pb-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-medium text-slate-800">{f.label}</span>
+                      <span
+                        className={cn(
+                          "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                          mediaTone(f.status),
+                        )}
+                      >
+                        {mediaLabel(f.status)}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 break-words text-[11px] leading-snug text-slate-500">
+                      {f.detail}
+                    </p>
+                    {f.url && (
+                      <a
+                        href={f.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+                      >
+                        <ExternalLink className="h-3 w-3" /> Open source
+                      </a>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              )}
+            </div>
+            );
+          })}
+          </div>
+          </RadioGroup>
+          )}
+        </div>
+      )}
+
+      <div
+        className={cn(
+          "flex items-center justify-between gap-2",
+          mediaResults && mediaResults.length > 0 && "border-t border-slate-300 pt-3",
+        )}
+      >
         <p className="label-caps text-black">
           {screeningDone
             ? "Tick who you want to trade with"
@@ -1299,111 +1409,6 @@ export function CounterpartyRecord({
                 {!mediaProgress.failed && <WorkingEllipsis />}
               </p>
             </>
-          )}
-        </div>
-      )}
-
-      {mediaResults && mediaResults.length > 0 && (
-        <div className="mt-3 space-y-2.5 border-t border-slate-300 pt-3">
-          <button
-            type="button"
-            onClick={() => setMediaExpanded((v) => !v)}
-            className="flex w-full items-center justify-between gap-2"
-          >
-            <span className="label-caps text-slate-600">Online media screening results</span>
-            <ChevronDown
-              className={cn(
-                "h-3.5 w-3.5 shrink-0 text-slate-500 transition-transform",
-                mediaExpanded && "rotate-180",
-              )}
-            />
-          </button>
-          {mediaExpanded && (
-          <RadioGroup value={pickedId ?? ""} onValueChange={setPickedId} disabled={!screeningDone} asChild>
-          <div className="space-y-2.5">
-          {mediaResults.map((m) => {
-            const coOpen = expandedMediaCos.has(m.counterpartyId);
-            const cand = candidates.find((c) => c.id === m.counterpartyId);
-            return (
-            <div key={m.counterpartyId} className="rounded-xl border border-slate-300 bg-white p-3">
-              <div className="flex w-full items-start gap-2.5">
-                {/* Same circle/checkbox the top list used to show, now living on the accordion
-                    record itself instead of duplicated in a separate list above. */}
-                {screeningDone ? (
-                  <RadioGroupItem id={`media-pick-${m.counterpartyId}`} value={m.counterpartyId} className="mt-0.5 shrink-0" />
-                ) : (
-                  <Checkbox
-                    id={`media-pick-${m.counterpartyId}`}
-                    checked={Boolean(cand?.shortlisted)}
-                    onCheckedChange={(v) => cand && toggle(cand, Boolean(v))}
-                    className="mt-0.5 shrink-0"
-                  />
-                )}
-                <button
-                  type="button"
-                  onClick={() => toggleCo(expandedMediaCos, setExpandedMediaCos, m.counterpartyId)}
-                  className="flex min-w-0 flex-1 items-start justify-between gap-2 text-left"
-                >
-                  <span className="min-w-0">
-                    <span className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-semibold text-slate-900">{m.name}</span>
-                      {cand?.score != null && (
-                        <span className="shrink-0 rounded-full border border-foreground bg-foreground px-2 py-0.5 text-[11px] font-semibold text-background">
-                          {cand.score}% match
-                        </span>
-                      )}
-                    </span>
-                    {cand && (cand.jurisdiction || cand.sector) && (
-                      <span className="block text-[11px] text-slate-500">
-                        {[cand.jurisdiction, cand.sector].filter(Boolean).join(" · ")}
-                      </span>
-                    )}
-                  </span>
-                  <ChevronDown
-                    className={cn(
-                      "mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500 transition-transform",
-                      coOpen && "rotate-180",
-                    )}
-                  />
-                </button>
-              </div>
-              {coOpen && (
-              <ul className="mt-2 divide-y divide-slate-200">
-                {m.findings.map((f) => (
-                  <li key={f.source} className="py-1.5 first:pt-0 last:pb-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-medium text-slate-800">{f.label}</span>
-                      <span
-                        className={cn(
-                          "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-                          mediaTone(f.status),
-                        )}
-                      >
-                        {mediaLabel(f.status)}
-                      </span>
-                    </div>
-                    <p className="mt-0.5 break-words text-[11px] leading-snug text-slate-500">
-                      {f.detail}
-                    </p>
-                    {f.url && (
-                      <a
-                        href={f.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
-                      >
-                        <ExternalLink className="h-3 w-3" /> Open source
-                      </a>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              )}
-            </div>
-            );
-          })}
-          </div>
-          </RadioGroup>
           )}
         </div>
       )}

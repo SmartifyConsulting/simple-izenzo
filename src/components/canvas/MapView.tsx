@@ -244,21 +244,22 @@ function MemoryArcLabel() {
               d={`M ${arcCx - rx} ${arcCy} A ${rx} ${ry} 0 0 1 ${arcCx + rx} ${arcCy}`}
             />
           </defs>
-          {/* Same "black pill" treatment as every other step heading: a filled backing stroked
-              along the same arc the text follows, so the ring itself isn't disturbed. */}
+          {/* Always solid black (not the theme-token grey used elsewhere) — a filled backing
+              stroked along the same arc the text follows, so the ring itself isn't disturbed. */}
           <path
             d={`M ${arcCx - rx} ${arcCy} A ${rx} ${ry} 0 0 1 ${arcCx + rx} ${arcCy}`}
             fill="none"
-            stroke="var(--step-pill-bg)"
+            stroke="#000"
             strokeWidth={18 * sy}
             strokeLinecap="round"
           />
           <text
             className="font-semibold uppercase"
-            style={{ fill: "var(--step-pill-fg)" }}
+            fill="#fff"
             fontSize={11}
             letterSpacing="0.09em"
             textAnchor="middle"
+            dominantBaseline="middle"
           >
             <textPath href="#memory-arc-px" startOffset="50%">
               Step 5 · Memory

@@ -8,6 +8,10 @@ export function playStepAdvanceChime() {
     const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!Ctx) return;
     const ctx = new Ctx();
+    // Some browsers hand back a context that starts "suspended" until explicitly resumed, even
+    // after an earlier user gesture on the page — without this the oscillators schedule silently
+    // and nothing is ever actually heard.
+    void ctx.resume();
     const now = ctx.currentTime;
     const notes = [660, 880];
     notes.forEach((freq, i) => {
