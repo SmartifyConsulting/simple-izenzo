@@ -1332,7 +1332,7 @@ function LiveDealEngine() {
       >
         <div
           className={cn(
-            "relative grid grid-cols-1 items-stretch gap-4 rounded-3xl lg:grid-cols-[minmax(0,1fr)_minmax(0,1.63fr)]",
+            "relative grid grid-cols-1 items-stretch gap-4 rounded-3xl lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]",
             fillToTaskbar && "min-h-0 flex-1",
           )}
         >
