@@ -429,6 +429,8 @@ export function MapView({
     <div className="relative h-full w-full">
       <div className="relative w-full" style={{ aspectRatio: `${W} / ${H}` }}>
         <ArrowLayer />
+        <MemoryArcLabel />
+
 
         <Frame box={TRADE_ENGINE_FRAME} label="Step 1 · Trading" />
         <Frame box={COMPLIANCE_FRAME} label="Step 2 · Compliance" subLabel="Governance" />
