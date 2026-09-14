@@ -44,8 +44,8 @@ function nodeState(stage: StageKey, step: string, tx: Transaction | null): NodeS
 // Workspace: everything is placed on this canvas and scaled to the container with percentages, so
 // tiles and their connecting lines always stay aligned however wide that column is.
 const W = 960;
-// Grown (was 825) to hold the wider vertical gaps between Step 2, Step 3/4 and Memory below.
-const H = 915;
+// Grown again to hold Step 2's taller frame and the Step 3/4 row pushed down beneath it.
+const H = 956;
 const px = (v: number) => `${(v / W) * 100}%`;
 const py = (v: number) => `${(v / H) * 100}%`;
 
