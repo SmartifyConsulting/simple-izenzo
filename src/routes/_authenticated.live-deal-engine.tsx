@@ -533,6 +533,23 @@ function LiveDealEngine() {
     void rereadDocuments(dealTx.id);
   }, [dealTx?.id, dealTx?.title, documentSummary, workspaceDocs.length]);
 
+  // Documents attached but no summary saved: start the read ourselves, so the reading progress bar
+  // in Bid Information always reflects a read that is genuinely running.
+  const autoReadStarted = useRef<string | null>(null);
+  useEffect(() => {
+    if (
+      !dealTx ||
+      workspaceDocs.length === 0 ||
+      documentSummary ||
+      rereading ||
+      readError ||
+      autoReadStarted.current === dealTx.id
+    ) return;
+    autoReadStarted.current = dealTx.id;
+    void rereadDocuments(dealTx.id);
+  }, [dealTx?.id, documentSummary, workspaceDocs.length, rereading, readError]);
+
+
   // Has interest already been fetched for this bid? Drives the "Fetch Interest" button, so it
   // stays offered for any bid that has documents but no matches yet — not only in the moment
   // straight after an upload.
