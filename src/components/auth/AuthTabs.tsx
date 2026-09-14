@@ -19,7 +19,7 @@ export function AuthTabs({
 }) {
   return (
     <div className={className}>
-      <div className={cn("flex items-center gap-2", compact ? "mb-1.5" : "mb-5")}>
+      <div className={cn("flex items-center gap-2", compact ? "mb-2" : "mb-5")}>
         <span className="flex h-7 w-7 items-center justify-center rounded bg-sidebar text-[11px] font-bold text-sidebar-foreground">
           IZ
         </span>
@@ -31,14 +31,14 @@ export function AuthTabs({
         </div>
       </div>
       <Tabs defaultValue={defaultTab ?? "signin"}>
-        <TabsList className={cn("grid w-full grid-cols-2", compact && "h-7")}>
+        <TabsList className={cn("grid w-full grid-cols-2", compact && "h-8")}>
           <TabsTrigger value="signin" className={compact ? "text-xs" : undefined}>Sign in</TabsTrigger>
           <TabsTrigger value="signup" className={compact ? "text-xs" : undefined}>Create account</TabsTrigger>
         </TabsList>
-        <TabsContent value="signin" className={compact ? "pt-1.5" : "pt-6"}>
+        <TabsContent value="signin" className={compact ? "pt-2" : "pt-6"}>
           <SignInForm next={next} hideHeader hideFooterLink compact={compact} />
         </TabsContent>
-        <TabsContent value="signup" className={compact ? "pt-1.5" : "pt-6"}>
+        <TabsContent value="signup" className={compact ? "pt-2" : "pt-6"}>
           <SignUpForm next={next} hideHeader hideFooterLink compact={compact} />
         </TabsContent>
       </Tabs>

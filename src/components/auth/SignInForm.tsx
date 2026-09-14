@@ -77,8 +77,8 @@ export function SignInForm({
         </>
       )}
 
-      <form onSubmit={onSubmit} className={cn(compact ? "space-y-1" : "space-y-4", !hideHeader && "mt-7")}>
-        <div className={compact ? "space-y-0.5" : "space-y-1.5"}>
+      <form onSubmit={onSubmit} className={cn(compact ? "space-y-1.5" : "space-y-4", !hideHeader && "mt-7")}>
+        <div className={compact ? "space-y-1" : "space-y-1.5"}>
           <Label htmlFor="signin-email" className={compact ? "text-xs" : undefined}>Email</Label>
           <Input
             id="signin-email"
@@ -87,10 +87,10 @@ export function SignInForm({
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
             required
-            className={compact ? "h-7 text-xs" : undefined}
+            className={compact ? "h-8 text-sm" : undefined}
           />
         </div>
-        <div className={compact ? "space-y-0.5" : "space-y-1.5"}>
+        <div className={compact ? "space-y-1" : "space-y-1.5"}>
           <div className="flex items-center justify-between">
             <Label htmlFor="signin-password" className={compact ? "text-xs" : undefined}>Password</Label>
             <Link to="/forgot-password" tabIndex={-1} className="text-xs text-muted-foreground hover:text-foreground">
@@ -103,7 +103,7 @@ export function SignInForm({
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="current-password"
             required
-            className={compact ? "h-7 text-xs" : undefined}
+            className={compact ? "h-8 text-sm" : undefined}
           />
         </div>
 
@@ -118,7 +118,7 @@ export function SignInForm({
         </Button>
       </form>
 
-      <div className={cn("flex items-center gap-3", compact ? "my-1.5" : "my-5")}>
+      <div className={cn("flex items-center gap-3", compact ? "my-2" : "my-5")}>
         <span className="h-px flex-1 bg-border" />
         <span className="text-xs text-muted-foreground">or</span>
         <span className="h-px flex-1 bg-border" />
@@ -135,7 +135,7 @@ export function SignInForm({
       )}
 
       {!hideFooterLink && (
-        <p className={cn("text-center text-sm text-muted-foreground", compact ? "mt-2" : "mt-6")}>
+        <p className={cn("text-center text-sm text-muted-foreground", compact ? "mt-3" : "mt-6")}>
           No account yet?{" "}
           <Link to="/auth" search={{ mode: "signup", next }} className="font-medium text-foreground hover:underline">
             Create one
