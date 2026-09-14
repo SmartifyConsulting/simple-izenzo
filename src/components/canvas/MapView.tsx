@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  Banknote,
-  Briefcase,
   Building2,
   CheckCircle2,
   Database,
@@ -518,11 +516,10 @@ export function MapView({
         })}
 
         {/* Step 3 — execution. The word "Execution" is the frame's heading, so the tile carries only
-            its icon and detail line. */}
+            its detail line. */}
         <MapNode
           box={BOXES.execution}
           label=""
-          icon={Briefcase}
           sub="Concept, Pre-Reqs, Feasibility, Bankability, Prep, Implementation"
           subSize="xs"
 
@@ -534,7 +531,7 @@ export function MapView({
         {/* Entry/Exit sits between the Step 3 and Step 4 frames, on its own. */}
         {node("entryExit", "Entry / Exit", "execution", "stakeholders", LogIn, { plain: true })}
         {/* Step 4 — finality. "Finality" is the frame heading, so the tile shows only its detail. */}
-        {node("finality", "", "finality", "entry", Banknote, {
+        {node("finality", "", "finality", "entry", undefined, {
           sub: "Payment, Signoff, Handover",
           subSize: "sm",
           plain: true,
