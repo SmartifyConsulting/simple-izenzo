@@ -25,7 +25,7 @@ const STAGES = [
     title: "Trading",
     tag: "Find, Match & Verify",
     icon: Target,
-    body: "Post your opportunity, get matched with the right Counterparty, and see each candidate checked for identity, ownership, and sanctions/watchlist exposure before you choose. Verification is mandatory.",
+    body: "Post your opportunity, match with the right counterparty, and review candidates pre-screened for identity, ownership, and sanctions. Verification is mandatory.",
   },
   {
     n: "02",
