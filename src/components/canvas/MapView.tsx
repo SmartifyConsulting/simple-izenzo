@@ -44,9 +44,8 @@ function nodeState(stage: StageKey, step: string, tx: Transaction | null): NodeS
 // Workspace: everything is placed on this canvas and scaled to the container with percentages, so
 // tiles and their connecting lines always stay aligned however wide that column is.
 const W = 960;
-// Grown again to give Step 2's checks room to breathe (see BOXES below) so the connecting
-// arrow between each pair is actually visible rather than nearly touching.
-const H = 950;
+// Trimmed slightly (was 950) so Step 3/4 fit on the canvas without the diagram running past it.
+const H = 920;
 const px = (v: number) => `${(v / W) * 100}%`;
 const py = (v: number) => `${(v / H) * 100}%`;
 
@@ -78,19 +77,19 @@ const BOXES = {
   // the "Steps" list order (Choice, Online Media Screening, Intent) mirrored on the map, instead
   // of visually grouped with Step 2's checks even though it advances the same trading stage.
   expressIntent: { x: 510, y: 301, w: 280, h: 48 },
-  // Step 2 (GRC)'s remaining checks — spread 84 units apart (was 64) so the connecting arrow
-  // between each pair reads clearly instead of the tiles nearly touching; Step 3/4 follow well
-  // beneath it.
-  poi: { x: 60, y: 457, w: 280, h: 48 },
-  withoutADoubt: { x: 60, y: 541, w: 280, h: 54 },
-  wad: { x: 60, y: 625, w: 280, h: 54 },
-  businessDocs: { x: 60, y: 709, w: 280, h: 54 },
+  // Step 2 (GRC)'s remaining checks — spread 84 units apart so the connecting arrow between
+  // each pair reads clearly instead of the tiles nearly touching; Step 3/4 follow well beneath
+  // it, with the gap to each neighbour trimmed slightly (was 50) so they still fit on the canvas.
+  poi: { x: 60, y: 442, w: 280, h: 48 },
+  withoutADoubt: { x: 60, y: 526, w: 280, h: 54 },
+  wad: { x: 60, y: 610, w: 280, h: 54 },
+  businessDocs: { x: 60, y: 694, w: 280, h: 54 },
   // Step 3 (Execution, with Entry/Exit beside it) and Step 4 (Finality) sit well clear of Step 2,
   // all 40% flatter than before — and wider, so their detail lines still fit.
-  execution: { x: 45, y: 851, w: 310, h: 58 },
+  execution: { x: 45, y: 821, w: 310, h: 58 },
   // Width trimmed 20% (was 140) and re-centred on the same midpoint.
-  entryExit: { x: 424, y: 861, w: 112, h: 37 },
-  finality: { x: 605, y: 851, w: 310, h: 58 },
+  entryExit: { x: 424, y: 831, w: 112, h: 37 },
+  finality: { x: 605, y: 821, w: 310, h: 58 },
 
 } as const satisfies Record<string, Box>;
 
@@ -100,15 +99,15 @@ const BOXES = {
 // the Bid Registration frame beside it.
 const TRADE_ENGINE_FRAME: Box = { x: 14, y: 24, w: 932, h: 343 };
 // Taller again now its four checks are spread further apart.
-const COMPLIANCE_FRAME: Box = { x: 30, y: 417, w: 340, h: 376 };
+const COMPLIANCE_FRAME: Box = { x: 30, y: 402, w: 340, h: 376 };
 // Execution and Entry/Exit+Finality get the same bordered, labelled group frame as Steps 1 and
-// 2, pushed back down to sit just clear of Step 2's now-taller frame.
-const EXECUTION_FRAME: Box = { x: 30, y: 843, w: 340, h: 73 };
-const FINALITY_FRAME: Box = { x: 590, y: 843, w: 340, h: 73 };
+// 2, with the gap above trimmed slightly so the row fits on the canvas.
+const EXECUTION_FRAME: Box = { x: 30, y: 813, w: 340, h: 73 };
+const FINALITY_FRAME: Box = { x: 590, y: 813, w: 340, h: 73 };
 // Width trimmed 20% (was 180), centred in the same gap between Step 3 and 4.
-const ENTRY_EXIT_FRAME: Box = { x: 408, y: 843, w: 144, h: 73 };
+const ENTRY_EXIT_FRAME: Box = { x: 408, y: 813, w: 144, h: 73 };
 // Kept beside Step 2 (not stacked under it) and re-centred on GRC's now-taller frame.
-const MEMORY = { cx: 570, cy: 605, r: 110 };
+const MEMORY = { cx: 570, cy: 590, r: 110 };
 
 
 // A connector arriving at a group frame stops this many units short of its border, so the tip
