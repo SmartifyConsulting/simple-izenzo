@@ -516,9 +516,8 @@ export function MapView({
           sub: "Hard gate · non-waivable",
           subTone: "gate",
         })}
-        {node("wad", "KYC / KYB", "compliance", "wad", Users, {
+        {node("wad", "KYC, KYB, PEP, AML", "compliance", "wad", Users, {
           overrideKey: "wad",
-          sub: "KYC, KYB, PEP, AML",
         })}
         {node("businessDocs", "Business Docs", "execution", "entry", FolderClosed, {
           sub: "POI, NDA, MOU, Contract",
