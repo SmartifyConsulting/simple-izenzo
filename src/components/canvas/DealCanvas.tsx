@@ -1261,7 +1261,7 @@ export function CounterpartyRecord({
 
 
 
-      {mediaRunning && !mediaResults && (
+      {mediaRunning && (
         <div className="mt-3 space-y-1.5 border-t border-slate-300 pt-3">
           <p className="text-xs text-slate-600">Scanning LinkedIn, Facebook, TikTok, marketplaces and news…</p>
           {mediaProgress && mediaProgress.total > 0 && (
