@@ -157,7 +157,7 @@ function MapScreen() {
           {tx && (
             <DocumentUploadStep
               transactionId={tx.id}
-              reference={tx.reference}
+              reference={tx.reference ?? null}
               onNext={() => void startSearch(tx.id)}
             />
           )}

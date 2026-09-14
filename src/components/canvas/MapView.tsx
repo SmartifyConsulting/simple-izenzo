@@ -416,7 +416,7 @@ export function MapView({
         </div>
       </div>
 
-      {panel && !readOnly && (
+      {panel && !readOnly && tx && (
         <InlineFrame
           tx={tx}
           stage={panel.stage}
