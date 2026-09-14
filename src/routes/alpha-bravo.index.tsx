@@ -22,31 +22,31 @@ const STAGES = [
     n: "01",
     title: "Trading",
     tag: "Find. Match. Structure.",
-    body: "Source opportunities, match Bidders with Responders, and capture the opportunity.",
+    body: "Source opportunities, load deal documents, search with AI/AI+, discover counterparties, make a choice, and record a Proof of Intent (POI) or generate a Preliminary Information Memorandum / Intent (PRI). The process relies on AI to surface optionality and AI+ to establish a probability framework for both the deal and counterparty, even dynamically handling counteroffers by reloading updated deal parameters to regenerate the PRI.",
   },
   {
     n: "02",
     title: "Compliance & Governance",
     tag: "Verify. Assess. Authorise.",
-    body: "Complete KYC/KYB, assess risk, and verify evidence.",
+    body: "Run Non-Waivable Hardgate (WaD), complete KYC/KYB, confirm authority, and review supporting evidence. This step seamlessly integrates a dedicated document repository where required business documents are automatically surfaced and managed by AI agents.",
   },
   {
     n: "03",
     title: "Execution",
     tag: "Plan. Implement. Deliver.",
-    body: "Turn a matched opportunity into an executable project.",
+    body: "Move through project preparation—from concept, pre-feasibility, and feasibility through to bankability—and advance directly into implementation and execution. Critically positioned between bankability and implementation is a strategic Investor Entry/Exit Point, allowing primary or third parties to optimize value when the project asset reaches peak growth potential.",
   },
   {
     n: "04",
     title: "Finality",
     tag: "Settle. Complete.",
-    body: "Finalise contracts, process payment, and close the transaction.",
+    body: "Finalise contracts, process payment, and complete the transaction. Unlike purely automated steps, this phase intentionally mandates human validation, such as uploading proof of payment, to formally finalize the deal.",
   },
   {
     n: "05",
     title: "Memory",
     tag: "Record. Learn. Scale.",
-    body: "Store verified outcomes and reuse intelligence for the next match.",
+    body: "Store a verified record, capture insights, and reuse intelligence for future opportunities. The step loops back as a circular compounding memory that continuously feeds data back into the system to guide capital deployment assessments via AI agents and AI+ logic.",
   },
 ];
 

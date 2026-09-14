@@ -566,6 +566,24 @@ function LiveDealEngine() {
     },
   });
 
+  // Counterparty search now starts itself the moment documents are in and no matches exist yet —
+  // no more manual "Find Counterparties" click.
+  const autoSearchStarted = useRef<string | null>(null);
+  useEffect(() => {
+    if (
+      !dealTx ||
+      workspaceDocsPending ||
+      workspaceDocs.length === 0 ||
+      interestCount > 0 ||
+      screening ||
+      mediaRunning ||
+      flowStep === "searching" ||
+      autoSearchStarted.current === dealTx.id
+    ) return;
+    autoSearchStarted.current = dealTx.id;
+    void fetchInterest(dealTx.id);
+  }, [dealTx?.id, workspaceDocsPending, workspaceDocs.length, interestCount, screening, mediaRunning, flowStep]);
+
   /** Which workflow item is genuinely current right now — the stored stage/step can't tell
    * "searching" apart from "results are in", so the page says it outright. Search AI + AI+ and
    * Online Media Screening are two separate, independently-timed operations — each pulses only
@@ -1008,6 +1026,16 @@ function LiveDealEngine() {
         };
         setActivity(loadedActivity);
         setDealTx(tx);
+        // Screening/media state belongs to whichever bid was open before — carrying it over to a
+        // newly-opened bid made a stale screeningResults look "done" here, so the Choice panel
+        // skipped straight to the Finalize button instead of Online Media Screening.
+        setScreening(false);
+        setScreeningResults(null);
+        setScreeningProgress(null);
+        setMediaRunning(false);
+        setMediaResults(null);
+        setMediaProgress(null);
+        setHasChosen(false);
         setDocumentSummary((tx as unknown as { document_summary: string | null }).document_summary ?? null);
         setFlowStep(tx.step === "documents" ? "documents" : "results");
         const { data: docs } = await supabase
@@ -1060,6 +1088,15 @@ function LiveDealEngine() {
         if (!tx) return;
         setActivity(saved.activity);
         setDealTx(tx as Transaction);
+        // Same reset as the tx-param load above — otherwise resuming a bid from localStorage can
+        // inherit another bid's stale screening/media state.
+        setScreening(false);
+        setScreeningResults(null);
+        setScreeningProgress(null);
+        setMediaRunning(false);
+        setMediaResults(null);
+        setMediaProgress(null);
+        setHasChosen(false);
         setDocumentSummary((tx as unknown as { document_summary: string | null }).document_summary ?? null);
         setFlowStep(tx.step === "documents" ? "documents" : "results");
         const { data: docs } = await supabase
@@ -1463,8 +1500,9 @@ function LiveDealEngine() {
             )}
           >
           {/* Everything pinned to the top of the workspace sits inside one opaque, full-bleed
-              surface — the heading row and the Bid Registration frame together — so nothing
-              scrolling underneath can appear through it or in the gap above it. */}
+              surface — the heading row, the Bid Registration frame, and the Bid Information
+              frame together — so nothing scrolling underneath (e.g. counterparty results) can
+              appear through it or in the gap above it. */}
           <div className="sticky -top-3 z-20 -mx-3 -mt-3 mb-3 bg-card px-3 pb-3 pt-3 sm:-top-5 sm:-mx-5 sm:-mt-5 sm:px-5 sm:pt-5">
           <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
             <p className="label-caps text-foreground">Live Workspace</p>
@@ -1514,14 +1552,25 @@ function LiveDealEngine() {
           </div>
 
           {/* Bid Registration — the very top of the workspace, pinned above everything else that
-              scrolls beneath it. Column 1: the bidder's identity/verification and how long that
-              business has been active. Column 2: the BID/OFF id, the bid's own name directly
-              beneath it (wrapped, right-aligned), when it was registered, and the country. */}
+              scrolls beneath it. The BID/OFF id sits on the same line as the heading (not its own
+              row) to keep this frame as short as possible. Column 1: the bidder's identity/
+              verification and how long that business has been active. Column 2: the bid's own
+              name (wrapped, right-aligned), when it was registered, and the country. */}
           {activity && dealTx && (
             // Fully opaque: the glass treatment's translucency let content scrolling beneath show
             // through this pinned frame.
             <div className="glass-node space-y-1.5 bg-card p-4 [backdrop-filter:none] [background-image:none]">
-              <p className="label-caps text-muted-foreground">Bid Registration</p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="label-caps text-muted-foreground">Bid Registration</p>
+                {(((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference) && (
+                  <span className="flex shrink-0 items-center gap-2 font-mono text-base font-bold tracking-wide text-foreground">
+                    {workspaceDocs.length > 0 && (
+                      <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    )}
+                    {((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference}
+                  </span>
+                )}
+              </div>
               <div className="grid grid-cols-2 items-start gap-3">
                 <div className="min-w-0 space-y-1">
                   <SubmitterIdentity orgId={dealTx.org_id} createdBy={null} />
@@ -1536,14 +1585,6 @@ function LiveDealEngine() {
                   )}
                 </div>
                 <div className="min-w-0 space-y-1 text-right">
-                  {(((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference) && (
-                    <span className="flex items-center justify-end gap-2 font-mono text-base font-bold tracking-wide text-foreground">
-                      {workspaceDocs.length > 0 && (
-                        <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                      )}
-                      {((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference}
-                    </span>
-                  )}
                   {(dealTx.commodity || dealTx.title) && !GENERIC_TITLES.has(dealTx.title) && (
                     <p className="break-words text-right text-sm font-semibold text-foreground">
                       {dealTx.commodity || dealTx.title}
@@ -1561,12 +1602,11 @@ function LiveDealEngine() {
               </div>
             </div>
           )}
-          </div>
 
           {/* Bidder details + AI summary come next — what was actually submitted, never buried
               behind the progress ribbon. The attachment(s) live here too, with preview/download. */}
           {activity && dealTx && (
-            <div className="glass-node space-y-2 p-4">
+            <div className="glass-node mt-1.5 space-y-2 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <button
                   type="button"
@@ -1718,10 +1758,10 @@ function LiveDealEngine() {
               )}
             </div>
           )}
-
+          </div>
 
             {dealTx ? (
-              <div className="mt-4 flex items-start justify-end gap-4">
+              <div className="mt-2 flex items-start justify-end gap-4">
                 <div className="w-1/2 max-w-[260px] shrink-0">
                   {workspaceDocsPending || (submittedForThisBid && workspaceDocs.length === 0) ? (
                     <div className="flex h-10 items-center justify-center text-xs text-muted-foreground">
@@ -1746,19 +1786,13 @@ function LiveDealEngine() {
                       initialFiles={seedFiles}
                     />
                   ) : interestCount === 0 ? (
-                    /* Documents are in — one button starts the AI/AI+ search and the online media
-                       screening together, and both pulse in the workflow while they run. The
-                       upload frame never comes back once a file exists. */
-                    <Button
-                      className="w-full"
-                      disabled={screening || mediaRunning || flowStep === "searching"}
-                      onClick={() => void fetchInterest(dealTx.id)}
-                    >
-                      {screening || mediaRunning || flowStep === "searching"
-                        ? "Finding counterparties…"
-                        : "Find Counterparties"}
-
-                    </Button>
+                    /* Documents are in — the AI/AI+ search and online media screening start
+                       themselves (see the auto-search effect above) and both pulse in the
+                       workflow while they run. The upload frame never comes back once a file
+                       exists. */
+                    <div className="flex h-10 items-center justify-center text-xs text-muted-foreground">
+                      Finding counterparties…
+                    </div>
                   ) : null}
 
                 </div>
@@ -1771,10 +1805,17 @@ function LiveDealEngine() {
               waiting for another click — so a visitor who already searched on the homepage lands
               straight on the summary panel below, never back on this same picker. */}
           {!activity && (
-            <div className="glass-node mt-4 space-y-3 bg-card p-4 [backdrop-filter:none] [background-image:none]">
+            <div className="glass-node mt-2 space-y-2 bg-card p-4 [backdrop-filter:none] [background-image:none]">
               {/* A brand-new workspace already reads as a bid: the same Bid Registration frame,
-                  with the BID number it has been given, around the description/upload bar. */}
-              <p className="label-caps text-muted-foreground">Bid Registration</p>
+                  with the BID number on the heading row, around the description/upload bar. */}
+              <div className="flex items-center justify-between gap-2">
+                <p className="label-caps text-muted-foreground">Bid Registration</p>
+                {draftReference && (
+                  <span className="shrink-0 font-mono text-base font-bold tracking-wide text-foreground">
+                    {draftReference}
+                  </span>
+                )}
+              </div>
               <div className="grid grid-cols-2 items-start gap-3">
                 <div className="min-w-0 space-y-1">
                   {org?.id && <SubmitterIdentity orgId={org.id} createdBy={null} />}
@@ -1789,11 +1830,6 @@ function LiveDealEngine() {
                   )}
                 </div>
                 <div className="min-w-0 space-y-1 text-right">
-                  {draftReference && (
-                    <span className="block font-mono text-base font-bold tracking-wide text-foreground">
-                      {draftReference}
-                    </span>
-                  )}
                   {org?.country && <p className="text-xs text-muted-foreground">{org.country}</p>}
                 </div>
               </div>
@@ -1839,8 +1875,8 @@ function LiveDealEngine() {
           )}
 
           {activity && dealTx && flowStep === "searching" && (
-            <div className="mt-3 overflow-hidden rounded-xl border border-warning/40">
-              <div className="flex items-center gap-3 bg-warning/15 px-4 py-3">
+            <div className="mt-2 overflow-hidden rounded-xl border border-warning/40">
+              <div className="flex items-center gap-3 bg-[#F1F5F9] px-4 py-3">
                 <p className="text-sm text-warning">Running AI and AI+ search for matching counterparties…</p>
               </div>
               <div className="h-1.5 w-full animate-ribbon-sweep" />
@@ -1851,7 +1887,7 @@ function LiveDealEngine() {
 
 
           {mapPanel && dealTx && (
-            <div className="mt-3">
+            <div className="mt-2">
               <InlineFrame
                 tx={dealTx}
                 stage={mapPanel.stage}
@@ -1863,7 +1899,7 @@ function LiveDealEngine() {
           )}
 
           {activity ? (
-            <div className="mt-4 space-y-3">
+            <div className="mt-2 space-y-2">
                 <div className="flex flex-wrap gap-1.5">
                   {activity.commodity && (
                     <span className="rounded-full bg-foreground px-2.5 py-1 text-[11px] font-semibold text-background">
