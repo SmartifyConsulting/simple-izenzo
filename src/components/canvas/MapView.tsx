@@ -530,7 +530,7 @@ export function MapView({
         {node("wad", "KYC, KYB, PEP, AML", "compliance", "wad", Users, {
           overrideKey: "wad",
         })}
-        {node("businessDocs", "Business Docs", "execution", "entry", FolderClosed, {
+        {node("businessDocs", "Business Docs", "execution", "business-docs", FolderClosed, {
           sub: "POI, NDA, MOU, Contract",
         })}
 

@@ -45,6 +45,11 @@ export const SPINE: StageDef[] = [
     key: "execution",
     label: "Execution Gate",
     steps: [
+      {
+        key: "business-docs",
+        label: "Business Docs",
+        blurb: "Upload the NDA, MOU and any other contracts for this deal.",
+      },
       { key: "entry", label: "Execution Entry", blurb: "Open execution and record the entry position." },
       { key: "preparation", label: "Project Preparation", blurb: "Concept, pre-feasibility and feasibility." },
       { key: "bankability", label: "Bankability", blurb: "Record the bankability assessment." },

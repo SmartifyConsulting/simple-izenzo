@@ -36,6 +36,7 @@ import { MapView } from "@/components/canvas/MapView";
 import { DocumentUploadStep } from "@/components/guided/DocumentUploadStep";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import {
   AlertDialog,
@@ -138,7 +139,7 @@ function highlightKeyTerms(text: string): React.ReactNode[] {
 
 type Attachment = {
   name: string;
-  kind: "ID" | "ID front" | "ID back" | "Document";
+  kind: "ID" | "ID front" | "ID back" | "Document" | "NDA" | "MOU" | "Contract" | "Certificate";
   /** Location of the stored file in the private `documents` bucket, so it can be opened later. */
   path?: string | null;
 };
@@ -500,7 +501,18 @@ function LiveDealEngine() {
   const savedAttachments: Attachment[] = useMemo(
     () => workspaceDocs.map((d) => ({
       name: d.name,
-      kind: d.doc_type === "identity" ? "ID" : "Document",
+      kind:
+        d.doc_type === "identity"
+          ? "ID"
+          : d.doc_type === "nda"
+            ? "NDA"
+            : d.doc_type === "mou"
+              ? "MOU"
+              : d.doc_type === "contract"
+                ? "Contract"
+                : d.doc_type === "certificate"
+                  ? "Certificate"
+                  : "Document",
       path: d.storage_path,
     })),
     [workspaceDocs],
@@ -1626,7 +1638,28 @@ function LiveDealEngine() {
                 {(((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference) && (
                   <span className="flex shrink-0 items-center gap-2 font-mono text-base font-bold tracking-wide text-foreground">
                     {workspaceDocs.length > 0 && (
-                      <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      <TooltipProvider delayDuration={150}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="inline-flex cursor-default">
+                              <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" align="start" className="max-w-[240px] bg-popover text-popover-foreground">
+                            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                              {savedAttachments.length} file{savedAttachments.length === 1 ? "" : "s"} on this bid
+                            </p>
+                            <ul className="space-y-0.5">
+                              {savedAttachments.map((a, i) => (
+                                <li key={i} className="flex items-center gap-1.5 text-xs">
+                                  <span className="truncate">{a.name}</span>
+                                  <span className="shrink-0 text-[10px] text-muted-foreground">{a.kind}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     )}
                     {((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference}
                   </span>

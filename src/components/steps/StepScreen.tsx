@@ -3,7 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Check, Coins, Download, Loader2, Sparkles, Lock } from "lucide-react";
+import { Check, Coins, Download, FileText, Loader2, Sparkles, Lock, UploadCloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,7 +27,6 @@ import { POI_COST, WAD_COST, type StageKey } from "@/lib/spine";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { routeIdentityVerification } from "@/lib/identityRouting";
-import { VerificationPanel } from "@/components/verification/VerificationPanel";
 import { AvatarWithPresence } from "@/components/PresenceDot";
 import { CommoditySearch } from "@/components/CommoditySearch";
 import { COUNTRIES } from "@/lib/countries";
@@ -185,6 +184,8 @@ function Body(props: Props) {
       return <PoiStep {...props} />;
     case "compliance/wad":
       return <WadStep {...props} />;
+    case "execution/business-docs":
+      return <BusinessDocsStep {...props} />;
     case "execution/stakeholders":
       return <StakeholderStep {...props} />;
     case "memory/ledger":
@@ -1833,16 +1834,6 @@ function WadStep({ tx, reload }: Props) {
         })}
       </ul>
       <div className="mt-5">
-        <VerificationPanel
-          transactionId={tx.id}
-          checks={(["id_document", "kyb", "aml"] as const).filter(
-            (k) => priorByKind.get(k)?.status !== "passed",
-          )}
-          title="Identity verification"
-          description="Only the checks that have not already come back clear. Results are recorded on the deal as they land; they inform the WaD decision but never make it."
-        />
-      </div>
-      <div className="mt-5">
         <Field label="Case notes">
           <Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
         </Field>
@@ -1856,6 +1847,176 @@ function WadStep({ tx, reload }: Props) {
 /* ---------- execution ---------- */
 
 const PREP_STAGES = ["Concept", "Pre-Feasibility", "Feasibility", "Bankability", "Implementation"];
+
+const BUSINESS_DOC_TYPES: { value: string; label: string }[] = [
+  { value: "nda", label: "NDA" },
+  { value: "mou", label: "MOU" },
+  { value: "contract", label: "Contract" },
+  { value: "other", label: "Other" },
+];
+
+const BUSINESS_DOC_LABEL: Record<string, string> = Object.fromEntries(
+  BUSINESS_DOC_TYPES.map((t) => [t.value, t.label]),
+);
+
+/** Drag-and-drop (or browse) upload for the NDA, MOU and any other contracts a deal needs —
+ * separate from the Trading Gate's own document upload, since these belong to Execution and
+ * aren't part of what gets searched/matched on. Every file lands in the same `documents` table
+ * (and the same "documents" storage bucket) as everything else on the deal, so it shows up
+ * automatically in the Bid Information paperclip archive on the Live Workspace. */
+function BusinessDocsStep({ tx, reload }: Props) {
+  const qc = useQueryClient();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [docType, setDocType] = useState(BUSINESS_DOC_TYPES[0]!.value);
+
+  const { data: docs = [] } = useQuery({
+    queryKey: ["business-docs", tx.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("documents")
+        .select("*")
+        .eq("transaction_id", tx.id)
+        .in(
+          "doc_type",
+          BUSINESS_DOC_TYPES.map((t) => t.value),
+        )
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  async function handleFiles(files: FileList | File[]) {
+    const list = Array.from(files);
+    if (list.length === 0) return;
+    setUploading(true);
+    try {
+      for (const file of list) {
+        const path = `deals/${tx.id}/business/${Date.now()}-${file.name}`;
+        const { error: upErr } = await supabase.storage.from("documents").upload(path, file);
+        const sha = await fingerprintOf({ name: file.name, size: file.size, at: Date.now() });
+        const { error } = await supabase.from("documents").insert({
+          transaction_id: tx.id,
+          name: file.name,
+          doc_type: docType,
+          notes: BUSINESS_DOC_LABEL[docType] ?? null,
+          version: 1,
+          sha256: sha,
+          storage_path: upErr ? null : path,
+        });
+        if (error) throw error;
+        await recordEvent({
+          transactionId: tx.id,
+          stage: "execution",
+          step: "business-docs",
+          action: "document_attached",
+          summary: `${file.name} — ${BUSINESS_DOC_LABEL[docType] ?? docType}`,
+          payload: { name: file.name, doc_type: docType, sha256: sha },
+        });
+      }
+      await advance(tx.id, "execution", "entry");
+      await qc.invalidateQueries({ queryKey: ["business-docs", tx.id] });
+      await qc.invalidateQueries({ queryKey: ["documents", tx.id] });
+      reload();
+      toast.success(list.length === 1 ? "Document uploaded" : `${list.length} documents uploaded`);
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <Panel
+        title="Business Docs"
+        description="Upload the NDA, MOU and any other contracts for this deal — each one is added to the Bid Information archive automatically."
+      >
+        <div className="space-y-3">
+          <Field label="Document type (applied to the next upload)">
+            <Select value={docType} onValueChange={setDocType}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {BUSINESS_DOC_TYPES.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>
+                    {t.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              if (e.dataTransfer.files.length) void handleFiles(e.dataTransfer.files);
+            }}
+            aria-label="Drop files here or click to browse"
+            className={cn(
+              "flex w-full flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed p-6 text-center transition-colors",
+              dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
+            )}
+          >
+            {uploading ? (
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            ) : (
+              <UploadCloud className="h-5 w-5 text-muted-foreground" />
+            )}
+            <span className="text-xs font-medium">
+              {uploading ? "Uploading…" : "Drop files here or click to browse"}
+            </span>
+            <span className="text-[11px] text-muted-foreground">
+              NDA, MOU, signed contracts — any format
+            </span>
+          </button>
+          <input
+            ref={inputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files) void handleFiles(e.target.files);
+              e.target.value = "";
+            }}
+          />
+        </div>
+      </Panel>
+
+      <Panel title="Uploaded">
+        {docs.length === 0 ? (
+          <Empty text="No business documents attached yet." />
+        ) : (
+          <ul className="divide-y divide-border">
+            {docs.map((d) => (
+              <li key={d.id} className="flex items-center gap-3 py-2.5 text-sm">
+                <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium">{d.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {BUSINESS_DOC_LABEL[d.doc_type] ?? d.doc_type} · {shortHash(d.sha256)}
+                  </p>
+                </div>
+                <span className="shrink-0 text-xs text-muted-foreground">{when(d.created_at)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Panel>
+    </div>
+  );
+}
 
 function ExecutionStep({ tx, step, reload }: Props) {
   const qc = useQueryClient();

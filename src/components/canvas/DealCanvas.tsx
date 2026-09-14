@@ -1297,7 +1297,7 @@ export function CounterpartyRecord({
             onClick={() => setMediaExpanded((v) => !v)}
             className="flex w-full items-center justify-between gap-2"
           >
-            <span className="label-caps text-slate-600">Online media screening</span>
+            <span className="label-caps text-slate-600">Online media screening results</span>
             <ChevronDown
               className={cn(
                 "h-3.5 w-3.5 shrink-0 text-slate-500 transition-transform",
