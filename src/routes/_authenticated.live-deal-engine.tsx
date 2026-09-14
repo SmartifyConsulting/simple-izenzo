@@ -436,6 +436,15 @@ function LiveDealEngine() {
   const bidInfoOpen = dealTx
     ? !(bidInfoCollapsedByTx[dealTx.id] ?? bidInfoDefaultCollapsed)
     : true;
+  // Online Media Screening results get their own collapsed frame under Bid Information once
+  // screening finishes — collapsed by default (unlike Bid Information, which opens for a fresh
+  // bid) since this is a record to check back on, not something that needs attention right away.
+  const [mediaResultsOpenByTx, setMediaResultsOpenByTx] = useState<Record<string, boolean>>({});
+  function setMediaResultsOpen(txId: string | undefined, open: boolean) {
+    if (!txId) return;
+    setMediaResultsOpenByTx((prev) => ({ ...prev, [txId]: open }));
+  }
+  const mediaResultsOpen = dealTx ? Boolean(mediaResultsOpenByTx[dealTx.id]) : false;
   // Once the ask has been made for a bid, the description/drop frame never comes back — not while
   // the files are still saving, not on a refresh, not on a tab switch. Remembered per bid.
   const [submittedBids, setSubmittedBids] = useState<Set<string>>(() => new Set());
@@ -1860,6 +1869,67 @@ function LiveDealEngine() {
                 </ul>
               )}
                 </>
+              )}
+            </div>
+          )}
+
+          {/* Online Media Screening results, once screening has actually finished — its own
+              collapsed frame right under Bid Information, closed by default since this is a
+              record to check back on rather than something needing attention the moment it's
+              ready. */}
+          {dealTx && mediaResults && mediaResults.length > 0 && (
+            <div className="glass-node mt-1.5 space-y-2 p-4">
+              <button
+                type="button"
+                onClick={() => setMediaResultsOpen(dealTx.id, !mediaResultsOpen)}
+                aria-expanded={mediaResultsOpen}
+                className="label-caps flex w-full items-center justify-between gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-primary"
+              >
+                <span className="flex items-center gap-1.5">
+                  <span aria-hidden className="w-2.5 text-center font-mono">
+                    {mediaResultsOpen ? "−" : "+"}
+                  </span>
+                  ONLINE MEDIA SCREENING RESULTS
+                </span>
+                <span className="shrink-0 text-[10px] font-semibold">
+                  {mediaResults.length} counterpart{mediaResults.length === 1 ? "y" : "ies"}
+                </span>
+              </button>
+              {mediaResultsOpen && (
+                <ul className="space-y-2 pt-1">
+                  {mediaResults.map((m) => (
+                    <li key={m.counterpartyId} className="rounded-lg border border-border p-2.5">
+                      <p className="text-xs font-semibold text-foreground">{m.name}</p>
+                      <ul className="mt-1.5 space-y-1">
+                        {m.findings.map((f) => (
+                          <li key={f.source} className="flex items-center justify-between gap-2 text-[11px]">
+                            <span className="text-muted-foreground">{f.label}</span>
+                            <span
+                              className={cn(
+                                "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                                f.status === "adverse"
+                                  ? "bg-destructive/15 text-destructive"
+                                  : f.status === "found"
+                                    ? "bg-success/15 text-success"
+                                    : "bg-muted text-muted-foreground",
+                              )}
+                            >
+                              {f.status === "adverse"
+                                ? "Adverse"
+                                : f.status === "found"
+                                  ? "Found"
+                                  : f.status === "not_found"
+                                    ? "Nothing found"
+                                    : f.status === "unavailable"
+                                      ? "Not connected"
+                                      : "Could not scan"}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           )}
