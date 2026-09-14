@@ -1143,9 +1143,11 @@ export function CounterpartyRecord({
   }
 
 
-  // Screening is done once every ticked counterparty has a result and nothing is still running —
-  // that's the moment the user can pick which one they actually want to trade with.
-  const screeningDone = !screening && screeningResults !== null && screeningResults.length > 0;
+  // Online Media Screening leads straight into picking a counterparty now — background
+  // screening no longer sits in between, since WaD in Compliance already runs KYC/KYB/PEP/AML
+  // on whoever is chosen. The moment media results are back (and nothing is still running) is
+  // the moment the user can pick which party they actually want to trade with.
+  const screeningDone = !mediaRunning && mediaResults !== null && mediaResults.length > 0;
 
   return (
     <div
@@ -1469,20 +1471,6 @@ export function CounterpartyRecord({
             : pickedId
               ? "Continue"
               : "Tick who you want to trade with"}
-        </Button>
-      ) : mediaResults && !screening && !screeningResults && onMediaContinue ? (
-        <Button
-          type="button"
-          className={cn(
-            "mt-3 w-full bg-info text-white hover:bg-info/90",
-            ticked.length === 0 && "bg-slate-300 text-slate-700 hover:bg-slate-300 disabled:opacity-100",
-          )}
-          disabled={ticked.length === 0}
-          onClick={() => onMediaContinue(ticked)}
-        >
-          {ticked.length === 0
-            ? "Tick who to take through screening"
-            : `Continue to background screening with ${ticked.length} counterpart${ticked.length === 1 ? "y" : "ies"}`}
         </Button>
       ) : (
         onContinue &&

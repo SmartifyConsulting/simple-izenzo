@@ -627,38 +627,25 @@ function LiveDealEngine() {
     if (!hasChosen) {
       o["choice"] = flowStep === "results" ? "active" : "open";
       o["onlineMedia"] = "open";
-      o["backgroundScreening"] = "open";
       o["intent"] = "open";
       return o;
     }
     o["choice"] = "done";
 
-    // Online media screening runs only once the choice has been made and continued.
+    // Online media screening runs only once the choice has been made and continued, and leads
+    // straight into Express Intent once it's back — there's no separate background-screening gate
+    // in between any more (WaD in Compliance already runs KYC/KYB/PEP/AML on whoever is chosen).
     if (mediaRunning) {
       o["onlineMedia"] = "active";
-      o["backgroundScreening"] = "open";
       o["intent"] = "open";
       return o;
     }
     if (mediaResults === null) {
       o["onlineMedia"] = "open";
-      o["backgroundScreening"] = "open";
       o["intent"] = "open";
       return o;
     }
     o["onlineMedia"] = "done";
-
-    if (screening) {
-      o["backgroundScreening"] = "active";
-      o["intent"] = "open";
-      return o;
-    }
-    if (screeningResults === null) {
-      o["backgroundScreening"] = "open";
-      o["intent"] = "open";
-      return o;
-    }
-    o["backgroundScreening"] = "done";
 
     o["intent"] = dealTx.intent_confirmed_at ? "done" : "active";
     if (dealTx.intent_confirmed_at) {
