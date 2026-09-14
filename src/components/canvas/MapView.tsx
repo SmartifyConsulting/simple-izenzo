@@ -46,7 +46,7 @@ function nodeState(stage: StageKey, step: string, tx: Transaction | null): NodeS
 // Workspace: everything is placed on this canvas and scaled to the container with percentages, so
 // tiles and their connecting lines always stay aligned however wide that column is.
 const W = 960;
-const H = 950;
+const H = 900;
 const px = (v: number) => `${(v / W) * 100}%`;
 const py = (v: number) => `${(v / H) * 100}%`;
 
@@ -78,19 +78,19 @@ const BOXES = {
   // Extra clearance below the frame's floating heading + "Governance" row so Express Intent
   // never touches either of them.
   // Widened and centred within the (also widened) Compliance frame.
-  expressIntent: { x: 60, y: 430, w: 280, h: 50 },
-  poi: { x: 60, y: 492, w: 280, h: 50 },
-  withoutADoubt: { x: 60, y: 554, w: 280, h: 56 },
-  wad: { x: 60, y: 622, w: 280, h: 56 },
-  businessDocs: { x: 60, y: 690, w: 280, h: 56 },
+  expressIntent: { x: 60, y: 420, w: 280, h: 48 },
+  poi: { x: 60, y: 476, w: 280, h: 48 },
+  withoutADoubt: { x: 60, y: 532, w: 280, h: 54 },
+  wad: { x: 60, y: 594, w: 280, h: 54 },
+  businessDocs: { x: 60, y: 656, w: 280, h: 54 },
   // Step 3 (Execution, with Entry/Exit beside it) and Step 4 (Finality) sit directly under Step 2,
   // aligned with the Compliance frame's left edge instead of off to its right.
   // Moved down ~1cm from Step 2, with even gaps between Execution, Entry/Exit and Finality.
-  execution: { x: 70, y: 818, w: 260, h: 94 },
+  execution: { x: 70, y: 778, w: 260, h: 90 },
   // Centred inside its own frame, which itself sits centred in the gap between Step 3 and Step 4.
   // Same size as the Search Results tile.
-  entryExit: { x: 410, y: 834, w: 140, h: 62 },
-  finality: { x: 635, y: 818, w: 250, h: 94 },
+  entryExit: { x: 410, y: 794, w: 140, h: 62 },
+  finality: { x: 635, y: 778, w: 250, h: 90 },
 } as const satisfies Record<string, Box>;
 
 // One outer frame holds the whole trading step — Bid, Load Deal Documents, Search, the Search
@@ -99,13 +99,13 @@ const BOXES = {
 // leaving a tall gap beneath it) so Compliance can sit right below without the diagram needing a
 // scroll.
 const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 932, h: 305 };
-const COMPLIANCE_FRAME: Box = { x: 30, y: 386, w: 340, h: 376 };
+const COMPLIANCE_FRAME: Box = { x: 30, y: 386, w: 340, h: 346 };
 // Execution and Entry/Exit+Finality get the same bordered, labelled group frame as Steps 1 and
 // 2, instead of sitting as bare tiles with no frame of their own.
-const EXECUTION_FRAME: Box = { x: 30, y: 800, w: 340, h: 130 };
-const FINALITY_FRAME: Box = { x: 590, y: 800, w: 340, h: 130 };
+const EXECUTION_FRAME: Box = { x: 30, y: 762, w: 340, h: 122 };
+const FINALITY_FRAME: Box = { x: 590, y: 762, w: 340, h: 122 };
 // Entry/Exit gets the same bordered frame treatment, centred in the gap between Step 3 and 4.
-const ENTRY_EXIT_FRAME: Box = { x: 390, y: 800, w: 180, h: 130 };
+const ENTRY_EXIT_FRAME: Box = { x: 390, y: 762, w: 180, h: 122 };
 const MEMORY = { cx: 570, cy: 520, r: 118 };
 
 // A connector arriving at a group frame stops this many units short of its border, so the tip
@@ -159,8 +159,8 @@ const ARROWS: string[] = [
   ),
   path(
     { x: cx(BOXES.finality), y: FINALITY_FRAME.y - ARROW_GAP },
-    { x: cx(BOXES.finality), y: 716 },
-    { x: MEMORY.cx, y: 716 },
+    { x: cx(BOXES.finality), y: 700 },
+    { x: MEMORY.cx, y: 700 },
     { x: MEMORY.cx, y: MEMORY.cy + MEMORY.r + ARROW_GAP },
   ),
 ];
