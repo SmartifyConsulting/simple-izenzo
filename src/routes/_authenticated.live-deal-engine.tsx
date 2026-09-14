@@ -1156,18 +1156,19 @@ function LiveDealEngine() {
     );
   }
 
-  /** "Fetch Interest" — runs the AI/AI+ search. Online media screening comes later, only once a
-   * person has made their choice and continued. */
+  /** "Find Counterparties" — runs the AI/AI+ search. Online media screening comes later, only once
+   * a person has made their choice and continued. */
   async function fetchInterest(txId: string) {
     setBidInfoCollapsed(txId, false);
     await runSearch(txId);
   }
 
   async function runSearch(txId: string) {
-    // Whichever way the search was started, the bid's own details stay in view beside the results
-    // rather than folding away — the header stays clickable to close them by hand.
+    // The bid's own details stay in view while the search runs, and only fold away once results
+    // have actually landed (below) — the header stays clickable either way.
     setBidInfoCollapsed(txId, false);
     setFlowStep("searching");
+
     setSearchError(null);
     // Marks Upload Documents done and moves the active step onto Search the moment the search
     // actually starts — previously this only advanced once AI/AI+ succeeded, so a failed search
