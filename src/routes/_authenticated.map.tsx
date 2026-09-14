@@ -19,7 +19,13 @@ import {
 } from "@/components/ui/select";
 import type { Transaction } from "@/lib/tx";
 
+type Search = { tx?: string | undefined; fresh?: boolean | undefined };
+
 export const Route = createFileRoute("/_authenticated/map")({
+  validateSearch: (search: Record<string, unknown>): Search => ({
+    tx: typeof search["tx"] === "string" ? (search["tx"] as string) : undefined,
+    fresh: search["fresh"] === true || search["fresh"] === "true" ? true : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Deal Map — Izenzo" },
