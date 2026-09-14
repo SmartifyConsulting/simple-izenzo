@@ -17,12 +17,8 @@ function About() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
             About Izenzo
           </p>
-          <h1 className="mt-6 text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl">
-            Izenzo means "actions" in isiZulu.
-          </h1>
           <p className="mt-6 leading-relaxed text-muted-foreground">
-            Izenzo turns intent into execution without the friction. From initial
-            search to final agreement, the platform builds a permanent, verified audit
+            From initial search to final agreement, the platform builds a permanent, verified audit
             trail—giving you pre-vetted options so you can close trade deals faster with
             complete trust.{" "}
             <span className="font-medium text-foreground">
