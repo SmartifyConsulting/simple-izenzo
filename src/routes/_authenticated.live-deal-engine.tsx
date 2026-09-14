@@ -157,9 +157,7 @@ const ACTIVE_DEAL_KEY = "izenzo:active-deal";
 // keeping, but that placeholder shouldn't surface as if it were a real deal name in this picker.
 const GENERIC_TITLES = new Set(["New Bid", "New Offer"]);
 
-// Temporarily off while the map alone carries the "where am I" job — flip back on to restore
-// the vertical stepper beneath it.
-const SHOW_VERTICAL_STEPPER = false;
+
 
 function OpenDealsPicker({ currentId, hasAttachment }: { currentId: string | null; hasAttachment?: boolean }) {
   const { org } = useAuth();
