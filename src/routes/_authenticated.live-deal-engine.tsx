@@ -304,6 +304,11 @@ function LiveDealEngine() {
   const [hasChosen, setHasChosen] = useState(false);
   /** Whether the deal map is shown above the stepper — folded away by hand if it isn't wanted. */
   const [mapOpen, setMapOpen] = useState(true);
+  // Only re-derived when switching to a different deal — not on every step change within the
+  // same one. Re-running this on every step change re-queried "chosen" the moment the step moved
+  // to online-media (before finalizeChoice has run), always finding none yet, and stomped the
+  // `true` that startMediaChecks had just set — which sent the workflow pulse back to Choice
+  // instead of on to Express Intent once media results landed.
   useEffect(() => {
     if (!dealTx?.id) return;
     let live = true;
@@ -318,7 +323,7 @@ function LiveDealEngine() {
     return () => {
       live = false;
     };
-  }, [dealTx?.id, dealTx?.step]);
+  }, [dealTx?.id]);
 
   const resumedStep: "intent" | "poi" | "wad" | null = dealTx?.wad_completed_at
     ? null
@@ -1785,7 +1790,7 @@ function LiveDealEngine() {
           </div>
 
             {dealTx ? (
-              <div className="mt-2 flex items-start justify-end gap-4">
+              <div className="mt-1 flex items-start justify-end gap-4">
                 <div className="w-1/2 max-w-[260px] shrink-0">
                   {workspaceDocsPending || (submittedForThisBid && workspaceDocs.length === 0) ? (
                     <div className="flex h-10 items-center justify-center text-xs text-muted-foreground">
@@ -1923,7 +1928,7 @@ function LiveDealEngine() {
           )}
 
           {activity ? (
-            <div className="mt-1.5 space-y-2">
+            <div className="mt-0.5 space-y-2">
                 <div className="flex flex-wrap gap-1.5">
                   {activity.commodity && (
                     <span className="rounded-full bg-foreground px-2.5 py-1 text-[11px] font-semibold text-background">
