@@ -1921,7 +1921,7 @@ function LiveDealEngine() {
           )}
 
           {activity ? (
-            <div className="mt-1 space-y-2">
+            <div className="mt-1.5 space-y-2">
                 <div className="flex flex-wrap gap-1.5">
                   {activity.commodity && (
                     <span className="rounded-full bg-foreground px-2.5 py-1 text-[11px] font-semibold text-background">
@@ -1940,7 +1940,7 @@ function LiveDealEngine() {
                 {(flowStep === "searching" || flowStep === "results") && dealTx && !stagePanel && (
                   <div className="space-y-2">
                     {searchError && (
-                      <p className="text-xs text-[#F59E0B]">Search failed: {searchError}</p>
+                      <p className="text-xs text-destructive">Search failed: {searchError}</p>
                     )}
                     <CounterpartyRecord
                       txId={dealTx.id}
