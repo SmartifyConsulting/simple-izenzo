@@ -6,6 +6,10 @@ In the Live Workspace, the description + upload bar currently sits inside a seco
 textured panel within the Bid Registration frame. That inner panel goes away, so the bar sits
 directly inside the Bid Registration frame — nothing else about the bar changes.
 
+The bar itself also gets slimmer and less chunky: a lighter single-hairline outline, softer
+corners, tighter padding and a smaller round submit button. The dashed "Drop files here" outline
+becomes noticeably clearer — a stronger dash colour and thicker dashes — so it is easy to see.
+
 ## 2. Put KYC, KYB, PEP, AML before Without a Doubt
 
 In Step 2 the order becomes:
