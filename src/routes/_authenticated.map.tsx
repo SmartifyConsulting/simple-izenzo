@@ -158,11 +158,14 @@ function MapScreen() {
               key={paneKey}
               src={paneSrc}
               title="Live Workspace"
-              className="h-[calc(100vh-14rem)] w-full rounded-2xl border border-border bg-background"
+              className="h-[calc(100vh-17rem)] w-full rounded-2xl border border-border bg-background"
             />
           </div>
         )}
       </div>
+
+      {/* Clears the bid tab strip pinned to the bottom of the screen, so nothing sits behind it. */}
+      <div className="h-12" />
 
       <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
         <DialogContent className="sm:max-w-2xl">
