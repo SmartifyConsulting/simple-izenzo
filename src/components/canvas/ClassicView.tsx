@@ -114,9 +114,9 @@ const STEPS: StepDef[] = [
     step: 4,
     label: "Finality",
     items: [
-      { key: "finality", label: "Finality", stage: "finality", step: "entry", icon: CheckCircle2 },
       { key: "payment", label: "Payment", stage: "finality", step: "type", icon: Banknote },
-      { key: "completion", label: "Completion", stage: "finality", step: "record" },
+      { key: "signoff", label: "Signoff", stage: "finality", step: "validation", icon: CheckCircle2 },
+      { key: "handover", label: "Handover", stage: "finality", step: "record" },
     ],
   },
   {
