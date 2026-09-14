@@ -46,15 +46,15 @@ const py = (v: number) => `${(v / H) * 100}%`;
 type Box = { x: number; y: number; w: number; h: number };
 
 const BOXES = {
-  bid: { x: 35, y: 68, w: 212, h: 78 },
-  loadDocs: { x: 35, y: 206, w: 212, h: 86 },
+  bid: { x: 35, y: 84, w: 212, h: 78 },
+  loadDocs: { x: 35, y: 214, w: 212, h: 86 },
   search: { x: 335, y: 218, w: 286, h: 68 },
-  steps: { x: 670, y: 196, w: 150, h: 148 },
+  steps: { x: 670, y: 178, w: 150, h: 164 },
   offer: { x: 1018, y: 124, w: 206, h: 72 },
   choice: { x: 1018, y: 240, w: 206, h: 70 },
   counterOffer: { x: 1268, y: 226, w: 178, h: 74 },
   socialMedia: { x: 1018, y: 360, w: 256, h: 70 },
-  expressIntent: { x: 335, y: 432, w: 280, h: 62 },
+  expressIntent: { x: 335, y: 444, w: 280, h: 62 },
   poi: { x: 335, y: 524, w: 280, h: 62 },
   withoutADoubt: { x: 335, y: 622, w: 280, h: 62 },
   wad: { x: 335, y: 714, w: 280, h: 62 },
