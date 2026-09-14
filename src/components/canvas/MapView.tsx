@@ -39,7 +39,7 @@ function nodeState(stage: StageKey, step: string, tx: Transaction | null): NodeS
 // Workspace: everything is placed on this canvas and scaled to the container with percentages, so
 // tiles and their connecting lines always stay aligned however wide that column is.
 const W = 960;
-const H = 1070;
+const H = 1120;
 const px = (v: number) => `${(v / W) * 100}%`;
 const py = (v: number) => `${(v / H) * 100}%`;
 
@@ -74,10 +74,10 @@ const BOXES = {
   businessDocs: { x: 60, y: 783, w: 240, h: 62 },
   // Step 3 (Execution, with Entry/Exit beside it) and Step 4 (Finality) sit directly under Step 2,
   // aligned with the Compliance frame's left edge instead of off to its right.
-  execution: { x: 50, y: 905, w: 260, h: 104 },
-  // Sits in the gap between the Step 3 and Step 4 frames, level with both.
-  entryExit: { x: 325, y: 929, w: 90, h: 56 },
-  finality: { x: 430, y: 905, w: 110, h: 104 },
+  // Moved down ~1cm from Step 2, with even gaps between Execution, Entry/Exit and Finality.
+  execution: { x: 50, y: 965, w: 260, h: 104 },
+  entryExit: { x: 350, y: 989, w: 90, h: 56 },
+  finality: { x: 480, y: 965, w: 110, h: 104 },
 } as const satisfies Record<string, Box>;
 
 // One outer frame holds the whole trading step — Bid, Load Deal Documents, Search, the Search
@@ -89,8 +89,8 @@ const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 932, h: 275 };
 const COMPLIANCE_FRAME: Box = { x: 30, y: 421, w: 340, h: 434 };
 // Execution and Entry/Exit+Finality get the same bordered, labelled group frame as Steps 1 and
 // 2, instead of sitting as bare tiles with no frame of their own.
-const EXECUTION_FRAME: Box = { x: 30, y: 885, w: 290, h: 144 };
-const FINALITY_FRAME: Box = { x: 400, y: 885, w: 170, h: 144 };
+const EXECUTION_FRAME: Box = { x: 30, y: 945, w: 290, h: 144 };
+const FINALITY_FRAME: Box = { x: 460, y: 945, w: 150, h: 144 };
 const MEMORY = { cx: 560, cy: 595, r: 127 };
 
 const cx = (b: Box) => b.x + b.w / 2;
@@ -130,7 +130,7 @@ const ARROWS: string[] = [
   // Execution, Entry/Exit and Finality sit in a single row.
   line(rightOf(BOXES.execution), leftOf(BOXES.entryExit)),
   line(rightOf(BOXES.entryExit), leftOf(BOXES.finality)),
-  path(topOf(BOXES.finality), { x: cx(BOXES.finality), y: 800 }, { x: MEMORY.cx, y: 800 }, { x: MEMORY.cx, y: MEMORY.cy + MEMORY.r }),
+  path(topOf(BOXES.finality), { x: cx(BOXES.finality), y: 844 }, { x: MEMORY.cx, y: 844 }, { x: MEMORY.cx, y: MEMORY.cy + MEMORY.r }),
 ];
 
 function ArrowLayer() {
