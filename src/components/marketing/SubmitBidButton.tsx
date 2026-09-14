@@ -40,7 +40,7 @@ export function SubmitBidButton({
           else setOpen(true);
         }}
       >
-        Submit a Bid
+        Start a Trade
       </Button>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-background/30 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
