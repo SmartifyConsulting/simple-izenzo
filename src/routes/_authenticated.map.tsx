@@ -62,7 +62,15 @@ function MapScreen() {
     },
   });
 
-  const tx = deals.find((d) => d.id === selected) ?? deals[0] ?? null;
+  // A bid tab at the bottom of the screen (or the Search tab) puts the bid in the address, and that
+  // takes precedence over the picker above the map.
+  const chosenId = txParam ?? selected;
+  const tx = fresh ? null : (deals.find((d) => d.id === chosenId) ?? deals[0] ?? null);
+
+  // Picking the New tab opens the empty workspace beside the map, ready to register a bid.
+  useEffect(() => {
+    if (fresh) setPaneOpen(true);
+  }, [fresh]);
 
   // While the workspace pane is open the deal is being worked on inside it, so the map keeps its
   // own copy of the record fresh — that's what moves the pulse along from tile to tile.
