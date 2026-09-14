@@ -79,7 +79,7 @@ function IntelligenceFabric() {
           How it transforms decision-making
         </p>
         <h2 className="mt-2 max-w-2xl text-3xl tracking-tight text-foreground sm:text-4xl">
-          Five ways AI+ works before you ever make a call.
+          Five ways AI+ works intuitively.
         </h2>
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">

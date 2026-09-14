@@ -8,6 +8,7 @@ import {
   FileText,
   FolderClosed,
   Gavel,
+  ListChecks,
   LogIn,
   RefreshCw,
   Search,
@@ -71,18 +72,20 @@ const BOXES = {
   // to match so the connector between them (unchanged below) doesn't have to stretch or overlap.
   // Extra clearance below the frame's floating heading + "Governance" row so Express Intent
   // never touches either of them.
-  expressIntent: { x: 60, y: 470, w: 240, h: 54 },
-  poi: { x: 60, y: 548, w: 240, h: 54 },
-  withoutADoubt: { x: 60, y: 626, w: 240, h: 62 },
-  wad: { x: 60, y: 712, w: 240, h: 62 },
-  businessDocs: { x: 60, y: 798, w: 240, h: 62 },
+  // Widened and centred within the (also widened) Compliance frame.
+  expressIntent: { x: 60, y: 470, w: 280, h: 54 },
+  poi: { x: 60, y: 548, w: 280, h: 54 },
+  withoutADoubt: { x: 60, y: 626, w: 280, h: 62 },
+  wad: { x: 60, y: 712, w: 280, h: 62 },
+  businessDocs: { x: 60, y: 798, w: 280, h: 62 },
   // Step 3 (Execution, with Entry/Exit beside it) and Step 4 (Finality) sit directly under Step 2,
   // aligned with the Compliance frame's left edge instead of off to its right.
   // Moved down ~1cm from Step 2, with even gaps between Execution, Entry/Exit and Finality.
-  execution: { x: 50, y: 965, w: 260, h: 104 },
+  execution: { x: 70, y: 965, w: 260, h: 104 },
   // Centred inside its own frame, which itself sits centred in the gap between Step 3 and Step 4.
-  entryExit: { x: 393, y: 989, w: 90, h: 56 },
-  finality: { x: 575, y: 965, w: 250, h: 104 },
+  // Same size as the Search Results tile.
+  entryExit: { x: 410, y: 985, w: 140, h: 64 },
+  finality: { x: 635, y: 965, w: 250, h: 104 },
 } as const satisfies Record<string, Box>;
 
 // One outer frame holds the whole trading step — Bid, Load Deal Documents, Search, the Search
@@ -90,15 +93,19 @@ const BOXES = {
 // which no longer carry a frame of their own. Trimmed to its actual content height (rather than
 // leaving a tall gap beneath it) so Compliance can sit right below without the diagram needing a
 // scroll.
-const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 932, h: 285 };
+const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 932, h: 305 };
 const COMPLIANCE_FRAME: Box = { x: 30, y: 421, w: 340, h: 449 };
 // Execution and Entry/Exit+Finality get the same bordered, labelled group frame as Steps 1 and
 // 2, instead of sitting as bare tiles with no frame of their own.
-const EXECUTION_FRAME: Box = { x: 30, y: 945, w: 290, h: 144 };
-const FINALITY_FRAME: Box = { x: 555, y: 945, w: 290, h: 144 };
+const EXECUTION_FRAME: Box = { x: 30, y: 945, w: 340, h: 144 };
+const FINALITY_FRAME: Box = { x: 590, y: 945, w: 340, h: 144 };
 // Entry/Exit gets the same bordered frame treatment, centred in the gap between Step 3 and 4.
-const ENTRY_EXIT_FRAME: Box = { x: 373, y: 945, w: 130, h: 144 };
+const ENTRY_EXIT_FRAME: Box = { x: 390, y: 945, w: 180, h: 144 };
 const MEMORY = { cx: 560, cy: 595, r: 127 };
+
+// A connector arriving at a group frame stops this many units short of its border, so the tip
+// points at the frame (and the heading floating on it) instead of touching or crossing into it.
+const ARROW_GAP = 8;
 
 const cx = (b: Box) => b.x + b.w / 2;
 const cy = (b: Box) => b.y + b.h / 2;
@@ -132,14 +139,25 @@ const ARROWS: string[] = [
   line(bottomOf(BOXES.poi), topOf(BOXES.withoutADoubt)),
   line(bottomOf(BOXES.withoutADoubt), topOf(BOXES.wad)),
   line(bottomOf(BOXES.wad), topOf(BOXES.businessDocs)),
-  // Step 2 into Step 3: straight down out of Business Docs, stopping at the Step 3 frame's edge
-  // rather than crossing into it to reach the (borderless) Execution tile itself.
-  line(bottomOf(BOXES.businessDocs), topOf(EXECUTION_FRAME)),
+  // Step 2 into Step 3: straight down out of Business Docs, stopping just short of the Step 3
+  // frame's edge — pointing at it (and the heading floating on it) rather than touching it.
+  line(bottomOf(BOXES.businessDocs), { x: cx(BOXES.businessDocs), y: EXECUTION_FRAME.y - ARROW_GAP }),
   // Execution, Entry/Exit and Finality sit in a single row — connectors run frame edge to frame
-  // edge, so they touch each group frame's border instead of crossing into it.
-  line(rightOf(EXECUTION_FRAME), leftOf(ENTRY_EXIT_FRAME)),
-  line(rightOf(ENTRY_EXIT_FRAME), leftOf(FINALITY_FRAME)),
-  path(topOf(FINALITY_FRAME), { x: cx(BOXES.finality), y: 844 }, { x: MEMORY.cx, y: 844 }, { x: MEMORY.cx, y: MEMORY.cy + MEMORY.r }),
+  // edge with a small gap at each end, so the tip points at the frame/heading without touching it.
+  line(
+    { x: EXECUTION_FRAME.x + EXECUTION_FRAME.w + ARROW_GAP, y: cy(ENTRY_EXIT_FRAME) },
+    { x: ENTRY_EXIT_FRAME.x - ARROW_GAP, y: cy(ENTRY_EXIT_FRAME) },
+  ),
+  line(
+    { x: ENTRY_EXIT_FRAME.x + ENTRY_EXIT_FRAME.w + ARROW_GAP, y: cy(FINALITY_FRAME) },
+    { x: FINALITY_FRAME.x - ARROW_GAP, y: cy(FINALITY_FRAME) },
+  ),
+  path(
+    { x: cx(BOXES.finality), y: FINALITY_FRAME.y - ARROW_GAP },
+    { x: cx(BOXES.finality), y: 844 },
+    { x: MEMORY.cx, y: 844 },
+    { x: MEMORY.cx, y: MEMORY.cy + MEMORY.r + ARROW_GAP },
+  ),
 ];
 
 function ArrowLayer() {
@@ -163,7 +181,7 @@ function ArrowLayer() {
         />
       </defs>
       <text
-        className="fill-primary text-[13px] font-semibold uppercase tracking-[0.09em]"
+        className="fill-primary text-[11px] font-semibold uppercase tracking-[0.09em]"
         textAnchor="middle"
       >
         <textPath href="#memory-arc" startOffset="50%">
@@ -275,7 +293,7 @@ function MapNode({
         <span
           className={cn(
             "w-full font-semibold uppercase leading-snug tracking-wide",
-            subSize === "sm" ? "text-[10px]" : "text-[8.5px]",
+            subSize === "sm" ? "text-[10px]" : "text-[9.5px]",
             subTone === "gate" ? "text-[#C1653D]" : "font-medium normal-case tracking-normal text-muted-foreground",
           )}
         >
@@ -385,7 +403,8 @@ export function MapView({
             height: py(BOXES.steps.h),
           }}
         >
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <p className="flex items-center justify-center gap-1.5 text-[10px] font-semibold tracking-wide text-muted-foreground">
+            <ListChecks className="h-3.5 w-3.5 shrink-0" />
             Search Results
           </p>
         </div>
@@ -421,7 +440,7 @@ export function MapView({
         {node("offer", "Offer", "trading", "counterparties", Tag)}
         {node("choice", "Choice", "trading", "choice", Share2, { overrideKey: "choice" })}
         {node("counterOffer", "Counter Offer", "trading", "counterparties", RefreshCw)}
-        {node("socialMedia", "Online Media Screening", "trading", "online-media", Users, {
+        {node("socialMedia", "Online Screening", "trading", "online-media", Users, {
           overrideKey: "onlineMedia",
         })}
 

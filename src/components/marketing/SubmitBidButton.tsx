@@ -36,7 +36,7 @@ export function SubmitBidButton({
         variant={variant}
         className={cn("rounded-full", fullWidth && "w-full", className)}
         onClick={() => {
-          if (user) navigate({ to: "/live-deal-engine" });
+          if (user) navigate({ to: "/live-deal-engine", search: { fresh: true } });
           else setOpen(true);
         }}
       >
