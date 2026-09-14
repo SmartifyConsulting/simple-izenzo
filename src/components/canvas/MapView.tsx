@@ -261,7 +261,7 @@ function MapNode({
   lock?: string | null | undefined;
   sub?: string | undefined;
   /** "gate" prints the sub-line in the warning colour, as with Without a Doubt. */
-  subTone?: "muted" | "gate" | undefined;
+  subTone?: "muted" | "gate" | "id" | undefined;
   /** No border/background of its own — used when the node already sits directly inside its own
    * group Frame (Step 3, Step 4), so it doesn't draw a second, redundant box inside that one. */
   plain?: boolean | undefined;
@@ -299,7 +299,11 @@ function MapNode({
           className={cn(
             "w-full font-semibold uppercase leading-snug tracking-wide",
             subSize === "sm" ? "text-[10px]" : "text-[9.5px]",
-            subTone === "gate" ? "text-[#C1653D]" : "font-medium normal-case tracking-normal text-muted-foreground",
+            subTone === "gate"
+              ? "text-[#C1653D]"
+              : subTone === "id"
+                ? "font-mono font-bold tracking-normal text-foreground"
+                : "font-medium normal-case tracking-normal text-muted-foreground",
           )}
         >
           {sub}
@@ -322,6 +326,7 @@ export function MapView({
   onBid,
   onLoadDocuments,
   searching,
+  reference,
   onOpenStep,
   overrideStates,
 }: {
@@ -334,6 +339,9 @@ export function MapView({
   onLoadDocuments?: (() => void) | undefined;
   /** True while AI and AI+ are running, so Search pulses and shows its own progress bar. */
   searching?: boolean | undefined;
+  /** The bid/offer number this map belongs to — shown inside the Bid tile, including on a brand-new
+   * workspace whose number has been issued but whose bid is not recorded yet. */
+  reference?: string | null | undefined;
   /** When given, a tile hands the (stage, step) to the caller instead of opening its own inline
    * frame — used when the map sits beside the Live Workspace. */
   onOpenStep?: ((stage: StageKey, step: string) => void) | undefined;
@@ -363,7 +371,7 @@ export function MapView({
     icon?: typeof Search,
     opts?: {
       sub?: string;
-      subTone?: "muted" | "gate";
+      subTone?: "muted" | "gate" | "id";
       overrideKey?: string;
       state?: NodeState;
       onClick?: () => void;
@@ -417,6 +425,7 @@ export function MapView({
         {/* Step 1 — trading. Bid and Load Deal Documents drive the workspace beside the map. */}
         {node("bid", "Bid", "trading", "bid-offer", Gavel, {
           overrideKey: "bidRegistration",
+          ...(reference ? { sub: reference, subTone: "id" as const } : {}),
           ...(onBid ? { onClick: onBid } : {}),
         })}
         {node("loadDocs", "Upload Files", "trading", "documents", FileText, {
