@@ -1871,6 +1871,15 @@ export function CanvasStart({
       // back to a deterministic computed reference for this case).
       const referenceColumnMissing =
         error?.code === "42703" || error?.code === "PGRST204" || Boolean(error?.message?.includes("schema cache"));
+      // Someone else claimed the same number in the meantime — draw a fresh one and try once more
+      // rather than losing the bid or filing a duplicate.
+      if (error?.code === "23505") {
+        ({ data: newTx, error } = await supabase
+          .from("transactions")
+          .insert({ ...baseRow, reference: await claimReference(direction) } as never)
+          .select()
+          .single());
+      }
       if (referenceColumnMissing) {
         ({ data: newTx, error } = await supabase.from("transactions").insert(baseRow as never).select().single());
       }
@@ -1926,8 +1935,8 @@ export function CanvasStart({
   // direction is inferred from the document itself once it's uploaded), so a confirmation screen
   // in between would just be a click for its own sake. Whatever was already typed/dropped rides
   // along via onCreated's `seed` so the real upload step can pick up exactly where this left off.
-  function beginPicking(filesOverride?: File[]) {
-    const ref = draftReference ?? nextReference("bid");
+  async function beginPicking(filesOverride?: File[]) {
+    const ref = draftReference ?? (await claimReference("bid"));
     if (!draftReference) {
       setDraftReference(ref);
       onDraftReference?.(ref);
@@ -1956,7 +1965,7 @@ export function CanvasStart({
     appliedInitialPrompt.current = true;
     const hasSeed = (initialPrompt && initialPrompt.trim()) || (initialFiles && initialFiles.length > 0);
     if (hasSeed && !initialDirection) {
-      beginPicking();
+      void beginPicking();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1980,7 +1989,7 @@ export function CanvasStart({
           onKeyDown={(e) => {
             if (e.key === "Enter" && canBeginPicking) {
               e.preventDefault();
-              beginPicking();
+              void beginPicking();
             }
           }}
           placeholder="Enter bid description"
@@ -2033,7 +2042,7 @@ export function CanvasStart({
 
         <button
           type="button"
-          onClick={() => beginPicking()}
+          onClick={() => void beginPicking()}
           disabled={!canBeginPicking}
           aria-label="Start"
           className="flex h-10 w-10 shrink-0 items-center justify-center self-center rounded-full bg-primary text-primary-foreground transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
