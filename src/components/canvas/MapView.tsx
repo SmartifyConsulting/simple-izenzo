@@ -73,16 +73,17 @@ const BOXES = {
   // tall — so the Step 1 frame loses the height the two-line tile needed.
   socialMedia: { x: 550, y: 255, w: 200, h: 48 },
   // Step 2 (Compliance & Governance) sits below Step 1's frame; Step 3/4 follow beneath it.
-  expressIntent: { x: 60, y: 388, w: 280, h: 48 },
-  poi: { x: 60, y: 444, w: 280, h: 48 },
-  withoutADoubt: { x: 60, y: 500, w: 280, h: 54 },
-  wad: { x: 60, y: 562, w: 280, h: 54 },
-  businessDocs: { x: 60, y: 624, w: 280, h: 54 },
+  expressIntent: { x: 60, y: 396, w: 280, h: 48 },
+  poi: { x: 60, y: 452, w: 280, h: 48 },
+  withoutADoubt: { x: 60, y: 508, w: 280, h: 54 },
+  wad: { x: 60, y: 570, w: 280, h: 54 },
+  businessDocs: { x: 60, y: 632, w: 280, h: 54 },
   // Step 3 (Execution, with Entry/Exit beside it) and Step 4 (Finality) sit directly under Step 2,
-  // all 40% flatter than before.
-  execution: { x: 70, y: 740, w: 260, h: 54 },
+  // all 40% flatter than before — and wider, so their detail lines still fit.
+  execution: { x: 45, y: 738, w: 310, h: 58 },
   entryExit: { x: 410, y: 748, w: 140, h: 37 },
-  finality: { x: 635, y: 740, w: 250, h: 54 },
+  finality: { x: 605, y: 738, w: 310, h: 58 },
+
 } as const satisfies Record<string, Box>;
 
 // One outer frame holds the whole trading step — Bid, Load Deal Documents, Search, the Search
