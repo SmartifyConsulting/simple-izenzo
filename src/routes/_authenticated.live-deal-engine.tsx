@@ -1951,6 +1951,7 @@ function LiveDealEngine() {
                       onContinue={startMediaChecks}
                       mediaRunning={mediaRunning}
                       mediaResults={mediaResults}
+                      mediaProgress={mediaProgress}
                       onMediaContinue={startScreening}
                       onFinalize={finalizeChoice}
                       finalizing={finalizing}

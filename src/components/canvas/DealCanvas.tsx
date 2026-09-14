@@ -788,10 +788,13 @@ export function InlineFrame({
   const canChangeParty =
     Boolean(onChangeParty) && !tx.poi_sealed_at && (step === "intent" || step === "poi");
   return (
-    <div className="glass-node animate-node-rise mt-2 p-5 sm:p-6">
+    <div className="glass-node animate-node-rise mt-1 p-5 sm:p-6">
       <div className="mb-4 flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="truncate text-base font-semibold tracking-tight">{def?.label ?? step}</p>
+          {/* Same heading treatment as the Bid Registration / Bid Information frames: small
+              caps, muted — Intent and WaD previously read a size larger than the rest of the
+              workspace. */}
+          <p className="label-caps truncate font-sans text-muted-foreground">{def?.label ?? step}</p>
           {def?.blurb && <p className="mt-1 text-[13px] text-muted-foreground">{def.blurb}</p>}
         </div>
         <button
@@ -895,6 +898,7 @@ export function CounterpartyRecord({
   screeningResults = null,
   mediaRunning = false,
   mediaResults = null,
+  mediaProgress = null,
   onMediaContinue,
   onFinalize,
   finalizing = false,
@@ -911,6 +915,7 @@ export function CounterpartyRecord({
   /** True while the open-web / social media scan is running. */
   mediaRunning?: boolean;
   mediaResults?: MediaCheckResult[] | null;
+  mediaProgress?: { done: number; total: number; failed?: boolean } | null;
   /** Fires the background screening once the media findings have been read. */
   onMediaContinue?: (counterpartyIds: string[]) => void;
   /** Fires once the user has picked the single counterparty to actually trade with,
@@ -1250,9 +1255,32 @@ export function CounterpartyRecord({
 
 
       {mediaRunning && !mediaResults && (
-        <p className="mt-3 border-t border-slate-300 pt-3 text-xs text-slate-600">
-          Scanning LinkedIn, Facebook, TikTok, marketplaces and news…
-        </p>
+        <div className="mt-3 space-y-1.5 border-t border-slate-300 pt-3">
+          <p className="text-xs text-slate-600">Scanning LinkedIn, Facebook, TikTok, marketplaces and news…</p>
+          {mediaProgress && mediaProgress.total > 0 && (
+            <>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-progress-track">
+                <div
+                  className={cn(
+                    "h-full rounded-full transition-all duration-500",
+                    mediaProgress.failed ? "bg-destructive" : "bg-success",
+                  )}
+                  style={{
+                    width: `${Math.round((mediaProgress.done / mediaProgress.total) * 100)}%`,
+                  }}
+                />
+              </div>
+              <p className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                <span>
+                  {mediaProgress.failed
+                    ? "Online media screening could not finish"
+                    : `${Math.round((mediaProgress.done / mediaProgress.total) * 100)}% — ${mediaProgress.done} of ${mediaProgress.total} sources scanned`}
+                </span>
+                {!mediaProgress.failed && <WorkingEllipsis />}
+              </p>
+            </>
+          )}
+        </div>
       )}
 
       {mediaResults && mediaResults.length > 0 && (

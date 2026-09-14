@@ -545,7 +545,10 @@ export function MapView({
             left: px(MEMORY.cx - MEMORY.r),
             top: py(MEMORY.cy - MEMORY.r),
             width: px(MEMORY.r * 2),
-            height: py(MEMORY.r * 2),
+            // A fixed 1:1 aspect ratio (rather than deriving height from H the way every
+            // rectangular frame does) keeps this a true circle even if the canvas's own
+            // rendered aspect ratio ever drifts from W/H — width alone then decides the size.
+            aspectRatio: "1 / 1",
           }}
           className={cn(
             // Border always reads like the other steps' group frames (a steady border-border)
