@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Plus, Search, X } from "lucide-react";
 import {
@@ -19,17 +19,16 @@ import { cn } from "@/lib/utils";
 
 // Marketing/auth surfaces where a signed-in visitor could still be browsing — the workspace
 // taskbar is an authenticated-app concept and has no business following them onto the hero page.
+// The Map screen is also excluded: it runs a deal from the diagram itself and shows the site
+// footer in that same bottom strip, so the tab dock would sit on top of it.
 function isMarketingPath(pathname: string) {
   return (
     pathname === "/" ||
     pathname.startsWith("/alpha-bravo") ||
-    pathname.startsWith("/auth")
+    pathname.startsWith("/auth") ||
+    pathname === "/map"
   );
 }
-
-const footerLinkClass =
-  "text-[11px] tracking-wide text-muted-foreground transition-colors hover:text-foreground";
-
 
 /** Finds an existing bid or offer by its reference or by a keyword in its name, and opens it. */
 function DealSearchDialog({
@@ -116,19 +115,10 @@ export function WorkspaceTaskbar() {
 
   function activate(id: string, mode: string) {
     if (mode === "minimized") setMode(id, "maximized");
-    // On the Map the workspace opens in the pane beside the diagram rather than on its own page,
-    // so the Map listens for this instead of a navigation.
-    if (pathname === "/map") {
-      window.dispatchEvent(
-        new CustomEvent("map:open-workspace", { detail: { tx: id === "new" ? null : id } }),
-      );
-      return;
-    }
     // `fresh: 1` tells the Live Workspace to show the empty upload/search template — otherwise a
     // bare URL with no `tx` is indistinguishable from "just resume whatever was last worked on".
     void navigate({ to: "/live-deal-engine", search: id === "new" ? { fresh: true } : { tx: id } });
   }
-
 
   // The blank template tab is permanent and always leftmost: recorded deals get their own tab, and
   // this one stays an empty workspace to start the next bid or offer in.
@@ -216,29 +206,6 @@ export function WorkspaceTaskbar() {
         );
       })}
       </div>
-
-      {/* The footer details now live in the middle of this same strip, so the dock carries both the
-          open deal tabs and the site's legal line and links. */}
-      <div className="hidden min-w-0 flex-1 items-center justify-center gap-5 pb-2 lg:flex">
-        <p className="truncate text-[11px] tracking-wide text-muted-foreground">
-          Izenzo is the trading name of Starfair162 (Pty) Ltd Reg: 2018 / 331720 / 07.
-        </p>
-        <nav aria-label="Footer" className="flex shrink-0 items-center gap-4">
-          <Link to="/glossary" className={footerLinkClass}>
-            Glossary
-          </Link>
-          <a href="/privacy" className={footerLinkClass}>
-            Privacy
-          </a>
-          <a href="/terms" className={footerLinkClass}>
-            Terms &amp; Conditions
-          </a>
-          <a href="mailto:support@izenzo.co.za" className={footerLinkClass}>
-            Support
-          </a>
-        </nav>
-      </div>
     </div>
-
   );
 }
