@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Sparkles } from "lucide-react";
+import { Banknote, Database, Hammer, ShieldCheck, Sparkles, Target } from "lucide-react";
 import { HeroMatchCard } from "@/components/marketing/HeroMatchCard";
 import { SubmitBidButton } from "@/components/marketing/SubmitBidButton";
 
@@ -22,30 +22,35 @@ const STAGES = [
     n: "01",
     title: "Trading",
     tag: "Find, Match & Verify",
+    icon: Target,
     body: "Post your opportunity, get matched with the right Responder, and see each candidate checked for identity, ownership, and sanctions/watchlist exposure before you choose. Verification can't be skipped.",
   },
   {
     n: "02",
     title: "Compliance & Governance",
     tag: "Engage",
+    icon: ShieldCheck,
     body: "Engage the party you've chosen, agree the terms, and sign off on what both sides have committed to — recorded as you go.",
   },
   {
     n: "03",
     title: "Execution",
     tag: "Deliver",
+    icon: Hammer,
     body: "Turn the agreed match into a real project — plan it, resource it, and track who's involved as it happens.",
   },
   {
     n: "04",
     title: "Finality",
     tag: "Finalize",
+    icon: Banknote,
     body: "Close it out: confirm what happened, record any changes, and get sign-off from everyone involved.",
   },
   {
     n: "05",
     title: "Memory",
     tag: "Remember",
+    icon: Database,
     body: "Every completed match becomes a searchable record — so the next one goes faster.",
   },
 ];
@@ -97,10 +102,19 @@ function AlphaBravoHome() {
       </div>
       <div className="mt-5 grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
         {STAGES.map((s) => (
-          <div key={s.n} className="rounded-2xl border border-border bg-card p-5">
-            <p className="text-sm font-semibold text-primary">{s.n}</p>
-            <h3 className="mt-3 text-base font-medium tracking-tight text-foreground">{s.title}</h3>
-            <p className="mt-1 text-xs text-muted-foreground">{s.tag}</p>
+          <div
+            key={s.n}
+            className="group relative overflow-hidden rounded-2xl border border-border bg-card p-5 transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5"
+          >
+            <div className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-primary transition-transform duration-300 group-hover:scale-x-100" />
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-primary">{s.n}</p>
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors duration-300 group-hover:bg-primary group-hover:text-primary-foreground">
+                <s.icon className="h-4 w-4" />
+              </span>
+            </div>
+            <h3 className="mt-4 text-base font-medium tracking-tight text-foreground">{s.title}</h3>
+            <p className="mt-1 text-xs font-medium text-primary">{s.tag}</p>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{s.body}</p>
           </div>
         ))}
