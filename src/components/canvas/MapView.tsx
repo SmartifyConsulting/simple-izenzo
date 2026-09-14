@@ -38,8 +38,8 @@ function nodeState(stage: StageKey, step: string, tx: Transaction | null): NodeS
 // Fixed diagram coordinate system, proportioned for the workflow column beside the Live
 // Workspace: everything is placed on this canvas and scaled to the container with percentages, so
 // tiles and their connecting lines always stay aligned however wide that column is.
-const W = 860;
-const H = 1246;
+const W = 960;
+const H = 1030;
 const px = (v: number) => `${(v / W) * 100}%`;
 const py = (v: number) => `${(v / H) * 100}%`;
 
@@ -50,27 +50,30 @@ const BOXES = {
   bid: { x: 40, y: 80, w: 160, h: 56 },
   loadDocs: { x: 40, y: 164, w: 160, h: 56 },
   // Search sits level with Load Deal Documents (same centre-line, for a straight connector), and
-  // the step chip card now sits directly beneath Search rather than beneath Load Deal Documents.
+  // the Search Results card sits directly beneath Search — now a single compact line of results
+  // rather than a tall stacked list, so Choice/Counter Offer/Online Media Screening can all sit
+  // higher, letting the rest of the diagram move up to fit without scrolling.
   search: { x: 230, y: 161, w: 160, h: 62 },
-  steps: { x: 230, y: 248, w: 160, h: 142 },
-  // Offer/Choice/Counter Offer/Social Media spread out further right, using the frame's full
-  // width instead of clustering against Search's column.
+  steps: { x: 230, y: 248, w: 160, h: 64 },
+  // Offer/Choice/Counter Offer/Online Media Screening spread out further right, using the
+  // frame's full width instead of clustering against Search's column.
   offer: { x: 460, y: 80, w: 160, h: 56 },
-  // Choice sits level with the Search Results card (same centre-line), so that connector is a
-  // single straight run; Counter Offer matches it so its loop back to Choice stays attached.
-  choice: { x: 460, y: 291, w: 160, h: 56 },
-  counterOffer: { x: 650, y: 287, w: 150, h: 64 },
-  socialMedia: { x: 460, y: 362, w: 160, h: 64 },
-  // Step 2 (Compliance) moves down ~1cm from Step 1, so Execution and everything after it shift
-  // down to match and keep the same gap beneath it.
-  expressIntent: { x: 60, y: 596, w: 240, h: 54 },
-  poi: { x: 60, y: 674, w: 240, h: 54 },
-  withoutADoubt: { x: 60, y: 752, w: 240, h: 62 },
-  wad: { x: 60, y: 838, w: 240, h: 62 },
-  businessDocs: { x: 60, y: 924, w: 240, h: 62 },
-  execution: { x: 430, y: 996, w: 300, h: 104 },
-  entryExit: { x: 420, y: 1134, w: 140, h: 56 },
-  finality: { x: 578, y: 1110, w: 160, h: 104 },
+  // Choice sits level with the (now shorter) Search Results card, so that connector is a single
+  // straight run; Counter Offer matches it so its loop back to Choice stays attached.
+  choice: { x: 460, y: 252, w: 160, h: 56 },
+  counterOffer: { x: 650, y: 248, w: 150, h: 64 },
+  socialMedia: { x: 460, y: 323, w: 160, h: 64 },
+  // Step 2 (Compliance & Governance) sits a little below Step 1's now-shorter frame.
+  expressIntent: { x: 60, y: 485, w: 240, h: 54 },
+  poi: { x: 60, y: 563, w: 240, h: 54 },
+  withoutADoubt: { x: 60, y: 641, w: 240, h: 62 },
+  wad: { x: 60, y: 727, w: 240, h: 62 },
+  businessDocs: { x: 60, y: 813, w: 240, h: 62 },
+  // Step 3 (Execution) and Step 4 (Entry/Exit, Finality) now share one row instead of stacking,
+  // flush with the bottom of the Compliance frame.
+  execution: { x: 430, y: 885, w: 260, h: 104 },
+  entryExit: { x: 705, y: 909, w: 90, h: 56 },
+  finality: { x: 810, y: 885, w: 110, h: 104 },
 } as const satisfies Record<string, Box>;
 
 // One outer frame holds the whole trading step — Bid, Load Deal Documents, Search, the Search
@@ -78,9 +81,9 @@ const BOXES = {
 // which no longer carry a frame of their own. Trimmed to its actual content height (rather than
 // leaving a tall gap beneath it) so Compliance can sit right below without the diagram needing a
 // scroll.
-const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 806, h: 392 };
-const COMPLIANCE_FRAME: Box = { x: 30, y: 562, w: 288, h: 434 };
-const MEMORY = { cx: 560, cy: 786, r: 110 };
+const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 806, h: 365 };
+const COMPLIANCE_FRAME: Box = { x: 30, y: 451, w: 288, h: 434 };
+const MEMORY = { cx: 560, cy: 685, r: 110 };
 
 const cx = (b: Box) => b.x + b.w / 2;
 const cy = (b: Box) => b.y + b.h / 2;
@@ -109,16 +112,22 @@ const ARROWS: string[] = [
   path(topOf(BOXES.counterOffer), { x: cx(BOXES.counterOffer), y: cy(BOXES.offer) }, rightOf(BOXES.offer)),
   line(bottomOf(BOXES.choice), topOf(BOXES.socialMedia)),
   // Out of trading and down into the compliance step.
-  path(bottomOf(BOXES.socialMedia), { x: cx(BOXES.socialMedia), y: 511 }, { x: cx(BOXES.expressIntent), y: 511 }, topOf(BOXES.expressIntent)),
+  path(bottomOf(BOXES.socialMedia), { x: cx(BOXES.socialMedia), y: 436 }, { x: cx(BOXES.expressIntent), y: 436 }, topOf(BOXES.expressIntent)),
   line(bottomOf(BOXES.expressIntent), topOf(BOXES.poi)),
   line(bottomOf(BOXES.poi), topOf(BOXES.withoutADoubt)),
   line(bottomOf(BOXES.withoutADoubt), topOf(BOXES.wad)),
   line(bottomOf(BOXES.wad), topOf(BOXES.businessDocs)),
-  // Into execution, then finality, then memory.
-  path(bottomOf(BOXES.businessDocs), { x: cx(BOXES.businessDocs), y: cy(BOXES.execution) }, leftOf(BOXES.execution)),
-  path({ x: cx(BOXES.entryExit), y: BOXES.execution.y + BOXES.execution.h }, topOf(BOXES.entryExit)),
+  // Step 2 into Step 3: off the right edge of the Compliance frame itself, level with Business
+  // Docs, rather than out of the Business Docs tile directly.
+  path(
+    { x: COMPLIANCE_FRAME.x + COMPLIANCE_FRAME.w, y: cy(BOXES.businessDocs) },
+    { x: cx(BOXES.execution), y: cy(BOXES.businessDocs) },
+    topOf(BOXES.execution),
+  ),
+  // Execution, Entry/Exit and Finality now share one row.
+  line(rightOf(BOXES.execution), leftOf(BOXES.entryExit)),
   line(rightOf(BOXES.entryExit), leftOf(BOXES.finality)),
-  path(topOf(BOXES.finality), { x: cx(BOXES.finality), y: 936 }, { x: MEMORY.cx, y: 936 }, { x: MEMORY.cx, y: MEMORY.cy + MEMORY.r }),
+  path(topOf(BOXES.finality), { x: cx(BOXES.finality), y: 840 }, { x: MEMORY.cx, y: 840 }, { x: MEMORY.cx, y: MEMORY.cy + MEMORY.r }),
 ];
 
 const SEARCH_RESULT_CHIPS = ["Result 1", "Result 2", "Result 3", "Result 4", "Result 5"];
@@ -303,7 +312,7 @@ export function MapView({
         <ArrowLayer />
 
         <Frame box={TRADE_ENGINE_FRAME} label="Step 1 · Trading" />
-        <Frame box={COMPLIANCE_FRAME} label="Step 2 · Compliance" />
+        <Frame box={COMPLIANCE_FRAME} label="Step 2 · Compliance & Governance" />
 
         {/* What Search actually returns — a placeholder list of results/findings, not steps of
             the workflow, shown as a small card beneath Search. */}
@@ -319,14 +328,9 @@ export function MapView({
           <p className="text-[8px] font-semibold uppercase tracking-wide text-muted-foreground/70">
             Search Results
           </p>
-          <ul className="mt-1 flex flex-col gap-1">
-            {SEARCH_RESULT_CHIPS.map((s) => (
-              <li key={s} className="flex items-center gap-1 text-[9px] font-medium leading-tight text-muted-foreground">
-                <span aria-hidden className="h-1 w-1 shrink-0 rounded-full bg-muted-foreground/60" />
-                {s}
-              </li>
-            ))}
-          </ul>
+          <p className="mt-1 text-[9px] font-medium leading-tight text-muted-foreground">
+            {SEARCH_RESULT_CHIPS.join(", ")}
+          </p>
         </div>
 
         {/* Step 1 — trading. Bid and Load Deal Documents drive the workspace beside the map. */}

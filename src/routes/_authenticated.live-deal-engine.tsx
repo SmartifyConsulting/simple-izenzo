@@ -1349,7 +1349,7 @@ function LiveDealEngine() {
           <div
             className={cn(
               "flex w-full flex-col overflow-hidden p-3 sm:p-5",
-              fillToTaskbar ? "h-full" : "h-[calc((100vh-190px)*0.945)]",
+              fillToTaskbar ? "h-full" : "h-[calc((100vh-190px)*0.945 + 1cm)]",
             )}
           >
             <div className="flex shrink-0 items-center justify-between gap-2">
@@ -1404,7 +1404,7 @@ function LiveDealEngine() {
           <div
             className={cn(
               "w-full overflow-y-auto rounded-3xl border border-border bg-card p-3 shadow-sm sm:p-5",
-              fillToTaskbar ? "h-full" : "h-[calc((100vh-190px)*0.945)]",
+              fillToTaskbar ? "h-full" : "h-[calc((100vh-190px)*0.945 + 1cm)]",
             )}
           >
           {/* Everything pinned to the top of the workspace sits inside one opaque, full-bleed
