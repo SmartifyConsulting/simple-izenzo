@@ -1369,7 +1369,7 @@ function LiveDealEngine() {
               {/* The diagram keeps a legible minimum width; on a very narrow column it scrolls
                   sideways rather than shrinking its labels into illegibility. */}
               {mapOpen && (
-                <div className="mb-4 overflow-x-auto border-b border-border pb-4">
+                <div className="mb-4 overflow-x-auto">
                   <div className="min-w-[420px]">
                   <MapView
                     tx={dealTx ?? null}

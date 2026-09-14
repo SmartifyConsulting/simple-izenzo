@@ -72,11 +72,12 @@ const BOXES = {
   withoutADoubt: { x: 60, y: 611, w: 240, h: 62 },
   wad: { x: 60, y: 697, w: 240, h: 62 },
   businessDocs: { x: 60, y: 783, w: 240, h: 62 },
-  // Step 3 (Execution, with Entry/Exit beneath it) and Step 4 (Finality) sit flush with the
-  // bottom of the Compliance frame.
-  execution: { x: 360, y: 855, w: 260, h: 104 },
-  entryExit: { x: 445, y: 974, w: 90, h: 56 },
-  finality: { x: 740, y: 855, w: 110, h: 104 },
+  // Step 3 (Execution, with Entry/Exit beside it) and Step 4 (Finality) sit directly under Step 2,
+  // aligned with the Compliance frame's left edge instead of off to its right.
+  execution: { x: 50, y: 905, w: 260, h: 104 },
+  // Sits in the gap between the Step 3 and Step 4 frames, level with both.
+  entryExit: { x: 325, y: 929, w: 90, h: 56 },
+  finality: { x: 430, y: 905, w: 110, h: 104 },
 } as const satisfies Record<string, Box>;
 
 // One outer frame holds the whole trading step — Bid, Load Deal Documents, Search, the Search
@@ -85,11 +86,11 @@ const BOXES = {
 // leaving a tall gap beneath it) so Compliance can sit right below without the diagram needing a
 // scroll.
 const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 932, h: 275 };
-const COMPLIANCE_FRAME: Box = { x: 30, y: 421, w: 288, h: 434 };
+const COMPLIANCE_FRAME: Box = { x: 30, y: 421, w: 340, h: 434 };
 // Execution and Entry/Exit+Finality get the same bordered, labelled group frame as Steps 1 and
 // 2, instead of sitting as bare tiles with no frame of their own.
-const EXECUTION_FRAME: Box = { x: 340, y: 835, w: 290, h: 210 };
-const FINALITY_FRAME: Box = { x: 630, y: 835, w: 240, h: 144 };
+const EXECUTION_FRAME: Box = { x: 30, y: 885, w: 290, h: 144 };
+const FINALITY_FRAME: Box = { x: 400, y: 885, w: 170, h: 144 };
 const MEMORY = { cx: 560, cy: 595, r: 127 };
 
 const cx = (b: Box) => b.x + b.w / 2;
@@ -124,16 +125,13 @@ const ARROWS: string[] = [
   line(bottomOf(BOXES.poi), topOf(BOXES.withoutADoubt)),
   line(bottomOf(BOXES.withoutADoubt), topOf(BOXES.wad)),
   line(bottomOf(BOXES.wad), topOf(BOXES.businessDocs)),
-  // Step 2 into Step 3: straight down out of Business Docs, then a right angle across into
-  // Execution's left edge.
-  path(bottomOf(BOXES.businessDocs), { x: cx(BOXES.businessDocs), y: cy(BOXES.execution) }, leftOf(BOXES.execution)),
-  // Entry/Exit sits beneath Execution; from there, right and up into Finality.
-  line(bottomOf(BOXES.execution), topOf(BOXES.entryExit)),
-  path(rightOf(BOXES.entryExit), { x: cx(BOXES.finality), y: cy(BOXES.entryExit) }, bottomOf(BOXES.finality)),
-  path(topOf(BOXES.finality), { x: cx(BOXES.finality), y: 810 }, { x: MEMORY.cx, y: 810 }, { x: MEMORY.cx, y: MEMORY.cy + MEMORY.r }),
+  // Step 2 into Step 3: straight down out of Business Docs into Execution, same centre-line.
+  line(bottomOf(BOXES.businessDocs), topOf(BOXES.execution)),
+  // Execution, Entry/Exit and Finality sit in a single row.
+  line(rightOf(BOXES.execution), leftOf(BOXES.entryExit)),
+  line(rightOf(BOXES.entryExit), leftOf(BOXES.finality)),
+  path(topOf(BOXES.finality), { x: cx(BOXES.finality), y: 800 }, { x: MEMORY.cx, y: 800 }, { x: MEMORY.cx, y: MEMORY.cy + MEMORY.r }),
 ];
-
-const SEARCH_RESULT_CHIPS = ["Result 1", "Result 2", "Result 3", "Result 4", "Result 5"];
 
 function ArrowLayer() {
   return (
@@ -147,7 +145,19 @@ function ArrowLayer() {
         <marker id="map-arrowhead" markerWidth="7" markerHeight="7" refX="6.5" refY="3.5" orient="auto">
           <path d="M0,0 L7,3.5 L0,7 Z" className="fill-muted-foreground" />
         </marker>
+        {/* The upper semicircle of the Memory circle's own outline, so "Step 5 · Memory" can run
+            along its circumference instead of sitting as a flat line inside it. */}
+        <path
+          id="memory-arc"
+          fill="none"
+          d={`M ${MEMORY.cx - MEMORY.r} ${MEMORY.cy} A ${MEMORY.r} ${MEMORY.r} 0 0 1 ${MEMORY.cx + MEMORY.r} ${MEMORY.cy}`}
+        />
       </defs>
+      <text className="label-caps fill-primary" textAnchor="middle">
+        <textPath href="#memory-arc" startOffset="50%">
+          Step 5 · Memory
+        </textPath>
+      </text>
       {ARROWS.map((d, i) => (
         <path
           key={i}
@@ -205,6 +215,7 @@ function MapNode({
   lock,
   sub,
   subTone,
+  plain,
 }: {
   box: Box;
   label: string;
@@ -215,6 +226,9 @@ function MapNode({
   sub?: string | undefined;
   /** "gate" prints the sub-line in the warning colour, as with Without a Doubt. */
   subTone?: "muted" | "gate" | undefined;
+  /** No border/background of its own — used when the node already sits directly inside its own
+   * group Frame (Step 3, Step 4), so it doesn't draw a second, redundant box inside that one. */
+  plain?: boolean | undefined;
 }) {
   const locked = state === "locked";
   return (
@@ -225,11 +239,13 @@ function MapNode({
       title={locked ? (lock ?? undefined) : undefined}
       style={{ left: px(box.x), top: py(box.y), width: px(box.w), height: py(box.h) }}
       className={cn(
-        "absolute flex flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl border bg-card/40 px-2 text-center font-sans text-[11px] font-semibold leading-tight transition-colors",
-        state === "open" && "border-border text-foreground hover:border-primary/60",
-        state === "done" && "border-success/70 text-success",
-        state === "active" && "animate-throb-aqua border-primary text-primary",
-        locked && "cursor-not-allowed border-border/50 text-muted-foreground opacity-50",
+        "absolute flex flex-col items-center justify-center gap-0.5 overflow-hidden px-2 text-center font-sans text-[11px] font-semibold leading-tight transition-colors",
+        plain ? "rounded-none border-0 bg-transparent" : "rounded-xl border bg-card/40",
+        !plain && state === "open" && "border-border text-foreground hover:border-primary/60",
+        plain && state === "open" && "text-foreground",
+        state === "done" && (plain ? "text-success" : "border-success/70 text-success"),
+        state === "active" && (plain ? "animate-throb-aqua text-primary" : "animate-throb-aqua border-primary text-primary"),
+        locked && (plain ? "cursor-not-allowed text-muted-foreground opacity-50" : "cursor-not-allowed border-border/50 text-muted-foreground opacity-50"),
       )}
     >
       <span className="flex w-full items-center justify-center gap-1.5">
@@ -309,6 +325,7 @@ export function MapView({
       overrideKey?: string;
       state?: NodeState;
       onClick?: () => void;
+      plain?: boolean;
     },
   ) => (
     <MapNode
@@ -317,6 +334,7 @@ export function MapView({
       icon={icon}
       {...(opts?.sub ? { sub: opts.sub } : {})}
       {...(opts?.subTone ? { subTone: opts.subTone } : {})}
+      {...(opts?.plain ? { plain: true } : {})}
       state={opts?.state ?? st(stage, step, opts?.overrideKey)}
       lock={lock(stage, step)}
       onClick={opts?.onClick ?? (() => open(stage, step))}
@@ -335,10 +353,9 @@ export function MapView({
         <Frame box={EXECUTION_FRAME} label="Step 3 · Execution" />
         <Frame box={FINALITY_FRAME} label="Step 4 · Finality" />
 
-        {/* What Search actually returns — a placeholder list of results/findings, not steps of
-            the workflow, shown as a small card beneath Search. */}
+        {/* A placeholder for what Search returns — just labelled, no results content shown. */}
         <div
-          className="pointer-events-none absolute overflow-hidden rounded-xl border border-border bg-card/40 px-3 py-2"
+          className="pointer-events-none absolute flex items-center justify-center overflow-hidden rounded-xl border border-border bg-card/40 px-3 py-2"
           style={{
             left: px(BOXES.steps.x),
             top: py(BOXES.steps.y),
@@ -346,11 +363,8 @@ export function MapView({
             height: py(BOXES.steps.h),
           }}
         >
-          <p className="text-[8px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
             Search Results
-          </p>
-          <p className="mt-1 text-[9px] font-medium leading-tight text-muted-foreground">
-            {SEARCH_RESULT_CHIPS.join(", ")}
           </p>
         </div>
 
@@ -407,7 +421,7 @@ export function MapView({
           sub: "POI, NDA, MOU, Contract",
         })}
 
-        {/* Step 3 — execution */}
+        {/* Step 3 — execution. No border of its own — it sits directly inside the Step 3 frame. */}
         <MapNode
           box={BOXES.execution}
           label="Execution"
@@ -415,10 +429,14 @@ export function MapView({
           state={st("execution", "preparation")}
           lock={lock("execution", "preparation")}
           onClick={() => open("execution", "preparation")}
+          plain
         />
+        {/* Entry/Exit sits between the Step 3 and Step 4 frames, on its own. */}
         {node("entryExit", "Entry / Exit", "execution", "stakeholders", LogIn)}
+        {/* Step 4 — finality. No border of its own — it sits directly inside the Step 4 frame. */}
         {node("finality", "Finality", "finality", "entry", Banknote, {
           sub: "Payment, Signoff, Handover",
+          plain: true,
         })}
 
         {/* Step 5 — memory */}
@@ -442,7 +460,6 @@ export function MapView({
           )}
         >
           <Database className={cn("h-4 w-4", memoryState === "open" && "text-primary")} />
-          <span className="text-[11px] font-semibold leading-tight">Step 5 · Memory</span>
           <span className="text-[10px] font-medium leading-tight">Compounding CDA</span>
           <span className="text-[8.5px] leading-snug text-muted-foreground">
             Capital Deployment Assessment
