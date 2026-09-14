@@ -1530,7 +1530,7 @@ function LiveDealEngine() {
               appear through it or in the gap above it. */}
           <div className="sticky -top-3 z-20 -mx-3 -mt-3 mb-3 bg-card px-3 pb-3 pt-3 sm:-top-5 sm:-mx-5 sm:-mt-5 sm:px-5 sm:pt-5">
           <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
-            <p className="label-caps text-foreground">Live Workspace</p>
+            <p className="label-caps rounded-full bg-primary/10 px-2.5 py-1 text-primary">Live Workspace</p>
             {dealTx && (
               <AlertDialog>
                 <DropdownMenu>
@@ -1586,7 +1586,7 @@ function LiveDealEngine() {
             // through this pinned frame.
             <div className="glass-node space-y-1.5 bg-card p-4 [backdrop-filter:none] [background-image:none]">
               <div className="flex items-center justify-between gap-2">
-                <p className="label-caps text-muted-foreground">Bid Registration</p>
+                <p className="label-caps rounded-full bg-primary/10 px-2.5 py-1 text-primary">Bid Registration</p>
                 {(((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference) && (
                   <span className="flex shrink-0 items-center gap-2 font-mono text-base font-bold tracking-wide text-foreground">
                     {workspaceDocs.length > 0 && (
@@ -1637,7 +1637,7 @@ function LiveDealEngine() {
                   type="button"
                   onClick={() => setBidInfoCollapsed(dealTx.id, bidInfoOpen)}
                   aria-expanded={bidInfoOpen}
-                  className="label-caps flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
+                  className="label-caps flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-primary transition-colors hover:bg-primary/15"
                 >
                   <span aria-hidden className="w-2.5 text-center font-mono">
                     {bidInfoOpen ? "−" : "+"}
@@ -1834,7 +1834,7 @@ function LiveDealEngine() {
               {/* A brand-new workspace already reads as a bid: the same Bid Registration frame,
                   with the BID number on the heading row, around the description/upload bar. */}
               <div className="flex items-center justify-between gap-2">
-                <p className="label-caps text-muted-foreground">Bid Registration</p>
+                <p className="label-caps rounded-full bg-primary/10 px-2.5 py-1 text-primary">Bid Registration</p>
                 {draftReference && (
                   <span className="shrink-0 font-mono text-base font-bold tracking-wide text-foreground">
                     {draftReference}
