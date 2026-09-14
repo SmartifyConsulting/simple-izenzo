@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Banknote,
   Briefcase,
@@ -46,7 +46,7 @@ function nodeState(stage: StageKey, step: string, tx: Transaction | null): NodeS
 // Workspace: everything is placed on this canvas and scaled to the container with percentages, so
 // tiles and their connecting lines always stay aligned however wide that column is.
 const W = 960;
-const H = 900;
+const H = 825;
 const px = (v: number) => `${(v / W) * 100}%`;
 const py = (v: number) => `${(v / H) * 100}%`;
 
@@ -69,44 +69,36 @@ const BOXES = {
   choice: { x: 570, y: 174, w: 160, h: 56 },
   // Counter Offer sits at the very right edge of the Trading frame, level with Choice and Search.
   counterOffer: { x: 750, y: 170, w: 150, h: 64 },
-  // Wide enough that "Online Media Screening" fits on one line instead of wrapping.
-  // Same width and centre-line as Choice, so the connector between them is straight. A little
-  // extra padding between Step 1's horizontal rows.
-  socialMedia: { x: 570, y: 255, w: 160, h: 64 },
-  // Step 2 (Compliance & Governance) moves further down from Step 1's frame; Step 3/4 shift down
-  // to match so the connector between them (unchanged below) doesn't have to stretch or overlap.
-  // Extra clearance below the frame's floating heading + "Governance" row so Express Intent
-  // never touches either of them.
-  // Widened and centred within the (also widened) Compliance frame.
-  expressIntent: { x: 60, y: 420, w: 280, h: 48 },
-  poi: { x: 60, y: 476, w: 280, h: 48 },
-  withoutADoubt: { x: 60, y: 532, w: 280, h: 54 },
-  wad: { x: 60, y: 594, w: 280, h: 54 },
-  businessDocs: { x: 60, y: 656, w: 280, h: 54 },
+  // Wide enough that "Online Screening" fits on one line instead of wrapping, and only one line
+  // tall — so the Step 1 frame loses the height the two-line tile needed.
+  socialMedia: { x: 550, y: 255, w: 200, h: 48 },
+  // Step 2 (Compliance & Governance) sits below Step 1's frame; Step 3/4 follow beneath it.
+  expressIntent: { x: 60, y: 396, w: 280, h: 48 },
+  poi: { x: 60, y: 452, w: 280, h: 48 },
+  withoutADoubt: { x: 60, y: 508, w: 280, h: 54 },
+  wad: { x: 60, y: 570, w: 280, h: 54 },
+  businessDocs: { x: 60, y: 632, w: 280, h: 54 },
   // Step 3 (Execution, with Entry/Exit beside it) and Step 4 (Finality) sit directly under Step 2,
-  // aligned with the Compliance frame's left edge instead of off to its right.
-  // Moved down ~1cm from Step 2, with even gaps between Execution, Entry/Exit and Finality.
-  execution: { x: 70, y: 778, w: 260, h: 90 },
-  // Centred inside its own frame, which itself sits centred in the gap between Step 3 and Step 4.
-  // Same size as the Search Results tile.
-  entryExit: { x: 410, y: 794, w: 140, h: 62 },
-  finality: { x: 635, y: 778, w: 250, h: 90 },
+  // all 40% flatter than before — and wider, so their detail lines still fit.
+  execution: { x: 45, y: 738, w: 310, h: 58 },
+  entryExit: { x: 410, y: 748, w: 140, h: 37 },
+  finality: { x: 605, y: 738, w: 310, h: 58 },
+
 } as const satisfies Record<string, Box>;
 
 // One outer frame holds the whole trading step — Bid, Load Deal Documents, Search, the Search
-// Results card and the counterparty tiles (Offer, Choice, Counter Offer, Online Media Screening),
-// which no longer carry a frame of their own. Trimmed to its actual content height (rather than
-// leaving a tall gap beneath it) so Compliance can sit right below without the diagram needing a
-// scroll.
-const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 932, h: 305 };
-const COMPLIANCE_FRAME: Box = { x: 30, y: 386, w: 340, h: 346 };
+// Results card and the counterparty tiles (Offer, Choice, Counter Offer, Online Screening),
+// trimmed to its actual content height.
+const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 932, h: 273 };
+const COMPLIANCE_FRAME: Box = { x: 30, y: 354, w: 340, h: 346 };
 // Execution and Entry/Exit+Finality get the same bordered, labelled group frame as Steps 1 and
 // 2, instead of sitting as bare tiles with no frame of their own.
-const EXECUTION_FRAME: Box = { x: 30, y: 762, w: 340, h: 122 };
-const FINALITY_FRAME: Box = { x: 590, y: 762, w: 340, h: 122 };
+const EXECUTION_FRAME: Box = { x: 30, y: 730, w: 340, h: 73 };
+const FINALITY_FRAME: Box = { x: 590, y: 730, w: 340, h: 73 };
 // Entry/Exit gets the same bordered frame treatment, centred in the gap between Step 3 and 4.
-const ENTRY_EXIT_FRAME: Box = { x: 390, y: 762, w: 180, h: 122 };
-const MEMORY = { cx: 570, cy: 520, r: 118 };
+const ENTRY_EXIT_FRAME: Box = { x: 390, y: 730, w: 180, h: 73 };
+const MEMORY = { cx: 570, cy: 488, r: 110 };
+
 
 // A connector arriving at a group frame stops this many units short of its border, so the tip
 // points at the frame (and the heading floating on it) instead of touching or crossing into it.
@@ -139,7 +131,7 @@ const ARROWS: string[] = [
   path(topOf(BOXES.counterOffer), { x: cx(BOXES.counterOffer), y: cy(BOXES.offer) }, rightOf(BOXES.offer)),
   line(bottomOf(BOXES.choice), topOf(BOXES.socialMedia)),
   // Out of trading and down into the compliance step.
-  path(bottomOf(BOXES.socialMedia), { x: cx(BOXES.socialMedia), y: 366 }, { x: cx(BOXES.expressIntent), y: 366 }, topOf(BOXES.expressIntent)),
+  path(bottomOf(BOXES.socialMedia), { x: cx(BOXES.socialMedia), y: 334 }, { x: cx(BOXES.expressIntent), y: 334 }, topOf(BOXES.expressIntent)),
   line(bottomOf(BOXES.expressIntent), topOf(BOXES.poi)),
   line(bottomOf(BOXES.poi), topOf(BOXES.withoutADoubt)),
   line(bottomOf(BOXES.withoutADoubt), topOf(BOXES.wad)),
@@ -159,8 +151,8 @@ const ARROWS: string[] = [
   ),
   path(
     { x: cx(BOXES.finality), y: FINALITY_FRAME.y - ARROW_GAP },
-    { x: cx(BOXES.finality), y: 700 },
-    { x: MEMORY.cx, y: 700 },
+    { x: cx(BOXES.finality), y: 668 },
+    { x: MEMORY.cx, y: 668 },
     { x: MEMORY.cx, y: MEMORY.cy + MEMORY.r + ARROW_GAP },
   ),
 ];
@@ -177,22 +169,7 @@ function ArrowLayer() {
         <marker id="map-arrowhead" markerWidth="7" markerHeight="7" refX="6.5" refY="3.5" orient="auto">
           <path d="M0,0 L7,3.5 L0,7 Z" className="fill-muted-foreground" />
         </marker>
-        {/* The upper semicircle of the Memory circle's own outline, so "Step 5 · Memory" can run
-            along its circumference instead of sitting as a flat line inside it. */}
-        <path
-          id="memory-arc"
-          fill="none"
-          d={`M ${MEMORY.cx - MEMORY.r} ${MEMORY.cy} A ${MEMORY.r} ${MEMORY.r} 0 0 1 ${MEMORY.cx + MEMORY.r} ${MEMORY.cy}`}
-        />
       </defs>
-      <text
-        className="fill-primary text-[11px] font-semibold uppercase tracking-[0.09em]"
-        textAnchor="middle"
-      >
-        <textPath href="#memory-arc" startOffset="50%">
-          Step 5 · Memory
-        </textPath>
-      </text>
       {ARROWS.map((d, i) => (
         <path
           key={i}
@@ -207,6 +184,60 @@ function ArrowLayer() {
     </svg>
   );
 }
+
+/**
+ * "Step 5 · Memory" set along the top of the Memory circle. It lives on its own layer measured in
+ * real CSS pixels — the diagram layer is stretched to the container, which would squeeze the label
+ * well below 11px however it is sized.
+ */
+function MemoryArcLabel() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ w: 0, h: 0 });
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => setSize({ w: el.clientWidth, h: el.clientHeight });
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const sx = size.w ? size.w / W : 0;
+  const sy = size.h ? size.h / H : 0;
+  const arcCx = MEMORY.cx * sx;
+  const arcCy = MEMORY.cy * sy;
+  const rx = MEMORY.r * sx;
+  const ry = MEMORY.r * sy;
+
+  return (
+    <div ref={ref} className="pointer-events-none absolute inset-0" aria-hidden>
+      {sx > 0 && (
+        <svg className="absolute inset-0 h-full w-full overflow-visible">
+          <defs>
+            <path
+              id="memory-arc-px"
+              fill="none"
+              d={`M ${arcCx - rx} ${arcCy} A ${rx} ${ry} 0 0 1 ${arcCx + rx} ${arcCy}`}
+            />
+          </defs>
+          <text
+            className="fill-primary font-semibold uppercase"
+            fontSize={11}
+            letterSpacing="0.09em"
+            textAnchor="middle"
+          >
+            <textPath href="#memory-arc-px" startOffset="50%">
+              Step 5 · Memory
+            </textPath>
+          </text>
+        </svg>
+      )}
+    </div>
+  );
+}
+
 
 /** A group frame: a hairline rounded outline with its name set into the top edge — drawn from the
  * theme's own colours, so it reads the same way on cream as it does on black. */
@@ -399,6 +430,8 @@ export function MapView({
     <div className="relative h-full w-full">
       <div className="relative w-full" style={{ aspectRatio: `${W} / ${H}` }}>
         <ArrowLayer />
+        <MemoryArcLabel />
+
 
         <Frame box={TRADE_ENGINE_FRAME} label="Step 1 · Trading" />
         <Frame box={COMPLIANCE_FRAME} label="Step 2 · Compliance" subLabel="Governance" />
@@ -446,7 +479,7 @@ export function MapView({
               width: px(BOXES.search.w),
             }}
           >
-            <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
+            <div className="h-1 w-full overflow-hidden rounded-full bg-progress-track">
               <div className="h-full w-1/3 animate-[slide-in-right_1.4s_ease-in-out_infinite] rounded-full bg-success" />
             </div>
           </div>
@@ -476,13 +509,15 @@ export function MapView({
           sub: "POI, NDA, MOU, Contract",
         })}
 
-        {/* Step 3 — execution. No border of its own — it sits directly inside the Step 3 frame. */}
+        {/* Step 3 — execution. The word "Execution" is the frame's heading, so the tile carries only
+            its icon and detail line. */}
         <MapNode
           box={BOXES.execution}
-          label="Execution"
+          label=""
           icon={Briefcase}
-          sub="Concept, Pre-Reqs, Feasibility, Bankability, Project Prep, Implementation"
-          subSize="sm"
+          sub="Concept, Pre-Reqs, Feasibility, Bankability, Prep, Implementation"
+          subSize="xs"
+
           state={st("execution", "preparation")}
           lock={lock("execution", "preparation")}
           onClick={() => open("execution", "preparation")}
@@ -490,12 +525,13 @@ export function MapView({
         />
         {/* Entry/Exit sits between the Step 3 and Step 4 frames, on its own. */}
         {node("entryExit", "Entry / Exit", "execution", "stakeholders", LogIn, { plain: true })}
-        {/* Step 4 — finality. No border of its own — it sits directly inside the Step 4 frame. */}
-        {node("finality", "Finality", "finality", "entry", Banknote, {
+        {/* Step 4 — finality. "Finality" is the frame heading, so the tile shows only its detail. */}
+        {node("finality", "", "finality", "entry", Banknote, {
           sub: "Payment, Signoff, Handover",
           subSize: "sm",
           plain: true,
         })}
+
 
         {/* Step 5 — memory */}
         <button

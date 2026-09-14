@@ -533,6 +533,23 @@ function LiveDealEngine() {
     void rereadDocuments(dealTx.id);
   }, [dealTx?.id, dealTx?.title, documentSummary, workspaceDocs.length]);
 
+  // Documents attached but no summary saved: start the read ourselves, so the reading progress bar
+  // in Bid Information always reflects a read that is genuinely running.
+  const autoReadStarted = useRef<string | null>(null);
+  useEffect(() => {
+    if (
+      !dealTx ||
+      workspaceDocs.length === 0 ||
+      documentSummary ||
+      rereading ||
+      readError ||
+      autoReadStarted.current === dealTx.id
+    ) return;
+    autoReadStarted.current = dealTx.id;
+    void rereadDocuments(dealTx.id);
+  }, [dealTx?.id, documentSummary, workspaceDocs.length, rereading, readError]);
+
+
   // Has interest already been fetched for this bid? Drives the "Fetch Interest" button, so it
   // stays offered for any bid that has documents but no matches yet — not only in the moment
   // straight after an upload.
@@ -1139,18 +1156,19 @@ function LiveDealEngine() {
     );
   }
 
-  /** "Fetch Interest" — runs the AI/AI+ search. Online media screening comes later, only once a
-   * person has made their choice and continued. */
+  /** "Find Counterparties" — runs the AI/AI+ search. Online media screening comes later, only once
+   * a person has made their choice and continued. */
   async function fetchInterest(txId: string) {
     setBidInfoCollapsed(txId, false);
     await runSearch(txId);
   }
 
   async function runSearch(txId: string) {
-    // Whichever way the search was started, the bid's own details stay in view beside the results
-    // rather than folding away — the header stays clickable to close them by hand.
+    // The bid's own details stay in view while the search runs, and only fold away once results
+    // have actually landed (below) — the header stays clickable either way.
     setBidInfoCollapsed(txId, false);
     setFlowStep("searching");
+
     setSearchError(null);
     // Marks Upload Documents done and moves the active step onto Search the moment the search
     // actually starts — previously this only advanced once AI/AI+ succeeded, so a failed search
@@ -1183,9 +1201,17 @@ function LiveDealEngine() {
       // The candidates are written server-side, so the Record panel's cached (empty) list has to
       // be refreshed or it stays stuck on "Searching for counterparties…".
       await queryClient.invalidateQueries({ queryKey: ["counterparties", txId] });
+      const { count } = await supabase
+        .from("counterparties")
+        .select("id", { count: "exact", head: true })
+        .eq("transaction_id", txId);
+      await queryClient.invalidateQueries({ queryKey: ["counterparties-count", txId] });
+      // Counterparties found: fold Bid Information away so the results list gets the room.
+      if ((count ?? 0) > 0) setBidInfoCollapsed(txId, true);
       // Online media screening deliberately does NOT start here — Choice comes first. It runs from
       // the Record panel's tick-and-continue, once a person has picked their counterparties.
     }
+
   }
 
   /** Files are read through this app's own address (a server function), never the storage host —
@@ -1617,20 +1643,13 @@ function LiveDealEngine() {
                       );
                     })}
                 </ul>
-              ) : (
+              ) : workspaceDocs.length === 0 && !submittedForThisBid ? (
                 <p className="text-xs text-muted-foreground">
-                  {workspaceDocs.length === 0 && !submittedForThisBid
-                    ? "The AI summary appears here once a document is uploaded."
-                    : "Reading your documents…"}
+                  The AI summary appears here once a document is uploaded.
                 </p>
-              )}
-              {/* Documents attached but never read — say so plainly, with a way to run it again,
-                  instead of leaving a toast that has long since vanished. */}
-              {!documentSummary && workspaceDocs.length > 0 && (
+              ) : readError ? (
                 <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <p className="text-[11px] text-muted-foreground">
-                    {readError ?? "These documents haven't been read yet."}
-                  </p>
+                  <p className="text-[11px] text-muted-foreground">Couldn't read these documents.</p>
                   <Button
                     size="sm"
                     variant="outline"
@@ -1638,10 +1657,20 @@ function LiveDealEngine() {
                     disabled={rereading}
                     onClick={() => void rereadDocuments(dealTx.id)}
                   >
-                    {rereading ? "Reading…" : "Read documents"}
+                    {rereading ? "Reading…" : "Try again"}
                   </Button>
                 </div>
+              ) : (
+                /* Documents are in and the summary isn't saved yet — show the read running as a
+                   progress bar rather than a line of text about it not having happened. */
+                <div className="space-y-1.5 pt-1">
+                  <p className="text-[11px] font-medium text-muted-foreground">Reading your documents…</p>
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-progress-track">
+                    <div className="h-full w-1/3 animate-[slide-in-right_1.4s_ease-in-out_infinite] rounded-full bg-success" />
+                  </div>
+                </div>
               )}
+
 
               {savedAttachments.length > 0 && (
                 <ul className="mt-2 space-y-1 border-t border-border pt-2">
@@ -1726,8 +1755,9 @@ function LiveDealEngine() {
                       onClick={() => void fetchInterest(dealTx.id)}
                     >
                       {screening || mediaRunning || flowStep === "searching"
-                        ? "Fetching interest…"
-                        : "Fetch Interest"}
+                        ? "Finding counterparties…"
+                        : "Find Counterparties"}
+
                     </Button>
                   ) : null}
 
@@ -1741,7 +1771,33 @@ function LiveDealEngine() {
               waiting for another click — so a visitor who already searched on the homepage lands
               straight on the summary panel below, never back on this same picker. */}
           {!activity && (
-            <div className="mt-4">
+            <div className="glass-node mt-4 space-y-3 bg-card p-4 [backdrop-filter:none] [background-image:none]">
+              {/* A brand-new workspace already reads as a bid: the same Bid Registration frame,
+                  with the BID number it has been given, around the description/upload bar. */}
+              <p className="label-caps text-muted-foreground">Bid Registration</p>
+              <div className="grid grid-cols-2 items-start gap-3">
+                <div className="min-w-0 space-y-1">
+                  {org?.id && <SubmitterIdentity orgId={org.id} createdBy={null} />}
+                  {(org as unknown as { created_at?: string } | null)?.created_at && (
+                    <p className="text-xs text-muted-foreground">
+                      Bidder Active Since:{" "}
+                      {new Date((org as unknown as { created_at: string }).created_at).toLocaleDateString(
+                        undefined,
+                        { year: "numeric", month: "short", day: "numeric" },
+                      )}
+                    </p>
+                  )}
+                </div>
+                <div className="min-w-0 space-y-1 text-right">
+                  {draftReference && (
+                    <span className="block font-mono text-base font-bold tracking-wide text-foreground">
+                      {draftReference}
+                    </span>
+                  )}
+                  {org?.country && <p className="text-xs text-muted-foreground">{org.country}</p>}
+                </div>
+              </div>
+
               <CanvasStart
                 // Re-keyed on each New press so the starting card remounts and draws its own fresh
                 // BID number rather than reusing the one already on screen.

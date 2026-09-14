@@ -162,7 +162,7 @@ export function MatchResultsPanel({
       {!isLoading && data.length === 0 && (
         <p className="mt-3 text-sm text-muted-foreground">
           {transactionId
-            ? "No matches recorded for this bid yet — run Fetch Interest."
+            ? "No matches recorded for this bid yet — run Find Counterparties."
             : "No Responders on file for this search yet."}
         </p>
       )}
