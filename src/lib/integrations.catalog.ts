@@ -20,6 +20,11 @@ export type IntegrationProvider = {
   /** Where in the trading pipeline this provider is actually called — shown so an admin can tell
    * at a glance what breaks if it's left unconfigured. */
   usedAt: string;
+  /** A short, non-binding note on how this provider charges (per-check, subscription, %-of-
+   * transaction, etc.) so an admin can see at a glance what turning it on will cost — actual
+   * rates depend on the account's own plan/negotiated terms and should be confirmed on the
+   * provider's own pricing page before enabling in production. */
+  costNote?: string;
   docsUrl?: string;
   environments?: string[];
   fields: IntegrationField[];
@@ -53,6 +58,7 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
       "ID document + selfie, company (KYB) and sanctions/PEP checks. Used for self-verification and at the WaD compliance gate.",
     usedAt:
       "Trading Gate → Background screening (per-counterparty ID/KYB/AML checks) and Compliance Gate → Without a Doubt.",
+    costNote: "Charged per verification/check run (ID, KYB, sanctions/PEP) — see Didit's pricing page for current rates on your plan.",
     docsUrl: "https://docs.didit.me",
     environments: ["sandbox", "production"],
     fields: [
@@ -92,6 +98,7 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
     group: "Business Registry & Tax",
     summary: "Company registration and director verification.",
     usedAt: "Trading Gate → Counterparties (registry lookup during background screening) and Compliance Gate → KYB.",
+    costNote: "Charged per registry lookup, per CIPC's own published fee schedule.",
     fields: [
       { key: "customer_code", label: "Customer code", secret: false },
       { key: "username", label: "Username", secret: false },
@@ -109,6 +116,7 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
     group: "Business Registry & Tax",
     summary: "Tax Compliance Status checks. Usually requires a registered practitioner profile.",
     usedAt: "Compliance Gate → Without a Doubt (KYB tax-status check).",
+    costNote: "No per-check fee from SARS itself, but access typically requires a paid registered tax practitioner profile.",
     fields: [
       { key: "client_id", label: "Client ID", secret: false },
       { key: "client_secret", label: "Client secret", secret: true },
@@ -126,6 +134,7 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
     group: "Payments",
     summary: "South African card and EFT processing with ITN webhooks.",
     usedAt: "Trading Gate → Proof of Intent (token purchase) and Finality Gate → Payment.",
+    costNote: "Percentage + fixed fee per successful transaction — see PayFast's pricing page for current rates.",
     environments: ["sandbox", "production"],
     fields: [
       { key: "merchant_id", label: "Merchant ID", secret: false },
@@ -145,6 +154,7 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
     summary:
       "Bank or provider holding funds between counterparties. Compliance-sensitive — confirm the arrangement with your legal and compliance advisers before going live.",
     usedAt: "Execution Gate and Finality Gate → Payment (funds held between parties until completion).",
+    costNote: "Set by your bank/provider's own escrow agreement — typically a flat or %-of-value holding fee.",
     fields: [
       { key: "provider_name", label: "Provider name", secret: false },
       { key: "account_reference", label: "Account reference", secret: false },
@@ -164,6 +174,7 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
     summary: "Transactional email for verification, trade and support notices.",
     usedAt:
       "Throughout — account verification, trade/gate notifications, and inviting counterparties who aren't signed up yet.",
+    costNote: "Free tier for low volume, then a monthly plan or pay-as-you-go per email above that — see Resend's pricing page.",
     fields: [
       { key: "api_key", label: "API key", secret: true, placeholder: "re_…" },
       { key: "from_address", label: "From address", secret: false, placeholder: "no-reply@izenzo.co.za" },
@@ -179,6 +190,7 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
     group: "Currency",
     summary: "Alternative exchange-rate feed.",
     usedAt: "Trading Gate → Bid/Offer (price/currency display), as a fallback feed.",
+    costNote: "Free tier available; higher request volumes need a paid plan — see Open Exchange Rates' pricing page.",
     fields: [
       { key: "app_id", label: "App ID", secret: true },
       { key: "dev_center_url", label: "Dev center login URL", secret: false, placeholder: "https://…" },
@@ -195,6 +207,7 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
       "Live web, marketplace, directory and news reading. Powers counterparty matching and the online media checks.",
     usedAt:
       "Trading Gate → Counterparties (AI / AI+ web matching) and Online Media Checks (social, marketplace and news reading).",
+    costNote: "Metered by pages/credits scraped per month — see Firecrawl's pricing page for current plan rates.",
     docsUrl: "https://docs.firecrawl.dev",
     fields: [
       {
@@ -217,6 +230,7 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
     group: "Archival Storage",
     summary: "Cold storage for long-term legal retention of evidence packs.",
     usedAt: "Memory Gate (long-term retention of evidence packs and the transaction record).",
+    costNote: "Charged per GB stored per month plus retrieval fees — see AWS's S3/Glacier pricing pages for your region.",
     fields: [
       { key: "region", label: "Region", secret: false, placeholder: "af-south-1" },
       { key: "bucket", label: "Bucket", secret: false },
@@ -237,6 +251,7 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
       "The protected AI+ decision service. It proposes candidates, pricing, risk flags, structure and timing for a person to adopt or reject — it never records an outcome itself.",
     usedAt:
       "Five moments: after a counterparty is chosen, at Intent confirmation, after Proof of Intent is sealed, when a Without a Doubt case changes, and after Finality is recorded.",
+    costNote: "Internal Izenzo service — cost is whatever the underlying model/compute contract for this deployment runs, not a third-party bill.",
     environments: ["sandbox", "production"],
     fields: [
       {

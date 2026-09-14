@@ -1204,7 +1204,10 @@ export function CounterpartyRecord({
               ? `Search could not finish: ${error}`
               : "No matches found yet — run the search again."}
         </p>
-      ) : (
+      ) : mediaResults ? null : (
+        // Once media results are in, the Online Media Screening accordion below carries the
+        // selection control (circle/checkbox), match % and subtext itself — repeating the same
+        // company, match and subtext up here as well just duplicated the same information twice.
         <RadioGroup
           asChild
           value={pickedId ?? ""}
@@ -1302,23 +1305,55 @@ export function CounterpartyRecord({
               )}
             />
           </button>
-          {mediaExpanded && mediaResults.map((m) => {
+          {mediaExpanded && (
+          <RadioGroup value={pickedId ?? ""} onValueChange={setPickedId} disabled={!screeningDone} asChild>
+          <div className="space-y-2.5">
+          {mediaResults.map((m) => {
             const coOpen = expandedMediaCos.has(m.counterpartyId);
+            const cand = candidates.find((c) => c.id === m.counterpartyId);
             return (
             <div key={m.counterpartyId} className="rounded-xl border border-slate-300 bg-white p-3">
-              <button
-                type="button"
-                onClick={() => toggleCo(expandedMediaCos, setExpandedMediaCos, m.counterpartyId)}
-                className="flex w-full items-center justify-between gap-2 text-left"
-              >
-                <span className="text-sm font-semibold text-slate-900">{m.name}</span>
-                <ChevronDown
-                  className={cn(
-                    "h-3.5 w-3.5 shrink-0 text-slate-500 transition-transform",
-                    coOpen && "rotate-180",
-                  )}
-                />
-              </button>
+              <div className="flex w-full items-start gap-2.5">
+                {/* Same circle/checkbox the top list used to show, now living on the accordion
+                    record itself instead of duplicated in a separate list above. */}
+                {screeningDone ? (
+                  <RadioGroupItem id={`media-pick-${m.counterpartyId}`} value={m.counterpartyId} className="mt-0.5 shrink-0" />
+                ) : (
+                  <Checkbox
+                    id={`media-pick-${m.counterpartyId}`}
+                    checked={Boolean(cand?.shortlisted)}
+                    onCheckedChange={(v) => cand && toggle(cand, Boolean(v))}
+                    className="mt-0.5 shrink-0"
+                  />
+                )}
+                <button
+                  type="button"
+                  onClick={() => toggleCo(expandedMediaCos, setExpandedMediaCos, m.counterpartyId)}
+                  className="flex min-w-0 flex-1 items-start justify-between gap-2 text-left"
+                >
+                  <span className="min-w-0">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-semibold text-slate-900">{m.name}</span>
+                      {cand?.score != null && (
+                        <span className="shrink-0 rounded-full border border-foreground bg-foreground px-2 py-0.5 text-[11px] font-semibold text-background">
+                          {cand.score}% match
+                        </span>
+                      )}
+                    </span>
+                    {cand && (cand.jurisdiction || cand.sector) && (
+                      <span className="block text-[11px] text-slate-500">
+                        {[cand.jurisdiction, cand.sector].filter(Boolean).join(" · ")}
+                      </span>
+                    )}
+                  </span>
+                  <ChevronDown
+                    className={cn(
+                      "mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500 transition-transform",
+                      coOpen && "rotate-180",
+                    )}
+                  />
+                </button>
+              </div>
               {coOpen && (
               <ul className="mt-2 divide-y divide-slate-200">
                 {m.findings.map((f) => (
@@ -1354,108 +1389,15 @@ export function CounterpartyRecord({
             </div>
             );
           })}
+          </div>
+          </RadioGroup>
+          )}
         </div>
       )}
 
-      {screeningResults && screeningResults.length > 0 && (
-        <div className="mt-3 space-y-2.5 border-t border-slate-300 pt-3">
-          <div className="flex items-center justify-between gap-2">
-            <p className="label-caps text-slate-600">Background screening</p>
-            <button
-              type="button"
-              onClick={downloadFindingsPdf}
-              className="flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
-            >
-              <Download className="h-3 w-3" />
-              Download PDF
-            </button>
-          </div>
-          {screeningResults.map((r) => {
-            const cand = candidates.find((c) => c.id === r.counterpartyId);
-            const coOpen = expandedScreeningCos.has(r.counterpartyId);
-            return (
-              <div key={r.counterpartyId} className="rounded-xl border border-slate-300 bg-white p-3">
-                <button
-                  type="button"
-                  onClick={() => toggleCo(expandedScreeningCos, setExpandedScreeningCos, r.counterpartyId)}
-                  className="flex w-full items-center justify-between gap-2 text-left"
-                >
-                  <span className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-slate-900">{r.name}</span>
-                    {cand?.score != null && (
-                      <span className="shrink-0 rounded-full border border-foreground bg-foreground px-2 py-0.5 text-[11px] font-semibold text-background">
-                        {cand.score}% match
-                      </span>
-                    )}
-                  </span>
-                  <ChevronDown
-                    className={cn(
-                      "h-3.5 w-3.5 shrink-0 text-slate-500 transition-transform",
-                      coOpen && "rotate-180",
-                    )}
-                  />
-                </button>
-                {coOpen && (
-                <ul className="mt-2 divide-y divide-slate-200">
-                  {r.checks.map((chk) => {
-                    const live = chk.verificationId ? verificationById.get(chk.verificationId) : undefined;
-                    const view = describeCheck(chk, live);
-                    return (
-                      <li key={chk.kind} className="py-1.5 first:pt-0 last:pb-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-medium text-slate-800">{chk.label}</span>
-                          <span
-                            className={cn(
-                              "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-                              view.tone,
-                            )}
-                          >
-                            {view.label}
-                          </span>
-                        </div>
-                        <p className="mt-0.5 whitespace-pre-line break-words text-[11px] leading-snug text-slate-500">
-                          {view.detail}
-                        </p>
-                        {(chk.url || (chk.verificationId && view.pending)) && (
-                          <div className="mt-1 flex items-center gap-3">
-                            {chk.url && (
-                              <a
-                                href={chk.url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
-                              >
-                                <ExternalLink className="h-3 w-3" /> Open check
-                              </a>
-                            )}
-                            {chk.verificationId && view.pending && (
-                              <button
-                                type="button"
-                                onClick={() => refreshCheck(chk.verificationId as string)}
-                                disabled={refreshingId === chk.verificationId}
-                                className="flex items-center gap-1 text-[11px] font-medium text-slate-600 hover:underline disabled:opacity-50"
-                              >
-                                <RefreshCw
-                                  className={cn(
-                                    "h-3 w-3",
-                                    refreshingId === chk.verificationId && "animate-spin",
-                                  )}
-                                />
-                                Refresh
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {/* Background screening no longer runs (or shows its results) from this panel — it's
+          scoped to run automatically once the flow reaches WaD/KYC,KYB,PEP,AML instead, so it
+          doesn't show up alongside the Online Media Screening findings above. */}
 
 
       {screeningDone && onFinalize ? (

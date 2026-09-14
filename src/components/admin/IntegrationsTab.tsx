@@ -387,6 +387,11 @@ function ProviderCard({
         <p className="text-[11px] text-muted-foreground">
           <span className="font-semibold text-foreground">Used at:</span> {provider.usedAt}
         </p>
+        {provider.costNote && (
+          <p className="text-[11px] text-muted-foreground">
+            <span className="font-semibold text-foreground">Cost:</span> {provider.costNote}
+          </p>
+        )}
         {provider.environments && provider.environments.length > 1 && (
           <div className="space-y-1.5">
             <Label htmlFor={`${provider.id}-env`}>Environment</Label>
