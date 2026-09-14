@@ -284,8 +284,6 @@ function LiveDealEngine() {
   // already has a chosen counterparty but no signed intent always reopens Intent, whatever step
   // happens to be stored on the row — that is what left users stranded on "Choice recorded".
   const [hasChosen, setHasChosen] = useState(false);
-  /** Whether the deal map is shown above the stepper — folded away by hand if it isn't wanted. */
-  const [mapOpen, setMapOpen] = useState(true);
   useEffect(() => {
     if (!dealTx?.id) return;
     let live = true;
@@ -373,29 +371,6 @@ function LiveDealEngine() {
   // Once interest is being fetched the submitted detail collapses out of the way, so the results
   // have the room. Remembered per bid, so it stays collapsed on a refresh or a tab switch; the
   // header stays clickable to open it again.
-  // Kept per bid rather than as one shared boolean: a single flag meant an explicit collapse could
-  // be undone the moment the transaction object was replaced (which happens on every step
-  // advance), which is exactly why this frame kept springing back open.
-  const [bidInfoCollapsedByTx, setBidInfoCollapsedByTx] = useState<Record<string, boolean>>({});
-  const bidInfoKnown = useRef<Set<string>>(new Set());
-  function setBidInfoCollapsed(txId: string | undefined, collapsed: boolean) {
-    if (!txId) return;
-    bidInfoKnown.current.add(txId);
-    setBidInfoCollapsedByTx((prev) => ({ ...prev, [txId]: collapsed }));
-    try {
-      if (collapsed) sessionStorage.setItem(`bid-info-collapsed:${txId}`, "1");
-      else sessionStorage.removeItem(`bid-info-collapsed:${txId}`);
-    } catch {
-      // Private browsing without storage — the state above still holds for this view.
-    }
-  }
-  // A bid that has already moved past submitting its documents opens with this frame closed, so it
-  // never flashes open while the saved state is being read. Anything the user (or a search) sets
-  // explicitly wins over that default.
-  const bidInfoDefaultCollapsed = dealTx ? !["bid-offer", "documents"].includes(dealTx.step) : false;
-  const bidInfoOpen = dealTx
-    ? !(bidInfoCollapsedByTx[dealTx.id] ?? bidInfoDefaultCollapsed)
-    : true;
   // Once the ask has been made for a bid, the description/drop frame never comes back — not while
   // the files are still saving, not on a refresh, not on a tab switch. Remembered per bid.
   const [submittedBids, setSubmittedBids] = useState<Set<string>>(() => new Set());
@@ -481,23 +456,6 @@ function LiveDealEngine() {
     }
   }, [dealTx?.id, workspaceDocs.length]);
   const submittedForThisBid = dealTx ? submittedBids.has(dealTx.id) : false;
-  // A bid whose detail was collapsed when interest was fetched stays collapsed when it's opened
-  // again, rather than springing back open on every load. Read once per bid only, so it can never
-  // overwrite a collapse the user (or a search) just made.
-  useEffect(() => {
-    const txId = dealTx?.id;
-    if (!txId || bidInfoKnown.current.has(txId)) return;
-    bidInfoKnown.current.add(txId);
-    let collapsed = false;
-    try {
-      collapsed = sessionStorage.getItem(`bid-info-collapsed:${txId}`) === "1";
-    } catch {
-      collapsed = false;
-    }
-    // Only a stored collapse is applied here — with nothing stored the default above decides, so a
-    // progressed bid is never forced open.
-    if (collapsed) setBidInfoCollapsedByTx((prev) => ({ ...prev, [txId]: true }));
-  }, [dealTx?.id]);
   // Older bids may already have a good summary but still carry the old "New Bid" placeholder.
   // Read once more to generate and persist their proper display title; the ref prevents repeated
   // AI calls while the transaction query catches up with the saved title.
@@ -1110,14 +1068,10 @@ function LiveDealEngine() {
   /** "Fetch Interest" — runs the AI/AI+ search. Online media screening comes later, only once a
    * person has made their choice and continued. */
   async function fetchInterest(txId: string) {
-    setBidInfoCollapsed(txId, true);
     await runSearch(txId);
   }
 
   async function runSearch(txId: string) {
-    // Whichever way the search was started, the submitted detail collapses out of the way so the
-    // results have the room; the header stays clickable to open it again.
-    setBidInfoCollapsed(txId, true);
     setFlowStep("searching");
     setSearchError(null);
     // Marks Upload Documents done and moves the active step onto Search the moment the search
@@ -1326,58 +1280,17 @@ function LiveDealEngine() {
           and the workspace so the pair reads as a single working surface. */}
       <div
         className={cn(
-          "relative rounded-3xl border border-border bg-card/40 p-3 shadow-sm",
-          fillToTaskbar && "flex min-h-0 flex-1 flex-col",
+          "relative flex flex-col gap-4 rounded-3xl border border-border bg-card/40 p-3 shadow-sm",
+          fillToTaskbar ? "min-h-0 flex-1" : "h-[calc((100vh-190px)*0.9)]",
         )}
       >
-        <div
-          className={cn(
-            "relative grid grid-cols-1 items-stretch gap-4 rounded-3xl lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]",
-            fillToTaskbar && "min-h-0 flex-1",
-          )}
-        >
-          {/* Engine Map — always visible on the left. Clicking a node opens that step inline in
-              the Live Workspace beside it, instead of navigating away from this screen. When
-              nothing else is competing for screen space (the common case), both panels stretch to
-              fill all the way down to the taskbar of open bid tabs rather than stopping short of
-              it; a docked/floating workspace instead keeps a fixed viewport-relative height, since
-              it's a small window rather than the whole screen. */}
-          <div
-            className={cn(
-              "flex w-full flex-col overflow-hidden p-3 sm:p-5",
-              fillToTaskbar ? "h-full" : "h-[calc((100vh-190px)*0.9)]",
-            )}
-          >
-            <div className="flex shrink-0 items-center justify-between gap-2">
-              <p className="label-caps text-foreground">Izenzo Trade Workflow</p>
-              <button
-                type="button"
-                onClick={() => setMapOpen((v) => !v)}
-                className="label-caps text-muted-foreground transition-colors hover:text-foreground"
-                aria-expanded={mapOpen}
-              >
-                {mapOpen ? "− Map" : "+ Map"}
-              </button>
-            </div>
+        {/* Top band — a third of the canvas: the vertical stepper on the left, the deal map taking
+            the wider 60% share on the right, so the map finally gets real room instead of folding
+            in and out above the stepper. */}
+        <div className="flex min-h-0 flex-[1] gap-4">
+          <div className="flex w-[40%] shrink-0 flex-col overflow-hidden rounded-3xl border border-border bg-card p-3 shadow-sm sm:p-5">
+            <p className="label-caps shrink-0 text-foreground">Izenzo Trade Workflow</p>
             <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
-              {/* The map sits above the stepper as the visual "where am I" companion — the same
-                  states, the same click targets, opening the same step frames. */}
-              {/* The diagram keeps a legible minimum width; on a very narrow column it scrolls
-                  sideways rather than shrinking its labels into illegibility. */}
-              {mapOpen && (
-                <div className="mb-4 overflow-x-auto border-b border-border pb-4">
-                  <div className="min-w-[420px]">
-                  <MapView
-                    tx={dealTx ?? null}
-                    reload={() => void reloadDeal()}
-                    readOnly={!dealTx}
-                    onOpenStep={openMapStep}
-                    overrideStates={stepOverrides}
-                    {...(dealTx ? {} : { onBid: startNewDeal })}
-                  />
-                  </div>
-                </div>
-              )}
               <ClassicView
                 tx={dealTx ?? FLOWCHART_PREVIEW_TX}
                 reload={() => void reloadDeal()}
@@ -1389,20 +1302,28 @@ function LiveDealEngine() {
             </div>
           </div>
 
-          {/* Live Workspace — always visible on the right. Its heading line carries the bid/offer
-              reference on the same row; below it is either the real upload frame (before any
-              document is attached) or a bulleted list of what's been classified from the documents
-              already uploaded. */}
-          <div
-            className={cn(
-              "w-full overflow-y-auto rounded-3xl border border-border bg-card p-3 shadow-sm sm:p-5",
-              fillToTaskbar ? "h-full" : "h-[calc((100vh-190px)*0.9)]",
-            )}
-          >
-          {/* Everything pinned to the top of the workspace sits inside one opaque, full-bleed
-              surface — the heading row and the Bid Registration frame together — so nothing
-              scrolling underneath can appear through it or in the gap above it. */}
-          <div className="sticky -top-3 z-20 -mx-3 -mt-3 mb-3 bg-card px-3 pb-3 pt-3 sm:-top-5 sm:-mx-5 sm:-mt-5 sm:px-5 sm:pt-5">
+          <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-3xl border border-border bg-card p-3 shadow-sm sm:p-5">
+            <p className="label-caps shrink-0 text-foreground">Map</p>
+            <div className="mt-3 min-h-0 flex-1 overflow-auto">
+              <div className="min-w-[420px]">
+                <MapView
+                  tx={dealTx ?? null}
+                  reload={() => void reloadDeal()}
+                  readOnly={!dealTx}
+                  onOpenStep={openMapStep}
+                  overrideStates={stepOverrides}
+                  {...(dealTx ? {} : { onBid: startNewDeal })}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom band — the remaining two-thirds: the Live Workspace. Bid Registration and Bid
+            Information sit fixed in a left column, always expanded rather than a collapsible
+            accordion, since they now have a permanent home instead of competing with the results
+            for space; everything else (upload/search, results, gates) fills the right column. */}
+        <div className="flex min-h-0 flex-[2] flex-col overflow-hidden rounded-3xl border border-border bg-card p-3 shadow-sm sm:p-5">
           <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
             <p className="label-caps text-foreground">Live Workspace</p>
             {dealTx && (
@@ -1450,6 +1371,8 @@ function LiveDealEngine() {
             )}
           </div>
 
+          <div className="flex min-h-0 flex-1 gap-4">
+          <div className="flex w-[40%] shrink-0 flex-col gap-3 overflow-y-auto">
           {/* Bid Registration — the very top of the workspace, pinned above everything else that
               scrolls beneath it. Column 1: the bidder's identity/verification and how long that
               business has been active. Column 2: the BID/OFF id, the bid's own name directly
@@ -1498,24 +1421,13 @@ function LiveDealEngine() {
               </div>
             </div>
           )}
-          </div>
 
           {/* Bidder details + AI summary come next — what was actually submitted, never buried
               behind the progress ribbon. The attachment(s) live here too, with preview/download. */}
           {activity && dealTx && (
             <div className="glass-node space-y-2 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <button
-                  type="button"
-                  onClick={() => setBidInfoCollapsed(dealTx.id, bidInfoOpen)}
-                  aria-expanded={bidInfoOpen}
-                  className="label-caps flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
-                >
-                  <span aria-hidden className="w-2.5 text-center font-mono">
-                    {bidInfoOpen ? "−" : "+"}
-                  </span>
-                  BID INFORMATION
-                </button>
+                <p className="label-caps text-muted-foreground">BID INFORMATION</p>
                 {idCheck?.status === "passed" && (
                   <span
                     title={`Verified${idCheck.completed_at ? ` — ${new Date(idCheck.completed_at).toLocaleString()}` : ""}`}
@@ -1531,8 +1443,6 @@ function LiveDealEngine() {
                   </span>
                 )}
               </div>
-              {bidInfoOpen && (
-                <>
               {/* The value of the trade belongs with the rest of its material aspects, inside this
                   frame, rather than sitting on its own outside it. */}
               {(Number(activity.price) > 0 || Number(activity.quantity) > 0) && (
@@ -1648,12 +1558,11 @@ function LiveDealEngine() {
                   ))}
                 </ul>
               )}
-                </>
-              )}
             </div>
           )}
+          </div>
 
-
+          <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
             {dealTx ? (
               <div className="mt-4 flex items-start justify-end gap-4">
                 <div className="w-1/2 max-w-[260px] shrink-0">
@@ -1818,7 +1727,8 @@ function LiveDealEngine() {
                 {dealTx?.wad_completed_at && <TradeSummary tx={dealTx} />}
               </div>
             ) : null}
-        </div>
+          </div>
+          </div>
         </div>
       </div>
     </>
