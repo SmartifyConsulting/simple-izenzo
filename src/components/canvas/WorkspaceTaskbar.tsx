@@ -17,15 +17,35 @@ import { useDealWindows } from "@/lib/dealWindows";
 import { fallbackReference } from "@/lib/tx";
 import { cn } from "@/lib/utils";
 
-// Marketing/auth surfaces where a signed-in visitor could still be browsing — the workspace
-// taskbar is an authenticated-app concept and has no business following them onto the hero page.
-function isMarketingPath(pathname: string) {
-  return (
-    pathname === "/" ||
-    pathname.startsWith("/alpha-bravo") ||
-    pathname.startsWith("/auth")
-  );
+// The bid tab strip belongs to the signed-in workspace only, so it is opt-in per screen rather
+// than "everywhere except the pages we happened to list" — that older exclusion list let the tabs
+// leak onto public pages (the hero included) whenever a new marketing route appeared.
+const WORKSPACE_PATHS = [
+  "/live-deal-engine",
+  "/deal",
+  "/tx",
+  "/trades",
+  "/inbox",
+  "/discover",
+  "/registry",
+  "/funder",
+  "/auditor",
+  "/compliance",
+  "/facilitation",
+  "/governance",
+  "/admin",
+  "/activity",
+  "/credits",
+  "/account",
+  "/guided",
+  "/support",
+  "/transactions",
+] as const;
+
+function isWorkspacePath(pathname: string) {
+  return WORKSPACE_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
+
 
 /** Finds an existing bid or offer by its reference or by a keyword in its name, and opens it. */
 function DealSearchDialog({
@@ -110,7 +130,7 @@ export function WorkspaceTaskbar() {
   const [overId, setOverId] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
 
-  if (isMarketingPath(pathname)) return null;
+  if (!isWorkspacePath(pathname)) return null;
 
   function activate(id: string, mode: string) {
     if (mode === "minimized") setMode(id, "maximized");
