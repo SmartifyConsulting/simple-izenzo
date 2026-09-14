@@ -26,7 +26,17 @@ function Landing() {
 
   useEffect(() => {
     if (loading) return;
-    navigate({ to: user ? safeNext(next) : "/alpha-bravo", replace: true });
+    if (user) {
+      navigate({ to: safeNext(next), replace: true });
+      return;
+    }
+    // Signed-out visitors land on the public home page, but an intended destination is carried
+    // through so signing in returns them to the page they were trying to open.
+    if (next) {
+      navigate({ to: "/auth", search: { next }, replace: true });
+      return;
+    }
+    navigate({ to: "/alpha-bravo", replace: true });
   }, [user, loading, next, navigate]);
 
   return null;
