@@ -64,8 +64,9 @@ const BOXES = {
   finality: { x: 1350, y: 902, w: 196, h: 78 },
 } as const satisfies Record<string, Box>;
 
-// Group frames.
-const TRADING_SEARCH_FRAME: Box = { x: 313, y: 190, w: 330, h: 126 };
+// Group frames. Bid, Load Deal Documents, Search and the Step 1–5 card all live inside one
+// outer frame — the trade engine — rather than the search box carrying a small frame of its own.
+const TRADE_ENGINE_FRAME: Box = { x: 14, y: 26, w: 838, h: 314 };
 const COUNTERPARTY_FRAME: Box = { x: 990, y: 88, w: 478, h: 370 };
 const COMPLIANCE_FRAME: Box = { x: 313, y: 352, w: 330, h: 542 };
 const MEMORY = { cx: 1196, cy: 655, r: 150 };
