@@ -240,19 +240,28 @@ export function MapView({
   tx,
   reload,
   readOnly,
+  onBid,
+  onLoadDocuments,
+  searching,
 }: {
-  tx: Transaction;
+  tx: Transaction | null;
   reload: () => void;
   readOnly?: boolean | undefined;
+  /** Bid tile — opens the registration workspace beside the map. */
+  onBid?: (() => void) | undefined;
+  /** Load Deal Documents tile — opens the search prompt + upload window. */
+  onLoadDocuments?: (() => void) | undefined;
+  /** True while AI and AI+ are running, so Search pulses and shows its own progress bar. */
+  searching?: boolean | undefined;
 }) {
   const [panel, setPanel] = useState<{ stage: StageKey; step: string } | null>(null);
 
   const open = (stage: StageKey, step: string) => {
-    if (readOnly) return;
+    if (readOnly || !tx) return;
     setPanel((p) => (p?.stage === stage && p?.step === step ? null : { stage, step }));
   };
   const st = (stage: StageKey, step: string) => nodeState(stage, step, tx);
-  const lock = (stage: StageKey, step: string) => lockReason(stage, step, tx);
+  const lock = (stage: StageKey, step: string) => (tx ? lockReason(stage, step, tx) : "Register a bid or offer first");
 
   const node = (
     key: keyof typeof BOXES,
@@ -262,6 +271,7 @@ export function MapView({
     fill: string,
     icon?: typeof Search,
     sub?: string,
+    override?: { state?: NodeState; onClick?: () => void },
   ) => (
     <MapNode
       box={BOXES[key]}
@@ -269,9 +279,9 @@ export function MapView({
       icon={icon}
       sub={sub}
       fill={fill}
-      state={st(stage, step)}
+      state={override?.state ?? st(stage, step)}
       lock={lock(stage, step)}
-      onClick={() => open(stage, step)}
+      onClick={override?.onClick ?? (() => open(stage, step))}
     />
   );
 
