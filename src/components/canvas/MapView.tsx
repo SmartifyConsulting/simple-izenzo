@@ -23,8 +23,10 @@ import type { Transaction } from "@/lib/tx";
 type NodeState = "locked" | "open" | "active" | "done";
 
 /** Node state comes straight from the live deal record and the shared gating rules — the same
- * `lockReason`/`stepIndex` logic the step list uses, unchanged. */
-function nodeState(stage: StageKey, step: string, tx: Transaction): NodeState {
+ * `lockReason`/`stepIndex` logic the step list uses, unchanged. With no deal open yet, only Bid
+ * is available and it pulses as the thing to do first. */
+function nodeState(stage: StageKey, step: string, tx: Transaction | null): NodeState {
+  if (!tx) return step === "bid-offer" ? "active" : "locked";
   if (lockReason(stage, step, tx)) return "locked";
   const idx = stepIndex(stage, step);
   const currentIdx = stepIndex(tx.stage, tx.step);
