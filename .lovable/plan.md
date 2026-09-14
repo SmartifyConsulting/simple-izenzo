@@ -80,3 +80,7 @@
   keeping the retry button only when `readError` is set; rename the Fetch Interest button and its busy
   label (and the `MatchResultsPanel` copy); in `fetchInterest`/`runSearch` collapse Bid Information
   after matches are saved (`interestCount > 0`) rather than at kickoff.
+- New workspace: render the Bid Registration header block (identity, Verified badge, bidder-since and
+  the `draftReference` claimed on mount) around `CanvasStart`'s prompt/upload bar, reusing the same
+  frame markup the registered-bid state uses.
+
