@@ -320,8 +320,8 @@ export function MapView({
           />
 
           <SideLabel x={415} y={176} text="AI and AI+" className="text-foreground" />
-          <SideLabel x={900} y={792} text="KYC, KYB, PEP, AML" className="text-foreground" />
-          <SideLabel x={900} y={872} text="POI, NDA, MOU, Contract" className="text-foreground" />
+          <SideLabel x={1100} y={792} text="KYC, KYB, PEP, AML" className="text-foreground" />
+          <SideLabel x={1100} y={872} text="POI, NDA, MOU, Contract" className="text-foreground" />
           <SideLabel x={1050} y={1146} text="Payment, Signoff, Handover" className="text-foreground" />
 
 
