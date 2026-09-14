@@ -1995,7 +1995,7 @@ export function CanvasStart({
           }}
           aria-label="Drop files here or click to browse"
           className={cn(
-            "flex min-w-0 flex-1 basis-1/2 items-center justify-center gap-2 rounded-lg border-2 border-dashed px-2 py-1.5 text-xs transition-colors",
+            "flex min-w-0 flex-1 basis-1/2 items-center justify-center gap-2 rounded-lg border border-dashed px-2 py-1.5 text-xs transition-colors",
             dragOver
               ? "border-primary bg-primary/5 text-foreground"
               : "border-muted-foreground/70 text-muted-foreground hover:border-primary/60 hover:text-foreground",
