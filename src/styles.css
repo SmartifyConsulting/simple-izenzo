@@ -108,6 +108,10 @@
   --taskbar-active-bg: oklch(0 0 0);
   --taskbar-active-fg: oklch(0.71 0.13 172);
   --taskbar-active-border: oklch(0.71 0.13 172);
+  /* Step name pills (map frame headings, Steps list headers) on the black stylesheet: the same
+     translucent-primary pill format used on the Live Workspace headings. */
+  --step-pill-bg: color-mix(in oklab, var(--primary) 10%, transparent);
+  --step-pill-fg: var(--primary);
   --warning: oklch(0.78 0.14 78);
   --warning-foreground: oklch(0.18 0.02 250);
   --info: oklch(0.68 0.11 220);
@@ -244,6 +248,10 @@
   --taskbar-active-bg: oklch(0.63 0.15 155);
   --taskbar-active-fg: oklch(0 0 0);
   --taskbar-active-border: oklch(0.63 0.15 155);
+  /* Step name pills (map frame headings, Steps list headers) on the cream stylesheet: solid
+     black pill, white writing. */
+  --step-pill-bg: oklch(0 0 0);
+  --step-pill-fg: oklch(1 0 0);
   --warning: oklch(0.78 0.14 78);
   --warning-foreground: oklch(0.18 0.02 250);
   --info: oklch(0.51 0.24 265);

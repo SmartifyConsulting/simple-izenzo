@@ -50,7 +50,7 @@ export function TradeSummary({ tx }: { tx: Transaction }) {
   return (
     <div className="glass-node space-y-4 p-4">
       <div>
-        <p className="label-caps text-muted-foreground">Trade summary</p>
+        <p className="label-caps inline-block rounded-full bg-primary/10 px-2.5 py-1 text-primary">Trade summary</p>
         <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
           {facts.map(([k, v]) => (
             <div key={k} className="contents">

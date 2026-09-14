@@ -281,12 +281,12 @@ function Frame({
       style={{ left: px(box.x), top: py(box.y), width: px(box.w), height: py(box.h) }}
     >
       {label && (
-        <span className="label-caps absolute -top-2 left-5 whitespace-nowrap bg-background px-2 text-primary">
+        <span className="label-caps absolute -top-2 left-5 whitespace-nowrap rounded-full bg-[var(--step-pill-bg)] px-2.5 py-0.5 text-[var(--step-pill-fg)]">
           {label}
         </span>
       )}
       {subLabel && (
-        <span className="label-caps absolute left-5 top-3 whitespace-nowrap text-primary">
+        <span className="label-caps absolute left-5 top-3 whitespace-nowrap rounded-full bg-[var(--step-pill-bg)] px-2.5 py-0.5 text-[var(--step-pill-fg)]">
           {subLabel}
         </span>
       )}

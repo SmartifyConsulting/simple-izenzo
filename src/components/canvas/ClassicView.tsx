@@ -326,8 +326,14 @@ export function ClassicView({
               >
                 {"{"}
               </span>
-              {/* "Step N ·" goes green together with the step's name once the step is complete. */}
-              <span className={cn("label-caps mt-1", allDone ? "text-success" : "text-foreground")}>
+              {/* Step names read as pills now — "Step N ·" and the step's own name share one
+                  pill background, going green together once the step is complete. */}
+              <span
+                className={cn(
+                  "label-caps mt-1 whitespace-nowrap rounded-l-full px-2.5 py-0.5",
+                  allDone ? "bg-success/15 text-success" : "bg-[var(--step-pill-bg)] text-[var(--step-pill-fg)]",
+                )}
+              >
                 {stepCollapsed ? "+" : "−"}Step {s.step} ·{" "}
               </span>
             </>
@@ -345,8 +351,8 @@ export function ClassicView({
                 {bracketAndPrefix}
                 <span
                   className={cn(
-                    "label-caps -ml-2 mt-1 transition-colors",
-                    allDone ? "text-success" : "text-foreground hover:text-primary",
+                    "label-caps -ml-2 mt-1 whitespace-nowrap rounded-r-full px-2.5 py-0.5 transition-colors",
+                    allDone ? "bg-success/15 text-success" : "bg-[var(--step-pill-bg)] text-[var(--step-pill-fg)] hover:brightness-110",
                   )}
                 >
                   {s.label}
