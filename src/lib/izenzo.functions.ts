@@ -172,7 +172,7 @@ export const completeWad = createServerFn({ method: "POST" })
       .update({
         wad_completed_at: cleared ? now : null,
         stage: cleared ? "execution" : "compliance",
-        step: cleared ? "entry" : "wad",
+        step: cleared ? "business-docs" : "wad",
       })
       .eq("id", tx.id);
 
