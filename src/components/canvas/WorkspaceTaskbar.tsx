@@ -130,7 +130,7 @@ export function WorkspaceTaskbar() {
   const [overId, setOverId] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
 
-  if (isMarketingPath(pathname)) return null;
+  if (!isWorkspacePath(pathname)) return null;
 
   function activate(id: string, mode: string) {
     if (mode === "minimized") setMode(id, "maximized");
