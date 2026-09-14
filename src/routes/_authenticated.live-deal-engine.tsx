@@ -1201,9 +1201,17 @@ function LiveDealEngine() {
       // The candidates are written server-side, so the Record panel's cached (empty) list has to
       // be refreshed or it stays stuck on "Searching for counterparties…".
       await queryClient.invalidateQueries({ queryKey: ["counterparties", txId] });
+      const { count } = await supabase
+        .from("counterparties")
+        .select("id", { count: "exact", head: true })
+        .eq("transaction_id", txId);
+      await queryClient.invalidateQueries({ queryKey: ["counterparties-count", txId] });
+      // Counterparties found: fold Bid Information away so the results list gets the room.
+      if ((count ?? 0) > 0) setBidInfoCollapsed(txId, true);
       // Online media screening deliberately does NOT start here — Choice comes first. It runs from
       // the Record panel's tick-and-continue, once a person has picked their counterparties.
     }
+
   }
 
   /** Files are read through this app's own address (a server function), never the storage host —
