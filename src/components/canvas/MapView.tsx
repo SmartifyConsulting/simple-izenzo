@@ -39,7 +39,7 @@ function nodeState(stage: StageKey, step: string, tx: Transaction | null): NodeS
 // Workspace: everything is placed on this canvas and scaled to the container with percentages, so
 // tiles and their connecting lines always stay aligned however wide that column is.
 const W = 760;
-const H = 1230;
+const H = 1240;
 const px = (v: number) => `${(v / W) * 100}%`;
 const py = (v: number) => `${(v / H) * 100}%`;
 
@@ -61,8 +61,8 @@ const BOXES = {
   wad: { x: 60, y: 842, w: 300, h: 62 },
   businessDocs: { x: 60, y: 928, w: 300, h: 62 },
   execution: { x: 430, y: 1000, w: 300, h: 104 },
-  entryExit: { x: 424, y: 1141, w: 140, h: 56 },
-  finality: { x: 584, y: 1136, w: 150, h: 66 },
+  entryExit: { x: 420, y: 1138, w: 140, h: 56 },
+  finality: { x: 580, y: 1122, w: 155, h: 88 },
 } as const satisfies Record<string, Box>;
 
 // One outer frame holds the whole trading step — Bid, Load Deal Documents, Search, the Step 1–5
