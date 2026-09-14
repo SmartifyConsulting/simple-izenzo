@@ -33,7 +33,7 @@ function safeNext(next: string | undefined) {
 }
 
 function AuthPage() {
-  const { next } = Route.useSearch();
+  const { next, expired } = Route.useSearch();
   const navigate = useNavigate();
   const { session, loading } = useAuth();
 
