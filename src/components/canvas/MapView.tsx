@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   Banknote,
+  Briefcase,
   Building2,
   CheckCircle2,
   Database,
@@ -48,23 +49,24 @@ type Box = { x: number; y: number; w: number; h: number };
 /** Rows and columns are aligned so every connector is a straight horizontal or vertical run. */
 const BOXES = {
   bid: { x: 40, y: 80, w: 160, h: 56 },
-  loadDocs: { x: 40, y: 164, w: 160, h: 56 },
+  loadDocs: { x: 40, y: 174, w: 160, h: 56 },
   // Search sits level with Load Deal Documents (same centre-line, for a straight connector), and
   // the Search Results card sits directly beneath Search — now a single compact line of results
   // rather than a tall stacked list, so Choice/Counter Offer/Online Media Screening can all sit
   // higher, letting the rest of the diagram move up to fit without scrolling.
-  search: { x: 230, y: 161, w: 160, h: 62 },
+  search: { x: 230, y: 171, w: 160, h: 62 },
   // Search Results now sits in line between Search and Choice, all on the same row.
-  steps: { x: 410, y: 160, w: 140, h: 64 },
+  steps: { x: 410, y: 170, w: 140, h: 64 },
   // Offer/Choice/Counter Offer/Online Media Screening move further right to leave room for the
   // Search Results card between Search and Choice.
   offer: { x: 570, y: 80, w: 160, h: 56 },
-  choice: { x: 570, y: 164, w: 160, h: 56 },
+  choice: { x: 570, y: 174, w: 160, h: 56 },
   // Counter Offer sits at the very right edge of the Trading frame, level with Choice and Search.
-  counterOffer: { x: 750, y: 160, w: 150, h: 64 },
+  counterOffer: { x: 750, y: 170, w: 150, h: 64 },
   // Wide enough that "Online Media Screening" fits on one line instead of wrapping.
-  // Centred under Choice (same centre-line as Choice) so the connector between them is straight.
-  socialMedia: { x: 540, y: 235, w: 220, h: 56 },
+  // Same width and centre-line as Choice, so the connector between them is straight. A little
+  // extra padding between Step 1's horizontal rows.
+  socialMedia: { x: 570, y: 255, w: 160, h: 64 },
   // Step 2 (Compliance & Governance) moves further down from Step 1's frame; Step 3/4 shift down
   // to match so the connector between them (unchanged below) doesn't have to stretch or overlap.
   // Extra clearance below the frame's floating heading + "Governance" row so Express Intent
@@ -78,7 +80,8 @@ const BOXES = {
   // aligned with the Compliance frame's left edge instead of off to its right.
   // Moved down ~1cm from Step 2, with even gaps between Execution, Entry/Exit and Finality.
   execution: { x: 50, y: 965, w: 260, h: 104 },
-  entryExit: { x: 350, y: 989, w: 90, h: 56 },
+  // Centred inside its own frame, which itself sits centred in the gap between Step 3 and Step 4.
+  entryExit: { x: 393, y: 989, w: 90, h: 56 },
   finality: { x: 575, y: 965, w: 250, h: 104 },
 } as const satisfies Record<string, Box>;
 
@@ -87,12 +90,14 @@ const BOXES = {
 // which no longer carry a frame of their own. Trimmed to its actual content height (rather than
 // leaving a tall gap beneath it) so Compliance can sit right below without the diagram needing a
 // scroll.
-const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 932, h: 275 };
+const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 932, h: 285 };
 const COMPLIANCE_FRAME: Box = { x: 30, y: 421, w: 340, h: 449 };
 // Execution and Entry/Exit+Finality get the same bordered, labelled group frame as Steps 1 and
 // 2, instead of sitting as bare tiles with no frame of their own.
 const EXECUTION_FRAME: Box = { x: 30, y: 945, w: 290, h: 144 };
 const FINALITY_FRAME: Box = { x: 555, y: 945, w: 290, h: 144 };
+// Entry/Exit gets the same bordered frame treatment, centred in the gap between Step 3 and 4.
+const ENTRY_EXIT_FRAME: Box = { x: 373, y: 945, w: 130, h: 144 };
 const MEMORY = { cx: 560, cy: 595, r: 127 };
 
 const cx = (b: Box) => b.x + b.w / 2;
@@ -122,17 +127,19 @@ const ARROWS: string[] = [
   path(topOf(BOXES.counterOffer), { x: cx(BOXES.counterOffer), y: cy(BOXES.offer) }, rightOf(BOXES.offer)),
   line(bottomOf(BOXES.choice), topOf(BOXES.socialMedia)),
   // Out of trading and down into the compliance step.
-  path(bottomOf(BOXES.socialMedia), { x: cx(BOXES.socialMedia), y: 376 }, { x: cx(BOXES.expressIntent), y: 376 }, topOf(BOXES.expressIntent)),
+  path(bottomOf(BOXES.socialMedia), { x: cx(BOXES.socialMedia), y: 395 }, { x: cx(BOXES.expressIntent), y: 395 }, topOf(BOXES.expressIntent)),
   line(bottomOf(BOXES.expressIntent), topOf(BOXES.poi)),
   line(bottomOf(BOXES.poi), topOf(BOXES.withoutADoubt)),
   line(bottomOf(BOXES.withoutADoubt), topOf(BOXES.wad)),
   line(bottomOf(BOXES.wad), topOf(BOXES.businessDocs)),
-  // Step 2 into Step 3: straight down out of Business Docs into Execution, same centre-line.
-  line(bottomOf(BOXES.businessDocs), topOf(BOXES.execution)),
-  // Execution, Entry/Exit and Finality sit in a single row.
-  line(rightOf(BOXES.execution), leftOf(BOXES.entryExit)),
-  line(rightOf(BOXES.entryExit), leftOf(BOXES.finality)),
-  path(topOf(BOXES.finality), { x: cx(BOXES.finality), y: 844 }, { x: MEMORY.cx, y: 844 }, { x: MEMORY.cx, y: MEMORY.cy + MEMORY.r }),
+  // Step 2 into Step 3: straight down out of Business Docs, stopping at the Step 3 frame's edge
+  // rather than crossing into it to reach the (borderless) Execution tile itself.
+  line(bottomOf(BOXES.businessDocs), topOf(EXECUTION_FRAME)),
+  // Execution, Entry/Exit and Finality sit in a single row — connectors run frame edge to frame
+  // edge, so they touch each group frame's border instead of crossing into it.
+  line(rightOf(EXECUTION_FRAME), leftOf(ENTRY_EXIT_FRAME)),
+  line(rightOf(ENTRY_EXIT_FRAME), leftOf(FINALITY_FRAME)),
+  path(topOf(FINALITY_FRAME), { x: cx(BOXES.finality), y: 844 }, { x: MEMORY.cx, y: 844 }, { x: MEMORY.cx, y: MEMORY.cy + MEMORY.r }),
 ];
 
 function ArrowLayer() {
@@ -221,6 +228,7 @@ function MapNode({
   sub,
   subTone,
   plain,
+  subSize,
 }: {
   box: Box;
   label: string;
@@ -234,6 +242,9 @@ function MapNode({
   /** No border/background of its own — used when the node already sits directly inside its own
    * group Frame (Step 3, Step 4), so it doesn't draw a second, redundant box inside that one. */
   plain?: boolean | undefined;
+  /** Execution/Finality's own sub-text reads larger than the compact gate/manual-doc notes on
+   * other tiles. */
+  subSize?: "xs" | "sm" | undefined;
 }) {
   const locked = state === "locked";
   return (
@@ -245,12 +256,14 @@ function MapNode({
       style={{ left: px(box.x), top: py(box.y), width: px(box.w), height: py(box.h) }}
       className={cn(
         "absolute flex flex-col items-center justify-center gap-0.5 overflow-hidden px-2 text-center font-sans text-[11px] font-semibold leading-tight transition-colors",
-        plain ? "rounded-none border-0 bg-transparent" : "rounded-xl border bg-card/40",
-        !plain && state === "open" && "border-border text-foreground hover:border-primary/60",
+        // Border always stays a steady, visible border-border — like every group Frame — rather
+        // than dimming to border-border/50 when locked; only the text/icon show that state.
+        plain ? "rounded-none border-0 bg-transparent" : "rounded-xl border border-border bg-card/40",
+        !plain && state === "open" && "text-foreground hover:border-primary/60",
         plain && state === "open" && "text-foreground",
         state === "done" && (plain ? "text-success" : "border-success/70 text-success"),
         state === "active" && (plain ? "animate-throb-aqua text-primary" : "animate-throb-aqua border-primary text-primary"),
-        locked && (plain ? "cursor-not-allowed text-muted-foreground opacity-50" : "cursor-not-allowed border-border/50 text-muted-foreground opacity-50"),
+        locked && "cursor-not-allowed text-muted-foreground",
       )}
     >
       <span className="flex w-full items-center justify-center gap-1.5">
@@ -261,7 +274,8 @@ function MapNode({
       {sub && (
         <span
           className={cn(
-            "w-full text-[8.5px] font-semibold uppercase leading-snug tracking-wide",
+            "w-full font-semibold uppercase leading-snug tracking-wide",
+            subSize === "sm" ? "text-[10px]" : "text-[8.5px]",
             subTone === "gate" ? "text-[#C1653D]" : "font-medium normal-case tracking-normal text-muted-foreground",
           )}
         >
@@ -331,6 +345,7 @@ export function MapView({
       state?: NodeState;
       onClick?: () => void;
       plain?: boolean;
+      subSize?: "xs" | "sm";
     },
   ) => (
     <MapNode
@@ -340,6 +355,7 @@ export function MapView({
       {...(opts?.sub ? { sub: opts.sub } : {})}
       {...(opts?.subTone ? { subTone: opts.subTone } : {})}
       {...(opts?.plain ? { plain: true } : {})}
+      {...(opts?.subSize ? { subSize: opts.subSize } : {})}
       state={opts?.state ?? st(stage, step, opts?.overrideKey)}
       lock={lock(stage, step)}
       onClick={opts?.onClick ?? (() => open(stage, step))}
@@ -356,6 +372,7 @@ export function MapView({
         <Frame box={TRADE_ENGINE_FRAME} label="Step 1 · Trading" />
         <Frame box={COMPLIANCE_FRAME} label="Step 2 · Compliance" subLabel="Governance" />
         <Frame box={EXECUTION_FRAME} label="Step 3 · Execution" />
+        <Frame box={ENTRY_EXIT_FRAME} />
         <Frame box={FINALITY_FRAME} label="Step 4 · Finality" />
 
         {/* A placeholder for what Search returns — just labelled, no results content shown. */}
@@ -430,17 +447,20 @@ export function MapView({
         <MapNode
           box={BOXES.execution}
           label="Execution"
+          icon={Briefcase}
           sub="Concept, Pre-Reqs, Feasibility, Bankability, Project Prep, Implementation"
+          subSize="sm"
           state={st("execution", "preparation")}
           lock={lock("execution", "preparation")}
           onClick={() => open("execution", "preparation")}
           plain
         />
         {/* Entry/Exit sits between the Step 3 and Step 4 frames, on its own. */}
-        {node("entryExit", "Entry / Exit", "execution", "stakeholders", LogIn)}
+        {node("entryExit", "Entry / Exit", "execution", "stakeholders", LogIn, { plain: true })}
         {/* Step 4 — finality. No border of its own — it sits directly inside the Step 4 frame. */}
         {node("finality", "Finality", "finality", "entry", Banknote, {
           sub: "Payment, Signoff, Handover",
+          subSize: "sm",
           plain: true,
         })}
 
@@ -463,12 +483,12 @@ export function MapView({
             memoryState === "open" && "text-foreground hover:border-primary/60",
             memoryState === "done" && "border-success/70 text-success",
             memoryState === "active" && "animate-throb-aqua border-primary text-primary",
-            memoryState === "locked" && "cursor-not-allowed text-muted-foreground opacity-50",
+            memoryState === "locked" && "cursor-not-allowed text-muted-foreground",
           )}
         >
           <Database className={cn("h-4 w-4", memoryState === "open" && "text-primary")} />
-          <span className="text-[10px] font-medium leading-tight">Compounding CDA</span>
-          <span className="text-[8.5px] leading-snug text-muted-foreground">
+          <span className="text-[12px] font-medium leading-tight">Compounding CDA</span>
+          <span className="text-[10px] leading-snug text-muted-foreground">
             Capital Deployment Assessment
           </span>
         </button>
