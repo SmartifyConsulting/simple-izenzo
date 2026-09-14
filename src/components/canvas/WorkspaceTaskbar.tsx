@@ -116,10 +116,19 @@ export function WorkspaceTaskbar() {
 
   function activate(id: string, mode: string) {
     if (mode === "minimized") setMode(id, "maximized");
+    // On the Map the workspace opens in the pane beside the diagram rather than on its own page,
+    // so the Map listens for this instead of a navigation.
+    if (pathname === "/map") {
+      window.dispatchEvent(
+        new CustomEvent("map:open-workspace", { detail: { tx: id === "new" ? null : id } }),
+      );
+      return;
+    }
     // `fresh: 1` tells the Live Workspace to show the empty upload/search template — otherwise a
     // bare URL with no `tx` is indistinguishable from "just resume whatever was last worked on".
     void navigate({ to: "/live-deal-engine", search: id === "new" ? { fresh: true } : { tx: id } });
   }
+
 
   // The blank template tab is permanent and always leftmost: recorded deals get their own tab, and
   // this one stays an empty workspace to start the next bid or offer in.
