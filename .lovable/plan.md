@@ -2,9 +2,11 @@
 
 ## What changes
 
-1. **The New tab works every time.** Pressing New while you are already on a new, empty workspace
-   currently does nothing, because the address it navigates to is the one you are already on. Each
-   press now genuinely starts a clean workspace — cleared prompt, cleared files, no bid attached.
+1. **The New tab works every time, with a new bid number.** Pressing New while you are already on a
+   new, empty workspace currently does nothing, because the address it navigates to is the one you
+   are already on. Each press now genuinely starts a clean workspace — cleared prompt, cleared files,
+   no bid attached — and always issues a fresh, unused BID number for it, never the one shown on the
+   previous new workspace.
 
 2. **Step 5 label at 11px.** The "Step 5 · Memory" text around the memory circle is set to the same
    11px as the other step labels.
