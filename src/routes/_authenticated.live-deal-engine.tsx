@@ -2005,9 +2005,10 @@ function LiveDealEngine() {
                        themselves (see the auto-search effect above) and both pulse in the
                        workflow while they run. The upload frame never comes back once a file
                        exists. */
-                    <div className="flex h-10 items-center justify-center text-xs text-muted-foreground">
-                      Finding counterparties…
-                    </div>
+                    /* The "Finding counterparties…" note lives inline on the search bar below
+                       rather than on a line of its own here. */
+                    null
+
                   ) : null}
 
                 </div>
