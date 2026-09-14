@@ -1614,7 +1614,9 @@ function WadStep({ tx, reload }: Props) {
       "Checks satisfied:",
       ...WAD_CHECKS.map((c) => {
         const s = statusFor(c.key);
-        return `  • ${c.label} — ${s?.text ?? "Confirmed by the compliance reviewer"}`;
+        if (s && s.tone === "ok") return `  • ${c.label} — ${s.text}`;
+        const detail = s ? `${s.text}; ` : "";
+        return `  • ${c.label} — ${detail}cleared by reviewer override`;
       }),
       "",
       notes ? `Case notes: ${notes}` : "",
@@ -1737,7 +1739,7 @@ function WadStep({ tx, reload }: Props) {
             <Button size="sm" variant="outline" disabled={busy || shortOnTokens} onClick={() => decide("blocked")}>
               Block
             </Button>
-            <Button size="sm" disabled={busy || !allChecked || shortOnTokens} onClick={() => decide("cleared")}>
+            <Button size="sm" disabled={busy || shortOnTokens} onClick={() => decide("cleared")}>
               Clear WaD
             </Button>
           </div>
@@ -1755,6 +1757,16 @@ function WadStep({ tx, reload }: Props) {
           <strong>{chosenCp?.name}</strong> carries a Flagged counterparty rating. This requires
           admin review before WaD proceeds — the rating itself does not clear or block any
           compliance gate on its own.
+        </div>
+      )}
+      {!allChecked && (
+        <div className="mb-4 rounded-md border border-[#F97316]/30 bg-[#F97316]/10 p-3 text-xs text-[#F97316]">
+          Still outstanding:{" "}
+          {WAD_CHECKS.filter((c) => !checks[c.key])
+            .map((c) => c.label)
+            .join("; ")}
+          . Clearing now is recorded against this deal as a reviewer override and appears on the
+          clearance certificate.
         </div>
       )}
 
