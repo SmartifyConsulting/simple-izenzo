@@ -748,6 +748,17 @@ function LiveDealEngine() {
         prev ? { ...prev, intent_confirmed_at: null, poi_sealed_at: null, poi_hash: null } : prev,
       );
     }
+    // A previous round's finalized pick (if any) no longer applies once screening is re-run for a
+    // (possibly different) set of candidates — leaving its "chosen" row in place made the Intent
+    // panel force itself open on next load/reload even though the workflow had genuinely moved
+    // back to Online Media Screening, since that panel only checked the database for any chosen
+    // row rather than whether the reopened one was the current one.
+    await supabase
+      .from("counterparties")
+      .update({ status: "screened", chosen_at: null } as never)
+      .eq("transaction_id", dealTx.id)
+      .eq("status", "chosen");
+    setDbHasChosenParty(false);
     setMediaRunning(true);
     setMediaResults(null);
     setMediaProgress({ done: 0, total: counterpartyIds.length * SOURCES_PER_COUNTERPARTY });
