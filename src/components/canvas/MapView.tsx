@@ -515,8 +515,9 @@ export function MapView({
           box={BOXES.execution}
           label=""
           icon={Briefcase}
-          sub="Concept, Pre-Reqs, Feasibility, Bankability, Project Prep, Implementation"
-          subSize="sm"
+          sub="Concept, Pre-Reqs, Feasibility, Bankability, Prep, Implementation"
+          subSize="xs"
+
           state={st("execution", "preparation")}
           lock={lock("execution", "preparation")}
           onClick={() => open("execution", "preparation")}
