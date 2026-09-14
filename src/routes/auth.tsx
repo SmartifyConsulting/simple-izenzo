@@ -4,12 +4,17 @@ import { AuthTabs } from "@/components/auth/AuthTabs";
 import { useAuth } from "@/lib/auth";
 import { applyCurrentStylePreset } from "@/lib/stylePreset";
 
-type Search = { mode?: "signin" | "signup" | undefined; next?: string | undefined };
+type Search = {
+  mode?: "signin" | "signup" | undefined;
+  next?: string | undefined;
+  expired?: boolean | undefined;
+};
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (search: Record<string, unknown>): Search => ({
     mode: search["mode"] === "signup" ? "signup" : "signin",
     next: typeof search["next"] === "string" ? (search["next"] as string) : undefined,
+    expired: search["expired"] === true || search["expired"] === "true" ? true : undefined,
   }),
   head: () => ({
     meta: [
@@ -28,7 +33,7 @@ function safeNext(next: string | undefined) {
 }
 
 function AuthPage() {
-  const { next } = Route.useSearch();
+  const { next, expired } = Route.useSearch();
   const navigate = useNavigate();
   const { session, loading } = useAuth();
 
@@ -41,7 +46,12 @@ function AuthPage() {
   }, [loading, session, next, navigate]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 px-5 py-12">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-muted/40 px-5 py-12">
+      {expired && (
+        <p className="w-full max-w-sm rounded-xl border border-border bg-background px-4 py-3 text-xs text-muted-foreground">
+          Your session expired — please sign in again to continue.
+        </p>
+      )}
       <AuthTabs next={next} defaultTab="signin" className="w-full max-w-sm rounded-2xl border border-border bg-background p-8 shadow-sm" />
     </div>
   );

@@ -16,11 +16,22 @@ import { ActivityTracker } from "@/components/ActivityTracker";
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async ({ location }) => {
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) {
-      throw redirect({ to: "/", search: { next: location.href } });
+    const first = await supabase.auth.getUser();
+    if (!first.error && first.data.user) return { user: first.data.user };
+
+    // A saved sign-in that has simply gone stale is worth one renewal attempt — otherwise a
+    // momentarily expired token quietly bounced people off the screen they clicked.
+    const refreshed = await supabase.auth.refreshSession();
+    if (!refreshed.error && refreshed.data.user) return { user: refreshed.data.user };
+
+    // Genuinely signed out: discard the unusable token so the next attempt starts clean, and say
+    // so on the sign-in screen instead of dropping the person on the home page with no reason.
+    try {
+      await supabase.auth.signOut({ scope: "local" });
+    } catch {
+      /* the session is already gone — nothing to clear */
     }
-    return { user: data.user };
+    throw redirect({ to: "/auth", search: { next: location.href, expired: true } });
   },
   component: RequireEmailVerified,
 });
