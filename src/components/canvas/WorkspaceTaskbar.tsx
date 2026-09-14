@@ -116,7 +116,12 @@ export function WorkspaceTaskbar() {
     if (mode === "minimized") setMode(id, "maximized");
     // `fresh: 1` tells the Live Workspace to show the empty upload/search template — otherwise a
     // bare URL with no `tx` is indistinguishable from "just resume whatever was last worked on".
-    void navigate({ to: "/live-deal-engine", search: id === "new" ? { fresh: true } : { tx: id } });
+    // The nonce makes every New press a distinct address, so pressing it while already on an empty
+    // workspace still resets it and issues a new BID number instead of doing nothing.
+    void navigate({
+      to: "/live-deal-engine",
+      search: id === "new" ? { fresh: true, n: Date.now() } : { tx: id },
+    });
   }
 
   function openDeal(txId: string) {

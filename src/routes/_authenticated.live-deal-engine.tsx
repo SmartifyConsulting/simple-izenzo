@@ -21,6 +21,7 @@ import {
 import { AppShell } from "@/components/layout/AppShell";
 import {
   CanvasStart,
+  claimReference,
   CounterpartyRecord,
   InlineFrame,
   FLOWCHART_PREVIEW_TX,
@@ -78,7 +79,15 @@ export const Route = createFileRoute("/_authenticated/live-deal-engine")({
   // that specific deal, instead of only ever resuming whatever was last worked on here.
   validateSearch: (
     search: Record<string, unknown>,
-  ): { tx?: string; popout?: boolean; panel?: "matches"; q?: string; seed?: string; fresh?: boolean } => ({
+  ): {
+    tx?: string;
+    popout?: boolean;
+    panel?: "matches";
+    q?: string;
+    seed?: string;
+    fresh?: boolean;
+    n?: number;
+  } => ({
     ...(typeof search["tx"] === "string" ? { tx: search["tx"] as string } : {}),
     // The router serialises this back out as a boolean, so a reload/round-trip has to be read
     // as truthy too — otherwise `popout=1` turns into `popout=false` on the next navigation.
@@ -93,6 +102,12 @@ export const Route = createFileRoute("/_authenticated/live-deal-engine")({
     // when the bare URL (no `tx`) would otherwise resume whatever deal was last worked on.
     ...(search["fresh"] === "1" || search["fresh"] === true || search["fresh"] === "true"
       ? { fresh: true }
+      : {}),
+    // Bumped every time the New tab is pressed, so pressing it again while already on an empty
+    // workspace still starts a genuinely new one (with its own BID number) instead of being a
+    // no-op navigation to the address already showing.
+    ...(Number.isFinite(Number(search["n"])) && search["n"] !== undefined && search["n"] !== ""
+      ? { n: Number(search["n"]) }
       : {}),
   }),
   component: LiveDealEngine,
@@ -241,7 +256,7 @@ function OpenDealsPicker({ currentId, hasAttachment }: { currentId: string | nul
 /** The Live Deal Engine is the one screen users work from — the workflow canvas itself, never a
  * separate per-deal detail page. */
 function LiveDealEngine() {
-  const { tx: txParam, popout, panel, q: matchQuery, seed, fresh } = Route.useSearch();
+  const { tx: txParam, popout, panel, q: matchQuery, seed, fresh, n: freshNonce } = Route.useSearch();
   const navigate = useNavigate();
   const { org } = useAuth();
   // Whatever the visitor dropped on the homepage before signing in, if anything. Read via a
@@ -1068,7 +1083,20 @@ function LiveDealEngine() {
     } catch {
       // Best-effort — worst case a later refresh resumes the old deal again.
     }
-  }, [fresh]);
+  }, [fresh, freshNonce]);
+
+  // An empty workspace still gets its BID number up front, so the map's Bid tile can show the
+  // number the bid will be recorded under rather than waiting for the first upload.
+  useEffect(() => {
+    if (dealTx || draftReference) return;
+    let cancelled = false;
+    void claimReference("bid").then((ref) => {
+      if (!cancelled) setDraftReference(ref);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [dealTx, draftReference]);
 
   // Keeps the Search dialog's "Recent" shortcuts up to date with whatever deal is actually on
   // screen, however it got there (resumed, opened from the trades list, or just recorded).
@@ -1114,14 +1142,14 @@ function LiveDealEngine() {
   /** "Fetch Interest" — runs the AI/AI+ search. Online media screening comes later, only once a
    * person has made their choice and continued. */
   async function fetchInterest(txId: string) {
-    setBidInfoCollapsed(txId, true);
+    setBidInfoCollapsed(txId, false);
     await runSearch(txId);
   }
 
   async function runSearch(txId: string) {
-    // Whichever way the search was started, the submitted detail collapses out of the way so the
-    // results have the room; the header stays clickable to open it again.
-    setBidInfoCollapsed(txId, true);
+    // Whichever way the search was started, the bid's own details stay in view beside the results
+    // rather than folding away — the header stays clickable to close them by hand.
+    setBidInfoCollapsed(txId, false);
     setFlowStep("searching");
     setSearchError(null);
     // Marks Upload Documents done and moves the active step onto Search the moment the search
@@ -1377,6 +1405,7 @@ function LiveDealEngine() {
                     readOnly={!dealTx}
                     onOpenStep={openMapStep}
                     overrideStates={stepOverrides}
+                    reference={dealTx?.reference ?? draftReference}
                     {...(dealTx ? {} : { onBid: startNewDeal })}
                   />
                   </div>
@@ -1714,9 +1743,13 @@ function LiveDealEngine() {
           {!activity && (
             <div className="mt-4">
               <CanvasStart
+                // Re-keyed on each New press so the starting card remounts and draws its own fresh
+                // BID number rather than reusing the one already on screen.
+                key={freshNonce ?? "new"}
                 initialDirection={pendingDirection}
                 initialPrompt={seed}
                 initialFiles={seedFilesFromHome}
+                initialReference={draftReference}
                 onDraftReference={setDraftReference}
                 onCreated={(tx, recorded, seed) => {
                   setPicking(false);

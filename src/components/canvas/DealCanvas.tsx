@@ -542,7 +542,7 @@ export function DealCanvas({
                           className={cn(
                             "h-full rounded-full transition-all duration-500",
                             matchProgress.searching
-                              ? "w-1/2 animate-ribbon-sweep bg-primary"
+                              ? "w-1/2 animate-ribbon-sweep bg-success"
                               : "w-full bg-destructive",
                           )}
                         />
@@ -575,7 +575,7 @@ export function DealCanvas({
                         <div
                           className={cn(
                             "h-full rounded-full transition-all duration-500",
-                            mediaProgress.failed ? "bg-destructive" : "bg-info",
+                            mediaProgress.failed ? "bg-destructive" : "bg-success",
                           )}
                           style={{
                             width: `${Math.round((mediaProgress.done / mediaProgress.total) * 100)}%`,
@@ -611,7 +611,7 @@ export function DealCanvas({
                         <div
                           className={cn(
                             "h-full rounded-full transition-all duration-500",
-                            screeningProgress.failed ? "bg-destructive" : "bg-info",
+                            screeningProgress.failed ? "bg-destructive" : "bg-success",
                           )}
                           style={{
                             width: `${Math.round((screeningProgress.done / screeningProgress.total) * 100)}%`,
@@ -1735,11 +1735,31 @@ export type RecordedActivity = {
 
 const BID_REFERENCE_BASE = 9088778;
 const OFFER_REFERENCE_BASE = 8979667;
+// Wide enough that two bids drawing at random practically never land on the same number — the old
+// span of 1000 was small enough that repeats did happen, leaving two bids sharing one BID id.
+const REFERENCE_SPAN = 900000;
 
 export function nextReference(direction: "bid" | "offer") {
   const base = direction === "bid" ? BID_REFERENCE_BASE : OFFER_REFERENCE_BASE;
-  const unique = base + Math.floor(Math.random() * 1000);
+  const unique = base + Math.floor(Math.random() * REFERENCE_SPAN);
   return `${direction === "bid" ? "BID" : "OFF"}${unique}`;
+}
+
+/** Draws a bid/offer number that isn't already in use — checked against the numbers on file before
+ * it's handed out, so two deals can never end up sharing one. */
+export async function claimReference(direction: "bid" | "offer") {
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const candidate = nextReference(direction);
+    const { data, error } = await supabase
+      .from("transactions")
+      .select("id")
+      .eq("reference", candidate)
+      .limit(1);
+    // Can't check (offline, or the column isn't there yet) — use it rather than block the bid.
+    if (error) return candidate;
+    if (!data || data.length === 0) return candidate;
+  }
+  return nextReference(direction);
 }
 
 export function CanvasStart({
@@ -1750,6 +1770,7 @@ export function CanvasStart({
   initialDirection,
   initialPrompt,
   initialFiles,
+  initialReference,
 }: {
   /** `seed` carries whatever the visitor already typed/dropped on the starting card, so the
    * caller can hand it straight to the real upload step instead of making them repeat it. */
@@ -1776,6 +1797,9 @@ export function CanvasStart({
   /** Files already dropped/selected on the marketing homepage before signing in — carried the
    * same way `initialPrompt` is, so they aren't silently dropped on the floor. */
   initialFiles?: File[] | undefined;
+  /** A BID number the caller has already drawn and shown (on the map's Bid tile, say) — used as
+   * this card's own reference instead of drawing a second, different-looking one. */
+  initialReference?: string | null | undefined;
 }) {
   const { org, orgs, user, profile, refresh } = useAuth();
   // Which company this bid/offer is traded as — only shown as a choice when the user belongs to
@@ -1784,7 +1808,7 @@ export function CanvasStart({
   // Generated the moment picking starts (not at final submit) so the workspace can show a real
   // BID/OFF id immediately — reused as-is at submit time rather than generating a second,
   // different-looking one.
-  const [draftReference, setDraftReference] = useState<string | null>(null);
+  const [draftReference, setDraftReference] = useState<string | null>(initialReference ?? null);
   const activeCompanyId = companyId ?? org?.id ?? null;
   const [picking, setPickingState] = useState(Boolean(initialDirection));
   const setPicking = (v: boolean) => {
@@ -1851,6 +1875,15 @@ export function CanvasStart({
       // back to a deterministic computed reference for this case).
       const referenceColumnMissing =
         error?.code === "42703" || error?.code === "PGRST204" || Boolean(error?.message?.includes("schema cache"));
+      // Someone else claimed the same number in the meantime — draw a fresh one and try once more
+      // rather than losing the bid or filing a duplicate.
+      if (error?.code === "23505") {
+        ({ data: newTx, error } = await supabase
+          .from("transactions")
+          .insert({ ...baseRow, reference: await claimReference(direction) } as never)
+          .select()
+          .single());
+      }
       if (referenceColumnMissing) {
         ({ data: newTx, error } = await supabase.from("transactions").insert(baseRow as never).select().single());
       }
@@ -1906,8 +1939,8 @@ export function CanvasStart({
   // direction is inferred from the document itself once it's uploaded), so a confirmation screen
   // in between would just be a click for its own sake. Whatever was already typed/dropped rides
   // along via onCreated's `seed` so the real upload step can pick up exactly where this left off.
-  function beginPicking(filesOverride?: File[]) {
-    const ref = draftReference ?? nextReference("bid");
+  async function beginPicking(filesOverride?: File[]) {
+    const ref = draftReference ?? (await claimReference("bid"));
     if (!draftReference) {
       setDraftReference(ref);
       onDraftReference?.(ref);
@@ -1936,7 +1969,7 @@ export function CanvasStart({
     appliedInitialPrompt.current = true;
     const hasSeed = (initialPrompt && initialPrompt.trim()) || (initialFiles && initialFiles.length > 0);
     if (hasSeed && !initialDirection) {
-      beginPicking();
+      void beginPicking();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1960,7 +1993,7 @@ export function CanvasStart({
           onKeyDown={(e) => {
             if (e.key === "Enter" && canBeginPicking) {
               e.preventDefault();
-              beginPicking();
+              void beginPicking();
             }
           }}
           placeholder="Enter bid description"
@@ -2013,7 +2046,7 @@ export function CanvasStart({
 
         <button
           type="button"
-          onClick={() => beginPicking()}
+          onClick={() => void beginPicking()}
           disabled={!canBeginPicking}
           aria-label="Start"
           className="flex h-10 w-10 shrink-0 items-center justify-center self-center rounded-full bg-primary text-primary-foreground transition-opacity disabled:cursor-not-allowed disabled:opacity-40"

@@ -28,7 +28,12 @@ type NodeState = "locked" | "open" | "active" | "done";
  * `lockReason`/`stepIndex` logic the step list uses, unchanged. With no deal open yet, only Bid
  * is available and it pulses as the thing to do first. */
 function nodeState(stage: StageKey, step: string, tx: Transaction | null): NodeState {
-  if (!tx) return step === "bid-offer" ? "active" : "locked";
+  // A brand-new workspace already carries its own BID number, so Bid is behind us: Upload Files is
+  // the thing to do next and pulses instead.
+  if (!tx) {
+    if (step === "bid-offer") return "done";
+    return step === "documents" ? "active" : "locked";
+  }
   if (lockReason(stage, step, tx)) return "locked";
   const idx = stepIndex(stage, step);
   const currentIdx = stepIndex(tx.stage, tx.step);
@@ -41,7 +46,7 @@ function nodeState(stage: StageKey, step: string, tx: Transaction | null): NodeS
 // Workspace: everything is placed on this canvas and scaled to the container with percentages, so
 // tiles and their connecting lines always stay aligned however wide that column is.
 const W = 960;
-const H = 1120;
+const H = 900;
 const px = (v: number) => `${(v / W) * 100}%`;
 const py = (v: number) => `${(v / H) * 100}%`;
 
@@ -73,19 +78,19 @@ const BOXES = {
   // Extra clearance below the frame's floating heading + "Governance" row so Express Intent
   // never touches either of them.
   // Widened and centred within the (also widened) Compliance frame.
-  expressIntent: { x: 60, y: 470, w: 280, h: 54 },
-  poi: { x: 60, y: 548, w: 280, h: 54 },
-  withoutADoubt: { x: 60, y: 626, w: 280, h: 62 },
-  wad: { x: 60, y: 712, w: 280, h: 62 },
-  businessDocs: { x: 60, y: 798, w: 280, h: 62 },
+  expressIntent: { x: 60, y: 420, w: 280, h: 48 },
+  poi: { x: 60, y: 476, w: 280, h: 48 },
+  withoutADoubt: { x: 60, y: 532, w: 280, h: 54 },
+  wad: { x: 60, y: 594, w: 280, h: 54 },
+  businessDocs: { x: 60, y: 656, w: 280, h: 54 },
   // Step 3 (Execution, with Entry/Exit beside it) and Step 4 (Finality) sit directly under Step 2,
   // aligned with the Compliance frame's left edge instead of off to its right.
   // Moved down ~1cm from Step 2, with even gaps between Execution, Entry/Exit and Finality.
-  execution: { x: 70, y: 965, w: 260, h: 104 },
+  execution: { x: 70, y: 778, w: 260, h: 90 },
   // Centred inside its own frame, which itself sits centred in the gap between Step 3 and Step 4.
   // Same size as the Search Results tile.
-  entryExit: { x: 410, y: 985, w: 140, h: 64 },
-  finality: { x: 635, y: 965, w: 250, h: 104 },
+  entryExit: { x: 410, y: 794, w: 140, h: 62 },
+  finality: { x: 635, y: 778, w: 250, h: 90 },
 } as const satisfies Record<string, Box>;
 
 // One outer frame holds the whole trading step — Bid, Load Deal Documents, Search, the Search
@@ -94,14 +99,14 @@ const BOXES = {
 // leaving a tall gap beneath it) so Compliance can sit right below without the diagram needing a
 // scroll.
 const TRADE_ENGINE_FRAME: Box = { x: 14, y: 46, w: 932, h: 305 };
-const COMPLIANCE_FRAME: Box = { x: 30, y: 421, w: 340, h: 449 };
+const COMPLIANCE_FRAME: Box = { x: 30, y: 386, w: 340, h: 346 };
 // Execution and Entry/Exit+Finality get the same bordered, labelled group frame as Steps 1 and
 // 2, instead of sitting as bare tiles with no frame of their own.
-const EXECUTION_FRAME: Box = { x: 30, y: 945, w: 340, h: 144 };
-const FINALITY_FRAME: Box = { x: 590, y: 945, w: 340, h: 144 };
+const EXECUTION_FRAME: Box = { x: 30, y: 762, w: 340, h: 122 };
+const FINALITY_FRAME: Box = { x: 590, y: 762, w: 340, h: 122 };
 // Entry/Exit gets the same bordered frame treatment, centred in the gap between Step 3 and 4.
-const ENTRY_EXIT_FRAME: Box = { x: 390, y: 945, w: 180, h: 144 };
-const MEMORY = { cx: 560, cy: 595, r: 127 };
+const ENTRY_EXIT_FRAME: Box = { x: 390, y: 762, w: 180, h: 122 };
+const MEMORY = { cx: 570, cy: 520, r: 118 };
 
 // A connector arriving at a group frame stops this many units short of its border, so the tip
 // points at the frame (and the heading floating on it) instead of touching or crossing into it.
@@ -134,7 +139,7 @@ const ARROWS: string[] = [
   path(topOf(BOXES.counterOffer), { x: cx(BOXES.counterOffer), y: cy(BOXES.offer) }, rightOf(BOXES.offer)),
   line(bottomOf(BOXES.choice), topOf(BOXES.socialMedia)),
   // Out of trading and down into the compliance step.
-  path(bottomOf(BOXES.socialMedia), { x: cx(BOXES.socialMedia), y: 395 }, { x: cx(BOXES.expressIntent), y: 395 }, topOf(BOXES.expressIntent)),
+  path(bottomOf(BOXES.socialMedia), { x: cx(BOXES.socialMedia), y: 366 }, { x: cx(BOXES.expressIntent), y: 366 }, topOf(BOXES.expressIntent)),
   line(bottomOf(BOXES.expressIntent), topOf(BOXES.poi)),
   line(bottomOf(BOXES.poi), topOf(BOXES.withoutADoubt)),
   line(bottomOf(BOXES.withoutADoubt), topOf(BOXES.wad)),
@@ -154,8 +159,8 @@ const ARROWS: string[] = [
   ),
   path(
     { x: cx(BOXES.finality), y: FINALITY_FRAME.y - ARROW_GAP },
-    { x: cx(BOXES.finality), y: 844 },
-    { x: MEMORY.cx, y: 844 },
+    { x: cx(BOXES.finality), y: 700 },
+    { x: MEMORY.cx, y: 700 },
     { x: MEMORY.cx, y: MEMORY.cy + MEMORY.r + ARROW_GAP },
   ),
 ];
@@ -256,7 +261,7 @@ function MapNode({
   lock?: string | null | undefined;
   sub?: string | undefined;
   /** "gate" prints the sub-line in the warning colour, as with Without a Doubt. */
-  subTone?: "muted" | "gate" | undefined;
+  subTone?: "muted" | "gate" | "id" | undefined;
   /** No border/background of its own — used when the node already sits directly inside its own
    * group Frame (Step 3, Step 4), so it doesn't draw a second, redundant box inside that one. */
   plain?: boolean | undefined;
@@ -294,7 +299,11 @@ function MapNode({
           className={cn(
             "w-full font-semibold uppercase leading-snug tracking-wide",
             subSize === "sm" ? "text-[10px]" : "text-[9.5px]",
-            subTone === "gate" ? "text-[#C1653D]" : "font-medium normal-case tracking-normal text-muted-foreground",
+            subTone === "gate"
+              ? "text-[#C1653D]"
+              : subTone === "id"
+                ? "font-mono font-bold tracking-normal text-foreground"
+                : "font-medium normal-case tracking-normal text-muted-foreground",
           )}
         >
           {sub}
@@ -317,6 +326,7 @@ export function MapView({
   onBid,
   onLoadDocuments,
   searching,
+  reference,
   onOpenStep,
   overrideStates,
 }: {
@@ -329,6 +339,9 @@ export function MapView({
   onLoadDocuments?: (() => void) | undefined;
   /** True while AI and AI+ are running, so Search pulses and shows its own progress bar. */
   searching?: boolean | undefined;
+  /** The bid/offer number this map belongs to — shown inside the Bid tile, including on a brand-new
+   * workspace whose number has been issued but whose bid is not recorded yet. */
+  reference?: string | null | undefined;
   /** When given, a tile hands the (stage, step) to the caller instead of opening its own inline
    * frame — used when the map sits beside the Live Workspace. */
   onOpenStep?: ((stage: StageKey, step: string) => void) | undefined;
@@ -358,7 +371,7 @@ export function MapView({
     icon?: typeof Search,
     opts?: {
       sub?: string;
-      subTone?: "muted" | "gate";
+      subTone?: "muted" | "gate" | "id";
       overrideKey?: string;
       state?: NodeState;
       onClick?: () => void;
@@ -412,6 +425,7 @@ export function MapView({
         {/* Step 1 — trading. Bid and Load Deal Documents drive the workspace beside the map. */}
         {node("bid", "Bid", "trading", "bid-offer", Gavel, {
           overrideKey: "bidRegistration",
+          ...(reference ? { sub: reference, subTone: "id" as const } : {}),
           ...(onBid ? { onClick: onBid } : {}),
         })}
         {node("loadDocs", "Upload Files", "trading", "documents", FileText, {
@@ -433,7 +447,7 @@ export function MapView({
             }}
           >
             <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
-              <div className="h-full w-1/3 animate-[slide-in-right_1.4s_ease-in-out_infinite] rounded-full bg-primary" />
+              <div className="h-full w-1/3 animate-[slide-in-right_1.4s_ease-in-out_infinite] rounded-full bg-success" />
             </div>
           </div>
         )}
