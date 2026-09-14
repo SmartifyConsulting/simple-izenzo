@@ -31,9 +31,12 @@ function isMarketingPath(pathname: string) {
 function DealSearchDialog({
   open,
   onOpenChange,
+  onPick,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Where a chosen bid should be opened — the Map keeps you on the map instead of navigating. */
+  onPick: (txId: string) => void;
 }) {
   const { org } = useAuth();
   const navigate = useNavigate();
