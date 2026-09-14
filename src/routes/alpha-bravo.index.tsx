@@ -32,7 +32,7 @@ const STAGES = [
     title: "Compliance & Governance",
     tag: "Engage",
     icon: ShieldCheck,
-    body: "Engage the party you've chosen, agree the terms, and sign off on what both sides have committed to — recorded as you go.",
+    body: "Prove intent to engage with the selected party, engage, agree the terms, complete KYC/KYB, and record supporting evidence.",
   },
   {
     n: "03",
