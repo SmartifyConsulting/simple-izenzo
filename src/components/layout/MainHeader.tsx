@@ -21,7 +21,6 @@ import { cn } from "@/lib/utils";
 /** The one menu the whole app uses — public pages and signed-in screens alike, so no screen has
  * a different set of items to any other. */
 const NAV = [
-  { to: "/map", label: "Map" },
   { to: "/alpha-bravo", label: "Home" },
   { to: "/alpha-bravo/about", label: "About Izenzo" },
   { to: "/alpha-bravo/how-it-works", label: "How It Works" },

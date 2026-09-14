@@ -57,7 +57,7 @@ function ResetPassword() {
       return;
     }
     toast.success("Password updated");
-    navigate({ to: "/map", replace: true });
+    navigate({ to: "/live-deal-engine", replace: true });
   }
 
   return (

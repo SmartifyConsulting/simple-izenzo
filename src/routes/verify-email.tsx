@@ -51,7 +51,7 @@ function VerifyEmailPage() {
       await refresh();
       setDone(true);
       toast.success("Email confirmed");
-      setTimeout(() => navigate({ to: "/map", replace: true }), 900);
+      setTimeout(() => navigate({ to: "/live-deal-engine", replace: true }), 900);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [verified, user?.id]);
