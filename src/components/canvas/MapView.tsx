@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
   Building2,
   CheckCircle2,
@@ -208,65 +208,17 @@ function ArrowLayer() {
 }
 
 /**
- * "Step 5 · Memory" set along the top of the Memory circle. It lives on its own layer measured in
- * real CSS pixels — the diagram layer is stretched to the container, which would squeeze the label
- * well below 11px however it is sized.
+ * "Step 5 · Memory" as a straight black pill centered above the Memory circle — not set on its
+ * curve, so its text is a plain, always-horizontal heading like every other step label.
  */
 function MemoryArcLabel() {
-  const ref = useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState({ w: 0, h: 0 });
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const measure = () => setSize({ w: el.clientWidth, h: el.clientHeight });
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  const sx = size.w ? size.w / W : 0;
-  const sy = size.h ? size.h / H : 0;
-  const arcCx = MEMORY.cx * sx;
-  const arcCy = MEMORY.cy * sy;
-  const rx = MEMORY.r * sx;
-  const ry = MEMORY.r * sy;
-
   return (
-    <div ref={ref} className="pointer-events-none absolute inset-0" aria-hidden>
-      {sx > 0 && (
-        <svg className="absolute inset-0 h-full w-full overflow-visible">
-          <defs>
-            <path
-              id="memory-arc-px"
-              fill="none"
-              d={`M ${arcCx - rx} ${arcCy} A ${rx} ${ry} 0 0 1 ${arcCx + rx} ${arcCy}`}
-            />
-          </defs>
-          {/* Always solid black (not the theme-token grey used elsewhere) — a filled backing
-              stroked along the same arc the text follows, so the ring itself isn't disturbed. */}
-          <path
-            d={`M ${arcCx - rx} ${arcCy} A ${rx} ${ry} 0 0 1 ${arcCx + rx} ${arcCy}`}
-            fill="none"
-            stroke="#000"
-            strokeWidth={18 * sy}
-            strokeLinecap="round"
-          />
-          <text
-            className="font-semibold uppercase"
-            fill="#fff"
-            fontSize={11}
-            letterSpacing="0.09em"
-            textAnchor="middle"
-            dominantBaseline="middle"
-          >
-            <textPath href="#memory-arc-px" startOffset="50%">
-              Step 5 · Memory
-            </textPath>
-          </text>
-        </svg>
-      )}
+    <div
+      className="pointer-events-none absolute z-10 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center whitespace-nowrap rounded-full bg-black px-2.5 py-0.5 text-center font-sans text-[11px] font-semibold uppercase leading-none tracking-[0.09em] text-white"
+      style={{ left: px(MEMORY.cx), top: py(MEMORY.cy - MEMORY.r) }}
+      aria-hidden
+    >
+      Step 5 · Memory
     </div>
   );
 }
@@ -537,6 +489,7 @@ export function MapView({
         })}
         {node("businessDocs", "Business Docs", "execution", "business-docs", FolderClosed, {
           sub: "POI, NDA, MOU, Contract",
+          overrideKey: "businessDocs",
         })}
 
         {/* Step 3 — execution. The word "Execution" is the frame's heading, so the tile carries only

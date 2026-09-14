@@ -798,7 +798,7 @@ export function InlineFrame({
           {/* Same heading treatment as the Bid Registration / Bid Information frames: small
               caps, muted — Intent and WaD previously read a size larger than the rest of the
               workspace. */}
-          <p className="label-caps inline-block truncate rounded-full bg-[var(--step-pill-bg)] px-2.5 py-1 font-sans text-[var(--step-pill-fg)]">
+          <p className="label-caps inline-block truncate rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 font-sans text-[var(--lw-pill-fg)]">
             {def?.label ?? step}
           </p>
           {def?.blurb && <p className="mt-1 text-[13px] text-muted-foreground">{def.blurb}</p>}
@@ -1281,7 +1281,7 @@ export function CounterpartyRecord({
       >
         <p className="label-caps text-black">
           {screeningDone
-            ? "Tick who you want to trade with"
+            ? "Select which one to trade with"
             : continued
               ? "Selected counterparties"
               : "Tick counterparties of interest to continue"}

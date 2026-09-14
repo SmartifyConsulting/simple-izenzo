@@ -295,7 +295,7 @@ function LiveDealEngine() {
   >(null);
   const [finalizing, setFinalizing] = useState(false);
   /** Which gate step the right-hand panel is currently asking the user to complete. */
-  const [stagePanel, setStagePanel] = useState<"intent" | "poi" | "wad" | null>(null);
+  const [stagePanel, setStagePanel] = useState<"intent" | "poi" | "wad" | "business-docs" | null>(null);
   // Closing the Intent frame without confirming isn't the same as confirming it — the workflow
   // pulse goes back to Online Media Screening (the last real completed step) rather than sitting
   // on Intent, which is now hidden. Cleared again the moment Intent is reopened.
@@ -351,8 +351,10 @@ function LiveDealEngine() {
     };
   }, [dealTx?.id]);
 
-  const resumedStep: "intent" | "poi" | "wad" | null = dealTx?.wad_completed_at
-    ? null
+  const resumedStep: "intent" | "poi" | "wad" | "business-docs" | null = dealTx?.wad_completed_at
+    ? dealTx.step === "business-docs"
+      ? "business-docs"
+      : null
     : dealTx?.poi_sealed_at
       ? "wad"
       : dealTx?.intent_confirmed_at
@@ -685,7 +687,10 @@ function LiveDealEngine() {
       o["onlineMedia"] = "done";
       o["intent"] = "done";
       o["poi"] = dealTx.poi_sealed_at ? "done" : "active";
-      if (dealTx.poi_sealed_at) o["wad"] = dealTx.wad_completed_at ? "done" : "active";
+      if (dealTx.poi_sealed_at) {
+        o["wad"] = dealTx.wad_completed_at ? "done" : "active";
+        if (dealTx.wad_completed_at) o["businessDocs"] = dealTx.step === "business-docs" ? "active" : "done";
+      }
       return o;
     }
 
@@ -723,7 +728,10 @@ function LiveDealEngine() {
     o["intent"] = dealTx.intent_confirmed_at ? "done" : "active";
     if (dealTx.intent_confirmed_at) {
       o["poi"] = dealTx.poi_sealed_at ? "done" : "active";
-      if (dealTx.poi_sealed_at) o["wad"] = dealTx.wad_completed_at ? "done" : "active";
+      if (dealTx.poi_sealed_at) {
+        o["wad"] = dealTx.wad_completed_at ? "done" : "active";
+        if (dealTx.wad_completed_at) o["businessDocs"] = dealTx.step === "business-docs" ? "active" : "done";
+      }
     }
     return o;
   }, [
@@ -1686,7 +1694,7 @@ function LiveDealEngine() {
             // through this pinned frame.
             <div className="glass-node space-y-1.5 bg-card p-4 [backdrop-filter:none] [background-image:none]">
               <div className="flex items-center justify-between gap-2">
-                <p className="label-caps rounded-full bg-[var(--step-pill-bg)] px-2.5 py-1 text-[var(--step-pill-fg)]">Bid Registration</p>
+                <p className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">Bid Registration</p>
                 {(((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference) && (
                   <span className="flex shrink-0 items-center gap-2 font-mono text-base font-bold tracking-wide text-foreground">
                     {workspaceDocs.length > 0 && (
@@ -1758,7 +1766,7 @@ function LiveDealEngine() {
                   type="button"
                   onClick={() => setBidInfoCollapsed(dealTx.id, bidInfoOpen)}
                   aria-expanded={bidInfoOpen}
-                  className="label-caps flex items-center gap-1.5 rounded-full bg-[var(--step-pill-bg)] px-2.5 py-1 text-[var(--step-pill-fg)] transition-colors hover:brightness-110"
+                  className="label-caps flex items-center gap-1.5 rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)] transition-colors hover:brightness-110"
                 >
                   <span aria-hidden className="w-2.5 text-center font-mono">
                     {bidInfoOpen ? "−" : "+"}
@@ -1915,7 +1923,7 @@ function LiveDealEngine() {
                 type="button"
                 onClick={() => setMediaResultsOpen(dealTx.id, !mediaResultsOpen)}
                 aria-expanded={mediaResultsOpen}
-                className="label-caps flex w-full items-center justify-between gap-1.5 rounded-full bg-[var(--step-pill-bg)] px-2.5 py-1 text-[var(--step-pill-fg)]"
+                className="label-caps flex w-full items-center justify-between gap-1.5 rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]"
               >
                 <span className="flex items-center gap-1.5">
                   <span aria-hidden className="w-2.5 text-center font-mono">
@@ -2016,7 +2024,7 @@ function LiveDealEngine() {
               {/* A brand-new workspace already reads as a bid: the same Bid Registration frame,
                   with the BID number on the heading row, around the description/upload bar. */}
               <div className="flex items-center justify-between gap-2">
-                <p className="label-caps rounded-full bg-[var(--step-pill-bg)] px-2.5 py-1 text-[var(--step-pill-fg)]">Bid Registration</p>
+                <p className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">Bid Registration</p>
                 {draftReference && (
                   <span className="shrink-0 font-mono text-base font-bold tracking-wide text-foreground">
                     {draftReference}
@@ -2123,7 +2131,10 @@ function LiveDealEngine() {
 
                 {/* Once a party is chosen the gate panel takes over the workspace — leaving the
                     match list open below it is what made the screen look stuck. */}
-                {(flowStep === "searching" || flowStep === "results") && dealTx && !stagePanel && (
+                {(flowStep === "searching" || flowStep === "results") &&
+                  dealTx &&
+                  !stagePanel &&
+                  !dealTx.wad_completed_at && (
                   <div className="space-y-2">
                     {searchError && (
                       <p className="text-xs text-destructive">Search failed: {searchError}</p>
@@ -2148,7 +2159,7 @@ function LiveDealEngine() {
                 {dealTx && stagePanel && (
                   <InlineFrame
                     tx={dealTx}
-                    stage={stagePanel === "wad" ? "compliance" : "trading"}
+                    stage={stagePanel === "wad" ? "compliance" : stagePanel === "business-docs" ? "execution" : "trading"}
                     step={stagePanel}
                     reload={() => void reloadDeal()}
                     onClose={() => {

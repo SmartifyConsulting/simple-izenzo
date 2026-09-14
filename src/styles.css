@@ -112,6 +112,11 @@
      translucent-primary pill format used on the Live Workspace headings. */
   --step-pill-bg: color-mix(in oklab, var(--primary) 10%, transparent);
   --step-pill-fg: var(--primary);
+  /* Live Workspace frame headings (Bid Registration, Bid Information, Online Media Screening
+     Results, Trade Summary, Intent/WaD) — a dark grey pill, distinct from the black used by the
+     Map/Steps step-name pills above. */
+  --lw-pill-bg: oklch(0.4 0 0);
+  --lw-pill-fg: oklch(1 0 0);
   --warning: oklch(0.78 0.14 78);
   --warning-foreground: oklch(0.18 0.02 250);
   --info: oklch(0.68 0.11 220);
@@ -252,6 +257,10 @@
      black pill, white writing. */
   --step-pill-bg: oklch(0 0 0);
   --step-pill-fg: oklch(1 0 0);
+  /* Live Workspace frame headings — dark grey rather than solid black, distinct from the Map/Steps
+     step-name pills above. */
+  --lw-pill-bg: oklch(0.4 0 0);
+  --lw-pill-fg: oklch(1 0 0);
   --warning: oklch(0.78 0.14 78);
   --warning-foreground: oklch(0.18 0.02 250);
   --info: oklch(0.51 0.24 265);
