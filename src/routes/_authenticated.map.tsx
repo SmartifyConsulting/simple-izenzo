@@ -19,7 +19,13 @@ import {
 } from "@/components/ui/select";
 import type { Transaction } from "@/lib/tx";
 
+type Search = { tx?: string | undefined; fresh?: boolean | undefined };
+
 export const Route = createFileRoute("/_authenticated/map")({
+  validateSearch: (search: Record<string, unknown>): Search => ({
+    tx: typeof search["tx"] === "string" ? (search["tx"] as string) : undefined,
+    fresh: search["fresh"] === true || search["fresh"] === "true" ? true : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Deal Map — Izenzo" },
@@ -34,6 +40,7 @@ export const Route = createFileRoute("/_authenticated/map")({
 });
 
 function MapScreen() {
+  const { tx: txParam, fresh } = Route.useSearch();
   const [selected, setSelected] = useState<string | null>(null);
   /** The Live Workspace pane on the right — opened by the Bid tile, then stays for the deal. */
   const [paneOpen, setPaneOpen] = useState(false);
@@ -55,7 +62,15 @@ function MapScreen() {
     },
   });
 
-  const tx = deals.find((d) => d.id === selected) ?? deals[0] ?? null;
+  // A bid tab at the bottom of the screen (or the Search tab) puts the bid in the address, and that
+  // takes precedence over the picker above the map.
+  const chosenId = txParam ?? selected;
+  const tx = fresh ? null : (deals.find((d) => d.id === chosenId) ?? deals[0] ?? null);
+
+  // Picking the New tab opens the empty workspace beside the map, ready to register a bid.
+  useEffect(() => {
+    if (fresh) setPaneOpen(true);
+  }, [fresh]);
 
   // While the workspace pane is open the deal is being worked on inside it, so the map keeps its
   // own copy of the record fresh — that's what moves the pulse along from tile to tile.
@@ -143,11 +158,14 @@ function MapScreen() {
               key={paneKey}
               src={paneSrc}
               title="Live Workspace"
-              className="h-[calc(100vh-14rem)] w-full rounded-2xl border border-border bg-background"
+              className="h-[calc(100vh-17rem)] w-full rounded-2xl border border-border bg-background"
             />
           </div>
         )}
       </div>
+
+      {/* Clears the bid tab strip pinned to the bottom of the screen, so nothing sits behind it. */}
+      <div className="h-12" />
 
       <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
         <DialogContent className="sm:max-w-2xl">

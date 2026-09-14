@@ -19,14 +19,11 @@ import { cn } from "@/lib/utils";
 
 // Marketing/auth surfaces where a signed-in visitor could still be browsing — the workspace
 // taskbar is an authenticated-app concept and has no business following them onto the hero page.
-// The Map screen is also excluded: it runs a deal from the diagram itself and shows the site
-// footer in that same bottom strip, so the tab dock would sit on top of it.
 function isMarketingPath(pathname: string) {
   return (
     pathname === "/" ||
     pathname.startsWith("/alpha-bravo") ||
-    pathname.startsWith("/auth") ||
-    pathname === "/map"
+    pathname.startsWith("/auth")
   );
 }
 
@@ -34,12 +31,14 @@ function isMarketingPath(pathname: string) {
 function DealSearchDialog({
   open,
   onOpenChange,
+  onPick,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Where a chosen bid should be opened — the Map keeps you on the map instead of navigating. */
+  onPick: (txId: string) => void;
 }) {
   const { org } = useAuth();
-  const navigate = useNavigate();
   const { data: deals = [] } = useQuery({
     queryKey: ["searchable-deals", org?.id],
     enabled: Boolean(org?.id) && open,
@@ -84,7 +83,7 @@ function DealSearchDialog({
                   value={`${d.reference} ${d.name}`}
                   onSelect={() => {
                     onOpenChange(false);
-                    void navigate({ to: "/live-deal-engine", search: { tx: d.id } });
+                    onPick(d.id);
                   }}
                 >
                   <span className="font-mono font-semibold">{d.reference}</span>
@@ -113,11 +112,24 @@ export function WorkspaceTaskbar() {
 
   if (isMarketingPath(pathname)) return null;
 
+  // On the Map screen the tabs drive the map itself rather than sending you off to the step list:
+  // picking a bid switches which deal the diagram is showing, and New opens the empty workspace
+  // beside it.
+  const onMap = pathname === "/map";
+
   function activate(id: string, mode: string) {
     if (mode === "minimized") setMode(id, "maximized");
+    if (onMap) {
+      void navigate({ to: "/map", search: id === "new" ? { fresh: true } : { tx: id } });
+      return;
+    }
     // `fresh: 1` tells the Live Workspace to show the empty upload/search template — otherwise a
     // bare URL with no `tx` is indistinguishable from "just resume whatever was last worked on".
     void navigate({ to: "/live-deal-engine", search: id === "new" ? { fresh: true } : { tx: id } });
+  }
+
+  function openDeal(txId: string) {
+    void navigate({ to: onMap ? "/map" : "/live-deal-engine", search: { tx: txId } });
   }
 
   // The blank template tab is permanent and always leftmost: recorded deals get their own tab, and
@@ -149,7 +161,7 @@ export function WorkspaceTaskbar() {
           New
         </button>
       </div>
-      <DealSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+      <DealSearchDialog open={searchOpen} onOpenChange={setSearchOpen} onPick={openDeal} />
 
       <div className="flex items-end gap-1 overflow-x-auto">
       {deals.map((w) => {
