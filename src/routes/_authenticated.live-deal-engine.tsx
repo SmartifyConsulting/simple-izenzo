@@ -29,6 +29,8 @@ import {
   type RecordedActivity,
 } from "@/components/canvas/DealCanvas";
 import { TradeSummary } from "@/components/canvas/TradeSummary";
+import { DecisionPackPanel } from "@/components/canvas/DecisionPackPanel";
+
 import { SubmitterIdentity } from "@/components/canvas/SubmitterIdentity";
 import { MatchResultsPanel } from "@/components/canvas/MatchResultsPanel";
 
