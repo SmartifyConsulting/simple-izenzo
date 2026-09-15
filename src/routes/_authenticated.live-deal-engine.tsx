@@ -2556,10 +2556,10 @@ function LiveDealEngine() {
 
 
 
-                {/* Once Intent is confirmed its frame is no longer the thing needing attention —
-                    fold it into a small accordion under the screening results instead of leaving
-                    it open at full size. */}
-                {dealTx && stagePanel === "intent" && dealTx.intent_confirmed_at ? (
+                {/* Confirmed Intent, kept for the rest of the deal as a folded record. It no longer
+                    depends on which step the workspace is asking about, so it stops disappearing
+                    when the flow moves to sealing, compliance or execution. */}
+                {dealTx?.intent_confirmed_at && (
                   <div className="rounded-2xl border border-border bg-card">
                     <button
                       type="button"
@@ -2567,8 +2567,13 @@ function LiveDealEngine() {
                       className="flex w-full items-center justify-between gap-2 px-3.5 py-2 text-left"
                       aria-expanded={confirmedIntentOpen}
                     >
-                      <span className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
-                        Confirmed Intent
+                      <span className="min-w-0">
+                        <span className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+                          Confirmed Intent
+                        </span>
+                        <span className="mt-1 block text-[11px] text-muted-foreground">
+                          Read the terms as they stand. Confirming does not seal them — that is the next step.
+                        </span>
                       </span>
                       <ChevronDown
                         className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", confirmedIntentOpen && "rotate-180")}
@@ -2590,9 +2595,12 @@ function LiveDealEngine() {
                       </div>
                     )}
                   </div>
-                ) : dealTx && stagePanel === "poi" && dealTx.poi_sealed_at ? (
-                  /* Sealed Proof of Intent reads the same way: a folded record whose certificate
-                     is there when it's wanted. */
+                )}
+
+                {/* Sealed Proof of Intent reads the same way: a folded record whose certificate is
+                    there when it's wanted, with the sealing sentence as subtext under the pill
+                    rather than a second heading inside the frame. */}
+                {dealTx?.poi_sealed_at && (
                   <div className="rounded-2xl border border-border bg-card">
                     <button
                       type="button"
@@ -2600,8 +2608,14 @@ function LiveDealEngine() {
                       className="flex w-full items-center justify-between gap-2 px-3.5 py-2 text-left"
                       aria-expanded={sealedPoiOpen}
                     >
-                      <span className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
-                        Proof of Intent
+                      <span className="min-w-0">
+                        <span className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+                          Proof of Intent
+                        </span>
+                        <span className="mt-1 block text-[11px] text-muted-foreground">
+                          Sealing writes the transaction state to an immutable record with a fingerprint.
+                          Compliance, execution, finality and memory stay locked until it exists.
+                        </span>
                       </span>
                       <ChevronDown
                         className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", sealedPoiOpen && "rotate-180")}
@@ -2621,10 +2635,12 @@ function LiveDealEngine() {
                       </div>
                     )}
                   </div>
-                ) : /* The human decision on the AI+ proposals comes first: Intent only opens once
-                       every proposal from the Choice pack has been accepted or rejected, and
-                       sealing only once the pre-seal pack has been decided. */
-                dealTx && stagePanel === "intent" && dbHasChosenParty && !choicePackDecided ? (
+                )}
+
+                {/* The human decision on the AI+ proposals comes first: Intent only opens once
+                    every proposal from the Choice pack has been accepted or rejected, and
+                    sealing only once the pre-seal pack has been decided. */}
+                {dealTx && stagePanel === "intent" && !dealTx.intent_confirmed_at && dbHasChosenParty && !choicePackDecided ? (
                   <div className="rounded-2xl border border-border bg-card px-3.5 py-3">
                     <p className="text-xs text-muted-foreground">
                       Accept or reject each AI+ proposal above, then Intent opens.
@@ -2637,8 +2653,12 @@ function LiveDealEngine() {
                     </p>
                   </div>
                 ) : (
-
-                  dealTx && stagePanel && (
+                  /* The active step's own panel — skipped for intent and poi once those are
+                     recorded, since the folded records above already hold them. */
+                  dealTx &&
+                  stagePanel &&
+                  !(stagePanel === "intent" && dealTx.intent_confirmed_at) &&
+                  !(stagePanel === "poi" && dealTx.poi_sealed_at) && (
                     <InlineFrame
                       tx={dealTx}
                       stage={stagePanel === "wad" ? "compliance" : stagePanel === "business-docs" ? "execution" : "trading"}
@@ -2653,6 +2673,7 @@ function LiveDealEngine() {
                   )
 
                 )}
+
 
                 {/* Only once Step 2's own documents (Business Docs) are in — not the moment the
                     compliance checks clear. Collapsed by default: it's a record to check back on,
