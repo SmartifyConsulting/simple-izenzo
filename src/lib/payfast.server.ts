@@ -60,6 +60,21 @@ export function payfastSignature(fields: Record<string, string>, passphrase: str
   return createHash("md5").update(parts.join("&")).digest("hex");
 }
 
+/** Pulls the human-readable reason out of PayFast's HTML error page, which is otherwise 13KB of
+ * markup. Falls back to a trimmed snippet when the page shape changes. */
+function payfastReason(text: string): string {
+  const block = /error-block__message"?>([\s\S]{0,400}?)<\/div>/i.exec(text);
+  if (block?.[1]) {
+    const cleaned = block[1]
+      .replace(/<[^>]*>/g, " ")
+      .replace(/^\s*\d+\.\s*/, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (cleaned) return cleaned;
+  }
+  return text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 200) || "no details returned";
+}
+
 /** Asks PayFast for an Onsite Payment identifier, which the browser then hands to
  * `window.payfast_do_onsite_payment` to open the payment window in place. */
 export async function createOnsitePayment(
@@ -71,7 +86,9 @@ export async function createOnsitePayment(
     returnUrl: string;
     cancelUrl: string;
     notifyUrl: string;
-    emailAddress?: string | null;
+    /** PayFast rejects an Onsite Payment without a buyer email address ("The email address field
+     * is required."), so this is mandatory rather than optional. */
+    emailAddress: string;
   },
 ): Promise<string> {
   const fields: Record<string, string> = {
@@ -83,8 +100,8 @@ export async function createOnsitePayment(
     m_payment_id: input.mPaymentId,
     amount: input.amountZar.toFixed(2),
     item_name: input.itemName,
+    email_address: input.emailAddress,
   };
-  if (input.emailAddress) fields["email_address"] = input.emailAddress;
   fields["signature"] = payfastSignature(fields, creds.passphrase);
 
   const body = new URLSearchParams(fields);
@@ -95,11 +112,9 @@ export async function createOnsitePayment(
   });
   const text = await res.text();
   if (!res.ok) {
-    // PayFast's error body (often a plain-text reason, sometimes JSON) is the only way to tell a
-    // bad signature apart from a bad amount/field apart from disabled sandbox credentials — a bare
-    // "(400)" left this genuinely unfixable without seeing what PayFast actually objected to.
-    throw new Error(`PayFast could not start this payment (${res.status}): ${text.slice(0, 300) || "no details returned"}`);
+    throw new Error(`PayFast declined this payment: ${payfastReason(text)}`);
   }
+
   let uuid: string | undefined;
   try {
     uuid = (JSON.parse(text) as { uuid?: string }).uuid;
