@@ -7,7 +7,9 @@ import {
   Archive,
   BadgeCheck,
   CheckCircle2,
+  ChevronDown,
   Download,
+
   Eye,
   Maximize2,
   Minimize2,
@@ -55,6 +57,8 @@ import { advance, fallbackReference, recordEvent, swapReferencePrefix, type Tran
 import type { StageKey } from "@/lib/spine";
 import { useAuth } from "@/lib/auth";
 import { searchCounterparties } from "@/lib/izenzo.functions";
+import { listCounterOffers } from "@/lib/counterOffer.functions";
+
 import { runBackgroundScreening, type ScreeningResult } from "@/lib/screening.functions";
 import { runOnlineMediaChecks, type MediaCheckResult } from "@/lib/onlineMedia.functions";
 import { listVerificationsForTx } from "@/lib/didit.functions";
@@ -456,6 +460,9 @@ function LiveDealEngine() {
     setMediaResultsOpenByTx((prev) => ({ ...prev, [txId]: open }));
   }
   const mediaResultsOpen = dealTx ? Boolean(mediaResultsOpenByTx[dealTx.id]) : false;
+  // The trade record, once everything has cleared — folded away by default.
+  const [tradeSummaryOpen, setTradeSummaryOpen] = useState(false);
+
   // Once the ask has been made for a bid, the description/drop frame never comes back — not while
   // the files are still saving, not on a refresh, not on a tab switch. Remembered per bid.
   const [submittedBids, setSubmittedBids] = useState<Set<string>>(() => new Set());
@@ -618,14 +625,18 @@ function LiveDealEngine() {
     },
   });
 
-  // Counterparty search now starts itself the moment documents are in and no matches exist yet —
-  // no more manual "Find Counterparties" click.
+  // Counterparty search starts itself once documents are in — but only after the read has
+  // finished, so it searches on what the documents actually say rather than on their file names.
+  // A read that failed doesn't dead-end the deal: the search still runs (on the description and
+  // file names) once `readError` is set.
   const autoSearchStarted = useRef<string | null>(null);
   useEffect(() => {
     if (
       !dealTx ||
       workspaceDocsPending ||
       workspaceDocs.length === 0 ||
+      rereading ||
+      !(documentSummary || readError) ||
       interestCount > 0 ||
       screening ||
       mediaRunning ||
@@ -634,7 +645,8 @@ function LiveDealEngine() {
     ) return;
     autoSearchStarted.current = dealTx.id;
     void fetchInterest(dealTx.id);
-  }, [dealTx?.id, workspaceDocsPending, workspaceDocs.length, interestCount, screening, mediaRunning, flowStep]);
+  }, [dealTx?.id, workspaceDocsPending, workspaceDocs.length, rereading, documentSummary, readError, interestCount, screening, mediaRunning, flowStep]);
+
 
   // A short chime whenever the workflow moves itself on to the next step — search finishing,
   // media screening completing, an auto-advance firing — so a step change is audible even when
@@ -655,7 +667,20 @@ function LiveDealEngine() {
    * "searching" apart from "results are in", so the page says it outright. Search AI + AI+ and
    * Online Media Screening are two separate, independently-timed operations — each pulses only
    * while it is itself actually running, not just because the other one is. */
+  // Is a counter offer sitting out there unanswered? While one is, that's the live step.
+  const listCounterOffersFn = useServerFn(listCounterOffers);
+  const { data: counterOfferData } = useQuery({
+    queryKey: ["counter-offers-open", dealTx?.id],
+    enabled: !!dealTx?.id,
+    refetchInterval: 30000,
+    queryFn: () => listCounterOffersFn({ data: { transactionId: dealTx!.id } }),
+  });
+  const openCounterOffer = (counterOfferData?.offers ?? []).some(
+    (o: { direction: string; status: string }) => o.direction === "from_bidder" && o.status === "sent",
+  );
+
   const stepOverrides = useMemo(() => {
+
     const o: Record<string, "locked" | "open" | "active" | "done"> = {};
     if (!dealTx) return o;
     o["bidRegistration"] = "done";
@@ -692,7 +717,16 @@ function LiveDealEngine() {
         // checks row while they are outstanding, and the gate row only turns green with them.
         o["kycKyb"] = dealTx.wad_completed_at ? "done" : "active";
         o["wad"] = dealTx.wad_completed_at ? "done" : "open";
-        if (dealTx.wad_completed_at) o["businessDocs"] = dealTx.step === "business-docs" ? "active" : "done";
+        if (dealTx.wad_completed_at) {
+          o["businessDocs"] = dealTx.step === "business-docs" ? "active" : "done";
+          // Business documents in: Execution is what's next, so that's where the pulse goes.
+          if (o["businessDocs"] === "done") {
+            o["execution"] = "active";
+            o["preparation"] = "active";
+          }
+
+        }
+
       }
       return o;
     }
@@ -734,11 +768,24 @@ function LiveDealEngine() {
       if (dealTx.poi_sealed_at) {
         o["kycKyb"] = dealTx.wad_completed_at ? "done" : "active";
         o["wad"] = dealTx.wad_completed_at ? "done" : "open";
-        if (dealTx.wad_completed_at) o["businessDocs"] = dealTx.step === "business-docs" ? "active" : "done";
+        if (dealTx.wad_completed_at) {
+          o["businessDocs"] = dealTx.step === "business-docs" ? "active" : "done";
+          if (o["businessDocs"] === "done") {
+            o["execution"] = "active";
+            o["preparation"] = "active";
+          }
+
+        }
+
       }
     }
+    // A counter offer that has gone out and not been answered is what everything now waits on, so
+    // the pulse sits on Counter Offer until a reply is recorded.
+    if (openCounterOffer) o["counterOffer"] = "active";
     return o;
   }, [
+    openCounterOffer,
+
     dealTx,
     flowStep,
     mediaRunning,
@@ -1593,26 +1640,24 @@ function LiveDealEngine() {
                 </button>
               </div>
             </div>
-            <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
+            <div className={cn("mt-3 min-h-0 flex-1", mapOpen ? "overflow-hidden" : "overflow-y-auto")}>
               {/* The map is the visual "where am I" companion — the same states, the same click
-                  targets, opening the same step frames as the stepper. */}
-              {/* The diagram keeps a legible minimum width; on a very narrow column it scrolls
-                  sideways rather than shrinking its labels into illegibility. */}
+                  targets, opening the same step frames as the stepper. It scales to the panel, so
+                  neither a sideways nor a downward scrollbar appears around it; the step list keeps
+                  its own vertical scroll. */}
               {mapOpen ? (
-                <div className="overflow-x-auto">
-                  <div className="min-w-[420px]">
-                  <MapView
-                    tx={dealTx ?? null}
-                    reload={() => void reloadDeal()}
-                    readOnly={!dealTx}
-                    onOpenStep={openMapStep}
-                    overrideStates={stepOverrides}
-                    reference={dealTx?.reference ?? draftReference}
-                    {...(dealTx ? {} : { onBid: startNewDeal })}
-                  />
-                  </div>
-                </div>
+                <MapView
+                  tx={dealTx ?? null}
+                  reload={() => void reloadDeal()}
+                  readOnly={!dealTx}
+                  onOpenStep={openMapStep}
+                  overrideStates={stepOverrides}
+                  reference={dealTx?.reference ?? draftReference}
+                  {...(dealTx ? {} : { onBid: startNewDeal })}
+                />
               ) : (
+
+
                 <ClassicView
                   tx={dealTx ?? FLOWCHART_PREVIEW_TX}
                   reload={() => void reloadDeal()}
@@ -1997,7 +2042,10 @@ function LiveDealEngine() {
                       key={dealTx.id}
                       transactionId={dealTx.id}
                       reference={(dealTx as unknown as { reference?: string | null }).reference ?? draftReference}
-                      onNext={() => void runSearch(dealTx.id)}
+                      // The search is not started here: the auto-search effect above runs it once
+                      // the documents have finished being read, so it searches on their content.
+                      onNext={() => {}}
+
                       onSubmitted={() => markSubmitted(dealTx.id)}
                       onFirstClassified={({ directionGuess }) => void applyDirectionGuess(directionGuess)}
                       autoAdvance
@@ -2173,10 +2221,31 @@ function LiveDealEngine() {
                 )}
 
                 {/* Only once Step 2's own documents (Business Docs) are in — not the moment the
-                    compliance checks clear. */}
+                    compliance checks clear. Collapsed by default: it's a record to check back on,
+                    and Execution is what needs attention by then. */}
                 {dealTx?.wad_completed_at && stepOverrides["businessDocs"] === "done" && (
-                  <TradeSummary tx={dealTx} />
+                  <div className="mt-3 rounded-2xl border border-border bg-card">
+                    <button
+                      type="button"
+                      onClick={() => setTradeSummaryOpen((v) => !v)}
+                      className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
+                      aria-expanded={tradeSummaryOpen}
+                    >
+                      <span className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+                        Trade Summary
+                      </span>
+                      <ChevronDown
+                        className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", tradeSummaryOpen && "rotate-180")}
+                      />
+                    </button>
+                    {tradeSummaryOpen && (
+                      <div className="px-4 pb-4">
+                        <TradeSummary tx={dealTx} />
+                      </div>
+                    )}
+                  </div>
                 )}
+
               </div>
             ) : null}
         </div>

@@ -67,6 +67,7 @@ import { Route as AlphaBravoAboutSlugRouteImport } from './routes/alpha-bravo.ab
 import { Route as AlphaBravoRespondersIndexRouteImport } from './routes/alpha-bravo.responders.index'
 import { Route as AlphaBravoRespondersLocationJurisdictionRouteImport } from './routes/alpha-bravo.responders.location.$jurisdiction'
 import { Route as AlphaBravoRespondersSectorSectorRouteImport } from './routes/alpha-bravo.responders.sector.$sector'
+import { Route as ApiPublicPayfastItnRouteImport } from './routes/api/public/payfast/itn'
 import { Route as ApiPublicWebhooksDiditRouteImport } from './routes/api/public/webhooks/didit'
 import { Route as AuthenticatedTxIdStageStepRouteImport } from './routes/_authenticated.tx.$id.$stage.$step'
 
@@ -374,6 +375,11 @@ const AlphaBravoRespondersSectorSectorRoute =
     path: '/sector/$sector',
     getParentRoute: () => AlphaBravoRespondersRoute,
   } as any)
+const ApiPublicPayfastItnRoute = ApiPublicPayfastItnRouteImport.update({
+  id: '/api/public/payfast/itn',
+  path: '/api/public/payfast/itn',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicWebhooksDiditRoute = ApiPublicWebhooksDiditRouteImport.update({
   id: '/api/public/webhooks/didit',
   path: '/api/public/webhooks/didit',
@@ -444,6 +450,7 @@ export interface FileRoutesByFullPath {
   '/alpha-bravo/responders/': typeof AlphaBravoRespondersIndexRoute
   '/alpha-bravo/responders/location/$jurisdiction': typeof AlphaBravoRespondersLocationJurisdictionRoute
   '/alpha-bravo/responders/sector/$sector': typeof AlphaBravoRespondersSectorSectorRoute
+  '/api/public/payfast/itn': typeof ApiPublicPayfastItnRoute
   '/api/public/webhooks/didit': typeof ApiPublicWebhooksDiditRoute
   '/tx/$id/$stage/$step': typeof AuthenticatedTxIdStageStepRoute
 }
@@ -502,6 +509,7 @@ export interface FileRoutesByTo {
   '/alpha-bravo/responders': typeof AlphaBravoRespondersIndexRoute
   '/alpha-bravo/responders/location/$jurisdiction': typeof AlphaBravoRespondersLocationJurisdictionRoute
   '/alpha-bravo/responders/sector/$sector': typeof AlphaBravoRespondersSectorSectorRoute
+  '/api/public/payfast/itn': typeof ApiPublicPayfastItnRoute
   '/api/public/webhooks/didit': typeof ApiPublicWebhooksDiditRoute
   '/tx/$id/$stage/$step': typeof AuthenticatedTxIdStageStepRoute
 }
@@ -565,6 +573,7 @@ export interface FileRoutesById {
   '/alpha-bravo/responders/': typeof AlphaBravoRespondersIndexRoute
   '/alpha-bravo/responders/location/$jurisdiction': typeof AlphaBravoRespondersLocationJurisdictionRoute
   '/alpha-bravo/responders/sector/$sector': typeof AlphaBravoRespondersSectorSectorRoute
+  '/api/public/payfast/itn': typeof ApiPublicPayfastItnRoute
   '/api/public/webhooks/didit': typeof ApiPublicWebhooksDiditRoute
   '/_authenticated/tx/$id/$stage/$step': typeof AuthenticatedTxIdStageStepRoute
 }
@@ -628,6 +637,7 @@ export interface FileRouteTypes {
     | '/alpha-bravo/responders/'
     | '/alpha-bravo/responders/location/$jurisdiction'
     | '/alpha-bravo/responders/sector/$sector'
+    | '/api/public/payfast/itn'
     | '/api/public/webhooks/didit'
     | '/tx/$id/$stage/$step'
   fileRoutesByTo: FileRoutesByTo
@@ -686,6 +696,7 @@ export interface FileRouteTypes {
     | '/alpha-bravo/responders'
     | '/alpha-bravo/responders/location/$jurisdiction'
     | '/alpha-bravo/responders/sector/$sector'
+    | '/api/public/payfast/itn'
     | '/api/public/webhooks/didit'
     | '/tx/$id/$stage/$step'
   id:
@@ -748,6 +759,7 @@ export interface FileRouteTypes {
     | '/alpha-bravo/responders/'
     | '/alpha-bravo/responders/location/$jurisdiction'
     | '/alpha-bravo/responders/sector/$sector'
+    | '/api/public/payfast/itn'
     | '/api/public/webhooks/didit'
     | '/_authenticated/tx/$id/$stage/$step'
   fileRoutesById: FileRoutesById
@@ -774,6 +786,7 @@ export interface RootRouteChildren {
   SolutionsSovereignsRoute: typeof SolutionsSovereignsRoute
   SolutionsTradersRoute: typeof SolutionsTradersRoute
   VerifyCompleteRoute: typeof VerifyCompleteRoute
+  ApiPublicPayfastItnRoute: typeof ApiPublicPayfastItnRoute
   ApiPublicWebhooksDiditRoute: typeof ApiPublicWebhooksDiditRoute
 }
 
@@ -1185,6 +1198,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AlphaBravoRespondersSectorSectorRouteImport
       parentRoute: typeof AlphaBravoRespondersRoute
     }
+    '/api/public/payfast/itn': {
+      id: '/api/public/payfast/itn'
+      path: '/api/public/payfast/itn'
+      fullPath: '/api/public/payfast/itn'
+      preLoaderRoute: typeof ApiPublicPayfastItnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/webhooks/didit': {
       id: '/api/public/webhooks/didit'
       path: '/api/public/webhooks/didit'
@@ -1341,6 +1361,7 @@ const rootRouteChildren: RootRouteChildren = {
   SolutionsSovereignsRoute: SolutionsSovereignsRoute,
   SolutionsTradersRoute: SolutionsTradersRoute,
   VerifyCompleteRoute: VerifyCompleteRoute,
+  ApiPublicPayfastItnRoute: ApiPublicPayfastItnRoute,
   ApiPublicWebhooksDiditRoute: ApiPublicWebhooksDiditRoute,
 }
 export const routeTree = rootRouteImport

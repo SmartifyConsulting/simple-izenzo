@@ -1870,7 +1870,9 @@ function BusinessDocsStep({ tx, reload }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [docType, setDocType] = useState(BUSINESS_DOC_TYPES[0]!.value);
+  // Starts on Other, so a file can be dropped without picking a type first.
+  const [docType, setDocType] = useState("other");
+
 
   const { data: docs = [] } = useQuery({
     queryKey: ["business-docs", tx.id],

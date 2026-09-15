@@ -17,6 +17,9 @@ import { when } from "@/lib/tx";
 import { TOKEN_PRICE_USD } from "@/lib/spine";
 import { cn } from "@/lib/utils";
 import { formatHomeCurrency } from "@/lib/currency";
+import { useServerFn } from "@tanstack/react-start";
+import { getTokenPurchaseStatus, payfastAvailable, startTokenPurchase } from "@/lib/payfast.functions";
+
 
 export const Route = createFileRoute("/_authenticated/credits")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -84,6 +87,14 @@ function Credits() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
+  const startPurchase = useServerFn(startTokenPurchase);
+  const purchaseStatus = useServerFn(getTokenPurchaseStatus);
+  const payfastCheck = useServerFn(payfastAvailable);
+  const { data: payments } = useQuery({
+    queryKey: ["payfast-available"],
+    queryFn: () => payfastCheck({}),
+  });
+
   const [amount, setAmount] = useState(1);
   const [orgFilter, setOrgFilter] = useState("all");
   const isAdmin = roles.includes("admin");
@@ -144,6 +155,21 @@ function Credits() {
     .filter((r) => r.delta < 0 && new Date(r.created_at).getFullYear() === currentYear)
     .reduce((sum, r) => sum + Math.abs(r.delta), 0);
 
+  /** Loads PayFast's onsite engine once, so the payment window can open in place. */
+  async function loadPayFastEngine(sandbox: boolean) {
+    if (typeof window === "undefined") return;
+    if ((window as unknown as { payfast_do_onsite_payment?: unknown }).payfast_do_onsite_payment) return;
+    await new Promise<void>((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = sandbox
+        ? "https://sandbox.payfast.co.za/onsite/engine.js"
+        : "https://www.payfast.co.za/onsite/engine.js";
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error("The payment window could not be loaded."));
+      document.head.appendChild(script);
+    });
+  }
+
   async function buy() {
     if (!org) return;
     const n = amount;
@@ -151,27 +177,61 @@ function Credits() {
       toast.error("Enter how many tokens to buy.");
       return;
     }
+    if (payments && !payments.available) {
+      toast.error("Card payments are not connected yet.");
+      return;
+    }
     setBusy(true);
     try {
-      const { error } = await supabase.rpc("atomic_token_adjust", {
-        p_org_id: org.id,
-        p_delta: n,
-        p_reason: `Purchased ${n} token${n === 1 ? "" : "s"}`,
+      const started = await startPurchase({
+        data: { orgId: org.id, tokens: n, origin: window.location.origin },
       });
-      if (error) throw error;
+      await loadPayFastEngine(payments?.sandbox !== false);
+      const onsite = (
+        window as unknown as {
+          payfast_do_onsite_payment?: (opts: { uuid: string }, cb?: (ok: boolean) => void) => void;
+        }
+      ).payfast_do_onsite_payment;
+      if (!onsite) throw new Error("The payment window could not be opened.");
+
+      const paid = await new Promise<boolean>((resolve) => {
+        onsite({ uuid: started.uuid }, (ok: boolean) => resolve(Boolean(ok)));
+      });
+      if (!paid) {
+        toast.message("Payment cancelled — no tokens were bought.");
+        return;
+      }
+
+      // Tokens land only once PayFast's own confirmation reaches us, so wait for that.
+      toast.message("Payment received — confirming…");
+      let credited = false;
+      for (let i = 0; i < 20; i++) {
+        const status = await purchaseStatus({ data: { mPaymentId: started.mPaymentId } });
+        if (status.status === "complete") {
+          credited = true;
+          break;
+        }
+        if (status.status === "failed" || status.status === "cancelled") break;
+        await new Promise((r) => setTimeout(r, 1500));
+      }
       await refresh();
       await qc.invalidateQueries({ queryKey: ["credit_ledger"] });
-      toast.success(`${n} token${n === 1 ? "" : "s"} added`);
-      setAmount(1);
-      // Drop straight back to whatever was waiting on tokens — its gate button is unlocked the
-      // moment the balance lands, so there's nothing left to click through here.
-      if (returnTo) void navigate({ to: returnTo });
+      if (credited) {
+        toast.success(`${n} token${n === 1 ? "" : "s"} added`);
+        setAmount(1);
+        // Drop straight back to whatever was waiting on tokens — its gate button is unlocked the
+        // moment the balance lands, so there's nothing left to click through here.
+        if (returnTo) void navigate({ to: returnTo });
+      } else {
+        toast.message("Payment is still being confirmed — your tokens will appear shortly.");
+      }
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
       setBusy(false);
     }
   }
+
 
   return (
     <AppShell title="Tokens" description="One token is USD 10">

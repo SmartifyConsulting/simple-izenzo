@@ -38,7 +38,9 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { CounterOfferDialog } from "./CounterOfferDialog";
 import { raiseChallenge, listChallenges, type MatchChallenge } from "@/lib/challenges.functions";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -979,6 +981,11 @@ export function CounterpartyRecord({
   // Collapsed automatically the moment background screening takes over, so the panel doesn't keep
   // showing both sets of findings at once — still reachable by hand via the header toggle.
   const [mediaExpanded, setMediaExpanded] = useState(true);
+  // The AI/AI+ match list, kept as a folded record above the screening findings.
+  const [searchResultsExpanded, setSearchResultsExpanded] = useState(false);
+  // Negotiation window for one shortlisted counterparty.
+  const [counterOfferFor, setCounterOfferFor] = useState<{ id: string; name: string } | null>(null);
+
   const movedToScreening = screening || screeningResults !== null;
   useEffect(() => {
     if (movedToScreening) setMediaExpanded(false);
@@ -1168,7 +1175,53 @@ export function CounterpartyRecord({
     <div
       className="rounded-2xl border-2 border-primary bg-slate-100 p-4"
     >
+      {/* The match list from the AI/AI+ search, kept as a folded record above the screening
+          findings. A shortlisted company can be taken into a negotiation from here. */}
+      {candidates.length > 0 && mediaResults && mediaResults.length > 0 && (
+        <div className="space-y-2 pb-3">
+          <button
+            type="button"
+            onClick={() => setSearchResultsExpanded((v) => !v)}
+            aria-expanded={searchResultsExpanded}
+            className="flex w-full items-center justify-between gap-2"
+          >
+            <span className="label-caps text-slate-600">Search results ({candidates.length})</span>
+            <ChevronDown
+              className={cn(
+                "h-3.5 w-3.5 shrink-0 text-slate-500 transition-transform",
+                searchResultsExpanded && "rotate-180",
+              )}
+            />
+          </button>
+          {searchResultsExpanded && (
+            <ul className="space-y-1.5">
+              {candidates.map((c) => (
+                <li key={`sr-${c.id}`} className="flex items-center gap-2">
+                  <span className="min-w-0 flex-1 truncate text-xs text-slate-800">{c.name}</span>
+                  {c.score != null && (
+                    <span className="shrink-0 rounded-full border border-foreground bg-foreground px-2 py-0.5 text-[10px] font-semibold text-background">
+                      {c.score}%
+                    </span>
+                  )}
+                  {c.shortlisted && txId && (
+                    <button
+                      type="button"
+                      title="Start a counter offer"
+                      onClick={() => setCounterOfferFor({ id: c.id, name: c.name })}
+                      className="shrink-0 rounded p-1 text-slate-500 hover:bg-slate-200 hover:text-slate-900"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       {mediaResults && mediaResults.length > 0 && (
+
         <div className="space-y-2.5 pb-3">
           <button
             type="button"
@@ -1374,6 +1427,18 @@ export function CounterpartyRecord({
                   </span>
                 )}
               </label>
+              {/* Once a company is ticked, a negotiation can be opened with them from here. */}
+              {c.shortlisted && txId && (
+                <button
+                  type="button"
+                  title="Start a counter offer"
+                  onClick={() => setCounterOfferFor({ id: c.id, name: c.name })}
+                  className="shrink-0 rounded p-1 text-slate-500 hover:bg-slate-200 hover:text-slate-900"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </button>
+              )}
+
             </li>
           ))}
         </ul>
@@ -1526,7 +1591,19 @@ export function CounterpartyRecord({
           )}
         </DialogContent>
       </Dialog>
+
+      {txId && counterOfferFor && (
+        <CounterOfferDialog
+          open
+          onOpenChange={(o) => !o && setCounterOfferFor(null)}
+          txId={txId}
+          counterpartyId={counterOfferFor.id}
+          counterpartyName={counterOfferFor.name}
+          {...(onContinue ? { onProceed: () => onContinue([counterOfferFor.id]) } : {})}
+        />
+      )}
     </div>
+
   );
 }
 

@@ -64,6 +64,13 @@
       "when": 1789414303405,
       "tag": "0008_unique_transaction_reference",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1789431362783,
+      "tag": "0009_counter_offers_and_token_purchases",
+      "breakpoints": true
     }
   ]
 }
