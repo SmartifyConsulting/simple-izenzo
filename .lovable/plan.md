@@ -22,9 +22,10 @@ instead of a long open panel pushing everything down.
 The document type on the business documents upload starts on Other, so a file can be dropped
 without picking a type first.
 
-## 4. Workflow map scrollbar removed
+## 4. Workflow map scrollbars removed
 
-The map no longer sits in a horizontally scrolling box — it scales to the column width.
+Neither a sideways nor a downward scrollbar appears around the map — it scales to fit the panel.
+
 
 ## 5. Search results in their own collapsed frame
 
