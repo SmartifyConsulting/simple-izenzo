@@ -1367,6 +1367,25 @@ function LiveDealEngine() {
     setFlowStep("documents");
     setAttachments([]);
     setDocumentSummary(null);
+    // Nothing of the previous bid may survive into an empty workspace — no bidder details, no
+    // search or screening findings, no open gate panel.
+    setScreening(false);
+    setScreeningResults(null);
+    setScreeningProgress(null);
+    setMediaRunning(false);
+    setMediaResults(null);
+    setMediaProgress(null);
+    setHasChosen(false);
+    setDbHasChosenParty(false);
+    setIntentDismissed(false);
+    setStagePanel(null);
+    setMapPanel(null);
+    setSearchError(null);
+    setReadError(null);
+    setTradeSummaryOpen(false);
+    setConfirmedIntentOpen(false);
+    setDirection(null);
+    setPendingDirection(null);
     try {
       localStorage.removeItem(ACTIVE_DEAL_KEY);
     } catch {
