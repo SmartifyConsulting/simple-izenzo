@@ -91,17 +91,21 @@ export async function createOnsitePayment(
     emailAddress: string;
   },
 ): Promise<string> {
+  // The field order is PayFast's own documented order, not ours: PayFast rebuilds the signature
+  // in that order, so email_address must come before m_payment_id/amount/item_name. Any other
+  // order fails with "Generated signature does not match submitted signature."
   const fields: Record<string, string> = {
     merchant_id: creds.merchantId,
     merchant_key: creds.merchantKey,
     return_url: input.returnUrl,
     cancel_url: input.cancelUrl,
     notify_url: input.notifyUrl,
+    email_address: input.emailAddress,
     m_payment_id: input.mPaymentId,
     amount: input.amountZar.toFixed(2),
     item_name: input.itemName,
-    email_address: input.emailAddress,
   };
+
   fields["signature"] = payfastSignature(fields, creds.passphrase);
 
   const body = new URLSearchParams(fields);
