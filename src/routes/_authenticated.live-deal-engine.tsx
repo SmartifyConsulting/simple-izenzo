@@ -2443,7 +2443,16 @@ function LiveDealEngine() {
                               >
                                 {m.name}
                               </label>
+                              {/* The one intent was confirmed with, marked on its own row. */}
+                              {dealTx.intent_confirmed_at &&
+                                chosenPartyName &&
+                                m.name === chosenPartyName && (
+                                  <span className="shrink-0 rounded-full bg-success/15 px-1.5 py-0.5 text-[10px] font-medium text-success">
+                                    Confirmed Intent
+                                  </span>
+                                )}
                             </div>
+
                             <ul className="mt-1.5 space-y-1">
                               {m.findings.map((f) => (
                                 <li key={f.source} className="flex items-center justify-between gap-2 text-[11px]">
