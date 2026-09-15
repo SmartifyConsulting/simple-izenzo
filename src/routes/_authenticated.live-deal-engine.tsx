@@ -2188,10 +2188,31 @@ function LiveDealEngine() {
                 )}
 
                 {/* Only once Step 2's own documents (Business Docs) are in — not the moment the
-                    compliance checks clear. */}
+                    compliance checks clear. Collapsed by default: it's a record to check back on,
+                    and Execution is what needs attention by then. */}
                 {dealTx?.wad_completed_at && stepOverrides["businessDocs"] === "done" && (
-                  <TradeSummary tx={dealTx} />
+                  <div className="mt-3 rounded-2xl border border-border bg-card">
+                    <button
+                      type="button"
+                      onClick={() => setTradeSummaryOpen((v) => !v)}
+                      className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
+                      aria-expanded={tradeSummaryOpen}
+                    >
+                      <span className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+                        Trade Summary
+                      </span>
+                      <ChevronDown
+                        className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", tradeSummaryOpen && "rotate-180")}
+                      />
+                    </button>
+                    {tradeSummaryOpen && (
+                      <div className="px-4 pb-4">
+                        <TradeSummary tx={dealTx} />
+                      </div>
+                    )}
+                  </div>
                 )}
+
               </div>
             ) : null}
         </div>
