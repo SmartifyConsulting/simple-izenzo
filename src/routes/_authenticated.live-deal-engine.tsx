@@ -676,7 +676,7 @@ function LiveDealEngine() {
     queryFn: () => listCounterOffersFn({ data: { transactionId: dealTx!.id } }),
   });
   const openCounterOffer = (counterOfferData?.offers ?? []).some(
-    (o) => o.direction === "from_bidder" && o.status === "sent",
+    (o: { direction: string; status: string }) => o.direction === "from_bidder" && o.status === "sent",
   );
 
   const stepOverrides = useMemo(() => {
