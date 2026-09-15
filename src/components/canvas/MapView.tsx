@@ -55,15 +55,19 @@ type Box = { x: number; y: number; w: number; h: number };
 const BOXES = {
   // Raised (was 80) so Step 1's frame starts level with the Bid Registration frame in the Live
   // Workspace column beside it, instead of sitting lower with a bigger gap above it.
-  bid: { x: 40, y: 58, w: 160, h: 56 },
+  // Moved down slightly so the arrow into Load Deal Documents matches the length of every other
+  // down-arrow on the map (20 units — the same span as Online Screening into Express Intent).
+  bid: { x: 40, y: 76, w: 160, h: 56 },
   loadDocs: { x: 40, y: 152, w: 160, h: 56 },
   // Search sits level with Load Deal Documents (same centre-line, for a straight connector), and
   // the Search Results card sits directly beneath Search — now a single compact line of results
   // rather than a tall stacked list, so Choice/Counter Offer/Online Media Screening can all sit
   // higher, letting the rest of the diagram move up to fit without scrolling.
-  search: { x: 230, y: 149, w: 160, h: 62 },
+  // Load Deal Documents → Search → Search Results → Choice now sit on three equal
+  // horizontal gaps (~23.3 units each) instead of the first gap reading wider than the other two.
+  search: { x: 223.3, y: 149, w: 160, h: 62 },
   // Search Results now sits in line between Search and Choice, all on the same row.
-  steps: { x: 410, y: 148, w: 140, h: 64 },
+  steps: { x: 406.7, y: 148, w: 140, h: 64 },
   // Offer/Choice/Counter Offer/Online Media Screening move further right to leave room for the
   // Search Results card between Search and Choice.
   offer: { x: 570, y: 58, w: 160, h: 56 },
@@ -71,22 +75,24 @@ const BOXES = {
   // Counter Offer sits at the very right edge of the Trading frame, level with Choice and Search.
   counterOffer: { x: 750, y: 148, w: 150, h: 64 },
   // Wide enough that "Online Screening" fits on one line instead of wrapping, and only one line
-  // tall — so the Step 1 frame loses the height the two-line tile needed.
-  socialMedia: { x: 550, y: 233, w: 200, h: 48 },
+  // tall — so the Step 1 frame loses the height the two-line tile needed. Moved up 5 units (with
+  // Express Intent below it) so its own arrow into Choice above it is also a 20-unit span.
+  socialMedia: { x: 550, y: 228, w: 200, h: 48 },
   // Express Intent now lives inside Step 1's own frame, directly under Online Screening — it's
   // the "Steps" list order (Choice, Online Media Screening, Intent) mirrored on the map, instead
   // of visually grouped with Step 2's checks even though it advances the same trading stage.
-  expressIntent: { x: 510, y: 301, w: 280, h: 48 },
-  // Step 2 (GRC)'s remaining checks — spread 84 units apart so the connecting arrow between
-  // each pair reads clearly instead of the tiles nearly touching; Step 3/4 follow well beneath
-  // it, with the gap to each neighbour trimmed slightly (was 50) so they still fit on the canvas.
-  // Step 2 through 4 and Entry/Exit all shifted down 20 units together (relative positions
-  // between them unchanged) to open up room below Step 1 for the arrow pointing into Step 2.
+  expressIntent: { x: 510, y: 296, w: 280, h: 48 },
+  // Step 2 (GRC)'s remaining checks — every connecting arrow between them is the same 20-unit span
+  // as Online Screening → Express Intent above, instead of three different lengths; Step 3/4
+  // follow well beneath it, with the gap to each neighbour trimmed slightly (was 50) so they still
+  // fit on the canvas. Step 2 through 4 and Entry/Exit all shifted down 20 units together
+  // (relative positions between them unchanged) to open up room below Step 1 for the arrow
+  // pointing into Step 2.
   poi: { x: 60, y: 462, w: 280, h: 48 },
   // The KYC/KYB/PEP/AML checks now run before Without a Doubt, so they sit above it.
-  wad: { x: 60, y: 546, w: 280, h: 54 },
-  withoutADoubt: { x: 60, y: 630, w: 280, h: 54 },
-  businessDocs: { x: 60, y: 714, w: 280, h: 54 },
+  wad: { x: 60, y: 530, w: 280, h: 54 },
+  withoutADoubt: { x: 60, y: 604, w: 280, h: 54 },
+  businessDocs: { x: 60, y: 678, w: 280, h: 54 },
   // Step 3 (Execution, with Entry/Exit beside it) and Step 4 (Finality) sit well clear of Step 2,
   // all 40% flatter than before — and wider, so their detail lines still fit.
   execution: { x: 45, y: 841, w: 310, h: 58 },
@@ -537,20 +543,21 @@ export function MapView({
           className={cn(
             // Border always reads like the other steps' group frames (a steady border-border)
             // rather than dimming when locked — only the text/icon show that state.
-            "absolute flex flex-col items-center justify-center gap-1 rounded-full border border-border bg-card/40 px-5 text-center font-sans transition-colors",
+            "absolute rounded-full border border-border bg-card/40 px-5 text-center font-sans transition-colors",
             memoryState === "open" && "text-foreground hover:border-primary/60",
             memoryState === "done" && "border-success/70 text-success",
             memoryState === "active" && "animate-throb-aqua border-primary text-primary",
             memoryState === "locked" && "cursor-not-allowed text-muted-foreground",
           )}
         >
-          {/* Pushed down clear of the "Step 5 · Memory" pill above, which now sits inside the top
-              of this same circle. */}
-          <span className="mt-3 flex items-center gap-1.5">
-            <Database className={cn("h-4 w-4 shrink-0", memoryState === "open" && "text-primary")} />
-            <span className="text-[12px] font-medium leading-tight">Compounding CDA</span>
+          {/* Aligned with the Finality → Memory arrow, which enters this circle at its exact
+              vertical centre — not just centred within whatever space is left under the Step 5
+              pill. */}
+          <span className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 whitespace-nowrap">
+            <Database className={cn("h-3.5 w-3.5 shrink-0", memoryState === "open" && "text-primary")} />
+            <span className="text-[11px] font-medium leading-tight">Compounding CDA</span>
           </span>
-          <span className="text-[10px] leading-snug text-muted-foreground">
+          <span className="absolute left-1/2 top-[calc(50%+15px)] w-[75%] -translate-x-1/2 text-center text-[9px] leading-snug text-muted-foreground">
             Capital Deployment Assessment
           </span>
         </button>

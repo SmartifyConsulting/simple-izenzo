@@ -7,7 +7,6 @@ import {
   Archive,
   CheckCircle2,
   ChevronDown,
-  ChevronUp,
   Download,
 
   Eye,
@@ -322,9 +321,6 @@ function LiveDealEngine() {
   const [dbHasChosenParty, setDbHasChosenParty] = useState(false);
   /** Whether the deal map is shown above the stepper — folded away by hand if it isn't wanted. */
   const [mapOpen, setMapOpen] = useState(true);
-  // Fallback scroll nudge for the map — it scales to fit the panel, so this normally shouldn't be
-  // needed, but a very short/narrow window can still leave the scaled map taller than the panel.
-  const mapScrollRef = useRef<HTMLDivElement>(null);
   // Screening state is session-local and was never cleared on switching bids, so a fresh bid that
   // is still only searching could show a previous bid's leftover "online media screening results".
   useEffect(() => {
@@ -1656,31 +1652,9 @@ function LiveDealEngine() {
                 </button>
               </div>
             </div>
-            <div ref={mapScrollRef} className={cn("relative mt-3 min-h-0 flex-1 overflow-y-auto")}>
-              {/* The map scales to fit the panel, so this scrollbar shouldn't ever actually need
-                  to move — but a very short/narrow window can still leave it taller than the
-                  panel, so the scroll nudge buttons below are a fallback, not the primary way to
-                  see the whole map. */}
-              {mapOpen && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => mapScrollRef.current?.scrollBy({ top: -160, behavior: "smooth" })}
-                    aria-label="Scroll map up"
-                    className="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-card/90 text-muted-foreground shadow-sm transition-colors hover:text-foreground"
-                  >
-                    <ChevronUp className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => mapScrollRef.current?.scrollBy({ top: 160, behavior: "smooth" })}
-                    aria-label="Scroll map down"
-                    className="absolute bottom-1 right-1 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-card/90 text-muted-foreground shadow-sm transition-colors hover:text-foreground"
-                  >
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  </button>
-                </>
-              )}
+            <div className={cn("mt-3 min-h-0 flex-1", mapOpen ? "overflow-hidden" : "overflow-y-auto")}>
+              {/* The map scales to the panel, so neither a sideways nor a downward scrollbar
+                  appears around it; the step list keeps its own vertical scroll. */}
               {mapOpen ? (
                 <MapView
                   tx={dealTx ?? null}
