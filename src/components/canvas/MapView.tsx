@@ -543,7 +543,9 @@ export function MapView({
             memoryState === "locked" && "cursor-not-allowed text-muted-foreground",
           )}
         >
-          <span className="flex items-center gap-1.5">
+          {/* Pushed down clear of the "Step 5 · Memory" pill above, which now sits inside the top
+              of this same circle. */}
+          <span className="mt-3 flex items-center gap-1.5">
             <Database className={cn("h-4 w-4 shrink-0", memoryState === "open" && "text-primary")} />
             <span className="text-[12px] font-medium leading-tight">Compounding CDA</span>
           </span>

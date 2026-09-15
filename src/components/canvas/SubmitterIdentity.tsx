@@ -19,11 +19,24 @@ type OrgDetail = {
  * individual trading in their own name — a small building/person icon in front of the name says
  * which (instead of a pill, which would take more room than the distinction is worth), and it
  * expands to the same address/contact/sector detail either way. */
-export function SubmitterIdentity({ orgId, createdBy }: { orgId: string; createdBy?: string | null }) {
+export function SubmitterIdentity({
+  orgId,
+  createdBy,
+  currentCheckStatus,
+}: {
+  orgId: string;
+  createdBy?: string | null;
+  /** The identity check status for the specific deal this is shown on, if one exists — takes
+   * priority over the org's own verification history so this pill never contradicts the "ID
+   * check pending"/"ID Verified" badge shown elsewhere on the same page for the same deal. */
+  currentCheckStatus?: "passed" | "in_progress" | "pending" | "failed" | "review" | "expired" | null | undefined;
+}) {
   const [org, setOrg] = useState<OrgDetail | null>(null);
   const [personName, setPersonName] = useState<string | null>(null);
-  const [verified, setVerified] = useState(false);
+  const [historicallyVerified, setHistoricallyVerified] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const pending = currentCheckStatus === "in_progress" || currentCheckStatus === "pending";
+  const verified = currentCheckStatus === "passed" || (currentCheckStatus == null && historicallyVerified);
 
   useEffect(() => {
     let live = true;
@@ -51,7 +64,7 @@ export function SubmitterIdentity({ orgId, createdBy }: { orgId: string; created
         .eq("status", "passed")
         .limit(5);
       if (!live) return;
-      setVerified((checks ?? []).some((c) => ["approved", "pass", "clear"].includes(String(c.decision))));
+      setHistoricallyVerified((checks ?? []).some((c) => ["approved", "pass", "clear"].includes(String(c.decision))));
     })();
     return () => {
       live = false;
@@ -88,17 +101,24 @@ export function SubmitterIdentity({ orgId, createdBy }: { orgId: string; created
         {verified ? (
           <span
             title="Verified through Izenzo"
-            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-foreground px-2 py-0.5 text-[11px] font-semibold text-background"
+            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-foreground px-1.5 py-0.5 text-[10px] font-semibold text-background"
           >
-            <BadgeCheck className="h-3.5 w-3.5" aria-hidden />
+            <BadgeCheck className="h-3 w-3" aria-hidden />
             Verified
+          </span>
+        ) : pending ? (
+          <span
+            title="ID check running for this deal"
+            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+          >
+            ID check pending
           </span>
         ) : (
           <span
             title="Identity not yet verified through Izenzo"
-            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-foreground px-2 py-0.5 text-[11px] font-medium text-background"
+            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-foreground px-1.5 py-0.5 text-[10px] font-medium text-background"
           >
-            <ShieldAlert className="h-3.5 w-3.5" aria-hidden />
+            <ShieldAlert className="h-3 w-3" aria-hidden />
             Not verified
           </span>
         )}

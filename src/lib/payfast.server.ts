@@ -32,14 +32,17 @@ export async function loadPayFastCreds(): Promise<PayFastCreds | null> {
 
   const config = (row.config ?? {}) as Record<string, string>;
   const secrets = await decryptSecrets(row.secrets_encrypted as string | null);
-  const merchantId = config["merchant_id"] ?? "";
-  const merchantKey = secrets["merchant_key"] ?? "";
+  // Trimmed defensively — a merchant ID/key pasted with a stray leading/trailing space or newline
+  // signs correctly (the signature step also trims) but PayFast itself rejects the untrimmed
+  // value as unrecognized, which otherwise surfaces as a bare, hard-to-diagnose 400.
+  const merchantId = (config["merchant_id"] ?? "").trim();
+  const merchantKey = (secrets["merchant_key"] ?? "").trim();
   if (!merchantId || !merchantKey) return null;
 
   return {
     merchantId,
     merchantKey,
-    passphrase: secrets["passphrase"] ?? "",
+    passphrase: (secrets["passphrase"] ?? "").trim(),
     environment: (row.environment as string) || "sandbox",
     enabled: Boolean(row.enabled),
   };
@@ -91,7 +94,12 @@ export async function createOnsitePayment(
     body: body.toString(),
   });
   const text = await res.text();
-  if (!res.ok) throw new Error(`PayFast could not start this payment (${res.status}).`);
+  if (!res.ok) {
+    // PayFast's error body (often a plain-text reason, sometimes JSON) is the only way to tell a
+    // bad signature apart from a bad amount/field apart from disabled sandbox credentials — a bare
+    // "(400)" left this genuinely unfixable without seeing what PayFast actually objected to.
+    throw new Error(`PayFast could not start this payment (${res.status}): ${text.slice(0, 300) || "no details returned"}`);
+  }
   let uuid: string | undefined;
   try {
     uuid = (JSON.parse(text) as { uuid?: string }).uuid;

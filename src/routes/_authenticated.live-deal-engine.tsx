@@ -5,7 +5,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Archive,
-  BadgeCheck,
   CheckCircle2,
   ChevronDown,
   Download,
@@ -1789,7 +1788,7 @@ function LiveDealEngine() {
               </div>
               <div className="grid grid-cols-2 items-start gap-3">
                 <div className="min-w-0 space-y-1">
-                  <SubmitterIdentity orgId={dealTx.org_id} createdBy={null} />
+                  <SubmitterIdentity orgId={dealTx.org_id} createdBy={null} currentCheckStatus={idCheck?.status ?? null} />
                   {(org as unknown as { created_at?: string } | null)?.created_at && (
                     <p className="text-xs text-muted-foreground">
                       Bidder Active Since:{" "}
@@ -1842,20 +1841,10 @@ function LiveDealEngine() {
                   </span>
                   BID INFORMATION
                 </button>
-                {idCheck?.status === "passed" && (
-                  <span
-                    title={`Verified${idCheck.completed_at ? ` — ${new Date(idCheck.completed_at).toLocaleString()}` : ""}`}
-                    className="flex shrink-0 items-center gap-1 rounded-full bg-foreground px-2 py-0.5 text-[10px] font-semibold text-background"
-                  >
-                    <BadgeCheck className="h-3 w-3" />
-                    ID Verified
-                  </span>
-                )}
-                {idCheck?.status === "in_progress" && (
-                  <span className="flex shrink-0 items-center gap-1 rounded-full bg-foreground px-2 py-0.5 text-[10px] font-semibold text-background">
-                    ID check pending
-                  </span>
-                )}
+                {/* The ID check status already shows once, next to the submitter's name on the
+                    Bid Registration card above — showing it again here (from the same
+                    per-transaction check, but computed separately) was what let one place say
+                    "Verified" while this one still said "ID check pending". */}
               </div>
               {bidInfoOpen && (
                 <>
