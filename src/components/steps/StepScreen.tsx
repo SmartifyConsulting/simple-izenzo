@@ -1416,9 +1416,48 @@ function IntentStep({ tx, reload }: Props) {
     }
   }
 
+  const certificate = termsPending ? (
+    <div className="grid gap-3 sm:grid-cols-2">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i}>
+          <div className="h-3 w-16 animate-pulse rounded bg-muted" />
+          <div className="mt-1.5 h-4 w-28 animate-pulse rounded bg-muted" />
+        </div>
+      ))}
+    </div>
+  ) : (
+    <CertificateBlock
+      heading="Confirmation of Intent"
+      lines={[
+        ...materialTerms,
+        { label: "Counterparty", value: chosen ?? "—" },
+        { label: "Signed by", value: signer },
+      ]}
+      sealId={tx.intent_confirmed_at || confirmedLocally ? shortHash(tx.id) : null}
+      draft={!tx.intent_confirmed_at && !confirmedLocally}
+    />
+  );
+
+  // Already confirmed: this sits inside the "Confirmed Intent" accordion, which carries the
+  // heading — so no second panel, pill or close button around it. Just the line explaining where
+  // the deal stands, then the certificate.
+  if (tx.intent_confirmed_at) {
+    return (
+      <div className="text-xs leading-relaxed">
+        <p className="text-muted-foreground">
+          Read the terms as they stand. Confirming does not seal them — that is the next step.
+        </p>
+        <div className="mt-3">{certificate}</div>
+        <p className="mt-4 text-xs text-muted-foreground">
+          Signed by {signer} · {when(tx.intent_confirmed_at)}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <Panel
-      title="Confirm Intent"
+      title="Confirmation"
       description="Read the terms as they stand. Confirming does not seal them — that is the next step."
       pill
       footer={
@@ -1436,33 +1475,7 @@ function IntentStep({ tx, reload }: Props) {
         </div>
       }
     >
-      {termsPending ? (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i}>
-              <div className="h-3 w-16 animate-pulse rounded bg-muted" />
-              <div className="mt-1.5 h-4 w-28 animate-pulse rounded bg-muted" />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <CertificateBlock
-          heading="Confirmation of Intent"
-          lines={[
-            ...materialTerms,
-            { label: "Counterparty", value: chosen ?? "—" },
-            { label: "Signed by", value: signer },
-          ]}
-          sealId={tx.intent_confirmed_at || confirmedLocally ? shortHash(tx.id) : null}
-          draft={!tx.intent_confirmed_at && !confirmedLocally}
-        />
-      )}
-      {tx.intent_confirmed_at && (
-        <p className="mt-4 text-xs text-muted-foreground">
-          Signed by {signer} · {when(tx.intent_confirmed_at)}
-        </p>
-      )}
-
+      {certificate}
     </Panel>
   );
 }
