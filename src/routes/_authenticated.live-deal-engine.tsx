@@ -57,6 +57,8 @@ import { advance, fallbackReference, recordEvent, swapReferencePrefix, type Tran
 import type { StageKey } from "@/lib/spine";
 import { useAuth } from "@/lib/auth";
 import { searchCounterparties } from "@/lib/izenzo.functions";
+import { listCounterOffers } from "@/lib/counterOffer.functions";
+
 import { runBackgroundScreening, type ScreeningResult } from "@/lib/screening.functions";
 import { runOnlineMediaChecks, type MediaCheckResult } from "@/lib/onlineMedia.functions";
 import { listVerificationsForTx } from "@/lib/didit.functions";
