@@ -430,25 +430,59 @@ export function MapView({
   );
 
   const memoryState = st("memory", "ledger");
+  // Step 1 is behind us the moment Proof of Intent takes the pulse — its frame folds to a slim
+  // ticked bar and the rest of the map slides up. Clicking the bar opens it again.
+  const poiState = st("trading", "poi", "poi");
+  const step1Folded = !step1Open && (poiState === "active" || poiState === "done");
 
   return (
     <div className="relative h-full w-full">
-      <div className="relative w-full" style={{ aspectRatio: `${W} / ${H}` }}>
-        <ArrowLayer />
+      <div
+        className="relative w-full overflow-hidden"
+        style={{ aspectRatio: `${W} / ${step1Folded ? H - STEP1_SHIFT : H}` }}
+      >
+        {step1Folded && (
+          <button
+            type="button"
+            onClick={() => setStep1Open(true)}
+            style={{
+              left: px(STEP1_BAR.x),
+              top: `${(STEP1_BAR.y / (H - STEP1_SHIFT)) * 100}%`,
+              width: px(STEP1_BAR.w),
+              height: `${(STEP1_BAR.h / (H - STEP1_SHIFT)) * 100}%`,
+            }}
+            className="absolute z-10 flex items-center gap-2 rounded-3xl border border-success/70 bg-card/40 px-5 text-left font-sans text-[11px] font-semibold text-success"
+          >
+            <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+            <span className="label-caps text-success">Step 1 · Trading</span>
+            <span className="text-[10px] font-medium text-muted-foreground">Complete — click to open</span>
+          </button>
+        )}
+        <div
+          className="absolute left-0 top-0 w-full"
+          style={{
+            aspectRatio: `${W} / ${H}`,
+            ...(step1Folded ? { transform: `translateY(-${(STEP1_SHIFT / H) * 100}%)` } : {}),
+          }}
+        >
+        <ArrowLayer hideTrading={step1Folded} />
         <MemoryArcLabel />
 
 
-        <Frame box={TRADE_ENGINE_FRAME} label="Step 1 · Trading" />
+        {!step1Folded && <Frame box={TRADE_ENGINE_FRAME} label="Step 1 · Trading" />}
         <Frame box={COMPLIANCE_FRAME} label="Step 2 · GRC" />
         <Frame box={EXECUTION_FRAME} label="Step 3 · Execution" />
         <Frame box={ENTRY_EXIT_FRAME} />
         <Frame box={FINALITY_FRAME} label="Step 4 · Finality" />
 
+        {!step1Folded && (
+        <>
         {/* Mirrors Search's own state (same overrideKey) — both pulse together while the search is
             running, and once it's done the pulse moves straight on to Choice. */}
         {node("steps", "Search Results", "trading", "search", ListChecks, { overrideKey: "search" })}
 
         {/* Step 1 — trading. Bid and Load Deal Documents drive the workspace beside the map. */}
+
         {node("bid", "Bid", "trading", "bid-offer", Gavel, {
           overrideKey: "bidRegistration",
           ...(onBid ? { onClick: onBid } : {}),
