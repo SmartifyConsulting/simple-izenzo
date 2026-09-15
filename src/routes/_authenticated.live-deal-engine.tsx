@@ -605,7 +605,7 @@ function LiveDealEngine() {
   // Has interest already been fetched for this bid? Drives the "Fetch Interest" button, so it
   // stays offered for any bid that has documents but no matches yet — not only in the moment
   // straight after an upload.
-  const { data: interestCount = 0 } = useQuery({
+  const { data: interestCount = 0, isPending: interestCountPending } = useQuery({
     queryKey: ["counterparties-count", dealTx?.id],
     enabled: Boolean(dealTx?.id),
     queryFn: async () => {
@@ -624,7 +624,9 @@ function LiveDealEngine() {
   useEffect(() => {
     if (
       !dealTx ||
+      dealTx.stage !== "trading" ||
       workspaceDocsPending ||
+      interestCountPending ||
       workspaceDocs.length === 0 ||
       interestCount > 0 ||
       screening ||
@@ -634,7 +636,16 @@ function LiveDealEngine() {
     ) return;
     autoSearchStarted.current = dealTx.id;
     void fetchInterest(dealTx.id);
-  }, [dealTx?.id, workspaceDocsPending, workspaceDocs.length, interestCount, screening, mediaRunning, flowStep]);
+  }, [
+    dealTx?.id,
+    workspaceDocsPending,
+    interestCountPending,
+    workspaceDocs.length,
+    interestCount,
+    screening,
+    mediaRunning,
+    flowStep,
+  ]);
 
   // A short chime whenever the workflow moves itself on to the next step — search finishing,
   // media screening completing, an auto-advance firing — so a step change is audible even when
@@ -2116,14 +2127,9 @@ function LiveDealEngine() {
 
           {activity ? (
             <div className="mt-0.5 space-y-2">
-                <div className="flex flex-wrap gap-1.5">
-                  {activity.commodity && (
-                    <span className="rounded-full bg-foreground px-2.5 py-1 text-[11px] font-semibold text-background">
-                      {activity.commodity}
-                    </span>
-                  )}
-                  {/* Quantity and value now live inside the summary frame above. */}
-                </div>
+                {/* The commodity name already shows on the Bid Registration card above — repeating
+                    it here as its own pill just floated a second copy of the bid name with nothing
+                    else around it. */}
 
                 {/* The registration card and the one attachment list both live at the top of the
                     workspace now — no duplicate frames down here. */}
