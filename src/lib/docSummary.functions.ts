@@ -267,6 +267,30 @@ async function docxText(bytes: Uint8Array): Promise<string> {
   return xmlToText(strFromU8(doc)).slice(0, 200_000);
 }
 
+/** Pulls the visible text out of a .pptx — every slide's text boxes, slide by slide. */
+async function pptxText(bytes: Uint8Array): Promise<string> {
+  const { unzipSync, strFromU8 } = await import("fflate");
+  const files = unzipSync(bytes);
+  const slidePaths = Object.keys(files)
+    .filter((p) => /^ppt\/slides\/slide\d+\.xml$/.test(p))
+    .sort((a, b) => {
+      const n = (s: string) => Number(s.match(/slide(\d+)\.xml$/)?.[1] ?? 0);
+      return n(a) - n(b);
+    });
+  const out: string[] = [];
+  for (const path of slidePaths) {
+    const raw = files[path];
+    if (!raw) continue;
+    const xml = strFromU8(raw);
+    const text = [...xml.matchAll(/<a:t>([\s\S]*?)<\/a:t>/g)]
+      .map((m) => xmlToText(m[1] ?? "").trim())
+      .filter(Boolean)
+      .join("\n");
+    if (text) out.push(`[Slide ${out.length + 1}]\n${text}`);
+  }
+  return out.join("\n\n").slice(0, 200_000);
+}
+
 /** Pulls the cell values out of a .xlsx — shared strings plus any inline/number cells. */
 async function xlsxText(bytes: Uint8Array): Promise<string> {
   const { unzipSync, strFromU8 } = await import("fflate");
