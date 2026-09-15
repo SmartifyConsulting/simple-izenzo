@@ -1683,15 +1683,6 @@ function PoiStep({ tx, reload }: Props) {
       }
 
       toast.success("Proof of Intent sealed");
-      // Show the certificate briefly, then let it fade before filing itself away with the other
-      // documents — reload() (which flips this panel to the sealed summary view) waits until
-      // after that close animation finishes, not before.
-      setCertOpen(true);
-      await new Promise((resolve) => setTimeout(resolve, 2400));
-      setCertClosing(true);
-      await new Promise((resolve) => setTimeout(resolve, 350));
-      setCertOpen(false);
-      setCertClosing(false);
       reload();
     } catch (err) {
       reportGateError(err, navigate, tx);
@@ -2177,8 +2168,21 @@ function BusinessDocsStep({ tx, reload }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [skipping, setSkipping] = useState(false);
   // Starts on Other, so a file can be dropped without picking a type first.
   const [docType, setDocType] = useState("other");
+
+  async function skip() {
+    setSkipping(true);
+    try {
+      await advance(tx.id, "execution", "entry");
+      reload();
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setSkipping(false);
+    }
+  }
 
 
   const { data: docs = [] } = useQuery({
@@ -2243,6 +2247,13 @@ function BusinessDocsStep({ tx, reload }: Props) {
       <Panel
         title="Business Docs"
         description="Upload the NDA, MOU and any other contracts for this deal — each one is added to the Bid Information archive automatically."
+        footer={
+          <div className="flex justify-end">
+            <Button size="sm" variant="outline" disabled={skipping} onClick={() => void skip()}>
+              {skipping ? "Skipping…" : "Skip"}
+            </Button>
+          </div>
+        }
       >
         <div className="space-y-3">
           <Field label="Document type (applied to the next upload)">

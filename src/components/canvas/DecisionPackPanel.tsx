@@ -169,7 +169,7 @@ export function DecisionPackPanel({
                 onClick={() => void acceptAll()}
               >
                 {selectingAll ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-                Select all
+                Accept all
               </Button>
             )}
           </div>

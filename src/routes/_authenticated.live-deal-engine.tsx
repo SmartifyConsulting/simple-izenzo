@@ -326,6 +326,25 @@ function LiveDealEngine() {
   const [dbHasChosenParty, setDbHasChosenParty] = useState(false);
   /** Name of the chosen counterparty, so the folded frame can say who without being opened. */
   const [chosenPartyName, setChosenPartyName] = useState<string | null>(null);
+  // Every currently shortlisted company, so the Search Results header can name all of them (not
+  // just the one eventually chosen). Polled (rather than sharing CounterpartyRecord's own
+  // ["counterparties", txId] cache entry, which holds a different select() shape) so it stays
+  // current as shortlisting changes.
+  const { data: shortlistedNames = [] } = useQuery({
+    queryKey: ["shortlisted-names", dealTx?.id],
+    enabled: Boolean(dealTx?.id),
+    refetchInterval: 4000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("counterparties")
+        .select("name, score")
+        .eq("transaction_id", dealTx!.id)
+        .eq("shortlisted", true)
+        .order("score", { ascending: false, nullsFirst: false });
+      if (error) throw error;
+      return (data ?? []).map((c) => c.name as string);
+    },
+  });
 
   /** Whether the deal map is shown above the stepper — folded away by hand if it isn't wanted. */
   const [mapOpen, setMapOpen] = useState(true);
@@ -2347,10 +2366,11 @@ function LiveDealEngine() {
                         <span className="label-caps shrink-0 rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
                           Search Results
                         </span>
-                        {/* Who was chosen, readable without opening the frame. */}
-                        {dbHasChosenParty && chosenPartyName && (
+                        {/* Every shortlisted company, readable without opening the frame — not
+                            just the one eventually chosen. */}
+                        {shortlistedNames.length > 0 && (
                           <span className="min-w-0 truncate text-xs font-semibold text-foreground">
-                            {chosenPartyName}
+                            {shortlistedNames.join(", ")}
                           </span>
                         )}
                       </span>
