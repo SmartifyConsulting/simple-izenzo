@@ -400,6 +400,26 @@ function LiveDealEngine() {
 
 
   const [documentSummary, setDocumentSummary] = useState<string | null>(null);
+  // The summary reads as though it's being written live rather than popping in whole — replayed
+  // from scratch each time the text changes (a new file folded in can rewrite earlier lines, not
+  // just add to the end, so resuming mid-way through wouldn't read correctly).
+  const [summaryRevealLen, setSummaryRevealLen] = useState(0);
+  useEffect(() => {
+    if (!documentSummary) {
+      setSummaryRevealLen(0);
+      return;
+    }
+    setSummaryRevealLen(0);
+    const total = documentSummary.length;
+    const step = Math.max(1, Math.ceil(total / 90));
+    let shown = 0;
+    const id = setInterval(() => {
+      shown = Math.min(shown + step, total);
+      setSummaryRevealLen(shown);
+      if (shown >= total) clearInterval(id);
+    }, 15);
+    return () => clearInterval(id);
+  }, [documentSummary]);
   // The AI summary is written to the transaction row in the background, after the document
   // upload effects above have already captured their one-time snapshot — without this poll,
   // "What was submitted" would stay blank until the next full reload even once the summary was
@@ -520,6 +540,10 @@ function LiveDealEngine() {
       // Private browsing without storage — the in-memory set below still holds for this session.
     }
     setSubmittedBids((s) => (s.has(txId) ? s : new Set(s).add(txId)));
+    // Clicking through (the "Find Matching Interest"/Submit action) is what hands the workspace
+    // over to the search — Bid Information folds away right away instead of staying open while
+    // the read (which may already be finished, from reading as files were dropped) or search runs.
+    setBidInfoCollapsed(txId, true);
   }
   const queryClient = useQueryClient();
 
@@ -639,21 +663,26 @@ function LiveDealEngine() {
     void rereadDocuments(dealTx.id);
   }, [dealTx?.id, dealTx?.title, documentSummary, workspaceDocs.length]);
 
-  // Documents attached but no summary saved: start the read ourselves, so the reading progress bar
-  // in Bid Information always reflects a read that is genuinely running.
-  const autoReadStarted = useRef<string | null>(null);
+  // Documents attached: (re-)read them into a summary. Keyed by how many files this deal has been
+  // summarised for, not just "has a summary at all" — so dropping another file after the first
+  // summary already exists still triggers a fresh read that folds it in, rather than only ever
+  // reading once per deal. Debounced so several files dropped together produce one read, not one
+  // per file.
+  const summarizedDocCount = useRef<Record<string, number>>({});
+  const rereadDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (
-      !dealTx ||
-      workspaceDocs.length === 0 ||
-      documentSummary ||
-      rereading ||
-      readError ||
-      autoReadStarted.current === dealTx.id
-    ) return;
-    autoReadStarted.current = dealTx.id;
-    void rereadDocuments(dealTx.id);
-  }, [dealTx?.id, documentSummary, workspaceDocs.length, rereading, readError]);
+    if (!dealTx || workspaceDocs.length === 0 || rereading) return;
+    const txId = dealTx.id;
+    if (summarizedDocCount.current[txId] === workspaceDocs.length) return;
+    if (rereadDebounceRef.current) clearTimeout(rereadDebounceRef.current);
+    rereadDebounceRef.current = setTimeout(() => {
+      summarizedDocCount.current[txId] = workspaceDocs.length;
+      void rereadDocuments(txId);
+    }, 1200);
+    return () => {
+      if (rereadDebounceRef.current) clearTimeout(rereadDebounceRef.current);
+    };
+  }, [dealTx?.id, workspaceDocs.length, rereading]);
 
 
   // Has interest already been fetched for this bid? Drives the "Fetch Interest" button, so it
@@ -681,6 +710,7 @@ function LiveDealEngine() {
     if (
       !dealTx ||
       dealTx.stage !== "trading" ||
+      !submittedForThisBid ||
       workspaceDocsPending ||
       interestCountPending ||
       workspaceDocs.length === 0 ||
@@ -696,6 +726,7 @@ function LiveDealEngine() {
     void fetchInterest(dealTx.id);
   }, [
     dealTx?.id,
+    submittedForThisBid,
     workspaceDocsPending,
     interestCountPending,
     workspaceDocs.length,
@@ -1938,6 +1969,7 @@ function LiveDealEngine() {
               {documentSummary ? (
                 <ul className="mt-1 space-y-1 text-xs leading-relaxed text-foreground">
                   {documentSummary
+                    .slice(0, summaryRevealLen)
                     .split("\n")
                     .filter((raw) => raw.trim().length > 0)
                     .map((raw, i) => {
