@@ -22,11 +22,11 @@ import {
   Globe,
   Loader2,
   ExternalLink,
-  RefreshCw,
   ShieldAlert,
   ScrollText,
   X,
   UploadCloud,
+  FileText,
 } from "lucide-react";
 import { CanvasNode, Connector, GateBar, type NodeState } from "./CanvasNode";
 import { StepScreen } from "@/components/steps/StepScreen";
@@ -910,6 +910,86 @@ function mediaLabel(status: MediaFinding["status"]) {
   }
 }
 
+/** The read-only terms being put to one shortlisted counterparty — shown before a counter offer
+ * can be sent, so a counter offer always starts from having actually seen what's on the table. */
+function ProposalDialog({
+  open,
+  onOpenChange,
+  txId,
+  counterpartyName,
+  onCounterOffer,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  txId: string;
+  counterpartyName: string;
+  onCounterOffer: () => void;
+}) {
+  const { data: tx } = useQuery({
+    queryKey: ["proposal-terms", txId],
+    enabled: open && !!txId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("title, commodity, quantity, unit, price, currency, incoterms, jurisdiction")
+        .eq("id", txId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogTitle>Proposal — {counterpartyName}</DialogTitle>
+        <DialogDescription>The terms being put to this counterparty.</DialogDescription>
+        {tx && (
+          <div className="rounded-lg border-2 border-double border-foreground/70 bg-gradient-to-b from-muted/40 to-transparent p-4">
+            <p className="text-center font-sans text-sm font-bold uppercase tracking-[0.14em] text-foreground">
+              {tx.commodity || tx.title}
+            </p>
+            <dl className="mx-auto mt-4 grid max-w-md gap-x-4 gap-y-2 text-xs sm:grid-cols-2">
+              <div className="contents">
+                <dt className="text-muted-foreground">Volume</dt>
+                <dd className="font-medium text-foreground">
+                  {tx.quantity ? `${tx.quantity} ${tx.unit ?? ""}`.trim() : "—"}
+                </dd>
+              </div>
+              <div className="contents">
+                <dt className="text-muted-foreground">Price</dt>
+                <dd className="font-medium text-foreground">{money(tx.price, tx.currency)}</dd>
+              </div>
+              <div className="contents">
+                <dt className="text-muted-foreground">Incoterms</dt>
+                <dd className="font-medium text-foreground">{tx.incoterms || "—"}</dd>
+              </div>
+              <div className="contents">
+                <dt className="text-muted-foreground">Jurisdiction</dt>
+                <dd className="font-medium text-foreground">{tx.jurisdiction || "—"}</dd>
+              </div>
+            </dl>
+          </div>
+        )}
+        <DialogFooter className="gap-2 sm:justify-between">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+          <Button
+            type="button"
+            onClick={() => {
+              onOpenChange(false);
+              onCounterOffer();
+            }}
+          >
+            Counter offer
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function CounterpartyRecord({
   txId,
   searching = false,
@@ -989,6 +1069,9 @@ export function CounterpartyRecord({
   const [searchResultsExpanded, setSearchResultsExpanded] = useState(false);
   // Negotiation window for one shortlisted counterparty.
   const [counterOfferFor, setCounterOfferFor] = useState<{ id: string; name: string } | null>(null);
+  // The proposal (this deal's own terms) shown to a counterparty before a counter offer can be
+  // sent — seeing what's on the table comes first.
+  const [proposalFor, setProposalFor] = useState<{ id: string; name: string } | null>(null);
 
   const movedToScreening = screening || screeningResults !== null;
   useEffect(() => {
@@ -1210,11 +1293,11 @@ export function CounterpartyRecord({
                   {c.shortlisted && txId && (
                     <button
                       type="button"
-                      title="Start a counter offer"
-                      onClick={() => setCounterOfferFor({ id: c.id, name: c.name })}
+                      title="View proposal"
+                      onClick={() => setProposalFor({ id: c.id, name: c.name })}
                       className="shrink-0 rounded p-1 text-slate-500 hover:bg-slate-200 hover:text-slate-900"
                     >
-                      <RefreshCw className="h-3.5 w-3.5" />
+                      <FileText className="h-3.5 w-3.5" />
                     </button>
                   )}
                 </li>
@@ -1440,15 +1523,17 @@ export function CounterpartyRecord({
                   </span>
                 )}
               </label>
-              {/* Once a company is ticked, a negotiation can be opened with them from here. */}
-              {c.shortlisted && txId && (
+              {/* Seeing the proposal comes first — a counter offer is only reachable from inside
+                  it, not fired off blind. */}
+              {txId && (
                 <button
                   type="button"
-                  title="Start a counter offer"
-                  onClick={() => setCounterOfferFor({ id: c.id, name: c.name })}
-                  className="shrink-0 rounded p-1 text-slate-500 hover:bg-slate-200 hover:text-slate-900"
+                  title="View proposal"
+                  onClick={() => setProposalFor({ id: c.id, name: c.name })}
+                  className="flex shrink-0 items-center gap-1 rounded p-1 text-[11px] font-medium text-slate-500 hover:bg-slate-200 hover:text-slate-900"
                 >
-                  <RefreshCw className="h-3.5 w-3.5" />
+                  <FileText className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">View Proposal</span>
                 </button>
               )}
 
@@ -1613,6 +1698,16 @@ export function CounterpartyRecord({
           counterpartyId={counterOfferFor.id}
           counterpartyName={counterOfferFor.name}
           {...(onContinue ? { onProceed: () => onContinue([counterOfferFor.id]) } : {})}
+        />
+      )}
+
+      {txId && proposalFor && (
+        <ProposalDialog
+          open
+          onOpenChange={(o) => !o && setProposalFor(null)}
+          txId={txId}
+          counterpartyName={proposalFor.name}
+          onCounterOffer={() => setCounterOfferFor(proposalFor)}
         />
       )}
     </div>

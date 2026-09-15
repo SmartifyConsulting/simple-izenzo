@@ -1356,6 +1356,29 @@ function IntentStep({ tx, reload }: Props) {
     });
   }
 
+  /** Files the terms that were put to the chosen counterparty alongside the other deal documents,
+   * once intent against them is confirmed — the proposal they viewed before any counter offer. */
+  async function fileProposal() {
+    const body = [
+      "IZENZO — PROPOSAL",
+      "",
+      ...materialTerms.map((t) => `${t.label}: ${t.value}`),
+      `Counterparty: ${chosen ?? "—"}`,
+    ].join("\n");
+    const path = `deals/${tx.id}/${Date.now()}-proposal.txt`;
+    const { error: upErr } = await supabase.storage
+      .from("documents")
+      .upload(path, new Blob([body], { type: "text/plain" }));
+    if (upErr) return;
+    await supabase.from("documents").insert({
+      transaction_id: tx.id,
+      name: `Proposal — ${chosen ?? tx.title}.txt`,
+      doc_type: "proposal",
+      notes: "Proposal",
+      storage_path: path,
+    });
+  }
+
   async function confirm() {
     setBusy(true);
     try {
@@ -1378,6 +1401,7 @@ function IntentStep({ tx, reload }: Props) {
 
       });
       await fileIntentCertificate(now);
+      await fileProposal();
       // Let the certificate visibly shed its draft watermark before moving on — advancing
       // immediately meant the panel changed before anyone actually saw it become a real record.
       setConfirmedLocally(true);
