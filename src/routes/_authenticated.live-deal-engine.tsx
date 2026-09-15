@@ -736,16 +736,17 @@ function LiveDealEngine() {
     // Every row from here on is stated outright, so nothing falls back to the stored step and
     // starts pulsing alongside the operation that is genuinely running.
     if (flowStep === "searching") {
+      // Search and Search Results pulse together while the search is actually running.
       o["search"] = "active";
-      // The Search Results tile pulses once actual results are back, not while the search is
-      // merely in progress and there's nothing to show yet.
-      o["searchResults"] = "open";
+      o["searchResults"] = "active";
       o["onlineMedia"] = "open";
       o["choice"] = "open";
       return o;
     }
+    // The moment the search is done, the pulse moves straight on to Choice — Search and Search
+    // Results themselves stop pulsing rather than handing off to each other.
     o["search"] = "done";
-    o["searchResults"] = "active";
+    o["searchResults"] = "done";
 
     // Trust a persisted, unambiguous fact over this session's own local flow flags — hasChosen,
     // mediaResults and intentDismissed are plain React state that start back at their initial
@@ -2015,64 +2016,6 @@ function LiveDealEngine() {
             </div>
           )}
 
-          {/* Online Media Screening results, once screening has actually finished — its own
-              collapsed frame right under Bid Information, closed by default since this is a
-              record to check back on rather than something needing attention the moment it's
-              ready. */}
-          {dealTx && mediaResults && mediaResults.length > 0 && (
-            <div className="glass-node mt-1.5 space-y-2 p-4">
-              <button
-                type="button"
-                onClick={() => setMediaResultsOpen(dealTx.id, !mediaResultsOpen)}
-                aria-expanded={mediaResultsOpen}
-                className="label-caps flex w-full items-center justify-between gap-1.5 rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]"
-              >
-                <span>ONLINE MEDIA SCREENING RESULTS</span>
-                <span className="flex shrink-0 items-center gap-1.5">
-                  <span className="text-[10px] font-semibold">
-                    {mediaResults.length} counterpart{mediaResults.length === 1 ? "y" : "ies"}
-                  </span>
-                  <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform", mediaResultsOpen && "rotate-180")} />
-                </span>
-              </button>
-              {mediaResultsOpen && (
-                <ul className="space-y-2 pt-1">
-                  {mediaResults.map((m) => (
-                    <li key={m.counterpartyId} className="rounded-lg border border-border p-2.5">
-                      <p className="text-xs font-semibold text-foreground">{m.name}</p>
-                      <ul className="mt-1.5 space-y-1">
-                        {m.findings.map((f) => (
-                          <li key={f.source} className="flex items-center justify-between gap-2 text-[11px]">
-                            <span className="text-muted-foreground">{f.label}</span>
-                            <span
-                              className={cn(
-                                "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium",
-                                f.status === "adverse"
-                                  ? "bg-destructive/15 text-destructive"
-                                  : f.status === "found"
-                                    ? "bg-success/15 text-success"
-                                    : "bg-muted text-muted-foreground",
-                              )}
-                            >
-                              {f.status === "adverse"
-                                ? "Adverse"
-                                : f.status === "found"
-                                  ? "Found"
-                                  : f.status === "not_found"
-                                    ? "Nothing found"
-                                    : f.status === "unavailable"
-                                      ? "Not connected"
-                                      : "Could not scan"}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
           </div>
 
             {dealTx ? (
@@ -2201,7 +2144,7 @@ function LiveDealEngine() {
 
 
           {mapPanel && dealTx && (
-            <div className="mt-2">
+            <div className="mt-1.5">
               <InlineFrame
                 tx={dealTx}
                 stage={mapPanel.stage}
@@ -2214,7 +2157,7 @@ function LiveDealEngine() {
           )}
 
           {activity ? (
-            <div className="mt-1.5 space-y-2">
+            <div className="mt-1.5 space-y-1.5">
                 {/* The commodity name already shows on the Bid Registration card above — repeating
                     it here as its own pill just floated a second copy of the bid name with nothing
                     else around it. */}
@@ -2263,6 +2206,65 @@ function LiveDealEngine() {
                       finalizing={finalizing}
                     />
                     </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Online Media Screening results, once screening has actually finished — its own
+                    collapsed frame right under Search Results, closed by default since this is a
+                    record to check back on rather than something needing attention the moment it's
+                    ready. */}
+                {dealTx && mediaResults && mediaResults.length > 0 && (
+                  <div className="rounded-2xl border border-border bg-card p-4">
+                    <button
+                      type="button"
+                      onClick={() => setMediaResultsOpen(dealTx.id, !mediaResultsOpen)}
+                      aria-expanded={mediaResultsOpen}
+                      className="label-caps flex w-full items-center justify-between gap-1.5 rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]"
+                    >
+                      <span>ONLINE MEDIA SCREENING RESULTS</span>
+                      <span className="flex shrink-0 items-center gap-1.5">
+                        <span className="text-[10px] font-semibold">
+                          {mediaResults.length} counterpart{mediaResults.length === 1 ? "y" : "ies"}
+                        </span>
+                        <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform", mediaResultsOpen && "rotate-180")} />
+                      </span>
+                    </button>
+                    {mediaResultsOpen && (
+                      <ul className="mt-2 space-y-2">
+                        {mediaResults.map((m) => (
+                          <li key={m.counterpartyId} className="rounded-lg border border-border p-2.5">
+                            <p className="text-xs font-semibold text-foreground">{m.name}</p>
+                            <ul className="mt-1.5 space-y-1">
+                              {m.findings.map((f) => (
+                                <li key={f.source} className="flex items-center justify-between gap-2 text-[11px]">
+                                  <span className="text-muted-foreground">{f.label}</span>
+                                  <span
+                                    className={cn(
+                                      "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                                      f.status === "adverse"
+                                        ? "bg-destructive/15 text-destructive"
+                                        : f.status === "found"
+                                          ? "bg-success/15 text-success"
+                                          : "bg-muted text-muted-foreground",
+                                    )}
+                                  >
+                                    {f.status === "adverse"
+                                      ? "Adverse"
+                                      : f.status === "found"
+                                        ? "Found"
+                                        : f.status === "not_found"
+                                          ? "Nothing found"
+                                          : f.status === "unavailable"
+                                            ? "Not connected"
+                                            : "Could not scan"}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </li>
+                        ))}
+                      </ul>
                     )}
                   </div>
                 )}

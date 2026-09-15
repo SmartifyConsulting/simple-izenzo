@@ -432,9 +432,9 @@ export function MapView({
         <Frame box={ENTRY_EXIT_FRAME} />
         <Frame box={FINALITY_FRAME} label="Step 4 · Finality" />
 
-        {/* Its own state, separate from Search: it pulses only once actual results are back, not
-            while the search is merely in progress and there's nothing to show yet. */}
-        {node("steps", "Search Results", "trading", "search", ListChecks, { overrideKey: "searchResults" })}
+        {/* Mirrors Search's own state (same overrideKey) — both pulse together while the search is
+            running, and once it's done the pulse moves straight on to Choice. */}
+        {node("steps", "Search Results", "trading", "search", ListChecks, { overrideKey: "search" })}
 
         {/* Step 1 — trading. Bid and Load Deal Documents drive the workspace beside the map. */}
         {node("bid", "Bid", "trading", "bid-offer", Gavel, {
