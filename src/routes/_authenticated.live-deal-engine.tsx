@@ -533,6 +533,15 @@ function LiveDealEngine() {
   // Once the ask has been made for a bid, the description/drop frame never comes back — not while
   // the files are still saving, not on a refresh, not on a tab switch. Remembered per bid.
   const [submittedBids, setSubmittedBids] = useState<Set<string>>(() => new Set());
+  // Set only by the explicit "Find Matching Interest" click (DocumentUploadStep's onNext) — not by
+  // the upload itself, which fires its own onSubmitted the instant a file is dropped. Reading and
+  // writing the summary should be visible on drop; folding Bid Information away and moving on to
+  // the search only happens once the user actually says go.
+  const [searchGoByTx, setSearchGoByTx] = useState<Set<string>>(() => new Set());
+  function goToSearch(txId: string) {
+    setSearchGoByTx((s) => (s.has(txId) ? s : new Set(s).add(txId)));
+    setBidInfoCollapsed(txId, true);
+  }
   function markSubmitted(txId: string) {
     try {
       sessionStorage.setItem(`bid-submitted:${txId}`, "1");
@@ -540,10 +549,6 @@ function LiveDealEngine() {
       // Private browsing without storage — the in-memory set below still holds for this session.
     }
     setSubmittedBids((s) => (s.has(txId) ? s : new Set(s).add(txId)));
-    // Clicking through (the "Find Matching Interest"/Submit action) is what hands the workspace
-    // over to the search — Bid Information folds away right away instead of staying open while
-    // the read (which may already be finished, from reading as files were dropped) or search runs.
-    setBidInfoCollapsed(txId, true);
   }
   const queryClient = useQueryClient();
 
@@ -710,7 +715,7 @@ function LiveDealEngine() {
     if (
       !dealTx ||
       dealTx.stage !== "trading" ||
-      !submittedForThisBid ||
+      !searchGoByTx.has(dealTx.id) ||
       workspaceDocsPending ||
       interestCountPending ||
       workspaceDocs.length === 0 ||
@@ -726,7 +731,7 @@ function LiveDealEngine() {
     void fetchInterest(dealTx.id);
   }, [
     dealTx?.id,
-    submittedForThisBid,
+    searchGoByTx,
     workspaceDocsPending,
     interestCountPending,
     workspaceDocs.length,
@@ -2097,13 +2102,12 @@ function LiveDealEngine() {
                       key={dealTx.id}
                       transactionId={dealTx.id}
                       reference={(dealTx as unknown as { reference?: string | null }).reference ?? draftReference}
-                      // The search is not started here: the auto-search effect above runs it once
-                      // the documents have finished being read, so it searches on their content.
-                      onNext={() => {}}
-
+                      // Firing this is what actually hands the workspace over to the search —
+                      // Bid Information folds away right here, and the auto-search effect (gated
+                      // on searchGoByTx) picks up once the read this triggered has landed.
+                      onNext={() => goToSearch(dealTx.id)}
                       onSubmitted={() => markSubmitted(dealTx.id)}
                       onFirstClassified={({ directionGuess }) => void applyDirectionGuess(directionGuess)}
-                      autoAdvance
                       initialPrompt={seedPrompt}
                       initialFiles={seedFiles}
                     />
