@@ -665,7 +665,20 @@ function LiveDealEngine() {
    * "searching" apart from "results are in", so the page says it outright. Search AI + AI+ and
    * Online Media Screening are two separate, independently-timed operations — each pulses only
    * while it is itself actually running, not just because the other one is. */
+  // Is a counter offer sitting out there unanswered? While one is, that's the live step.
+  const listCounterOffersFn = useServerFn(listCounterOffers);
+  const { data: counterOfferData } = useQuery({
+    queryKey: ["counter-offers-open", dealTx?.id],
+    enabled: !!dealTx?.id,
+    refetchInterval: 30000,
+    queryFn: () => listCounterOffersFn({ data: { transactionId: dealTx!.id } }),
+  });
+  const openCounterOffer = (counterOfferData?.offers ?? []).some(
+    (o) => o.direction === "from_bidder" && o.status === "sent",
+  );
+
   const stepOverrides = useMemo(() => {
+
     const o: Record<string, "locked" | "open" | "active" | "done"> = {};
     if (!dealTx) return o;
     o["bidRegistration"] = "done";
