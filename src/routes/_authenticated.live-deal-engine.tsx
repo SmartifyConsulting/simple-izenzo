@@ -537,6 +537,11 @@ function LiveDealEngine() {
   // Once Intent is confirmed, its frame folds into a small accordion nested under Online Media
   // Screening Results rather than staying open as its own full-size panel.
   const [confirmedIntentOpen, setConfirmedIntentOpen] = useState(false);
+  // AI+ proposes; a person decides. These track whether every proposal in each pack has been
+  // accepted or rejected, which is what lets the spine move on.
+  const [choicePackDecided, setChoicePackDecided] = useState(false);
+  const [intentPackDecided, setIntentPackDecided] = useState(false);
+
   // The sealed Proof of Intent folds the same way — closed until the certificate is wanted.
   const [sealedPoiOpen, setSealedPoiOpen] = useState(false);
 
