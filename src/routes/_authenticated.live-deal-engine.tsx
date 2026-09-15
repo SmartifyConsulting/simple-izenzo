@@ -483,8 +483,16 @@ function LiveDealEngine() {
     if (!txId) return;
     setSearchResultsOpenByTx((prev) => ({ ...prev, [txId]: open }));
   }
+  // Online media screening is back, nothing is still running, and no party has actually been
+  // chosen yet: the choice is what the workspace is waiting for, so the frame carrying the
+  // selection circles and the Continue button must be on screen and open — regardless of any
+  // gate panel (Express Intent) that may have been opened, and regardless of `hasChosen`, which
+  // only means "the flow moved past Choice", not "a party was picked".
+  const choicePending = Boolean(
+    mediaResults && mediaResults.length > 0 && !mediaRunning && !dbHasChosenParty,
+  );
   const searchResultsOpen = dealTx
-    ? (searchResultsOpenByTx[dealTx.id] ?? !hasChosen)
+    ? (searchResultsOpenByTx[dealTx.id] ?? (choicePending || !hasChosen))
     : true;
   // The trade record, once everything has cleared — folded away by default.
   const [tradeSummaryOpen, setTradeSummaryOpen] = useState(false);
