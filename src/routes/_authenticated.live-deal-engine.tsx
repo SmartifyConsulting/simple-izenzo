@@ -936,10 +936,15 @@ function LiveDealEngine() {
     // Picking who to take through screening *is* the Choice — stating it here means the pulse moves
     // on to Online Media Screening on a repeat pass too, not just the first time round.
     setHasChosen(true);
-    // A new party has been picked, so an intent confirmed — and any Proof of Intent sealed —
-    // against the previous one no longer applies: clear both so they can be granted again for
-    // this party. The certificate already issued stays filed on the bid as history.
-    if (dealTx.intent_confirmed_at || dealTx.poi_sealed_at) {
+    // A new party has been picked, so an intent confirmed against the previous one no longer
+    // applies: clear it so it can be granted again for this party. A *sealed* Proof of Intent is
+    // a governance milestone and is never unwound — the deal stays with the party it names.
+    if (dealTx.poi_sealed_at) {
+      toast.error("The Proof of Intent is sealed for this bid — the counterparty can no longer change.");
+      return;
+    }
+    if (dealTx.intent_confirmed_at) {
+
       await supabase
         .from("transactions")
         .update({ intent_confirmed_at: null, poi_sealed_at: null, poi_hash: null })
