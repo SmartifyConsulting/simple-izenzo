@@ -40,6 +40,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { CounterOfferDialog } from "./CounterOfferDialog";
 import { raiseChallenge, listChallenges, type MatchChallenge } from "@/lib/challenges.functions";
+import { getCounterpartyProfile } from "@/lib/counterpartyProfile.functions";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -776,12 +777,16 @@ export function InlineFrame({
   onClose,
   onChangeParty,
   viewOnly,
+  bare,
 }: {
   tx: Transaction;
   stage: StageKey;
   step: string;
   reload: () => void;
   onClose: () => void;
+  /** Drops the outer card, heading pill and close button — used when this frame already sits
+   * inside an accordion that carries its own heading, so the two don't nest. */
+  bare?: boolean | undefined;
   /** Offered on Intent and Proof of Intent (before the seal is paid for) so a user who changes
    * their mind can reopen the counterparty choice instead of being stuck with their first pick. */
   onChangeParty?: (() => void) | undefined;
@@ -793,6 +798,13 @@ export function InlineFrame({
   const locked = lockReason(stage, step, tx);
   const canChangeParty =
     !viewOnly && Boolean(onChangeParty) && !tx.poi_sealed_at && (step === "intent" || step === "poi");
+  if (bare) {
+    return locked ? (
+      <p className="rounded-xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">{locked}.</p>
+    ) : (
+      <StepScreen tx={tx} stage={stage} step={step} reload={reload} />
+    );
+  }
   return (
     <div className="glass-node animate-node-rise mt-1 p-4">
       <div className="mb-4 flex items-start justify-between gap-4">
@@ -916,15 +928,23 @@ function ProposalDialog({
   open,
   onOpenChange,
   txId,
+  counterpartyId,
   counterpartyName,
   onCounterOffer,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   txId: string;
+  counterpartyId: string;
   counterpartyName: string;
   onCounterOffer: () => void;
 }) {
+  const loadProfile = useServerFn(getCounterpartyProfile);
+  const { data: profile, isPending: profilePending } = useQuery({
+    queryKey: ["counterparty-profile", counterpartyId],
+    enabled: open && !!counterpartyId,
+    queryFn: () => loadProfile({ data: { counterpartyId } }),
+  });
   const { data: tx } = useQuery({
     queryKey: ["proposal-terms", txId],
     enabled: open && !!txId,
@@ -939,11 +959,139 @@ function ProposalDialog({
     },
   });
 
+  const details: { label: string; value: string | null }[] = profile
+    ? [
+        { label: "Country", value: profile.country ?? profile.jurisdiction },
+        { label: "Sector", value: profile.industry ?? profile.sector },
+        {
+          label: "Years in business",
+          value: profile.yearsInBusiness != null ? String(profile.yearsInBusiness) : null,
+        },
+        { label: "Registration no.", value: profile.registrationNo },
+        { label: "What they offer", value: profile.offerings },
+        { label: "Terms of trade", value: profile.termsOfTrade },
+        { label: "Website", value: profile.website },
+        { label: "Contact", value: profile.contactName },
+        { label: "Email", value: profile.contactEmail },
+        { label: "Phone", value: profile.phone },
+        { label: "Found via", value: profile.source },
+      ].filter((d) => Boolean(d.value))
+    : [];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogTitle>Proposal — {counterpartyName}</DialogTitle>
-        <DialogDescription>The terms being put to this counterparty.</DialogDescription>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
+        <DialogTitle className="flex flex-wrap items-center gap-2">
+          <span className="min-w-0 truncate">{counterpartyName}</span>
+          {profile?.score != null && (
+            <span className="shrink-0 rounded-full border border-foreground bg-foreground px-2 py-0.5 text-[10px] font-semibold text-background">
+              {profile.score}% match
+            </span>
+          )}
+          {profile?.verified && (
+            <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
+              Verified
+            </span>
+          )}
+        </DialogTitle>
+        <DialogDescription>
+          {[profile?.jurisdiction, profile?.sector].filter(Boolean).join(" · ") ||
+            "Their company profile and the terms on the table."}
+        </DialogDescription>
+
+        {profilePending && (
+          <div className="space-y-1.5">
+            <p className="text-[11px] font-medium text-muted-foreground">Reading their profile…</p>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-progress-track">
+              <div className="h-full w-2/3 animate-pulse rounded-full bg-success" />
+            </div>
+          </div>
+        )}
+
+        {profile && (
+          <div className="space-y-3">
+            <div className="rounded-md border border-border">
+              <div className="border-b border-border px-4 py-3">
+                <h3 className="label-caps font-sans font-bold text-muted-foreground">About them</h3>
+              </div>
+              <div className="p-4 text-xs leading-relaxed text-foreground">
+                {profile.summary ? (
+                  <p className="whitespace-pre-line">{profile.summary}</p>
+                ) : (
+                  <p className="text-muted-foreground">
+                    This company has not published a profile on Izenzo yet. Everything below is what
+                    the search found on them.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {details.length > 0 && (
+              <div className="rounded-md border border-border">
+                <div className="border-b border-border px-4 py-3">
+                  <h3 className="label-caps font-sans font-bold text-muted-foreground">Company details</h3>
+                </div>
+                <dl className="grid gap-x-4 gap-y-2 p-4 text-xs sm:grid-cols-2">
+                  {details.map((d) => (
+                    <div key={d.label} className="contents">
+                      <dt className="text-muted-foreground">{d.label}</dt>
+                      <dd className="break-words font-medium text-foreground">
+                        {d.label === "Website" ? (
+                          <a
+                            href={d.value!.startsWith("http") ? d.value! : `https://${d.value}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="underline underline-offset-2"
+                          >
+                            {d.value}
+                          </a>
+                        ) : (
+                          d.value
+                        )}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            )}
+
+            {profile.portfolio.length > 0 && (
+              <div className="rounded-md border border-border">
+                <div className="border-b border-border px-4 py-3">
+                  <h3 className="label-caps font-sans font-bold text-muted-foreground">
+                    Attachments and portfolio
+                  </h3>
+                </div>
+                <ul className="space-y-1 p-4">
+                  {profile.portfolio.map((item, i) => (
+                    <li
+                      key={i}
+                      className="flex items-center gap-2 rounded-lg bg-foreground px-2.5 py-1.5 text-xs text-background"
+                    >
+                      <FileText className="h-3.5 w-3.5 shrink-0 text-background/70" />
+                      <span className="min-w-0 flex-1 truncate">
+                        {item.title}
+                        {item.description ? ` — ${item.description}` : ""}
+                      </span>
+                      {item.imageUrl && (
+                        <a
+                          href={item.imageUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          title={`Open ${item.title}`}
+                          className="shrink-0 rounded p-1 text-background/80 hover:bg-background/20 hover:text-background"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
         {tx && (
           <div className="rounded-lg border-2 border-double border-foreground/70 bg-gradient-to-b from-muted/40 to-transparent p-4">
             <p className="text-center font-sans text-sm font-bold uppercase tracking-[0.14em] text-foreground">
@@ -1288,9 +1436,18 @@ export function CounterpartyRecord({
           </button>
           {searchResultsExpanded && (
             <ul className="space-y-1.5">
-              {candidates.map((c) => (
+              {/* Everything the search found, with the ones that were picked kept at the top and
+                  marked as such. */}
+              {[...candidates]
+                .sort((a, b) => Number(Boolean(b.shortlisted)) - Number(Boolean(a.shortlisted)))
+                .map((c) => (
                 <li key={`sr-${c.id}`} className="flex items-center gap-2">
                   <span className="min-w-0 flex-1 truncate text-xs text-slate-800">{c.name}</span>
+                  {c.shortlisted && (
+                    <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
+                      Selected
+                    </span>
+                  )}
                   {c.score != null && (
                     <span className="shrink-0 rounded-full border border-foreground bg-foreground px-2 py-0.5 text-[10px] font-semibold text-background">
                       {c.score}%
@@ -1712,6 +1869,7 @@ export function CounterpartyRecord({
           open
           onOpenChange={(o) => !o && setProposalFor(null)}
           txId={txId}
+          counterpartyId={proposalFor.id}
           counterpartyName={proposalFor.name}
           onCounterOffer={() => setCounterOfferFor(proposalFor)}
         />

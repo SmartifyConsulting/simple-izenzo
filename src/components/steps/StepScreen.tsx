@@ -1301,6 +1301,7 @@ function IntentStep({ tx, reload }: Props) {
   // on — lets the certificate visibly lose its draft watermark first, rather than the whole panel
   // jumping to the next step before the user ever sees it become a real record.
   const [confirmedLocally, setConfirmedLocally] = useState(false);
+  const qc = useQueryClient();
   const { profile } = useAuth();
   const signer = profile?.full_name ?? profile?.email ?? "—";
 
@@ -1402,6 +1403,9 @@ function IntentStep({ tx, reload }: Props) {
       });
       await fileIntentCertificate(now);
       await fileProposal();
+      // The certificate must show up in the deal's document list straight away, not on the next
+      // refresh.
+      await qc.invalidateQueries({ queryKey: ["documents", tx.id] });
       // Let the certificate visibly shed its draft watermark before moving on — advancing
       // immediately meant the panel changed before anyone actually saw it become a real record.
       setConfirmedLocally(true);
@@ -1416,9 +1420,48 @@ function IntentStep({ tx, reload }: Props) {
     }
   }
 
+  const certificate = termsPending ? (
+    <div className="grid gap-3 sm:grid-cols-2">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i}>
+          <div className="h-3 w-16 animate-pulse rounded bg-muted" />
+          <div className="mt-1.5 h-4 w-28 animate-pulse rounded bg-muted" />
+        </div>
+      ))}
+    </div>
+  ) : (
+    <CertificateBlock
+      heading="Confirmation of Intent"
+      lines={[
+        ...materialTerms,
+        { label: "Counterparty", value: chosen ?? "—" },
+        { label: "Signed by", value: signer },
+      ]}
+      sealId={tx.intent_confirmed_at || confirmedLocally ? shortHash(tx.id) : null}
+      draft={!tx.intent_confirmed_at && !confirmedLocally}
+    />
+  );
+
+  // Already confirmed: this sits inside the "Confirmed Intent" accordion, which carries the
+  // heading — so no second panel, pill or close button around it. Just the line explaining where
+  // the deal stands, then the certificate.
+  if (tx.intent_confirmed_at) {
+    return (
+      <div className="text-xs leading-relaxed">
+        <p className="text-muted-foreground">
+          Read the terms as they stand. Confirming does not seal them — that is the next step.
+        </p>
+        <div className="mt-3">{certificate}</div>
+        <p className="mt-4 text-xs text-muted-foreground">
+          Signed by {signer} · {when(tx.intent_confirmed_at)}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <Panel
-      title="Confirm Intent"
+      title="Confirmation"
       description="Read the terms as they stand. Confirming does not seal them — that is the next step."
       pill
       footer={
@@ -1436,33 +1479,7 @@ function IntentStep({ tx, reload }: Props) {
         </div>
       }
     >
-      {termsPending ? (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i}>
-              <div className="h-3 w-16 animate-pulse rounded bg-muted" />
-              <div className="mt-1.5 h-4 w-28 animate-pulse rounded bg-muted" />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <CertificateBlock
-          heading="Confirmation of Intent"
-          lines={[
-            ...materialTerms,
-            { label: "Counterparty", value: chosen ?? "—" },
-            { label: "Signed by", value: signer },
-          ]}
-          sealId={tx.intent_confirmed_at || confirmedLocally ? shortHash(tx.id) : null}
-          draft={!tx.intent_confirmed_at && !confirmedLocally}
-        />
-      )}
-      {tx.intent_confirmed_at && (
-        <p className="mt-4 text-xs text-muted-foreground">
-          Signed by {signer} · {when(tx.intent_confirmed_at)}
-        </p>
-      )}
-
+      {certificate}
     </Panel>
   );
 }

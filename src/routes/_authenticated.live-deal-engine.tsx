@@ -494,6 +494,12 @@ function LiveDealEngine() {
   const searchResultsOpen = dealTx
     ? (searchResultsOpenByTx[dealTx.id] ?? (choicePending || !hasChosen))
     : true;
+  // Once a party is actually chosen the choice is settled: this folds back into the plain
+  // "Search Results" record instead of staying open.
+  useEffect(() => {
+    if (!dealTx || !dbHasChosenParty) return;
+    setSearchResultsOpenByTx((prev) => ({ ...prev, [dealTx.id]: false }));
+  }, [dealTx?.id, dbHasChosenParty]);
   // The trade record, once everything has cleared — folded away by default.
   const [tradeSummaryOpen, setTradeSummaryOpen] = useState(false);
   // Once Intent is confirmed, its frame folds into a small accordion nested under Online Media
@@ -1361,6 +1367,25 @@ function LiveDealEngine() {
     setFlowStep("documents");
     setAttachments([]);
     setDocumentSummary(null);
+    // Nothing of the previous bid may survive into an empty workspace — no bidder details, no
+    // search or screening findings, no open gate panel.
+    setScreening(false);
+    setScreeningResults(null);
+    setScreeningProgress(null);
+    setMediaRunning(false);
+    setMediaResults(null);
+    setMediaProgress(null);
+    setHasChosen(false);
+    setDbHasChosenParty(false);
+    setIntentDismissed(false);
+    setStagePanel(null);
+    setMapPanel(null);
+    setSearchError(null);
+    setReadError(null);
+    setTradeSummaryOpen(false);
+    setConfirmedIntentOpen(false);
+    setDirection(null);
+    setPendingDirection(null);
     try {
       localStorage.removeItem(ACTIVE_DEAL_KEY);
     } catch {
@@ -2299,7 +2324,10 @@ function LiveDealEngine() {
                     </button>
                     {confirmedIntentOpen && (
                       <div className="px-4 pb-4">
+                        {/* `bare`: this accordion already carries the "Confirmed Intent"
+                            heading, so the frame inside it must not add another one. */}
                         <InlineFrame
+                          bare
                           tx={dealTx}
                           stage="trading"
                           step="intent"
