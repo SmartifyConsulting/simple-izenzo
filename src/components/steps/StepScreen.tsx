@@ -121,7 +121,7 @@ function Panel({
   tone = "default",
   pill = false,
 }: {
-  title: string;
+  title?: string;
   description?: string;
   children: ReactNode;
   footer?: ReactNode;
@@ -142,15 +142,18 @@ function Panel({
         {/* Same heading treatment as the Bid Registration frame: small caps, muted. */}
         {/* font-sans is explicit: headings otherwise inherit the display face, which made this
             read in a different font from the LIVE WORKSPACE / BID INFORMATION labels. */}
-        {pill ? (
-          <h2 className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 font-sans text-[var(--lw-pill-fg)]">
-            {title}
-          </h2>
-        ) : (
-          <h2 className={cn("label-caps font-sans font-bold", light ? "text-slate-900" : "text-muted-foreground")}>
-            {title}
-          </h2>
-        )}
+        {title ? (
+          pill ? (
+            <h2 className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 font-sans text-[var(--lw-pill-fg)]">
+              {title}
+            </h2>
+          ) : (
+            <h2 className={cn("label-caps font-sans font-bold", light ? "text-slate-900" : "text-muted-foreground")}>
+              {title}
+            </h2>
+          )
+        ) : null}
+
         {description && (
           <p className={cn("mt-1 text-xs", light ? "text-slate-500" : "text-muted-foreground")}>{description}</p>
         )}
@@ -1461,8 +1464,8 @@ function IntentStep({ tx, reload }: Props) {
 
   return (
     <Panel
-      title="Intent Confirmation"
       description="Read the terms as they stand. Confirming does not seal them — that is the next step."
+
       footer={
         <div className="flex items-center justify-between">
           <label className="flex items-center gap-2 text-sm text-foreground">
@@ -1724,36 +1727,37 @@ function PoiStep({ tx, reload }: Props) {
   );
 
   if (tx.poi_sealed_at) {
+    // No panel heading of its own: this sits inside the workspace's folded "Proof of Intent"
+    // frame, which already names it. Just the sealing line, the certificate, and its actions.
     return (
       <>
-        <Panel
-          title="Proof of Intent — sealed"
-          description={`Sealed ${when(tx.poi_sealed_at)}`}
-          footer={
-            <div className="flex items-center justify-end gap-2">
-              <Button size="sm" variant="outline" className="gap-2" onClick={() => setCertOpen(true)}>
-                <FileText className="h-3.5 w-3.5" /> View certificate
-              </Button>
-              <Button size="sm" variant="outline" className="gap-2" onClick={download}>
-                <Download className="h-3.5 w-3.5" /> Download
-              </Button>
-            </div>
-          }
-        >
-          <CertificateBlock
-            heading="Proof of Intent"
-            lines={[
-              { label: "Transaction", value: tx.title },
-              { label: "Quantity / Price", value: `${tx.quantity ?? "—"} ${tx.unit ?? ""} at ${tx.price ?? "—"} ${tx.currency}` },
-              { label: "Sealed", value: String(tx.poi_sealed_at) },
-            ]}
-            sealId={tx.poi_hash ?? null}
-          />
-        </Panel>
+        <div className="text-xs leading-relaxed">
+          <p className="text-muted-foreground">Sealed {when(tx.poi_sealed_at)}</p>
+          <div className="mt-3">
+            <CertificateBlock
+              heading="Proof of Intent"
+              lines={[
+                { label: "Transaction", value: tx.title },
+                { label: "Quantity / Price", value: `${tx.quantity ?? "—"} ${tx.unit ?? ""} at ${tx.price ?? "—"} ${tx.currency}` },
+                { label: "Sealed", value: String(tx.poi_sealed_at) },
+              ]}
+              sealId={tx.poi_hash ?? null}
+            />
+          </div>
+          <div className="mt-3 flex items-center justify-end gap-2">
+            <Button size="sm" variant="outline" className="gap-2" onClick={() => setCertOpen(true)}>
+              <FileText className="h-3.5 w-3.5" /> View certificate
+            </Button>
+            <Button size="sm" variant="outline" className="gap-2" onClick={download}>
+              <Download className="h-3.5 w-3.5" /> Download
+            </Button>
+          </div>
+        </div>
         {certificateDialog}
       </>
     );
   }
+
 
   return (
     <>

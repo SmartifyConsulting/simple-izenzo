@@ -535,6 +535,9 @@ function LiveDealEngine() {
   // Once Intent is confirmed, its frame folds into a small accordion nested under Online Media
   // Screening Results rather than staying open as its own full-size panel.
   const [confirmedIntentOpen, setConfirmedIntentOpen] = useState(false);
+  // The sealed Proof of Intent folds the same way — closed until the certificate is wanted.
+  const [sealedPoiOpen, setSealedPoiOpen] = useState(false);
+
   // Which counterparty (from the media-screening findings) the user is about to proceed with —
   // this is where the actual pick happens now, right next to the screening evidence for it.
   const [mediaPick, setMediaPick] = useState<string | null>(null);
@@ -1107,7 +1110,11 @@ function LiveDealEngine() {
       await advance(dealTx.id, "trading", "intent");
       setDealTx((prev) => (prev ? { ...prev, stage: "trading", step: "intent" } : prev));
       setStagePanel("intent");
+      // The screening record has served its purpose — fold it so Intent has the room.
+      setMediaResultsOpen(dealTx.id, false);
+      setDbHasChosenParty(true);
       toast.success("Choice recorded — confirm the intent to continue");
+
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -2325,18 +2332,8 @@ function LiveDealEngine() {
                           <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform", mediaResultsOpen && "rotate-180")} />
                         </span>
                       </button>
-                      {/* The prompt reads as plain subtext; a real button only appears once a
-                          party has actually been picked. */}
-                      {!dbHasChosenParty && (mediaPick || finalizing) && (
-                        <Button
-                          size="sm"
-                          className="shrink-0"
-                          disabled={finalizing}
-                          onClick={() => mediaPick && finalizeChoice(mediaPick)}
-                        >
-                          {finalizing ? "Recording your choice…" : "Continue"}
-                        </Button>
-                      )}
+                      {/* The choice action lives at the bottom of the records below. */}
+
                     </div>
                     {!dbHasChosenParty && !mediaPick && !finalizing && (
                       <p className="mt-1.5 text-[11px] text-muted-foreground">
@@ -2402,7 +2399,19 @@ function LiveDealEngine() {
                       </ul>
                       </RadioGroup>
                     )}
-                    {/* The choice action lives on the heading row above. */}
+                    {/* Continue sits under the last screened record, where the reading ends. */}
+                    {mediaResultsOpen && !dbHasChosenParty && (
+                      <div className="mt-3 flex justify-end">
+                        <Button
+                          size="sm"
+                          disabled={!mediaPick || finalizing}
+                          onClick={() => mediaPick && finalizeChoice(mediaPick)}
+                        >
+                          {finalizing ? "Recording your choice…" : "Continue"}
+                        </Button>
+                      </div>
+                    )}
+
 
                   </div>
                 )}
@@ -2456,7 +2465,39 @@ function LiveDealEngine() {
                       </div>
                     )}
                   </div>
+                ) : dealTx && stagePanel === "poi" && dealTx.poi_sealed_at ? (
+                  /* Sealed Proof of Intent reads the same way: a folded record whose certificate
+                     is there when it's wanted. */
+                  <div className="rounded-2xl border border-border bg-card">
+                    <button
+                      type="button"
+                      onClick={() => setSealedPoiOpen((v) => !v)}
+                      className="flex w-full items-center justify-between gap-2 px-3.5 py-2 text-left"
+                      aria-expanded={sealedPoiOpen}
+                    >
+                      <span className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+                        Proof of Intent
+                      </span>
+                      <ChevronDown
+                        className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", sealedPoiOpen && "rotate-180")}
+                      />
+                    </button>
+                    {sealedPoiOpen && (
+                      <div className="px-3.5 pb-3">
+                        <InlineFrame
+                          bare
+                          tx={dealTx}
+                          stage="trading"
+                          step="poi"
+                          reload={() => void reloadDeal()}
+                          onClose={() => setStagePanel(null)}
+                          onChangeParty={() => void reopenChoice()}
+                        />
+                      </div>
+                    )}
+                  </div>
                 ) : (
+
                   dealTx && stagePanel && (
                     <InlineFrame
                       tx={dealTx}
