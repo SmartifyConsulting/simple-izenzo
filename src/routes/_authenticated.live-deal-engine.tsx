@@ -697,7 +697,12 @@ function LiveDealEngine() {
         // checks row while they are outstanding, and the gate row only turns green with them.
         o["kycKyb"] = dealTx.wad_completed_at ? "done" : "active";
         o["wad"] = dealTx.wad_completed_at ? "done" : "open";
-        if (dealTx.wad_completed_at) o["businessDocs"] = dealTx.step === "business-docs" ? "active" : "done";
+        if (dealTx.wad_completed_at) {
+          o["businessDocs"] = dealTx.step === "business-docs" ? "active" : "done";
+          // Business documents in: Execution is what's next, so that's where the pulse goes.
+          if (o["businessDocs"] === "done") o["execution"] = "active";
+        }
+
       }
       return o;
     }
