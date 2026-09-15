@@ -140,6 +140,7 @@ export function WorkspaceTaskbar() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const currentTx = useRouterState({ select: (s) => (s.location.search as { tx?: string })?.tx });
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -157,8 +158,19 @@ export function WorkspaceTaskbar() {
       await cancelBidFn({ data: { transactionId: closeConfirm.id } });
       await qc.invalidateQueries({ queryKey: ["my-trades"] });
       toast.success(`${closeConfirm.label} cancelled`);
+      // A cancelled deal disappears from the screen outright — if it's the one currently open,
+      // switch to another open tab, or a blank new workspace if that was the last one.
+      const wasShowing = pathname === "/live-deal-engine" && currentTx === closeConfirm.id;
+      const remaining = windows.filter((w) => w.id !== closeConfirm.id && w.id !== "new");
       close(closeConfirm.id);
       setCloseConfirm(null);
+      if (wasShowing) {
+        if (remaining.length > 0) {
+          void navigate({ to: "/live-deal-engine", search: { tx: remaining[0]!.id } });
+        } else {
+          void navigate({ to: "/live-deal-engine", search: { fresh: true, n: Date.now() } });
+        }
+      }
     } catch (err) {
       toast.error((err as Error).message);
     } finally {

@@ -1101,6 +1101,9 @@ function LiveDealEngine() {
           summary: "Bid/offer archived",
         });
       }
+      // A cancelled/archived deal disappears from the screen outright — switch to another open
+      // tab if one exists, or a blank new workspace if that was the last one.
+      const remaining = windows.filter((w) => w.id !== dealTx.id && w.id !== "new");
       closeWindow(dealTx.id);
       try {
         localStorage.removeItem(ACTIVE_DEAL_KEY);
@@ -1108,7 +1111,11 @@ function LiveDealEngine() {
         // Best-effort — worst case a later refresh resumes the same deal again.
       }
       toast.success(kind === "cancelled" ? "Bid/offer cancelled" : "Bid/offer archived");
-      void navigate({ to: "/live-deal-engine", search: { fresh: true } });
+      if (remaining.length > 0) {
+        void navigate({ to: "/live-deal-engine", search: { tx: remaining[0]!.id } });
+      } else {
+        void navigate({ to: "/live-deal-engine", search: { fresh: true, n: Date.now() } });
+      }
     } catch (err) {
       toast.error((err as Error).message);
     }
