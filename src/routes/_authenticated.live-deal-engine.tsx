@@ -2041,11 +2041,10 @@ function LiveDealEngine() {
             {dealTx ? (
               <div className="mt-1 flex items-start justify-end gap-4">
                 <div className="w-1/2 max-w-[260px] shrink-0">
-                  {workspaceDocsPending || (submittedForThisBid && workspaceDocs.length === 0) ? (
-                    <div className="flex h-10 items-center justify-center text-xs text-muted-foreground">
-                      Reading your documents…
-                    </div>
-                  ) : workspaceDocs.length === 0 && !submittedForThisBid ? (
+                  {/* The "reading your documents" progress bar already shown on the left says this
+                      — repeating it again here as plain text had no progress bar of its own and
+                      just duplicated the message. */}
+                  {workspaceDocsPending || (submittedForThisBid && workspaceDocs.length === 0) ? null : workspaceDocs.length === 0 && !submittedForThisBid ? (
                     <DocumentUploadStep
                       // A stale resumed deal (from the "keep working on your last bid"
                       // localStorage effect) can mount this before the freshly-seeded one
