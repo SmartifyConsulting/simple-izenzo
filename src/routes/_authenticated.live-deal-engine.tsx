@@ -2364,7 +2364,7 @@ function LiveDealEngine() {
                     >
                       <span className="flex min-w-0 items-center gap-2">
                         <span className="label-caps shrink-0 rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
-                          {dbHasChosenParty ? "Chosen Counterparty" : "Search Results"}
+                          Search Results
                         </span>
                         {/* Who was chosen, readable without opening the frame. */}
                         {dbHasChosenParty && chosenPartyName && (
@@ -2417,9 +2417,7 @@ function LiveDealEngine() {
                         className="label-caps flex min-w-0 flex-1 items-center justify-between gap-1.5 rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]"
                       >
                         <span className="min-w-0 truncate">
-                          {dbHasChosenParty
-                            ? `CHOSEN COUNTERPARTY${chosenPartyName ? ` — ${chosenPartyName}` : ""}`
-                            : "ONLINE MEDIA SCREENING RESULTS"}
+                          ONLINE SCANNING RESULTS
                         </span>
 
                         <span className="flex shrink-0 items-center gap-1.5">
@@ -2528,7 +2526,7 @@ function LiveDealEngine() {
                 {dealTx && mediaResults && mediaResults.length === 0 && (
                   <div className="rounded-2xl border border-border bg-card p-3">
                     <p className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
-                      ONLINE MEDIA SCREENING RESULTS
+                      ONLINE SCANNING RESULTS
                     </p>
                     <p className="mt-2 text-xs text-muted-foreground">
                       Screening returned no records — pick a counterparty from the search results above to
