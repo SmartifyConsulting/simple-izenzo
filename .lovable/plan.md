@@ -49,4 +49,6 @@ Information as Bid Information sits below Bid Registration.
   (~1490–1509) drop the `RadioGroupItem`/`Checkbox` column and the `screeningDone && onFinalize`
   Continue button (~1747–1762), leaving that accordion as a read-only record. `mediaResults`
   non-empty with zero candidates still renders the search-results record as today.
+- Frame pill label (~2266): `dbHasChosenParty ? "Chosen Counterparty" : choicePending ? "Choose
+  Counterparty" : "Search Results"`.
 - No changes to screening logic, gates, scoring or token costs.
