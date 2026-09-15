@@ -19,9 +19,15 @@ Footer keeps Close and Counter offer. If the company has no profile on the platf
 
 Cancelling or closing every bid tab leaves an empty Live Workspace: no bid name, no bid number, no bidder or Bid Information carried over from the last bid. The remembered "last bid" is cleared at the same time, so a reload does not bring it back.
 
-## 3. "Confirm Intent" heading becomes "Confirmation"
+## 3. One clean Confirmed Intent panel
 
-Heading text only; the step behaves as before.
+The intent step currently sits inside three nested frames (Confirmed Intent → Intent → Confirm Intent). It becomes a single panel:
+
+- one heading, "Confirmed Intent"
+- the subtext "Read the terms as they stand. Confirming does not seal them — that is the next step."
+- the certificate
+
+The inner "Intent" and "Confirm Intent" frames, their pills and the duplicate close button go. "Confirm Intent" as a heading is retired in favour of "Confirmation" wherever it still appears elsewhere.
 
 ## 4. Intent certificate appears in the document list immediately
 
