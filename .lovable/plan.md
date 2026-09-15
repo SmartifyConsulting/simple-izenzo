@@ -51,7 +51,22 @@ opens on click and stays available for the whole deal.
 - If no contact address is on file for a counterparty, the counter offer is still recorded and
   the bidder is told it could not be emailed.
 
+## 7. Buy Tokens goes through PayFast
+
+Today Buy Tokens credits the balance without taking any money. It will now open a PayFast payment
+window over the Tokens page, using the merchant credentials already saved on the Integrations page
+(sandbox or production, as configured):
+
+- Buy Tokens starts a payment for the chosen number of tokens at the current rate, converted to
+  rand, and shows the PayFast card/EFT window on top of the page.
+- Tokens are only added once PayFast confirms the payment; the balance and ledger refresh by
+  themselves and the "back to trade" hand-off still works.
+- A cancelled or failed payment leaves the balance untouched and says so.
+- If PayFast credentials are missing or switched off, the button says payments are not connected
+  yet instead of silently crediting tokens.
+
 ## Technical detail
+
 
 **Database** — one migration:
 - `public.counter_offers`: `id`, `transaction_id`, `counterparty_id`, `direction`
