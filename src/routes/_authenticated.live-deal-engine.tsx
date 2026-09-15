@@ -2085,7 +2085,7 @@ function LiveDealEngine() {
                 interestCount === 0 &&
                 flowStep !== "searching" && (
                   <Button
-                    className="mt-2 w-full"
+                    className="mt-2 w-full bg-emerald-500 text-black hover:bg-emerald-400"
                     disabled={rereading || workspaceDocsPending || !(documentSummary || readError)}
                     onClick={() => goToSearch(dealTx.id)}
                   >
