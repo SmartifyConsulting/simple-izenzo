@@ -15,6 +15,7 @@ type Proposal = {
   source_references: unknown;
   decision: string | null;
   decided_at: string | null;
+  related_counterparty: string | null;
 };
 
 const HEADING: Record<StageContext, string> = {
@@ -70,8 +71,19 @@ export function DecisionPackPanel({
 
   useEffect(() => {
     if (!proposals) return;
-    onAllDecided?.(proposals.length > 0 && proposals.every((p) => Boolean(p.decided_at)));
+    const allDecided = proposals.length > 0 && proposals.every((p) => Boolean(p.decided_at));
+    onAllDecided?.(allDecided);
   }, [proposals, onAllDecided]);
+
+  // Folds itself back up once every proposal has been decided — a brief pause so the last
+  // "Accepted"/"Rejected" state is actually seen before the panel collapses on its own.
+  useEffect(() => {
+    if (!proposals || proposals.length === 0) return;
+    const allDecided = proposals.every((p) => Boolean(p.decided_at));
+    if (!allDecided) return;
+    const id = setTimeout(() => setOpen(false), 1200);
+    return () => clearTimeout(id);
+  }, [proposals]);
 
   async function act(id: string, decision: "accepted" | "rejected") {
     setDeciding(id);
@@ -142,13 +154,18 @@ export function DecisionPackPanel({
               <div key={p.id} className="rounded-xl border border-border/70 p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <span className="label-caps text-[10px] text-muted-foreground">
                         {p.proposal_type}
                       </span>
                       {pct !== null && (
                         <span className="rounded-full bg-[var(--lw-pill-bg)] px-2 py-0.5 text-[10px] font-semibold text-[var(--lw-pill-fg)]">
                           {pct}%
+                        </span>
+                      )}
+                      {p.related_counterparty && (
+                        <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                          {p.related_counterparty}
                         </span>
                       )}
                     </div>

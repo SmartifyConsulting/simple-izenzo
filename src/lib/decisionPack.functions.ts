@@ -61,6 +61,7 @@ type RawProposal = {
   summary?: string;
   rationale?: string;
   source_references?: unknown;
+  counterparty?: string | null;
 };
 
 /** Nothing unvalidated is ever written: a bad type or an out-of-range probability is dropped. */
@@ -71,6 +72,7 @@ function validate(raw: RawProposal[]) {
     output: string;
     rationale: string;
     source_references: string[];
+    related_counterparty: string | null;
   }[] = [];
   const rejected: string[] = [];
 
@@ -93,12 +95,14 @@ function validate(raw: RawProposal[]) {
     const refs = Array.isArray(r.source_references)
       ? r.source_references.map((s) => String(s)).filter(Boolean).slice(0, 8)
       : [];
+    const counterparty = String(r.counterparty ?? "").trim();
     clean.push({
       proposal_type: type,
       probability: p,
       output: summary,
       rationale: String(r.rationale ?? "").trim(),
       source_references: refs,
+      related_counterparty: counterparty || null,
     });
   }
   return { clean, rejected };
@@ -151,8 +155,9 @@ export const runDecisionPack = createServerFn({ method: "POST" })
 
     const system = [
       "You are Izenzo AI+. You are advisory only: you never decide, never select, never adopt, and never change the transaction.",
-      "Return STRICT JSON: {\"proposals\":[{\"proposal_type\":\"counterparty|pricing|risk|structure|timing|substitution|bundle\",\"probability\":0.0,\"summary\":\"one sentence\",\"rationale\":\"why, in plain professional language\",\"source_references\":[\"…\"]}]}",
+      "Return STRICT JSON: {\"proposals\":[{\"proposal_type\":\"counterparty|pricing|risk|structure|timing|substitution|bundle\",\"probability\":0.0,\"summary\":\"one sentence\",\"rationale\":\"why, in plain professional language\",\"source_references\":[\"…\"],\"counterparty\":\"the exact counterparty name this proposal is about, from the Counterparties list below, or null if it isn't about a specific one\"}]}",
       "probability is a number between 0 and 1 expressing how likely the proposal is to be the right course. Never use words like low, medium or high for it.",
+      "Always set \"counterparty\" to the specific party's name whenever a proposal concerns one — never leave it null just because the type isn't \"counterparty\" (a pricing or risk proposal can still be about a specific party).",
       "Return between 2 and 6 proposals. No prose outside the JSON.",
     ].join("\n");
 
@@ -206,6 +211,8 @@ export const runDecisionPack = createServerFn({ method: "POST" })
     const { data: inserted, error } = await supabase
       .from("ai_proposals")
       .insert(
+        // related_counterparty predates the regenerated Supabase types (migration 0013) — cast
+        // through unknown until types are regenerated after that migration runs.
         clean.map((c) => ({
           transaction_id: tx.id,
           kind: "ai_plus",
@@ -217,7 +224,8 @@ export const runDecisionPack = createServerFn({ method: "POST" })
           output: c.output,
           rationale: c.rationale,
           source_references: c.source_references,
-        })),
+          related_counterparty: c.related_counterparty,
+        })) as unknown as never[],
       )
       .select();
     if (error) throw new Error(error.message);
