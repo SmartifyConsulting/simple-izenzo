@@ -535,6 +535,9 @@ function LiveDealEngine() {
   // Once Intent is confirmed, its frame folds into a small accordion nested under Online Media
   // Screening Results rather than staying open as its own full-size panel.
   const [confirmedIntentOpen, setConfirmedIntentOpen] = useState(false);
+  // The sealed Proof of Intent folds the same way — closed until the certificate is wanted.
+  const [sealedPoiOpen, setSealedPoiOpen] = useState(false);
+
   // Which counterparty (from the media-screening findings) the user is about to proceed with —
   // this is where the actual pick happens now, right next to the screening evidence for it.
   const [mediaPick, setMediaPick] = useState<string | null>(null);
