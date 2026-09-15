@@ -26,9 +26,9 @@ const HEADING: Record<StageContext, string> = {
 };
 
 const PILL_LABEL: Record<StageContext, string> = {
-  choice_made: "AI+ CHOICE CONSULT",
-  intent_confirmed: "AI+ FINAL CHOICE CONSULT",
-  wad_updated: "AI+ OVERALL COMPLIANCE CONSULT",
+  choice_made: "AI+ CHOICE RECOMMENDATIONS",
+  intent_confirmed: "AI+ FINAL CHOICE RECOMMENDATIONS",
+  wad_updated: "AI+ OVERALL COMPLIANCE RECOMMENDATIONS",
   finality_recorded: "AI+ PROPOSALS",
 };
 
@@ -125,7 +125,7 @@ export function DecisionPackPanel({
   const pending = (proposals ?? []).filter((p) => !p.decided_at).length;
 
   return (
-    <div className="rounded-2xl border border-border bg-card">
+    <div className="rounded-2xl border border-orange-500/40 bg-card">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -133,7 +133,7 @@ export function DecisionPackPanel({
         aria-expanded={open}
       >
         <span className="flex items-center gap-2">
-          <span className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+          <span className="label-caps rounded-full bg-orange-500 px-2.5 py-1 text-white">
             {PILL_LABEL[stageContext]}
           </span>
           {busy ? (
