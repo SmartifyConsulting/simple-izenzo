@@ -1762,7 +1762,9 @@ function PoiStep({ tx, reload }: Props) {
   return (
     <>
     <Panel
-      title="Proof of Intent"
+      {/* No title: the frame around this already reads "Proof of Intent", and the sealing
+          sentence now sits as subtext under that heading. */}
+
       footer={
         <div className="flex items-center justify-between gap-3">
           <TokenGateFooter cost={POI_COST} />
