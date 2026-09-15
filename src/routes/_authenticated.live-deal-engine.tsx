@@ -2066,7 +2066,7 @@ function LiveDealEngine() {
               waiting for another click — so a visitor who already searched on the homepage lands
               straight on the summary panel below, never back on this same picker. */}
           {!activity && (
-            <div className="glass-node mt-2 space-y-2 bg-card p-4 [backdrop-filter:none] [background-image:none]">
+            <div className="glass-node mt-1.5 space-y-2 bg-card p-4 [backdrop-filter:none] [background-image:none]">
               {/* A brand-new workspace already reads as a bid: the same Bid Registration frame,
                   with the BID number on the heading row, around the description/upload bar. */}
               <div className="flex items-center justify-between gap-2">
