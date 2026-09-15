@@ -12,7 +12,10 @@
 
 5. **Proof of Intent becomes the same kind of accordion once sealed** — a collapsed frame reading Proof of Intent, expanding to show the certificate with View certificate and Download.
 
-6. **50 tokens for testing.** Both organisations attached to info@georgiaadams.co.za (Smartify Consulting and Georgia Adams, both currently 0) get 50 tokens each, recorded in the credit ledger as a test allocation.
+6. **Step 1 folds up on the map.** Once the pulse has moved on to Proof of Intent in Step 2, the Step 1 · Trading frame on the workflow map collapses to a slim ticked header bar instead of its full set of tiles, freeing height for the steps that still need attention. Clicking it opens it again.
+
+7. **50 tokens for testing.** Both organisations attached to info@georgiaadams.co.za (Smartify Consulting and Georgia Adams, both currently 0) get 50 tokens each, recorded in the credit ledger as a test allocation.
+
 
 ## Technical detail
 
