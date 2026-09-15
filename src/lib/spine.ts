@@ -30,7 +30,7 @@ export const SPINE: StageDef[] = [
         blurb: "Scan LinkedIn, Facebook, TikTok, marketplaces and news for each shortlisted party.",
       },
       { key: "media", label: "Social / News Media", blurb: "Scan open media for signals on the deal and parties." },
-      { key: "intent", label: "Intent", blurb: "Confirm the intent to transact on the stated terms." },
+      { key: "intent", label: "Intent Confirmation", blurb: "Confirm the intent to transact on the stated terms." },
       { key: "poi", label: "Proof of Intent", blurb: "Seal the Proof of Intent. Costs 1 token (USD 10)." },
     ],
   },

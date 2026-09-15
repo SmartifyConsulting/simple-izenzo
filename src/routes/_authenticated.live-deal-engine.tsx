@@ -36,6 +36,7 @@ import { ClassicView } from "@/components/canvas/ClassicView";
 import { MapView } from "@/components/canvas/MapView";
 import { DocumentUploadStep } from "@/components/guided/DocumentUploadStep";
 import { Button } from "@/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -491,6 +492,9 @@ function LiveDealEngine() {
   // Once Intent is confirmed, its frame folds into a small accordion nested under Online Media
   // Screening Results rather than staying open as its own full-size panel.
   const [confirmedIntentOpen, setConfirmedIntentOpen] = useState(false);
+  // Which counterparty (from the media-screening findings) the user is about to proceed with —
+  // this is where the actual pick happens now, right next to the screening evidence for it.
+  const [mediaPick, setMediaPick] = useState<string | null>(null);
 
   // Once the ask has been made for a bid, the description/drop frame never comes back — not while
   // the files are still saving, not on a refresh, not on a tab switch. Remembered per bid.
@@ -1635,22 +1639,15 @@ function LiveDealEngine() {
         </div>
       )}
 
-      {/* Only one workspace is ever open at a time now (see dealWindows' setMode), so this is
-          always just the page itself — no halo/backdrop layer behind it, which used to read as a
-          second frame peeking out from underneath the real one. One outer frame wraps the workflow
-          and the workspace so the pair reads as a single working surface. */}
+      {/* The workflow (Map/Steps) and the Live Workspace each stand on their own now — the extra
+          outer card that used to wrap both was one frame too many once the workspace already has
+          its own border, and just ate space that the two panels can use instead. */}
       <div
         className={cn(
-          "relative rounded-3xl border border-border bg-card/40 p-3 shadow-sm",
-          fillToTaskbar && "flex min-h-0 flex-1 flex-col",
+          "relative grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]",
+          fillToTaskbar && "flex min-h-0 flex-1 flex-col lg:grid",
         )}
       >
-        <div
-          className={cn(
-            "relative grid grid-cols-1 items-stretch gap-4 rounded-3xl lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]",
-            fillToTaskbar && "min-h-0 flex-1",
-          )}
-        >
           {/* Engine Map — always visible on the left. Clicking a node opens that step inline in
               the Live Workspace beside it, instead of navigating away from this screen. When
               nothing else is competing for screen space (the common case), both panels stretch to
@@ -1800,7 +1797,7 @@ function LiveDealEngine() {
           {activity && dealTx && (
             // Fully opaque: the glass treatment's translucency let content scrolling beneath show
             // through this pinned frame.
-            <div className="glass-node space-y-1.5 bg-card p-4 [backdrop-filter:none] [background-image:none]">
+            <div className="glass-node space-y-1 bg-card p-3 [backdrop-filter:none] [background-image:none]">
               <div className="flex items-center justify-between gap-2">
                 <p className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">Bid Registration</p>
                 {(((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference) && (
@@ -1875,7 +1872,7 @@ function LiveDealEngine() {
           {/* Bidder details + AI summary come next — what was actually submitted, never buried
               behind the progress ribbon. The attachment(s) live here too, with preview/download. */}
           {activity && dealTx && (
-            <div className="glass-node mt-1.5 space-y-2 p-4">
+            <div className="glass-node mt-1.5 space-y-1.5 p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <button
                   type="button"
@@ -2058,7 +2055,7 @@ function LiveDealEngine() {
               waiting for another click — so a visitor who already searched on the homepage lands
               straight on the summary panel below, never back on this same picker. */}
           {!activity && (
-            <div className="glass-node mt-2 space-y-2 bg-card p-4 [backdrop-filter:none] [background-image:none]">
+            <div className="glass-node mt-1.5 space-y-1.5 bg-card p-3 [backdrop-filter:none] [background-image:none]">
               {/* A brand-new workspace already reads as a bid: the same Bid Registration frame,
                   with the BID number on the heading row, around the description/upload bar. */}
               <div className="flex items-center justify-between gap-2">
@@ -2176,7 +2173,7 @@ function LiveDealEngine() {
                     <button
                       type="button"
                       onClick={() => setSearchResultsOpen(dealTx.id, !searchResultsOpen)}
-                      className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
+                      className="flex w-full items-center justify-between gap-2 px-3.5 py-2 text-left"
                       aria-expanded={searchResultsOpen}
                     >
                       <span className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
@@ -2187,7 +2184,7 @@ function LiveDealEngine() {
                       />
                     </button>
                     {searchResultsOpen && (
-                    <div className="space-y-2 px-4 pb-4">
+                    <div className="space-y-2 px-3.5 pb-3">
                     {searchError && (
                       <p className="text-xs text-destructive">Search failed: {searchError}</p>
                     )}
@@ -2215,7 +2212,7 @@ function LiveDealEngine() {
                     record to check back on rather than something needing attention the moment it's
                     ready. */}
                 {dealTx && mediaResults && mediaResults.length > 0 && (
-                  <div className="rounded-2xl border border-border bg-card p-4">
+                  <div className="rounded-2xl border border-border bg-card p-3">
                     <button
                       type="button"
                       onClick={() => setMediaResultsOpen(dealTx.id, !mediaResultsOpen)}
@@ -2231,10 +2228,30 @@ function LiveDealEngine() {
                       </span>
                     </button>
                     {mediaResultsOpen && (
+                      <RadioGroup
+                        value={mediaPick ?? ""}
+                        onValueChange={setMediaPick}
+                        disabled={hasChosen}
+                        asChild
+                      >
                       <ul className="mt-2 space-y-2">
                         {mediaResults.map((m) => (
                           <li key={m.counterpartyId} className="rounded-lg border border-border p-2.5">
-                            <p className="text-xs font-semibold text-foreground">{m.name}</p>
+                            <div className="flex items-start gap-2">
+                              {!hasChosen && (
+                                <RadioGroupItem
+                                  id={`media-elect-${m.counterpartyId}`}
+                                  value={m.counterpartyId}
+                                  className="mt-0.5 shrink-0"
+                                />
+                              )}
+                              <label
+                                htmlFor={`media-elect-${m.counterpartyId}`}
+                                className={cn("min-w-0 flex-1 text-xs font-semibold text-foreground", !hasChosen && "cursor-pointer")}
+                              >
+                                {m.name}
+                              </label>
+                            </div>
                             <ul className="mt-1.5 space-y-1">
                               {m.findings.map((f) => (
                                 <li key={f.source} className="flex items-center justify-between gap-2 text-[11px]">
@@ -2265,6 +2282,18 @@ function LiveDealEngine() {
                           </li>
                         ))}
                       </ul>
+                      </RadioGroup>
+                    )}
+                    {mediaResultsOpen && !hasChosen && (
+                      <div className="mt-3 flex justify-end">
+                        <Button
+                          size="sm"
+                          disabled={!mediaPick || finalizing}
+                          onClick={() => mediaPick && finalizeChoice(mediaPick)}
+                        >
+                          {finalizing ? "Recording…" : "Elect to proceed — Confirm Intent"}
+                        </Button>
+                      </div>
                     )}
                   </div>
                 )}
@@ -2277,7 +2306,7 @@ function LiveDealEngine() {
                     <button
                       type="button"
                       onClick={() => setConfirmedIntentOpen((v) => !v)}
-                      className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
+                      className="flex w-full items-center justify-between gap-2 px-3.5 py-2 text-left"
                       aria-expanded={confirmedIntentOpen}
                     >
                       <span className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
@@ -2288,7 +2317,7 @@ function LiveDealEngine() {
                       />
                     </button>
                     {confirmedIntentOpen && (
-                      <div className="px-4 pb-4">
+                      <div className="px-3.5 pb-3">
                         <InlineFrame
                           tx={dealTx}
                           stage="trading"
@@ -2324,7 +2353,7 @@ function LiveDealEngine() {
                     <button
                       type="button"
                       onClick={() => setTradeSummaryOpen((v) => !v)}
-                      className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
+                      className="flex w-full items-center justify-between gap-2 px-3.5 py-2 text-left"
                       aria-expanded={tradeSummaryOpen}
                     >
                       <span className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
@@ -2335,7 +2364,7 @@ function LiveDealEngine() {
                       />
                     </button>
                     {tradeSummaryOpen && (
-                      <div className="px-4 pb-4">
+                      <div className="px-3.5 pb-3">
                         <TradeSummary tx={dealTx} />
                       </div>
                     )}
@@ -2346,7 +2375,6 @@ function LiveDealEngine() {
             ) : null}
         </div>
         </div>
-      </div>
     </>
   );
 
