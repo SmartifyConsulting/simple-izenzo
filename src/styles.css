@@ -108,10 +108,10 @@
   --taskbar-active-bg: oklch(0 0 0);
   --taskbar-active-fg: oklch(0.71 0.13 172);
   --taskbar-active-border: oklch(0.71 0.13 172);
-  /* Step name pills (map frame headings, Steps list headers) on the black stylesheet: the same
-     translucent-primary pill format used on the Live Workspace headings. */
-  --step-pill-bg: color-mix(in oklab, var(--primary) 10%, transparent);
-  --step-pill-fg: var(--primary);
+  /* Step name pills (map frame headings, Steps list headers) on the black stylesheet: light grey,
+     legible against the near-black page background. */
+  --step-pill-bg: oklch(0.82 0.005 260);
+  --step-pill-fg: oklch(0.16 0.008 260);
   /* Live Workspace frame headings (Bid Registration, Bid Information, Online Media Screening
      Results, Trade Summary, Intent/WaD) — a lighter charcoal pill, distinct from the black used by
      the Map/Steps step-name pills above. */
@@ -122,7 +122,7 @@
   --info: oklch(0.68 0.11 220);
   --info-foreground: oklch(0.16 0.02 250);
 
-  --border: oklch(1 0 0 / 26%);
+  --border: oklch(1 0 0 / 42%);
   --input: oklch(1 0 0 / 28%);
   --ring: oklch(0.78 0.12 178);
 

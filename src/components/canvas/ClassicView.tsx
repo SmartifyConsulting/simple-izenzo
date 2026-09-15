@@ -264,8 +264,9 @@ export function ClassicView({
     setCollapsed((c) => ({ ...c, [previous]: true, [activeStep]: false }));
   }, [activeStep]);
 
+  // A "done" row is a past stage — clicking it does nothing for now (see MapView.tsx for why).
   const open = (stage: StageKey, step: string, viewOnly = false) => {
-    if (readOnly) return;
+    if (readOnly || viewOnly) return;
     if (onOpenStep) {
       onOpenStep(stage, step, viewOnly);
       return;

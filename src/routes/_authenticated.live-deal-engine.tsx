@@ -1616,7 +1616,7 @@ function LiveDealEngine() {
             )}
           >
             <div className="flex shrink-0 items-center justify-between gap-2">
-              <p className="label-caps text-gray-600">Izenzo Trade Workflow</p>
+              <p className="label-caps text-muted-foreground">Izenzo Trade Workflow</p>
               {/* A switch, not a collapse: closing the map shows the vertical stepper instead, and
                   opening it hides the stepper again. One of the two is always on display. */}
               <div
@@ -1699,7 +1699,7 @@ function LiveDealEngine() {
               appear through it or in the gap above it. */}
           <div className="sticky -top-3 z-20 -mx-3 -mt-3 mb-3 bg-card px-3 pb-3 pt-3 sm:-top-5 sm:-mx-5 sm:-mt-5 sm:px-5 sm:pt-5">
           <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
-            <p className="label-caps text-gray-600">Live Workspace</p>
+            <p className="label-caps text-muted-foreground">Live Workspace</p>
             {dealTx && (
               <AlertDialog>
                 <DropdownMenu>

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUpRight, Download, LayoutGrid, List, Search } from "lucide-react";
+import { ArrowUpRight, Download, Handshake, LayoutGrid, List, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -91,6 +91,23 @@ function gateStates(t: TxRow) {
   return { search, match, poi, wad, execution };
 }
 
+/** A trade with a chosen counterparty — the moment a match becomes real, not just a candidate
+ * list. */
+function isMatched(t: TxRow) {
+  return gateStates(t).match?.label === "committed";
+}
+
+/** Gold handshake mark for matched trades — matches the client's supplied reference icon. */
+function MatchIcon() {
+  return (
+    <Handshake
+      className="h-3.5 w-3.5 shrink-0"
+      style={{ color: "oklch(0.75 0.14 85)" }}
+      aria-label="Matched"
+    />
+  );
+}
+
 function toCsv(rows: TxRow[]) {
   const header = ["Reference", "Title", "Commodity", "Counterparty", "Stage", "Step", "Created"];
   const lines = rows.map((t) =>
@@ -110,13 +127,26 @@ function toCsv(rows: TxRow[]) {
 }
 
 type ScopeFilter = "all" | "mine";
+const SCOPE_FILTERS: ScopeFilter[] = ["all", "mine"];
 
 /** The "nav menu view" of a deal list — search/filter/list-or-card, identical between /trades and
  * the Dashboard's canvas/list toggle so both surfaces behave the same way. */
 export function TradesListView() {
   const { org } = useAuth();
   const [query, setQuery] = useState("");
-  const [scope, setScope] = useState<ScopeFilter>("all");
+  // Multiple filter pills can be active at once — "mine" narrows the rows, "all" is the neutral
+  // default that adds no constraint, so toggling both on is the same as "mine" alone but both
+  // stay visibly selected.
+  const [scope, setScope] = useState<Set<ScopeFilter>>(new Set(["all"]));
+  function toggleScope(s: ScopeFilter) {
+    setScope((prev) => {
+      const next = new Set(prev);
+      if (next.has(s)) next.delete(s);
+      else next.add(s);
+      // Never let every pill switch off — fall back to "all" rather than showing nothing.
+      return next.size === 0 ? new Set(["all"]) : next;
+    });
+  }
   const [view, setView] = useState<"list" | "card">("list");
 
   const { data: txs = [], isLoading } = useQuery({
@@ -157,7 +187,7 @@ export function TradesListView() {
     let rows = txs;
     // "My Trades" — the ones this org itself registered (as opposed to every deal it can see
     // because it was picked as somebody else's counterparty).
-    if (scope === "mine") rows = rows.filter((t) => t.org_id === org?.id);
+    if (scope.has("mine")) rows = rows.filter((t) => t.org_id === org?.id);
     if (query.trim()) {
       const q = query.trim().toLowerCase();
       rows = rows.filter(
@@ -193,14 +223,15 @@ export function TradesListView() {
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-muted/30 px-5 py-3">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1.5">
-            {(["all", "mine"] as const).map((s) => (
+            {SCOPE_FILTERS.map((s) => (
               <button
                 key={s}
                 type="button"
-                onClick={() => setScope(s)}
+                aria-pressed={scope.has(s)}
+                onClick={() => toggleScope(s)}
                 className={cn(
                   "label-caps rounded-full border px-3 py-1 text-[11px] transition-colors",
-                  scope === s
+                  scope.has(s)
                     ? "border-transparent bg-foreground text-background"
                     : "border-border bg-transparent text-muted-foreground hover:text-foreground",
                 )}
@@ -282,9 +313,12 @@ export function TradesListView() {
               {filtered.map((t) => (
                 <tr key={t.id} className="hover:bg-muted/40">
                   <td className="px-4 py-3">
-                    <Link to="/live-deal-engine" search={{ tx: t.id }} className="font-mono text-xs font-semibold hover:underline">
-                      {t.reference ?? fallbackReference(t.id, t.direction)}
-                    </Link>
+                    <span className="flex items-center gap-1.5">
+                      {isMatched(t) && <MatchIcon />}
+                      <Link to="/live-deal-engine" search={{ tx: t.id }} className="font-mono text-xs font-semibold hover:underline">
+                        {t.reference ?? fallbackReference(t.id, t.direction)}
+                      </Link>
+                    </span>
                     <p className="mt-0.5 max-w-[220px] truncate text-xs text-muted-foreground">
                       {t.commodity || t.title}
                     </p>
@@ -315,7 +349,10 @@ export function TradesListView() {
               className="flex flex-col gap-2 rounded-xl border border-border p-3.5 transition-colors hover:border-primary/50"
             >
               <div className="flex items-start justify-between gap-2">
-                <span className="font-mono text-xs font-semibold">{t.reference ?? fallbackReference(t.id, t.direction)}</span>
+                <span className="flex items-center gap-1.5">
+                  {isMatched(t) && <MatchIcon />}
+                  <span className="font-mono text-xs font-semibold">{t.reference ?? fallbackReference(t.id, t.direction)}</span>
+                </span>
                 <span className="shrink-0 text-[11px] text-muted-foreground">{ageLabel(t.created_at)}</span>
               </div>
               <p className="truncate text-sm font-medium">{t.commodity || t.title}</p>

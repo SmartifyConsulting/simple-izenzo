@@ -368,11 +368,12 @@ export function MapView({
 }) {
   const [panel, setPanel] = useState<{ stage: StageKey; step: string; viewOnly: boolean } | null>(null);
 
-  // A "done" tile is a past stage — its data can no longer be changed once the workflow has moved
-  // on (most concretely: once a counterparty is chosen), so clicking it opens a read-only view
-  // instead of jumping back into the live, editable flow for that step.
+  // A "done" tile is a past stage — clicking it does nothing for now. A real read-only view of
+  // completed steps is planned for a later phase; showing the live editable upload/search/results
+  // UI for a step that's already behind the current pulse was confusing, so it's disabled rather
+  // than shipped half-right.
   const open = (stage: StageKey, step: string, viewOnly = false) => {
-    if (readOnly || !tx) return;
+    if (readOnly || !tx || viewOnly) return;
     if (onOpenStep) {
       onOpenStep(stage, step, viewOnly);
       return;
