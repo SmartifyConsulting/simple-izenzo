@@ -1742,23 +1742,9 @@ export function CounterpartyRecord({
           doesn't show up alongside the Online Media Screening findings above. */}
 
 
-      {screeningDone && onFinalize ? (
-        <Button
-          type="button"
-          className={cn(
-            "mt-3 w-full bg-info text-white hover:bg-info/90",
-            !pickedId && !finalizing && "bg-slate-300 text-slate-700 hover:bg-slate-300 disabled:opacity-100",
-          )}
-          disabled={finalizing || !pickedId}
-          onClick={() => pickedId && onFinalize(pickedId)}
-        >
-          {finalizing
-            ? "Recording your choice…"
-            : pickedId
-              ? "Continue"
-              : "Select who you want to trade with"}
-        </Button>
-      ) : (
+      {/* The final pick (and its Continue button) belongs to the Online Media Screening Results
+          frame in the workspace — a second one here competed with it. */}
+      {screeningDone ? null : (
         onContinue &&
         candidates.length > 0 &&
         !searching &&
