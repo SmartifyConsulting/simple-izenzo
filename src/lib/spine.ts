@@ -31,7 +31,12 @@ export const SPINE: StageDef[] = [
       },
       { key: "media", label: "Social / News Media", blurb: "Scan open media for signals on the deal and parties." },
       { key: "intent", label: "Confirm Intent", blurb: "Confirm the intent to transact on the stated terms." },
-      { key: "poi", label: "Proof of Intent", blurb: "Seal the Proof of Intent. Costs 1 token (USD 10)." },
+      {
+        key: "poi",
+        label: "Proof of Intent",
+        blurb:
+          "Sealing writes the transaction state to an immutable record with a fingerprint. Compliance, execution, finality and memory stay locked until it exists.",
+      },
     ],
   },
   {

@@ -1771,12 +1771,7 @@ function PoiStep({ tx, reload }: Props) {
           <Lock className="h-3.5 w-3.5" /> Not enough tokens — this needs {POI_COST} and the
           organisation has {org?.credits ?? 0}.
         </p>
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          Sealing writes the transaction state to an immutable record with a fingerprint. Compliance,
-          execution, finality and memory stay locked until it exists.
-        </p>
-      )}
+      ) : null}
     </Panel>
     {certificateDialog}
     </>

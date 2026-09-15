@@ -815,9 +815,10 @@ export function InlineFrame({
           <p className="label-caps inline-block truncate rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 font-sans text-[var(--lw-pill-fg)]">
             {def?.label ?? step}
           </p>
-          {/* Intent and Proof of Intent show their own heading + description inside the panel
-              below, so the outer blurb here would just repeat it. */}
-          {def?.blurb && step !== "intent" && step !== "poi" && (
+          {/* Intent shows its own heading + description inside the panel below, so the outer
+              blurb here would just repeat it. Proof of Intent's sealing sentence lives here
+              instead — its own panel no longer repeats it. */}
+          {def?.blurb && step !== "intent" && (
             <p className="mt-1 text-[13px] text-muted-foreground">{def.blurb}</p>
           )}
           {viewOnly && (
