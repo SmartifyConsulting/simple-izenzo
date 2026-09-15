@@ -106,6 +106,30 @@ window over the Tokens page, using the merchant credentials already saved on the
   and Proceed with this bid (calls the existing continue-to-media handler).
 - `src/components/steps/StepScreen.tsx`: `useState("other")` for the business-docs type.
 
+**PayFast token purchase**:
+- `src/lib/payfast.server.ts`: load and decrypt the `payfast` row from `integration_credentials`
+  (merchant ID, merchant key, passphrase, environment), build the MD5 signature over the ordered
+  field set, and start an Onsite Payment (`/onsite/process`) to get the payment identifier.
+- `src/lib/payfast.functions.ts`: `startTokenPurchase` (`requireSupabaseAuth`) — validates the
+  token count, converts USD to ZAR through the existing exchange-rate integration, writes a
+  pending purchase row (`credit_ledger`-adjacent purchase table or a `transaction_events`-style
+  record keyed by `m_payment_id`), and returns the identifier; `getTokenPurchaseStatus` for polling.
+- `src/routes/api/public/payfast/itn.ts`: server route verifying the ITN (signature, PayFast
+  source IP/host validation, amount match), then calling `atomic_token_adjust` with the purchased
+  amount once per `pf_payment_id`, idempotently.
+- `src/routes/_authenticated.credits.tsx`: `buy()` no longer calls `atomic_token_adjust` directly.
+  It calls `startTokenPurchase`, loads PayFast's onsite engine script and invokes
+  `window.payfast_do_onsite_payment({ uuid })`, then on the completion callback polls
+  `getTokenPurchaseStatus` until the ITN has credited the balance, refreshes org + ledger and
+  keeps the existing `returnTo` navigation. Missing/disabled credentials surface as an inline
+  message.
+- Migration for the pending-purchase table with GRANTs, RLS (own-org SELECT) and
+  `service_role` write access for the ITN route.
+
+**Map scrollbars**: remove `overflow-x-auto`/`min-w-[420px]` at `live-deal-engine.tsx:1602` and the
+`overflow-y-auto` on the surrounding panel (1596) so the map area itself never scrolls.
+
 Verification: typecheck, build, and a Playwright pass on the workspace covering the collapsed
 search-results frame, the counter-offer dialog, the pulse landing on Counter Offer then Execution,
-and the map rendering with no scrollbar.
+the map rendering with no scrollbars, and Buy Tokens opening the PayFast window in sandbox.
+
