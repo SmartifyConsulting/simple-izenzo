@@ -1598,25 +1598,23 @@ function LiveDealEngine() {
                 </button>
               </div>
             </div>
-            <div className="mt-3 min-h-0 flex-1">
+            <div className={cn("mt-3 min-h-0 flex-1", mapOpen ? "overflow-hidden" : "overflow-y-auto")}>
               {/* The map is the visual "where am I" companion — the same states, the same click
                   targets, opening the same step frames as the stepper. It scales to the panel, so
-                  neither a sideways nor a downward scrollbar appears around it. */}
+                  neither a sideways nor a downward scrollbar appears around it; the step list keeps
+                  its own vertical scroll. */}
               {mapOpen ? (
-                <div>
-                  <div>
-                  <MapView
-                    tx={dealTx ?? null}
-                    reload={() => void reloadDeal()}
-                    readOnly={!dealTx}
-                    onOpenStep={openMapStep}
-                    overrideStates={stepOverrides}
-                    reference={dealTx?.reference ?? draftReference}
-                    {...(dealTx ? {} : { onBid: startNewDeal })}
-                  />
-                  </div>
-                </div>
+                <MapView
+                  tx={dealTx ?? null}
+                  reload={() => void reloadDeal()}
+                  readOnly={!dealTx}
+                  onOpenStep={openMapStep}
+                  overrideStates={stepOverrides}
+                  reference={dealTx?.reference ?? draftReference}
+                  {...(dealTx ? {} : { onBid: startNewDeal })}
+                />
               ) : (
+
 
                 <ClassicView
                   tx={dealTx ?? FLOWCHART_PREVIEW_TX}
