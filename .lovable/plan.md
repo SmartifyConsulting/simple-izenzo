@@ -20,7 +20,13 @@ After the fix:
   circles/Continue button inside the Choose Counterparty frame's own copy of the screening records
   are removed so there is no second, conflicting place to pick.
 
-## 2. Tighter space between Bid Information and Choose Counterparty
+## 2. The frame renames itself once a party is chosen
+
+Once a counterparty has been chosen, the frame's pill reads **Chosen Counterparty** (instead of
+Choose Counterparty), and it folds closed as it does today. Before any pick it still reads Choose
+Counterparty, and before screening it reads Search Results.
+
+## 3. Tighter space between Bid Information and Choose Counterparty
 
 An always-present empty row sits between them (the slot that holds the upload control for a bid with
 no documents yet) and it adds a gap once the upload control is gone. That row only renders when it
