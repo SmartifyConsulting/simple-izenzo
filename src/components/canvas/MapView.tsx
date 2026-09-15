@@ -519,9 +519,6 @@ export function MapView({
         <MapNode
           box={BOXES.execution}
           label="Project Preparation and Execution"
-          sub="Concept, Pre-feasibility, Feasibility, Bankability, Implementation"
-          subSize="xs"
-
           state={st("execution", "preparation", "execution")}
           lock={lock("execution", "preparation")}
           onClick={() => open("execution", "preparation")}
