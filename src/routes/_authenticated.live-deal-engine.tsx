@@ -2178,7 +2178,9 @@ function LiveDealEngine() {
                     match list open below it is what made the screen look stuck. */}
                 {(flowStep === "searching" || flowStep === "results") &&
                   dealTx &&
-                  (!stagePanel || (stagePanel === "intent" && dealTx.intent_confirmed_at)) &&
+                  (choicePending ||
+                    !stagePanel ||
+                    (stagePanel === "intent" && dealTx.intent_confirmed_at)) &&
                   !dealTx.wad_completed_at && (
                   <div className="rounded-2xl border border-border bg-card">
                     <button
@@ -2188,7 +2190,7 @@ function LiveDealEngine() {
                       aria-expanded={searchResultsOpen}
                     >
                       <span className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
-                        Search Results
+                        {choicePending ? "Choose Counterparty" : "Search Results"}
                       </span>
                       <ChevronDown
                         className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", searchResultsOpen && "rotate-180")}
