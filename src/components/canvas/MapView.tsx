@@ -526,11 +526,16 @@ export function MapView({
           overrideKey: "onlineMedia",
         })}
 
-        {/* Step 2 — compliance & governance */}
+        {/* Confirm Intent closes out Step 1's own frame. */}
         {node("expressIntent", "Confirm Intent", "trading", "intent", ShieldCheck, {
           overrideKey: "intent",
         })}
+        </>
+        )}
+
+        {/* Step 2 — compliance & governance */}
         {node("poi", "Proof of Intent", "trading", "poi", Building2, { overrideKey: "poi" })}
+
         {node("wad", "KYC, KYB, PEP, AML", "compliance", "wad", Users, {
           overrideKey: "kycKyb",
         })}
