@@ -151,6 +151,16 @@ export function WorkspaceTaskbar() {
   const [cancelling, setCancelling] = useState(false);
   const cancelBidFn = useServerFn(cancelBid);
 
+  /** Closing the last tab must leave a genuinely empty workspace — otherwise a later visit
+   * resumes the bid that was just closed, name, bidder details and all. */
+  function forgetRememberedDeal() {
+    try {
+      localStorage.removeItem("izenzo:active-deal");
+    } catch {
+      // Best-effort only.
+    }
+  }
+
   async function cancelAndClose() {
     if (!closeConfirm) return;
     setCancelling(true);
