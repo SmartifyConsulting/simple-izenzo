@@ -29,6 +29,8 @@ import {
   type RecordedActivity,
 } from "@/components/canvas/DealCanvas";
 import { TradeSummary } from "@/components/canvas/TradeSummary";
+import { DecisionPackPanel } from "@/components/canvas/DecisionPackPanel";
+
 import { SubmitterIdentity } from "@/components/canvas/SubmitterIdentity";
 import { MatchResultsPanel } from "@/components/canvas/MatchResultsPanel";
 
@@ -321,6 +323,9 @@ function LiveDealEngine() {
   // immediately hijacked the workspace into a locked Intent panel, so the screening UI (and its
   // results) never had a chance to show. This one only ever reflects a real chosen row in the DB.
   const [dbHasChosenParty, setDbHasChosenParty] = useState(false);
+  /** Name of the chosen counterparty, so the folded frame can say who without being opened. */
+  const [chosenPartyName, setChosenPartyName] = useState<string | null>(null);
+
   /** Whether the deal map is shown above the stepper — folded away by hand if it isn't wanted. */
   const [mapOpen, setMapOpen] = useState(true);
   // Screening state is session-local and was never cleared on switching bids, so a fresh bid that
@@ -355,20 +360,44 @@ function LiveDealEngine() {
     if (!dealTx?.id) return;
     let live = true;
     (async () => {
-      const { count } = await supabase
+      const { data, count } = await supabase
         .from("counterparties")
-        .select("id", { count: "exact", head: true })
+        .select("id, name", { count: "exact" })
         .eq("transaction_id", dealTx.id)
         .eq("status", "chosen");
       if (live) {
         setHasChosen((count ?? 0) > 0);
         setDbHasChosenParty((count ?? 0) > 0);
+        setChosenPartyName(data?.[0]?.name ?? null);
       }
     })();
     return () => {
       live = false;
     };
   }, [dealTx?.id]);
+  // `dbHasChosenParty` is also set optimistically by finalizeChoice/startMediaChecks, so the name
+  // is re-read whenever it flips rather than only on switching deals.
+  useEffect(() => {
+    if (!dealTx?.id) return;
+    if (!dbHasChosenParty) {
+      setChosenPartyName(null);
+      return;
+    }
+    let live = true;
+    (async () => {
+      const { data } = await supabase
+        .from("counterparties")
+        .select("name")
+        .eq("transaction_id", dealTx.id)
+        .eq("status", "chosen")
+        .limit(1);
+      if (live) setChosenPartyName(data?.[0]?.name ?? null);
+    })();
+    return () => {
+      live = false;
+    };
+  }, [dealTx?.id, dbHasChosenParty]);
+
 
   const resumedStep: "intent" | "poi" | "wad" | "business-docs" | null = dealTx?.wad_completed_at
     ? dealTx.step === "business-docs"
@@ -521,11 +550,38 @@ function LiveDealEngine() {
     if (!dealTx || !dbHasChosenParty) return;
     setSearchResultsOpenByTx((prev) => ({ ...prev, [dealTx.id]: false }));
   }, [dealTx?.id, dbHasChosenParty]);
+  // Online media screening taking over is what the search results make way for: the record folds
+  // itself the moment screening starts, leaving the screen to the screening list below it.
+  useEffect(() => {
+    if (!dealTx || !mediaRunning) return;
+    setSearchResultsOpenByTx((prev) => ({ ...prev, [dealTx.id]: false }));
+  }, [dealTx?.id, mediaRunning]);
+  // Documents: attachments and the certificates the deal produces, in their own folded frame
+  // under Bid Information. Never opened automatically — filing a certificate is quiet.
+  const [documentsOpen, setDocumentsOpen] = useState(false);
+
+  // The selection circles for the choice live on the screening records, so that list has to be
+  // open the moment a choice is what the bid is waiting on — otherwise there is nothing to pick
+  // with and the deal reads as stuck.
+  useEffect(() => {
+    if (!dealTx || !choicePending) return;
+    setMediaResultsOpenByTx((prev) =>
+      prev[dealTx.id] ? prev : { ...prev, [dealTx.id]: true },
+    );
+  }, [dealTx?.id, choicePending]);
   // The trade record, once everything has cleared — folded away by default.
   const [tradeSummaryOpen, setTradeSummaryOpen] = useState(false);
   // Once Intent is confirmed, its frame folds into a small accordion nested under Online Media
   // Screening Results rather than staying open as its own full-size panel.
   const [confirmedIntentOpen, setConfirmedIntentOpen] = useState(false);
+  // AI+ proposes; a person decides. These track whether every proposal in each pack has been
+  // accepted or rejected, which is what lets the spine move on.
+  const [choicePackDecided, setChoicePackDecided] = useState(false);
+  const [intentPackDecided, setIntentPackDecided] = useState(false);
+
+  // The sealed Proof of Intent folds the same way — closed until the certificate is wanted.
+  const [sealedPoiOpen, setSealedPoiOpen] = useState(false);
+
   // Which counterparty (from the media-screening findings) the user is about to proceed with —
   // this is where the actual pick happens now, right next to the screening evidence for it.
   const [mediaPick, setMediaPick] = useState<string | null>(null);
@@ -924,24 +980,28 @@ function LiveDealEngine() {
     // Picking who to take through screening *is* the Choice — stating it here means the pulse moves
     // on to Online Media Screening on a repeat pass too, not just the first time round.
     setHasChosen(true);
-    // A new party has been picked, so an intent confirmed — and any Proof of Intent sealed —
-    // against the previous one no longer applies: clear both so they can be granted again for
-    // this party. The certificate already issued stays filed on the bid as history.
-    if (dealTx.intent_confirmed_at || dealTx.poi_sealed_at) {
+    // A new party has been picked, so an intent confirmed against the previous one no longer
+    // applies: clear it so it can be granted again for this party. A *sealed* Proof of Intent is
+    // a governance milestone and is never unwound — the deal stays with the party it names.
+    if (dealTx.poi_sealed_at) {
+      toast.error("The Proof of Intent is sealed for this bid — the counterparty can no longer change.");
+      return;
+    }
+    if (dealTx.intent_confirmed_at) {
+
       await supabase
         .from("transactions")
-        .update({ intent_confirmed_at: null, poi_sealed_at: null, poi_hash: null })
+        .update({ intent_confirmed_at: null })
         .eq("id", dealTx.id);
       await recordEvent({
         transactionId: dealTx.id,
         stage: "trading",
         step: "intent",
         action: "intent_reopened",
-        summary: "Intent and Proof of Intent reopened — a different counterparty was chosen",
+        summary: "Intent reopened — a different counterparty was chosen",
       });
-      setDealTx((prev) =>
-        prev ? { ...prev, intent_confirmed_at: null, poi_sealed_at: null, poi_hash: null } : prev,
-      );
+      setDealTx((prev) => (prev ? { ...prev, intent_confirmed_at: null } : prev));
+
     }
     // A previous round's finalized pick (if any) no longer applies once screening is re-run for a
     // (possibly different) set of candidates — leaving its "chosen" row in place made the Intent
@@ -1098,7 +1158,11 @@ function LiveDealEngine() {
       await advance(dealTx.id, "trading", "intent");
       setDealTx((prev) => (prev ? { ...prev, stage: "trading", step: "intent" } : prev));
       setStagePanel("intent");
+      // The screening record has served its purpose — fold it so Intent has the room.
+      setMediaResultsOpen(dealTx.id, false);
+      setDbHasChosenParty(true);
       toast.success("Choice recorded — confirm the intent to continue");
+
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -2036,8 +2100,48 @@ function LiveDealEngine() {
               )}
 
 
-              {savedAttachments.length > 0 && (
-                <ul className="mt-2 space-y-1 border-t border-border pt-2">
+              {/* The file list moved out of here into its own Documents frame below. */}
+
+              {/* Explicit go: collapses this frame and hands the workspace over to the search. */}
+              {workspaceDocs.length > 0 &&
+                !searchGoByTx.has(dealTx.id) &&
+                interestCount === 0 &&
+                flowStep !== "searching" && (
+                  <Button
+                    className="mt-2 w-full bg-emerald-500 text-black hover:bg-emerald-400"
+                    disabled={rereading || workspaceDocsPending || !(documentSummary || readError)}
+                    onClick={() => goToSearch(dealTx.id)}
+                  >
+                    {rereading || !(documentSummary || readError) ? "Reading documents…" : "Submit"}
+                  </Button>
+                )}
+                </>
+
+              )}
+            </div>
+          )}
+
+          {/* Documents: everything on file for this bid — the attachments and the certificates the
+              deal produces as it goes. Folded by default and never opened on its own, so a freshly
+              filed certificate does not pop the frame open. */}
+          {dealTx && savedAttachments.length > 0 && (
+            <div className="glass-node mt-1.5 rounded-2xl">
+              <button
+                type="button"
+                onClick={() => setDocumentsOpen((v) => !v)}
+                aria-expanded={documentsOpen}
+                className="flex w-full items-center justify-between gap-2 p-3 text-left"
+              >
+                <span className="label-caps flex items-center gap-1.5 rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+                  DOCUMENTS
+                  <span className="text-[10px] font-semibold">{savedAttachments.length}</span>
+                </span>
+                <ChevronDown
+                  className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", documentsOpen && "rotate-180")}
+                />
+              </button>
+              {documentsOpen && (
+                <ul className="space-y-1 px-3 pb-3">
                   {savedAttachments.map((a, i) => (
                     <li
                       key={i}
@@ -2095,21 +2199,18 @@ function LiveDealEngine() {
                     {rereading || !(documentSummary || readError) ? "Reading documents…" : "Submit"}
                   </Button>
                 )}
-                </>
-
-              )}
             </div>
           )}
 
+
           </div>
 
-            {dealTx ? (
+            {/* Only rendered when the upload control itself is — an always-present empty row here
+                added a gap between Bid Information and the frames below it. */}
+            {dealTx && !workspaceDocsPending && workspaceDocs.length === 0 && !submittedForThisBid ? (
               <div className="mt-1 flex items-start justify-end gap-4">
                 <div className="w-1/2 max-w-[260px] shrink-0">
-                  {/* The "reading your documents" progress bar already shown on the left says this
-                      — repeating it again here as plain text had no progress bar of its own and
-                      just duplicated the message. */}
-                  {workspaceDocsPending || (submittedForThisBid && workspaceDocs.length === 0) ? null : workspaceDocs.length === 0 && !submittedForThisBid ? (
+                  {(
                     <DocumentUploadStep
                       // A stale resumed deal (from the "keep working on your last bid"
                       // localStorage effect) can mount this before the freshly-seeded one
@@ -2129,7 +2230,7 @@ function LiveDealEngine() {
                       initialPrompt={seedPrompt}
                       initialFiles={seedFiles}
                     />
-                  ) : null}
+                  )}
 
 
                 </div>
@@ -2250,14 +2351,10 @@ function LiveDealEngine() {
                     workspace now — no duplicate frames down here. */}
 
 
-                {/* Once a party is chosen the gate panel takes over the workspace — leaving the
-                    match list open below it is what made the screen look stuck. */}
-                {(flowStep === "searching" || flowStep === "results") &&
-                  dealTx &&
-                  (choicePending ||
-                    !stagePanel ||
-                    (stagePanel === "intent" && dealTx.intent_confirmed_at)) &&
-                  !dealTx.wad_completed_at && (
+                {/* The search record stays on the page for the rest of the deal — folded once the
+                    flow has moved on, but never removed. Which step the workspace happens to be
+                    asking about no longer decides whether it exists. */}
+                {dealTx && (flowStep === "searching" || flowStep === "results" || interestCount > 0) && (
                   <div className="rounded-2xl border border-border bg-card">
                     <button
                       type="button"
@@ -2265,9 +2362,19 @@ function LiveDealEngine() {
                       className="flex w-full items-center justify-between gap-2 px-3.5 py-2 text-left"
                       aria-expanded={searchResultsOpen}
                     >
-                      <span className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
-                        {choicePending ? "Choose Counterparty" : "Search Results"}
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className="label-caps shrink-0 rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+                          {dbHasChosenParty ? "Chosen Counterparty" : "Search Results"}
+                        </span>
+                        {/* Who was chosen, readable without opening the frame. */}
+                        {dbHasChosenParty && chosenPartyName && (
+                          <span className="min-w-0 truncate text-xs font-semibold text-foreground">
+                            {chosenPartyName}
+                          </span>
+                        )}
                       </span>
+
+
                       <ChevronDown
                         className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", searchResultsOpen && "rotate-180")}
                       />
@@ -2302,32 +2409,48 @@ function LiveDealEngine() {
                     ready. */}
                 {dealTx && mediaResults && mediaResults.length > 0 && (
                   <div className="rounded-2xl border border-border bg-card p-3">
-                    <button
-                      type="button"
-                      onClick={() => setMediaResultsOpen(dealTx.id, !mediaResultsOpen)}
-                      aria-expanded={mediaResultsOpen}
-                      className="label-caps flex w-full items-center justify-between gap-1.5 rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]"
-                    >
-                      <span>ONLINE MEDIA SCREENING RESULTS</span>
-                      <span className="flex shrink-0 items-center gap-1.5">
-                        <span className="text-[10px] font-semibold">
-                          {mediaResults.length} counterpart{mediaResults.length === 1 ? "y" : "ies"}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setMediaResultsOpen(dealTx.id, !mediaResultsOpen)}
+                        aria-expanded={mediaResultsOpen}
+                        className="label-caps flex min-w-0 flex-1 items-center justify-between gap-1.5 rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]"
+                      >
+                        <span className="min-w-0 truncate">
+                          {dbHasChosenParty
+                            ? `CHOSEN COUNTERPARTY${chosenPartyName ? ` — ${chosenPartyName}` : ""}`
+                            : "ONLINE MEDIA SCREENING RESULTS"}
                         </span>
-                        <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform", mediaResultsOpen && "rotate-180")} />
-                      </span>
-                    </button>
+
+                        <span className="flex shrink-0 items-center gap-1.5">
+                          <span className="text-[10px] font-semibold">
+                            {mediaResults.length} counterpart{mediaResults.length === 1 ? "y" : "ies"}
+                          </span>
+                          <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform", mediaResultsOpen && "rotate-180")} />
+                        </span>
+                      </button>
+                      {/* The choice action lives at the bottom of the records below. */}
+
+                    </div>
+                    {!dbHasChosenParty && !mediaPick && !finalizing && (
+                      <p className="mt-1.5 text-[11px] text-muted-foreground">
+                        Select who you want to trade with
+                      </p>
+                    )}
+
+
                     {mediaResultsOpen && (
                       <RadioGroup
                         value={mediaPick ?? ""}
                         onValueChange={setMediaPick}
-                        disabled={hasChosen}
+                        disabled={dbHasChosenParty}
                         asChild
                       >
                       <ul className="mt-2 space-y-2">
                         {mediaResults.map((m) => (
                           <li key={m.counterpartyId} className="rounded-lg border border-border p-2.5">
                             <div className="flex items-start gap-2">
-                              {!hasChosen && (
+                              {!dbHasChosenParty && (
                                 <RadioGroupItem
                                   id={`media-elect-${m.counterpartyId}`}
                                   value={m.counterpartyId}
@@ -2336,11 +2459,20 @@ function LiveDealEngine() {
                               )}
                               <label
                                 htmlFor={`media-elect-${m.counterpartyId}`}
-                                className={cn("min-w-0 flex-1 text-xs font-semibold text-foreground", !hasChosen && "cursor-pointer")}
+                                className={cn("min-w-0 flex-1 text-xs font-semibold text-foreground", !dbHasChosenParty && "cursor-pointer")}
                               >
                                 {m.name}
                               </label>
+                              {/* The one intent was confirmed with, marked on its own row. */}
+                              {dealTx.intent_confirmed_at &&
+                                chosenPartyName &&
+                                m.name === chosenPartyName && (
+                                  <span className="shrink-0 rounded-full bg-success/15 px-1.5 py-0.5 text-[10px] font-medium text-success">
+                                    Confirmed Intent
+                                  </span>
+                                )}
                             </div>
+
                             <ul className="mt-1.5 space-y-1">
                               {m.findings.map((f) => (
                                 <li key={f.source} className="flex items-center justify-between gap-2 text-[11px]">
@@ -2373,24 +2505,78 @@ function LiveDealEngine() {
                       </ul>
                       </RadioGroup>
                     )}
-                    {mediaResultsOpen && !hasChosen && (
+                    {/* Continue sits under the last screened record, where the reading ends. */}
+                    {mediaResultsOpen && !dbHasChosenParty && (
                       <div className="mt-3 flex justify-end">
                         <Button
                           size="sm"
                           disabled={!mediaPick || finalizing}
                           onClick={() => mediaPick && finalizeChoice(mediaPick)}
                         >
-                          {finalizing ? "Recording…" : "Elect to proceed — Confirm Intent"}
+                          {finalizing ? "Recording your choice…" : "Continue"}
                         </Button>
                       </div>
                     )}
+
+
                   </div>
                 )}
 
-                {/* Once Intent is confirmed its frame is no longer the thing needing attention —
-                    fold it into a small accordion under the screening results instead of leaving
-                    it open at full size. */}
-                {dealTx && stagePanel === "intent" && dealTx.intent_confirmed_at ? (
+                {/* Screening came back with nothing at all — say so, rather than leaving an empty
+                    space where the choice controls would be. The search results above keep their
+                    own selection controls in that case. */}
+                {dealTx && mediaResults && mediaResults.length === 0 && (
+                  <div className="rounded-2xl border border-border bg-card p-3">
+                    <p className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+                      ONLINE MEDIA SCREENING RESULTS
+                    </p>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Screening returned no records — pick a counterparty from the search results above to
+                      continue.
+                    </p>
+                  </div>
+                )}
+
+                {/* AI+ is advisory, never the decision-maker: after the person makes the Choice it
+                    offers proposals, each with a numeric probability, and the person accepts or
+                    rejects them before Intent is available. */}
+                {dealTx && dbHasChosenParty && !dealTx.poi_sealed_at && (
+                  <DecisionPackPanel
+                    transactionId={dealTx.id}
+                    stageContext="choice_made"
+                    gating={!dealTx.intent_confirmed_at}
+                    onAllDecided={setChoicePackDecided}
+                  />
+                )}
+
+                {/* The last advisory word before the Proof of Intent becomes immutable. */}
+                {dealTx?.intent_confirmed_at && !dealTx.poi_sealed_at && (
+                  <DecisionPackPanel
+                    transactionId={dealTx.id}
+                    stageContext="intent_confirmed"
+                    gating
+                    onAllDecided={setIntentPackDecided}
+                  />
+                )}
+
+                {/* Advisory only — AI+ cannot approve, reject, alter or bypass the WaD gate. */}
+                {dealTx?.wad_completed_at && (
+                  <DecisionPackPanel transactionId={dealTx.id} stageContext="wad_updated" />
+                )}
+
+                {/* Closing the loop after finality: informational only — nothing here can change a
+                    completed transaction. */}
+                {dealTx?.stage === "finality" && (
+                  <DecisionPackPanel transactionId={dealTx.id} stageContext="finality_recorded" />
+                )}
+
+
+
+
+                {/* Confirmed Intent, kept for the rest of the deal as a folded record. It no longer
+                    depends on which step the workspace is asking about, so it stops disappearing
+                    when the flow moves to sealing, compliance or execution. */}
+                {dealTx?.intent_confirmed_at && (
                   <div className="rounded-2xl border border-border bg-card">
                     <button
                       type="button"
@@ -2398,8 +2584,13 @@ function LiveDealEngine() {
                       className="flex w-full items-center justify-between gap-2 px-3.5 py-2 text-left"
                       aria-expanded={confirmedIntentOpen}
                     >
-                      <span className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
-                        Confirmed Intent
+                      <span className="min-w-0">
+                        <span className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+                          Confirmed Intent
+                        </span>
+                        <span className="mt-1 block text-[11px] text-muted-foreground">
+                          Read the terms as they stand. Confirming does not seal them — that is the next step.
+                        </span>
                       </span>
                       <ChevronDown
                         className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", confirmedIntentOpen && "rotate-180")}
@@ -2421,8 +2612,70 @@ function LiveDealEngine() {
                       </div>
                     )}
                   </div>
+                )}
+
+                {/* Sealed Proof of Intent reads the same way: a folded record whose certificate is
+                    there when it's wanted, with the sealing sentence as subtext under the pill
+                    rather than a second heading inside the frame. */}
+                {dealTx?.poi_sealed_at && (
+                  <div className="rounded-2xl border border-border bg-card">
+                    <button
+                      type="button"
+                      onClick={() => setSealedPoiOpen((v) => !v)}
+                      className="flex w-full items-center justify-between gap-2 px-3.5 py-2 text-left"
+                      aria-expanded={sealedPoiOpen}
+                    >
+                      <span className="min-w-0">
+                        <span className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+                          Proof of Intent
+                        </span>
+                        <span className="mt-1 block text-[11px] text-muted-foreground">
+                          Sealing writes the transaction state to an immutable record with a fingerprint.
+                          Compliance, execution, finality and memory stay locked until it exists.
+                        </span>
+                      </span>
+                      <ChevronDown
+                        className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", sealedPoiOpen && "rotate-180")}
+                      />
+                    </button>
+                    {sealedPoiOpen && (
+                      <div className="px-3.5 pb-3">
+                        <InlineFrame
+                          bare
+                          tx={dealTx}
+                          stage="trading"
+                          step="poi"
+                          reload={() => void reloadDeal()}
+                          onClose={() => setStagePanel(null)}
+                          onChangeParty={() => void reopenChoice()}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* The human decision on the AI+ proposals comes first: Intent only opens once
+                    every proposal from the Choice pack has been accepted or rejected, and
+                    sealing only once the pre-seal pack has been decided. */}
+                {dealTx && stagePanel === "intent" && !dealTx.intent_confirmed_at && dbHasChosenParty && !choicePackDecided ? (
+                  <div className="rounded-2xl border border-border bg-card px-3.5 py-3">
+                    <p className="text-xs text-muted-foreground">
+                      Accept or reject each AI+ proposal above, then Intent opens.
+                    </p>
+                  </div>
+                ) : dealTx && stagePanel === "poi" && dealTx.intent_confirmed_at && !dealTx.poi_sealed_at && !intentPackDecided ? (
+                  <div className="rounded-2xl border border-border bg-card px-3.5 py-3">
+                    <p className="text-xs text-muted-foreground">
+                      Accept or reject the AI+ proposals above before sealing the Proof of Intent.
+                    </p>
+                  </div>
                 ) : (
-                  dealTx && stagePanel && (
+                  /* The active step's own panel — skipped for intent and poi once those are
+                     recorded, since the folded records above already hold them. */
+                  dealTx &&
+                  stagePanel &&
+                  !(stagePanel === "intent" && dealTx.intent_confirmed_at) &&
+                  !(stagePanel === "poi" && dealTx.poi_sealed_at) && (
                     <InlineFrame
                       tx={dealTx}
                       stage={stagePanel === "wad" ? "compliance" : stagePanel === "business-docs" ? "execution" : "trading"}
@@ -2435,7 +2688,9 @@ function LiveDealEngine() {
                       onChangeParty={() => void reopenChoice()}
                     />
                   )
+
                 )}
+
 
                 {/* Only once Step 2's own documents (Business Docs) are in — not the moment the
                     compliance checks clear. Collapsed by default: it's a record to check back on,

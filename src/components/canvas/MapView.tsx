@@ -109,6 +109,11 @@ const FINALITY_FRAME: Box = { x: 590, y: 723, w: 340, h: 73 };
 const ENTRY_EXIT_FRAME: Box = { x: 408, y: 723, w: 144, h: 73 };
 // Kept beside Step 2 (not stacked under it) and re-centred between Step 2 and Step 4.
 const MEMORY = { cx: 570, cy: 588, r: 105 };
+// Once the pulse has moved past Step 1, its whole frame folds into this slim ticked bar and
+// everything below slides up into the space it gives back.
+const STEP1_BAR: Box = { x: TRADE_ENGINE_FRAME.x, y: TRADE_ENGINE_FRAME.y, w: TRADE_ENGINE_FRAME.w, h: 44 };
+const STEP1_SHIFT = TRADE_ENGINE_FRAME.h - STEP1_BAR.h;
+
 
 
 // A connector arriving at a group frame stops this many units short of its border, so the tip
@@ -127,7 +132,9 @@ const line = (a: Point, b: Point) => `M ${a.x} ${a.y} L ${b.x} ${b.y}`;
 /** An orthogonal run through the given turning points — every leg horizontal or vertical. */
 const path = (...pts: Point[]) => pts.map((p, i) => `${i ? "L" : "M"} ${p.x} ${p.y}`).join(" ");
 
-const ARROWS: string[] = [
+// Step 1's own internal connectors, plus the one leaving it for Step 2 — all hidden together when
+// the Trading frame is folded away.
+const TRADING_ARROWS: string[] = [
   // Trading step: Bid down into Load Deal Documents, straight across into Search (same centre-
   // line), down into the step chips, then across into Choice.
   line(bottomOf(BOXES.bid), topOf(BOXES.loadDocs)),
@@ -152,6 +159,9 @@ const ARROWS: string[] = [
     { x: cx(BOXES.poi), y: (TRADE_ENGINE_FRAME.y + TRADE_ENGINE_FRAME.h + COMPLIANCE_FRAME.y) / 2 },
     { x: cx(BOXES.poi), y: COMPLIANCE_FRAME.y - ARROW_GAP },
   ),
+];
+
+const REST_ARROWS: string[] = [
   line(bottomOf(BOXES.poi), topOf(BOXES.wad)),
   line(bottomOf(BOXES.wad), topOf(BOXES.withoutADoubt)),
   line(bottomOf(BOXES.withoutADoubt), topOf(BOXES.businessDocs)),
@@ -177,7 +187,8 @@ const ARROWS: string[] = [
   ),
 ];
 
-function ArrowLayer() {
+function ArrowLayer({ hideTrading }: { hideTrading?: boolean }) {
+  const shown = hideTrading ? REST_ARROWS : [...TRADING_ARROWS, ...REST_ARROWS];
   return (
     <svg
       viewBox={`0 0 ${W} ${H}`}
@@ -190,7 +201,7 @@ function ArrowLayer() {
           <path d="M0,0 L7,3.5 L0,7 Z" className="fill-muted-foreground" />
         </marker>
       </defs>
-      {ARROWS.map((d, i) => (
+      {shown.map((d, i) => (
         <path
           key={i}
           d={d}
@@ -204,6 +215,7 @@ function ArrowLayer() {
     </svg>
   );
 }
+
 
 /**
  * "Step 5 · Memory" as a straight pill inside the Memory circle, near its top — not on the curve,
@@ -368,6 +380,9 @@ export function MapView({
   overrideStates?: Record<string, NodeState> | undefined;
 }) {
   const [panel, setPanel] = useState<{ stage: StageKey; step: string; viewOnly: boolean } | null>(null);
+  // Step 1's frame folds itself away once the pulse moves on; this reopens it by hand.
+  const [step1Open, setStep1Open] = useState(false);
+
 
   // A "done" tile is a past stage — clicking it does nothing for now. A real read-only view of
   // completed steps is planned for a later phase; showing the live editable upload/search/results
@@ -418,25 +433,59 @@ export function MapView({
   );
 
   const memoryState = st("memory", "ledger");
+  // Step 1 is behind us the moment Proof of Intent takes the pulse — its frame folds to a slim
+  // ticked bar and the rest of the map slides up. Clicking the bar opens it again.
+  const poiState = st("trading", "poi", "poi");
+  const step1Folded = !step1Open && (poiState === "active" || poiState === "done");
 
   return (
     <div className="relative h-full w-full">
-      <div className="relative w-full" style={{ aspectRatio: `${W} / ${H}` }}>
-        <ArrowLayer />
+      <div
+        className="relative w-full overflow-hidden"
+        style={{ aspectRatio: `${W} / ${step1Folded ? H - STEP1_SHIFT : H}` }}
+      >
+        {step1Folded && (
+          <button
+            type="button"
+            onClick={() => setStep1Open(true)}
+            style={{
+              left: px(STEP1_BAR.x),
+              top: `${(STEP1_BAR.y / (H - STEP1_SHIFT)) * 100}%`,
+              width: px(STEP1_BAR.w),
+              height: `${(STEP1_BAR.h / (H - STEP1_SHIFT)) * 100}%`,
+            }}
+            className="absolute z-10 flex items-center gap-2 rounded-3xl border border-success/70 bg-card/40 px-5 text-left font-sans text-[11px] font-semibold text-success"
+          >
+            <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+            <span className="label-caps text-success">Step 1 · Trading</span>
+            <span className="text-[10px] font-medium text-muted-foreground">Complete — click to open</span>
+          </button>
+        )}
+        <div
+          className="absolute left-0 top-0 w-full"
+          style={{
+            aspectRatio: `${W} / ${H}`,
+            ...(step1Folded ? { transform: `translateY(-${(STEP1_SHIFT / H) * 100}%)` } : {}),
+          }}
+        >
+        <ArrowLayer hideTrading={step1Folded} />
         <MemoryArcLabel />
 
 
-        <Frame box={TRADE_ENGINE_FRAME} label="Step 1 · Trading" />
+        {!step1Folded && <Frame box={TRADE_ENGINE_FRAME} label="Step 1 · Trading" />}
         <Frame box={COMPLIANCE_FRAME} label="Step 2 · GRC" />
         <Frame box={EXECUTION_FRAME} label="Step 3 · Execution" />
         <Frame box={ENTRY_EXIT_FRAME} />
         <Frame box={FINALITY_FRAME} label="Step 4 · Finality" />
 
+        {!step1Folded && (
+        <>
         {/* Mirrors Search's own state (same overrideKey) — both pulse together while the search is
             running, and once it's done the pulse moves straight on to Choice. */}
         {node("steps", "Search Results", "trading", "search", ListChecks, { overrideKey: "search" })}
 
         {/* Step 1 — trading. Bid and Load Deal Documents drive the workspace beside the map. */}
+
         {node("bid", "Bid", "trading", "bid-offer", Gavel, {
           overrideKey: "bidRegistration",
           ...(onBid ? { onClick: onBid } : {}),
@@ -480,11 +529,16 @@ export function MapView({
           overrideKey: "onlineMedia",
         })}
 
-        {/* Step 2 — compliance & governance */}
+        {/* Confirm Intent closes out Step 1's own frame. */}
         {node("expressIntent", "Confirm Intent", "trading", "intent", ShieldCheck, {
           overrideKey: "intent",
         })}
+        </>
+        )}
+
+        {/* Step 2 — compliance & governance */}
         {node("poi", "Proof of Intent", "trading", "poi", Building2, { overrideKey: "poi" })}
+
         {node("wad", "KYC, KYB, PEP, AML", "compliance", "wad", Users, {
           overrideKey: "kycKyb",
         })}
@@ -554,7 +608,9 @@ export function MapView({
             Capital Deployment Assessment
           </span>
         </button>
+        </div>
       </div>
+
 
       {panel && !readOnly && tx && (
         <InlineFrame

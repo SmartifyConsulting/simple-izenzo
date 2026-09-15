@@ -1416,165 +1416,41 @@ export function CounterpartyRecord({
     <div
       className="rounded-2xl border-2 border-primary bg-slate-100 p-4"
     >
-      {/* The match list from the AI/AI+ search, kept as a folded record above the screening
-          findings. A shortlisted company can be taken into a negotiation from here. */}
+      {/* The record of what the search found, kept plain inside the workspace's Search Results
+          frame — no second heading, and no repeat of the screening findings, which have their own
+          frame below in the workspace. */}
       {candidates.length > 0 && mediaResults && mediaResults.length > 0 && (
-        <div className="space-y-2 pb-3">
-          <button
-            type="button"
-            onClick={() => setSearchResultsExpanded((v) => !v)}
-            aria-expanded={searchResultsExpanded}
-            className="flex w-full items-center justify-between gap-2"
-          >
-            <span className="label-caps text-slate-600">Search results ({candidates.length})</span>
-            <ChevronDown
-              className={cn(
-                "h-3.5 w-3.5 shrink-0 text-slate-500 transition-transform",
-                searchResultsExpanded && "rotate-180",
-              )}
-            />
-          </button>
-          {searchResultsExpanded && (
-            <ul className="space-y-1.5">
-              {/* Everything the search found, with the ones that were picked kept at the top and
-                  marked as such. */}
-              {[...candidates]
-                .sort((a, b) => Number(Boolean(b.shortlisted)) - Number(Boolean(a.shortlisted)))
-                .map((c) => (
-                <li key={`sr-${c.id}`} className="flex items-center gap-2">
-                  <span className="min-w-0 flex-1 truncate text-xs text-slate-800">{c.name}</span>
-                  {c.shortlisted && (
-                    <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
-                      Selected
-                    </span>
-                  )}
-                  {c.score != null && (
-                    <span className="shrink-0 rounded-full border border-foreground bg-foreground px-2 py-0.5 text-[10px] font-semibold text-background">
-                      {c.score}%
-                    </span>
-                  )}
-                  {c.shortlisted && txId && (
-                    <button
-                      type="button"
-                      title="View proposal"
-                      onClick={() => setProposalFor({ id: c.id, name: c.name })}
-                      className="shrink-0 rounded p-1 text-slate-500 hover:bg-slate-200 hover:text-slate-900"
-                    >
-                      <FileText className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-
-      {mediaResults && mediaResults.length > 0 && (
-
-        <div className="space-y-2.5 pb-3">
-          <button
-            type="button"
-            onClick={() => setMediaExpanded((v) => !v)}
-            className="flex w-full items-center justify-between gap-2"
-          >
-            <span className="label-caps text-slate-600">Online media screening results</span>
-            <ChevronDown
-              className={cn(
-                "h-3.5 w-3.5 shrink-0 text-slate-500 transition-transform",
-                mediaExpanded && "rotate-180",
-              )}
-            />
-          </button>
-          {mediaExpanded && (
-          <RadioGroup value={pickedId ?? ""} onValueChange={setPickedId} disabled={!screeningDone} asChild>
-          <div className="space-y-2.5">
-          {mediaResults.map((m) => {
-            const coOpen = expandedMediaCos.has(m.counterpartyId);
-            const cand = candidates.find((c) => c.id === m.counterpartyId);
-            return (
-            <div key={m.counterpartyId} className="rounded-xl border border-slate-300 bg-white p-3">
-              <div className="flex w-full items-start gap-2.5">
-                {/* Same circle/checkbox the top list used to show, now living on the accordion
-                    record itself instead of duplicated in a separate list above. */}
-                {screeningDone ? (
-                  <RadioGroupItem id={`media-pick-${m.counterpartyId}`} value={m.counterpartyId} className="mt-0.5 shrink-0" />
-                ) : (
-                  <Checkbox
-                    id={`media-pick-${m.counterpartyId}`}
-                    checked={Boolean(cand?.shortlisted)}
-                    onCheckedChange={(v) => cand && toggle(cand, Boolean(v))}
-                    className="mt-0.5 shrink-0"
-                  />
-                )}
-                <button
-                  type="button"
-                  onClick={() => toggleCo(expandedMediaCos, setExpandedMediaCos, m.counterpartyId)}
-                  className="flex min-w-0 flex-1 items-start justify-between gap-2 text-left"
-                >
-                  <span className="min-w-0">
-                    <span className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-semibold text-slate-900">{m.name}</span>
-                      {cand?.score != null && (
-                        <span className="shrink-0 rounded-full border border-foreground bg-foreground px-2 py-0.5 text-[11px] font-semibold text-background">
-                          {cand.score}% match
-                        </span>
-                      )}
-                    </span>
-                    {cand && (cand.jurisdiction || cand.sector) && (
-                      <span className="block text-[11px] text-slate-500">
-                        {[cand.jurisdiction, cand.sector].filter(Boolean).join(" · ")}
-                      </span>
-                    )}
+        <ul className="space-y-1.5 pb-3">
+          {[...candidates]
+            .sort((a, b) => Number(Boolean(b.shortlisted)) - Number(Boolean(a.shortlisted)))
+            .map((c) => (
+              <li key={`sr-${c.id}`} className="flex items-center gap-2">
+                <span className="min-w-0 flex-1 truncate text-xs text-slate-800">{c.name}</span>
+                {c.shortlisted && (
+                  <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
+                    Selected
                   </span>
-                  <ChevronDown
-                    className={cn(
-                      "mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500 transition-transform",
-                      coOpen && "rotate-180",
-                    )}
-                  />
-                </button>
-              </div>
-              {coOpen && (
-              <ul className="mt-2 divide-y divide-slate-200">
-                {m.findings.map((f) => (
-                  <li key={f.source} className="py-1.5 first:pt-0 last:pb-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-medium text-slate-800">{f.label}</span>
-                      <span
-                        className={cn(
-                          "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-                          mediaTone(f.status),
-                        )}
-                      >
-                        {mediaLabel(f.status)}
-                      </span>
-                    </div>
-                    <p className="mt-0.5 break-words text-[11px] leading-snug text-slate-500">
-                      {f.detail}
-                    </p>
-                    {f.url && (
-                      <a
-                        href={f.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
-                      >
-                        <ExternalLink className="h-3 w-3" /> Open source
-                      </a>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              )}
-            </div>
-            );
-          })}
-          </div>
-          </RadioGroup>
-          )}
-        </div>
+                )}
+                {c.score != null && (
+                  <span className="shrink-0 rounded-full border border-foreground bg-foreground px-2 py-0.5 text-[10px] font-semibold text-background">
+                    {c.score}%
+                  </span>
+                )}
+                {c.shortlisted && txId && (
+                  <button
+                    type="button"
+                    title="View proposal"
+                    onClick={() => setProposalFor({ id: c.id, name: c.name })}
+                    className="shrink-0 rounded p-1 text-slate-500 hover:bg-slate-200 hover:text-slate-900"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </li>
+            ))}
+        </ul>
       )}
+
 
       <div
         className={cn(
@@ -1582,13 +1458,15 @@ export function CounterpartyRecord({
           mediaResults && mediaResults.length > 0 && "border-t border-slate-300 pt-3",
         )}
       >
+        {/* Nothing to prompt for until the search has actually returned companies. */}
         <p className="label-caps text-black">
-          {screeningDone
-            ? "Select who you want to trade with"
-            : continued
+          {candidates.length === 0 || searching
+            ? ""
+            : screeningDone || continued
               ? "Selected counterparties"
               : "Select a counterparty to continue"}
         </p>
+
         {CHALLENGES_FEATURE_ENABLED && txId && (
           <div className="flex shrink-0 items-center gap-1">
             <button
@@ -1744,23 +1622,9 @@ export function CounterpartyRecord({
           doesn't show up alongside the Online Media Screening findings above. */}
 
 
-      {screeningDone && onFinalize ? (
-        <Button
-          type="button"
-          className={cn(
-            "mt-3 w-full bg-info text-white hover:bg-info/90",
-            !pickedId && !finalizing && "bg-slate-300 text-slate-700 hover:bg-slate-300 disabled:opacity-100",
-          )}
-          disabled={finalizing || !pickedId}
-          onClick={() => pickedId && onFinalize(pickedId)}
-        >
-          {finalizing
-            ? "Recording your choice…"
-            : pickedId
-              ? "Continue"
-              : "Select who you want to trade with"}
-        </Button>
-      ) : (
+      {/* The final pick (and its Continue button) belongs to the Online Media Screening Results
+          frame in the workspace — a second one here competed with it. */}
+      {screeningDone ? null : (
         onContinue &&
         candidates.length > 0 &&
         !searching &&
@@ -2377,11 +2241,11 @@ export function CanvasStart({
           disabled={!canBeginPicking}
           aria-label="Submit"
           title="Submit"
-          className="flex h-8 shrink-0 items-center gap-1.5 self-center rounded-full bg-emerald-500 px-3 text-xs font-semibold text-black transition-opacity hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex h-8 w-8 shrink-0 items-center justify-center self-center rounded-full bg-foreground text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Submit
-          <ArrowUp className="h-3.5 w-3.5" />
+          <ArrowUp className="h-4 w-4" />
         </button>
+
       </div>
 
       {pendingFiles.length > 0 && (
