@@ -2100,13 +2100,12 @@ function LiveDealEngine() {
 
           </div>
 
-            {dealTx ? (
+            {/* Only rendered when the upload control itself is — an always-present empty row here
+                added a gap between Bid Information and the frames below it. */}
+            {dealTx && !workspaceDocsPending && workspaceDocs.length === 0 && !submittedForThisBid ? (
               <div className="mt-1 flex items-start justify-end gap-4">
                 <div className="w-1/2 max-w-[260px] shrink-0">
-                  {/* The "reading your documents" progress bar already shown on the left says this
-                      — repeating it again here as plain text had no progress bar of its own and
-                      just duplicated the message. */}
-                  {workspaceDocsPending || (submittedForThisBid && workspaceDocs.length === 0) ? null : workspaceDocs.length === 0 && !submittedForThisBid ? (
+                  {(
                     <DocumentUploadStep
                       // A stale resumed deal (from the "keep working on your last bid"
                       // localStorage effect) can mount this before the freshly-seeded one
