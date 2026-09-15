@@ -947,18 +947,17 @@ function LiveDealEngine() {
 
       await supabase
         .from("transactions")
-        .update({ intent_confirmed_at: null, poi_sealed_at: null, poi_hash: null })
+        .update({ intent_confirmed_at: null })
         .eq("id", dealTx.id);
       await recordEvent({
         transactionId: dealTx.id,
         stage: "trading",
         step: "intent",
         action: "intent_reopened",
-        summary: "Intent and Proof of Intent reopened — a different counterparty was chosen",
+        summary: "Intent reopened — a different counterparty was chosen",
       });
-      setDealTx((prev) =>
-        prev ? { ...prev, intent_confirmed_at: null, poi_sealed_at: null, poi_hash: null } : prev,
-      );
+      setDealTx((prev) => (prev ? { ...prev, intent_confirmed_at: null } : prev));
+
     }
     // A previous round's finalized pick (if any) no longer applies once screening is re-run for a
     // (possibly different) set of candidates — leaving its "chosen" row in place made the Intent
