@@ -46,7 +46,7 @@ function nodeState(stage: StageKey, step: string, tx: Transaction | null): NodeS
 const W = 960;
 // Trimmed (was 940) now that Step 2's frame is shorter and Step 3/4 sit higher, so the map fits
 // its panel without needing to scroll.
-const H = 875;
+const H = 816;
 const px = (v: number) => `${(v / W) * 100}%`;
 const py = (v: number) => `${(v / H) * 100}%`;
 
@@ -318,7 +318,10 @@ function MapNode({
         !plain && state === "open" && "text-foreground hover:border-primary/60",
         plain && state === "open" && "text-foreground",
         state === "done" && (plain ? "text-success" : "border-success/70 text-success"),
-        state === "active" && (plain ? "animate-throb-aqua text-primary" : "animate-throb-aqua border-primary text-primary"),
+        // animate-throb-aqua always draws its own 2px border, which read as a sharp-cornered box
+        // on a "plain" tile (border-0/rounded-none otherwise) — rounded-xl keeps its pulse the
+        // same shape as every other node's, instead of the only rectangular one on the map.
+        state === "active" && (plain ? "animate-throb-aqua rounded-xl text-primary" : "animate-throb-aqua border-primary text-primary"),
         locked && "cursor-not-allowed text-muted-foreground",
       )}
     >
