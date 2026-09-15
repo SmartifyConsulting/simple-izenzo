@@ -17,6 +17,9 @@ import { when } from "@/lib/tx";
 import { TOKEN_PRICE_USD } from "@/lib/spine";
 import { cn } from "@/lib/utils";
 import { formatHomeCurrency } from "@/lib/currency";
+import { useServerFn } from "@tanstack/react-start";
+import { getTokenPurchaseStatus, payfastAvailable, startTokenPurchase } from "@/lib/payfast.functions";
+
 
 export const Route = createFileRoute("/_authenticated/credits")({
   validateSearch: (search: Record<string, unknown>) => ({
