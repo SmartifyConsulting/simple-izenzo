@@ -20,7 +20,7 @@ export const startTokenPurchase = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { supabase, userId, claims } = context;
 
     const { data: org, error: orgErr } = await supabase
       .from("organisations")
@@ -29,6 +29,20 @@ export const startTokenPurchase = createServerFn({ method: "POST" })
       .maybeSingle();
     if (orgErr) throw new Error(orgErr.message);
     if (!org) throw new Error("That account could not be opened.");
+
+    // PayFast requires a buyer email address on every Onsite Payment.
+    let email = ((claims as { email?: string } | undefined)?.email ?? "").trim();
+    if (!email) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("email")
+        .eq("id", userId)
+        .maybeSingle();
+      email = ((profile as { email?: string } | null)?.email ?? "").trim();
+    }
+    if (!email) {
+      throw new Error("Add an email address to your profile before buying tokens — PayFast needs one.");
+    }
 
     const { loadPayFastCreds, createOnsitePayment } = await import("@/lib/payfast.server");
     const creds = await loadPayFastCreds();
@@ -58,11 +72,14 @@ export const startTokenPurchase = createServerFn({ method: "POST" })
       mPaymentId,
       returnUrl: `${data.origin}/credits`,
       cancelUrl: `${data.origin}/credits`,
-      notifyUrl: `${data.origin}/api/public/payfast/itn`,
+      // The payment confirmation must reach the published site, not a preview address.
+      notifyUrl: `${PUBLIC_ORIGIN}/api/public/payfast/itn`,
+      emailAddress: email,
     });
 
     return { uuid, mPaymentId, amountZar, amountUsd };
   });
+
 
 export const getTokenPurchaseStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
