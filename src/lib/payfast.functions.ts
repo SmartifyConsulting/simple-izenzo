@@ -3,9 +3,36 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const TOKEN_PRICE_USD = 10;
-const USD_TO_ZAR = 18.5;
+/** Used only if a live rate can't be fetched (the API is down, or this is the very first call and
+ * it fails) — a purchase should never be blocked by an FX lookup. */
+const FALLBACK_USD_TO_ZAR = 18.5;
 /** The live site PayFast must call back with the payment confirmation. */
 const PUBLIC_ORIGIN = "https://reelme.co.za";
+
+let cachedUsdToZar: { rate: number; at: number } | null = null;
+const RATE_TTL_MS = 60 * 60 * 1000;
+
+/** Live USD→ZAR rate, cached for an hour so a burst of purchases doesn't hammer the FX API. Falls
+ * back to the last known-good rate (or the static constant if none has ever been fetched) rather
+ * than letting an FX lookup failure block a payment. */
+async function getUsdToZarRate(): Promise<number> {
+  if (cachedUsdToZar && Date.now() - cachedUsdToZar.at < RATE_TTL_MS) {
+    return cachedUsdToZar.rate;
+  }
+  try {
+    const res = await fetch("https://open.er-api.com/v6/latest/USD");
+    if (!res.ok) throw new Error(`FX rate lookup failed: HTTP ${res.status}`);
+    const json = (await res.json()) as { result?: string; rates?: Record<string, number> };
+    const rate = json.rates?.["ZAR"];
+    if (json.result !== "success" || typeof rate !== "number" || !Number.isFinite(rate)) {
+      throw new Error("FX rate response was malformed");
+    }
+    cachedUsdToZar = { rate, at: Date.now() };
+    return rate;
+  } catch {
+    return cachedUsdToZar?.rate ?? FALLBACK_USD_TO_ZAR;
+  }
+}
 
 
 /** Starts a token purchase through PayFast. Returns the Onsite Payment reference the browser uses
@@ -54,7 +81,7 @@ export const startTokenPurchase = createServerFn({ method: "POST" })
     }
 
     const amountUsd = data.tokens * TOKEN_PRICE_USD;
-    const amountZar = Math.round(amountUsd * USD_TO_ZAR * 100) / 100;
+    const amountZar = Math.round(amountUsd * (await getUsdToZarRate()) * 100) / 100;
     const mPaymentId = `tok-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
