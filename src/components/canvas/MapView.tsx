@@ -109,6 +109,11 @@ const FINALITY_FRAME: Box = { x: 590, y: 723, w: 340, h: 73 };
 const ENTRY_EXIT_FRAME: Box = { x: 408, y: 723, w: 144, h: 73 };
 // Kept beside Step 2 (not stacked under it) and re-centred between Step 2 and Step 4.
 const MEMORY = { cx: 570, cy: 588, r: 105 };
+// Once the pulse has moved past Step 1, its whole frame folds into this slim ticked bar and
+// everything below slides up into the space it gives back.
+const STEP1_BAR: Box = { x: TRADE_ENGINE_FRAME.x, y: TRADE_ENGINE_FRAME.y, w: TRADE_ENGINE_FRAME.w, h: 44 };
+const STEP1_SHIFT = TRADE_ENGINE_FRAME.h - STEP1_BAR.h;
+
 
 
 // A connector arriving at a group frame stops this many units short of its border, so the tip
