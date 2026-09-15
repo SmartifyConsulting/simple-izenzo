@@ -20,8 +20,8 @@ accordion.
    followed by the chosen counterparty's name, so the frame answers "who" without opening it.
 
 4. **Confirmed Intent badge.** In the screening list, the record that was chosen carries a
-   small green "Confirmed Intent" badge next to its name once intent is confirmed, plus a
-   "Chosen" marker from the moment the choice is made.
+   small green "Confirmed Intent" badge next to its name once intent is confirmed. No other
+   marker is added to that row.
 
 5. **Proof of Intent frame, folded.** A Proof of Intent accordion is created and kept closed
    in the stack. The duplicated "PROOF OF INTENT" heading inside it is removed; the sentence
@@ -32,6 +32,9 @@ accordion.
 6. **New Documents frame under Bid Information.** Attachments move out of Bid Information into
    their own collapsed "Documents" frame directly beneath it, which also holds the certificates
    the deal produces (confirmed intent, sealed proof of intent, clearance) as they are filed.
+   Certificates are filed quietly: nothing opens, expands or pops up when one is generated —
+   the frame stays closed until you open it.
+
 
 ## Technical notes
 
@@ -48,7 +51,9 @@ accordion.
     (`intent_confirmed_at`, `poi_sealed_at`) rather than from `stagePanel`, so they persist;
     keep the active-gate `InlineFrame` branch for the step still needing action.
   - Move the `savedAttachments` list into a new collapsed Documents accordion rendered after
-    the Bid Information frame, with certificate rows appended.
+    the Bid Information frame, with certificate rows appended; its open state defaults to closed
+    and is never forced open when a certificate is filed.
+
 - `src/components/steps/StepScreen.tsx`: in the POI step, drop the inner heading when rendered
   `bare` and emit the sealing sentence as subtext under the pill.
 - No schema, gating or governance changes: the AI+ advisory decision flow, WaD gate and seal
