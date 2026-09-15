@@ -979,6 +979,11 @@ export function CounterpartyRecord({
   // Collapsed automatically the moment background screening takes over, so the panel doesn't keep
   // showing both sets of findings at once — still reachable by hand via the header toggle.
   const [mediaExpanded, setMediaExpanded] = useState(true);
+  // The AI/AI+ match list, kept as a folded record above the screening findings.
+  const [searchResultsExpanded, setSearchResultsExpanded] = useState(false);
+  // Negotiation window for one shortlisted counterparty.
+  const [counterOfferFor, setCounterOfferFor] = useState<{ id: string; name: string } | null>(null);
+
   const movedToScreening = screening || screeningResults !== null;
   useEffect(() => {
     if (movedToScreening) setMediaExpanded(false);
