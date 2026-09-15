@@ -29,6 +29,8 @@ import {
   type RecordedActivity,
 } from "@/components/canvas/DealCanvas";
 import { TradeSummary } from "@/components/canvas/TradeSummary";
+import { DecisionPackPanel } from "@/components/canvas/DecisionPackPanel";
+
 import { SubmitterIdentity } from "@/components/canvas/SubmitterIdentity";
 import { MatchResultsPanel } from "@/components/canvas/MatchResultsPanel";
 
@@ -535,6 +537,11 @@ function LiveDealEngine() {
   // Once Intent is confirmed, its frame folds into a small accordion nested under Online Media
   // Screening Results rather than staying open as its own full-size panel.
   const [confirmedIntentOpen, setConfirmedIntentOpen] = useState(false);
+  // AI+ proposes; a person decides. These track whether every proposal in each pack has been
+  // accepted or rejected, which is what lets the spine move on.
+  const [choicePackDecided, setChoicePackDecided] = useState(false);
+  const [intentPackDecided, setIntentPackDecided] = useState(false);
+
   // The sealed Proof of Intent folds the same way — closed until the certificate is wanted.
   const [sealedPoiOpen, setSealedPoiOpen] = useState(false);
 
@@ -936,24 +943,28 @@ function LiveDealEngine() {
     // Picking who to take through screening *is* the Choice — stating it here means the pulse moves
     // on to Online Media Screening on a repeat pass too, not just the first time round.
     setHasChosen(true);
-    // A new party has been picked, so an intent confirmed — and any Proof of Intent sealed —
-    // against the previous one no longer applies: clear both so they can be granted again for
-    // this party. The certificate already issued stays filed on the bid as history.
-    if (dealTx.intent_confirmed_at || dealTx.poi_sealed_at) {
+    // A new party has been picked, so an intent confirmed against the previous one no longer
+    // applies: clear it so it can be granted again for this party. A *sealed* Proof of Intent is
+    // a governance milestone and is never unwound — the deal stays with the party it names.
+    if (dealTx.poi_sealed_at) {
+      toast.error("The Proof of Intent is sealed for this bid — the counterparty can no longer change.");
+      return;
+    }
+    if (dealTx.intent_confirmed_at) {
+
       await supabase
         .from("transactions")
-        .update({ intent_confirmed_at: null, poi_sealed_at: null, poi_hash: null })
+        .update({ intent_confirmed_at: null })
         .eq("id", dealTx.id);
       await recordEvent({
         transactionId: dealTx.id,
         stage: "trading",
         step: "intent",
         action: "intent_reopened",
-        summary: "Intent and Proof of Intent reopened — a different counterparty was chosen",
+        summary: "Intent reopened — a different counterparty was chosen",
       });
-      setDealTx((prev) =>
-        prev ? { ...prev, intent_confirmed_at: null, poi_sealed_at: null, poi_hash: null } : prev,
-      );
+      setDealTx((prev) => (prev ? { ...prev, intent_confirmed_at: null } : prev));
+
     }
     // A previous round's finalized pick (if any) no longer applies once screening is re-run for a
     // (possibly different) set of candidates — leaving its "chosen" row in place made the Intent
@@ -2431,6 +2442,42 @@ function LiveDealEngine() {
                   </div>
                 )}
 
+                {/* AI+ is advisory, never the decision-maker: after the person makes the Choice it
+                    offers proposals, each with a numeric probability, and the person accepts or
+                    rejects them before Intent is available. */}
+                {dealTx && dbHasChosenParty && !dealTx.poi_sealed_at && (
+                  <DecisionPackPanel
+                    transactionId={dealTx.id}
+                    stageContext="choice_made"
+                    gating={!dealTx.intent_confirmed_at}
+                    onAllDecided={setChoicePackDecided}
+                  />
+                )}
+
+                {/* The last advisory word before the Proof of Intent becomes immutable. */}
+                {dealTx?.intent_confirmed_at && !dealTx.poi_sealed_at && (
+                  <DecisionPackPanel
+                    transactionId={dealTx.id}
+                    stageContext="intent_confirmed"
+                    gating
+                    onAllDecided={setIntentPackDecided}
+                  />
+                )}
+
+                {/* Advisory only — AI+ cannot approve, reject, alter or bypass the WaD gate. */}
+                {dealTx?.wad_completed_at && (
+                  <DecisionPackPanel transactionId={dealTx.id} stageContext="wad_updated" />
+                )}
+
+                {/* Closing the loop after finality: informational only — nothing here can change a
+                    completed transaction. */}
+                {dealTx?.stage === "finality" && (
+                  <DecisionPackPanel transactionId={dealTx.id} stageContext="finality_recorded" />
+                )}
+
+
+
+
                 {/* Once Intent is confirmed its frame is no longer the thing needing attention —
                     fold it into a small accordion under the screening results instead of leaving
                     it open at full size. */}
@@ -2496,6 +2543,21 @@ function LiveDealEngine() {
                       </div>
                     )}
                   </div>
+                ) : /* The human decision on the AI+ proposals comes first: Intent only opens once
+                       every proposal from the Choice pack has been accepted or rejected, and
+                       sealing only once the pre-seal pack has been decided. */
+                dealTx && stagePanel === "intent" && dbHasChosenParty && !choicePackDecided ? (
+                  <div className="rounded-2xl border border-border bg-card px-3.5 py-3">
+                    <p className="text-xs text-muted-foreground">
+                      Accept or reject each AI+ proposal above, then Intent opens.
+                    </p>
+                  </div>
+                ) : dealTx && stagePanel === "poi" && dealTx.intent_confirmed_at && !dealTx.poi_sealed_at && !intentPackDecided ? (
+                  <div className="rounded-2xl border border-border bg-card px-3.5 py-3">
+                    <p className="text-xs text-muted-foreground">
+                      Accept or reject the AI+ proposals above before sealing the Proof of Intent.
+                    </p>
+                  </div>
                 ) : (
 
                   dealTx && stagePanel && (
@@ -2511,6 +2573,7 @@ function LiveDealEngine() {
                       onChangeParty={() => void reopenChoice()}
                     />
                   )
+
                 )}
 
                 {/* Only once Step 2's own documents (Business Docs) are in — not the moment the
