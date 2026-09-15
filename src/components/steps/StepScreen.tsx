@@ -1727,36 +1727,37 @@ function PoiStep({ tx, reload }: Props) {
   );
 
   if (tx.poi_sealed_at) {
+    // No panel heading of its own: this sits inside the workspace's folded "Proof of Intent"
+    // frame, which already names it. Just the sealing line, the certificate, and its actions.
     return (
       <>
-        <Panel
-          title="Proof of Intent — sealed"
-          description={`Sealed ${when(tx.poi_sealed_at)}`}
-          footer={
-            <div className="flex items-center justify-end gap-2">
-              <Button size="sm" variant="outline" className="gap-2" onClick={() => setCertOpen(true)}>
-                <FileText className="h-3.5 w-3.5" /> View certificate
-              </Button>
-              <Button size="sm" variant="outline" className="gap-2" onClick={download}>
-                <Download className="h-3.5 w-3.5" /> Download
-              </Button>
-            </div>
-          }
-        >
-          <CertificateBlock
-            heading="Proof of Intent"
-            lines={[
-              { label: "Transaction", value: tx.title },
-              { label: "Quantity / Price", value: `${tx.quantity ?? "—"} ${tx.unit ?? ""} at ${tx.price ?? "—"} ${tx.currency}` },
-              { label: "Sealed", value: String(tx.poi_sealed_at) },
-            ]}
-            sealId={tx.poi_hash ?? null}
-          />
-        </Panel>
+        <div className="text-xs leading-relaxed">
+          <p className="text-muted-foreground">Sealed {when(tx.poi_sealed_at)}</p>
+          <div className="mt-3">
+            <CertificateBlock
+              heading="Proof of Intent"
+              lines={[
+                { label: "Transaction", value: tx.title },
+                { label: "Quantity / Price", value: `${tx.quantity ?? "—"} ${tx.unit ?? ""} at ${tx.price ?? "—"} ${tx.currency}` },
+                { label: "Sealed", value: String(tx.poi_sealed_at) },
+              ]}
+              sealId={tx.poi_hash ?? null}
+            />
+          </div>
+          <div className="mt-3 flex items-center justify-end gap-2">
+            <Button size="sm" variant="outline" className="gap-2" onClick={() => setCertOpen(true)}>
+              <FileText className="h-3.5 w-3.5" /> View certificate
+            </Button>
+            <Button size="sm" variant="outline" className="gap-2" onClick={download}>
+              <Download className="h-3.5 w-3.5" /> Download
+            </Button>
+          </div>
+        </div>
         {certificateDialog}
       </>
     );
   }
+
 
   return (
     <>
