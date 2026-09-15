@@ -2469,6 +2469,13 @@ function LiveDealEngine() {
                   <DecisionPackPanel transactionId={dealTx.id} stageContext="wad_updated" />
                 )}
 
+                {/* Closing the loop after finality: informational only — nothing here can change a
+                    completed transaction. */}
+                {dealTx?.stage === "finality" && (
+                  <DecisionPackPanel transactionId={dealTx.id} stageContext="finality_recorded" />
+                )}
+
+
 
 
                 {/* Once Intent is confirmed its frame is no longer the thing needing attention —
