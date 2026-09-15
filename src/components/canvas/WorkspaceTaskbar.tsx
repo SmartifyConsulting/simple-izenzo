@@ -324,7 +324,14 @@ export function WorkspaceTaskbar() {
             </Button>
             <AlertDialogAction
               onClick={() => {
-                if (closeConfirm) close(closeConfirm.id);
+                if (closeConfirm) {
+                  const remaining = windows.filter((w) => w.id !== closeConfirm.id && w.id !== "new");
+                  close(closeConfirm.id);
+                  if (remaining.length === 0) {
+                    forgetRememberedDeal();
+                    void navigate({ to: "/live-deal-engine", search: { fresh: true, n: Date.now() } });
+                  }
+                }
                 setCloseConfirm(null);
               }}
             >
