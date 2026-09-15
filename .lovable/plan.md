@@ -28,6 +28,10 @@
 - Intent step (~1462–1465): drop `title="Intent Confirmation"`; the unconfirmed panel renders the description line and terms without a heading pill.
 - Sealed POI (~1726–1756): support the `bare` path so it returns just the certificate plus the two buttons when rendered inside the route accordion (no `Panel` title/description).
 
+`src/components/canvas/MapView.tsx`
+- When the Proof of Intent node's state is `active` (or Step 1 is fully done), render the `TRADE_ENGINE_FRAME` as a collapsed header bar — label plus green tick — and skip its child nodes/arrows; a local `step1Open` state toggled by clicking the bar restores the full frame. The remaining frames shift up by the reclaimed height.
+
 Database (one migration, no schema change): `update public.organisations set credits = credits + 50` for the two org ids above, plus matching `credit_ledger` rows.
+
 
 Then typecheck and confirm the preview build is clean.
