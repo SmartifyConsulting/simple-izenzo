@@ -2002,7 +2002,10 @@ function LiveDealEngine() {
                       key={dealTx.id}
                       transactionId={dealTx.id}
                       reference={(dealTx as unknown as { reference?: string | null }).reference ?? draftReference}
-                      onNext={() => void runSearch(dealTx.id)}
+                      // The search is not started here: the auto-search effect above runs it once
+                      // the documents have finished being read, so it searches on their content.
+                      onNext={() => {}}
+
                       onSubmitted={() => markSubmitted(dealTx.id)}
                       onFirstClassified={({ directionGuess }) => void applyDirectionGuess(directionGuess)}
                       autoAdvance
