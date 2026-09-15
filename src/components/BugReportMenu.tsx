@@ -224,27 +224,6 @@ export function BugReportMenu() {
           </SheetTitle>
         </SheetHeader>
 
-        <div className="flex flex-wrap items-center gap-1.5">
-          {(Object.keys(TYPE_META) as ReportType[]).map((t) => {
-            const Icon = TYPE_META[t].icon;
-            const active = type === t;
-            return (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setType(t)}
-                className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition ${
-                  active
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
-              >
-                {Icon && <Icon className="h-3.5 w-3.5" />}
-                {TYPE_META[t].label}
-              </button>
-            );
-          })}
-        </div>
 
         <div className="flex items-center gap-1.5">
           <Input

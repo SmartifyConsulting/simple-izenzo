@@ -601,6 +601,8 @@ function LiveDealEngine() {
 
   // The sealed Proof of Intent folds the same way — closed until the certificate is wanted.
   const [sealedPoiOpen, setSealedPoiOpen] = useState(false);
+  // Cleared WaD case — same folded-record treatment, closed until wanted.
+  const [sealedWadOpen, setSealedWadOpen] = useState(false);
 
   // Which counterparty (from the media-screening findings) the user is about to proceed with —
   // this is where the actual pick happens now, right next to the screening evidence for it.
@@ -2660,6 +2662,42 @@ function LiveDealEngine() {
                   </div>
                 )}
 
+                {/* Cleared WaD case — same folded-record treatment as Proof of Intent above. */}
+                {dealTx?.wad_completed_at && (
+                  <div className="rounded-2xl border border-border bg-card">
+                    <button
+                      type="button"
+                      onClick={() => setSealedWadOpen((v) => !v)}
+                      className="flex w-full items-center justify-between gap-2 px-3.5 py-2 text-left"
+                      aria-expanded={sealedWadOpen}
+                    >
+                      <span className="min-w-0">
+                        <span className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+                          Without a Doubt (WAD)
+                        </span>
+                        <span className="mt-1 block text-[11px] text-muted-foreground">
+                          KYC, KYB, UBO, sanctions and PEP cleared.
+                        </span>
+                      </span>
+                      <ChevronDown
+                        className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", sealedWadOpen && "rotate-180")}
+                      />
+                    </button>
+                    {sealedWadOpen && (
+                      <div className="px-3.5 pb-3">
+                        <InlineFrame
+                          bare
+                          tx={dealTx}
+                          stage="compliance"
+                          step="wad"
+                          reload={() => void reloadDeal()}
+                          onClose={() => setStagePanel(null)}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* The human decision on the AI+ proposals comes first: Intent only opens once
                     every proposal from the Choice pack has been accepted or rejected, and
                     sealing only once the pre-seal pack has been decided. */}
@@ -2681,7 +2719,8 @@ function LiveDealEngine() {
                   dealTx &&
                   stagePanel &&
                   !(stagePanel === "intent" && dealTx.intent_confirmed_at) &&
-                  !(stagePanel === "poi" && dealTx.poi_sealed_at) && (
+                  !(stagePanel === "poi" && dealTx.poi_sealed_at) &&
+                  !(stagePanel === "wad" && dealTx.wad_completed_at) && (
                     <InlineFrame
                       tx={dealTx}
                       stage={stagePanel === "wad" ? "compliance" : stagePanel === "business-docs" ? "execution" : "trading"}
