@@ -164,6 +164,7 @@ export function WorkspaceTaskbar() {
       const remaining = windows.filter((w) => w.id !== closeConfirm.id && w.id !== "new");
       close(closeConfirm.id);
       setCloseConfirm(null);
+      if (remaining.length === 0) forgetRememberedDeal();
       if (wasShowing) {
         if (remaining.length > 0) {
           void navigate({ to: "/live-deal-engine", search: { tx: remaining[0]!.id } });
