@@ -6,6 +6,9 @@ export type DealWindow = {
   /** The transaction id this window shows, or "new" for a not-yet-created bid/offer. */
   id: string;
   label: string;
+  /** The deal's commodity/title, if it has one yet — shown on hover over the tab, since `label`
+   * itself is just the bid/offer reference (e.g. "BID9089361"), not a name a person recognizes. */
+  name?: string | undefined;
   mode: WindowMode;
   /** Position while docked and not maximized — dragged freely within the viewport. */
   x: number;
@@ -39,7 +42,7 @@ type DealWindowsValue = {
   open: (id: string, label: string) => void;
   /** Registers a window if it doesn't exist yet, and keeps its label current, but never changes
    * an existing window's mode — safe to call on every render of the page that owns this deal. */
-  register: (id: string, label: string) => void;
+  register: (id: string, label: string, name?: string) => void;
   setMode: (id: string, mode: WindowMode) => void;
   move: (id: string, x: number, y: number) => void;
   close: (id: string) => void;
@@ -103,15 +106,15 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
   );
 
   const register = useCallback(
-    (id: string, label: string) => {
+    (id: string, label: string, name?: string) => {
       const current = readAll();
       const already = current.find((w) => w.id === id);
       if (already) {
         // Keeps the tab's label current — a brand-new bid/offer opens as "New workspace" and
         // gets a real reference moments later once it's recorded, and the tab should pick that
         // up without disturbing whatever mode the window is already in (minimized, maximized…).
-        if (already.label !== label) {
-          persist(current.map((w) => (w.id === id ? { ...w, label } : w)));
+        if (already.label !== label || already.name !== name) {
+          persist(current.map((w) => (w.id === id ? { ...w, label, name } : w)));
         }
         return;
       }
@@ -119,7 +122,7 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
       // out of the way onto the taskbar instead of the two competing for the same space.
       const others = current.map((w) => (w.mode === "minimized" ? w : { ...w, mode: "minimized" as WindowMode }));
       const offset = current.length * 24;
-      persist([...others, { id, label, mode: "maximized", x: 80 + offset, y: 80 + offset }]);
+      persist([...others, { id, label, name, mode: "maximized", x: 80 + offset, y: 80 + offset }]);
     },
     [persist],
   );

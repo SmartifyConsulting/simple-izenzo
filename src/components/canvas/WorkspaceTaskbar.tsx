@@ -219,7 +219,7 @@ export function WorkspaceTaskbar() {
               type="button"
               className="min-w-0 flex-1 truncate text-center font-sans text-[12px] font-bold uppercase tracking-wide"
               onClick={() => activate(w.id, w.mode)}
-              title={w.label}
+              title={w.name ? `${w.label} — ${w.name}` : w.label}
             >
               {w.label}
             </button>

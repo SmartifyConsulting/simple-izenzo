@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { sealProofOfIntent, completeWad, runAiProposal, searchCounterparties } from "@/lib/izenzo.functions";
+import { sealProofOfIntent, completeWad, runAiProposal, searchCounterparties, extractMaterialTerms } from "@/lib/izenzo.functions";
 import { type ScreeningCheck } from "@/lib/screening.functions";
 import { listIntentMessages, postIntentMessage } from "@/lib/intentChallenge.functions";
 import { advance, fingerprintOf, money, recordEvent, shortHash, when, type Transaction, type TxEvent } from "@/lib/tx";
@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { routeIdentityVerification } from "@/lib/identityRouting";
 import { AvatarWithPresence } from "@/components/PresenceDot";
+import { Logo } from "@/components/Logo";
 import { CommoditySearch } from "@/components/CommoditySearch";
 import { COUNTRIES } from "@/lib/countries";
 import { UNITS } from "@/lib/units";
@@ -58,6 +59,57 @@ type Props = {
 };
 
 /* ---------- shared bits ---------- */
+
+/** A cleared Proof of Intent or Without a Doubt reads as an actual issued certificate — the
+ * Izenzo mark, a title, a double border and a seal number — rather than a plain monospace text
+ * dump of the same facts. */
+function CertificateBlock({
+  heading,
+  lines,
+  sealId,
+  draft,
+}: {
+  heading: string;
+  lines: { label: string; value: string }[];
+  /** The short fingerprint/hash printed as the certificate's own seal/serial number. */
+  sealId: string | null;
+  /** Shown as a plain draft, not yet a real certificate — a large grey diagonal "DRAFT" watermark
+   * over the record, gone the moment it's actually confirmed/cleared. */
+  draft?: boolean | undefined;
+}) {
+  return (
+    <div className="relative overflow-hidden rounded-lg border-2 border-double border-foreground/70 bg-gradient-to-b from-muted/40 to-transparent p-5">
+      {draft && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-1/2 -z-10 -translate-x-1/2 -translate-y-1/2 -rotate-[24deg] select-none whitespace-nowrap text-6xl font-black uppercase tracking-widest text-muted-foreground/25"
+        >
+          Draft
+        </span>
+      )}
+      <div className="relative flex items-center justify-between gap-3 border-b border-border pb-3">
+        <Logo />
+        <span className="label-caps text-muted-foreground">{draft ? "Draft — not yet confirmed" : "Certified record"}</span>
+      </div>
+      <p className="mt-4 text-center font-sans text-sm font-bold uppercase tracking-[0.14em] text-foreground">
+        {heading}
+      </p>
+      <dl className="mx-auto mt-4 grid max-w-md gap-x-4 gap-y-1.5 text-xs sm:grid-cols-2">
+        {lines.map((l) => (
+          <div key={l.label} className="contents">
+            <dt className="text-muted-foreground">{l.label}</dt>
+            <dd className="break-words font-medium text-foreground">{l.value}</dd>
+          </div>
+        ))}
+      </dl>
+      {sealId && (
+        <p className="mt-4 truncate border-t border-border pt-2 text-center font-mono text-[10px] text-muted-foreground">
+          Seal {sealId}
+        </p>
+      )}
+    </div>
+  );
+}
 
 function Panel({
   title,
@@ -1236,6 +1288,16 @@ function IntentStep({ tx, reload }: Props) {
   const { profile } = useAuth();
   const signer = profile?.full_name ?? profile?.email ?? "—";
 
+  // Every deal type carries different material terms (a services engagement has no "quantity" the
+  // way a commodity trade does), so these are read off the actual record by AI rather than a fixed
+  // field list that either sat blank or quietly misrepresented deals that don't fit it.
+  const getMaterialTerms = useServerFn(extractMaterialTerms);
+  const { data: termsData, isPending: termsPending } = useQuery({
+    queryKey: ["material-terms", tx.id],
+    queryFn: () => getMaterialTerms({ data: { transactionId: tx.id } }),
+  });
+  const materialTerms = termsData?.terms ?? [];
+
   // The party chosen after background screening — the intent is signed against them.
   const { data: chosen } = useQuery({
     queryKey: ["chosen-counterparty", tx.id],
@@ -1251,6 +1313,32 @@ function IntentStep({ tx, reload }: Props) {
       return data?.name ?? null;
     },
   });
+
+  async function fileIntentCertificate(confirmedAt: string) {
+    const body = [
+      "IZENZO — CONFIRMATION OF INTENT",
+      "",
+      ...materialTerms.map((t) => `${t.label}: ${t.value}`),
+      `Counterparty: ${chosen ?? "—"}`,
+      `Signed by: ${signer}`,
+      `Confirmed: ${confirmedAt}`,
+    ].join("\n");
+    const path = `deals/${tx.id}/${Date.now()}-confirmation-of-intent.txt`;
+    const { error: upErr } = await supabase.storage
+      .from("documents")
+      .upload(path, new Blob([body], { type: "text/plain" }));
+    if (upErr) {
+      toast.warning("Confirmed, but the certificate could not be filed against the deal.");
+      return;
+    }
+    await supabase.from("documents").insert({
+      transaction_id: tx.id,
+      name: `Confirmation of Intent — ${tx.title}.txt`,
+      doc_type: "certificate",
+      notes: "Certificate",
+      storage_path: path,
+    });
+  }
 
   async function confirm() {
     setBusy(true);
@@ -1273,6 +1361,7 @@ function IntentStep({ tx, reload }: Props) {
         },
 
       });
+      await fileIntentCertificate(now);
       await advance(tx.id, "trading", "poi");
       reload();
       toast.success("Intent confirmed");
@@ -1302,42 +1391,27 @@ function IntentStep({ tx, reload }: Props) {
         </div>
       }
     >
-      <dl className="grid gap-3 text-sm sm:grid-cols-2">
-        <div>
-          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-muted-foreground">Transaction</dt>
-          <dd className="text-foreground">{tx.title}</dd>
+      {termsPending ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i}>
+              <div className="h-3 w-16 animate-pulse rounded bg-muted" />
+              <div className="mt-1.5 h-4 w-28 animate-pulse rounded bg-muted" />
+            </div>
+          ))}
         </div>
-        <div>
-          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-muted-foreground">Commodity</dt>
-          <dd className="text-foreground">{tx.commodity ?? "—"}</dd>
-        </div>
-        <div>
-          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-muted-foreground">Quantity</dt>
-          <dd className="text-foreground">
-            {tx.quantity ?? "—"} {tx.unit ?? ""}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-muted-foreground">Price</dt>
-          <dd className="text-foreground">{money(tx.price, tx.currency)}</dd>
-        </div>
-        <div>
-          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-muted-foreground">Incoterms</dt>
-          <dd className="text-foreground">{tx.incoterms ?? "—"}</dd>
-        </div>
-        <div>
-          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-muted-foreground">Jurisdiction</dt>
-          <dd className="text-foreground">{tx.jurisdiction ?? "—"}</dd>
-        </div>
-        <div>
-          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-muted-foreground">Counterparty</dt>
-          <dd className="text-foreground">{chosen ?? "—"}</dd>
-        </div>
-        <div>
-          <dt className="text-[11px] font-semibold uppercase tracking-[0.09em] text-muted-foreground">Signed by</dt>
-          <dd className="text-foreground">{signer}</dd>
-        </div>
-      </dl>
+      ) : (
+        <CertificateBlock
+          heading="Confirmation of Intent"
+          lines={[
+            ...materialTerms,
+            { label: "Counterparty", value: chosen ?? "—" },
+            { label: "Signed by", value: signer },
+          ]}
+          sealId={tx.intent_confirmed_at ? shortHash(tx.id) : null}
+          draft={!tx.intent_confirmed_at}
+        />
+      )}
       {tx.intent_confirmed_at && (
         <p className="mt-4 text-xs text-muted-foreground">
           Signed by {signer} · {when(tx.intent_confirmed_at)}
@@ -1441,17 +1515,15 @@ function PoiStep({ tx, reload }: Props) {
           </div>
         }
       >
-        <div className="seal-block">
-          IZENZO PROOF OF INTENT
-          <br />
-          {tx.title}
-          <br />
-          {tx.quantity ?? "—"} {tx.unit ?? ""} at {tx.price ?? "—"} {tx.currency}
-          <br />
-          sealed {tx.poi_sealed_at}
-          <br />
-          sha256 {tx.poi_hash}
-        </div>
+        <CertificateBlock
+          heading="Proof of Intent"
+          lines={[
+            { label: "Transaction", value: tx.title },
+            { label: "Quantity / Price", value: `${tx.quantity ?? "—"} ${tx.unit ?? ""} at ${tx.price ?? "—"} ${tx.currency}` },
+            { label: "Sealed", value: String(tx.poi_sealed_at) },
+          ]}
+          sealId={tx.poi_hash ?? null}
+        />
       </Panel>
     );
   }
@@ -1709,15 +1781,15 @@ function WadStep({ tx, reload }: Props) {
           </div>
         }
       >
-        <div className="seal-block">
-          IZENZO WITHOUT A DOUBT CLEARANCE
-          <br />
-          {tx.title}
-          <br />
-          KYC · KYB · UBO · sanctions · PEP
-          <br />
-          cleared {tx.wad_completed_at}
-        </div>
+        <CertificateBlock
+          heading="Without a Doubt Clearance"
+          lines={[
+            { label: "Transaction", value: tx.title },
+            { label: "Checks", value: "KYC · KYB · UBO · sanctions · PEP" },
+            { label: "Cleared", value: String(tx.wad_completed_at) },
+          ]}
+          sealId={shortHash(tx.id)}
+        />
         <p className="mt-3 text-xs text-muted-foreground">
           Without a Doubt has cleared. Execution is open.
         </p>

@@ -1495,13 +1495,13 @@ function LiveDealEngine() {
 
   useEffect(() => {
     if (popout) return;
-    registerWindow(windowId, windowLabel);
+    registerWindow(windowId, windowLabel, dealTx?.commodity ?? dealTx?.title ?? undefined);
     // The not-yet-created placeholder isn't a real saved workspace worth remembering a stray
     // docked position or minimized state for — always present it maximized, even if a stale
     // "new" entry from before this page had that default was left sitting in localStorage.
     if (windowId === "new") setMode(windowId, "maximized");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [windowId, windowLabel, popout]);
+  }, [windowId, windowLabel, popout, dealTx?.commodity, dealTx?.title]);
 
   const [dragging, setDragging] = useState<{ dx: number; dy: number } | null>(null);
   const posX = win?.x ?? 80;
@@ -1802,8 +1802,15 @@ function LiveDealEngine() {
                 </div>
                 <div className="min-w-0 space-y-1 text-right">
                   {(dealTx.commodity || dealTx.title) && !GENERIC_TITLES.has(dealTx.title) && (
-                    <p className="break-words text-right text-sm font-semibold text-foreground">
-                      {dealTx.commodity || dealTx.title}
+                    <p className="text-right">
+                      {/* box-decoration-break: clone gives each wrapped line its own pill instead
+                          of one pill stretching across every line the name wraps onto. */}
+                      <span
+                        className="inline whitespace-normal break-words rounded-full bg-emerald-600 px-2.5 py-0.5 text-sm font-semibold leading-[1.9] text-white"
+                        style={{ WebkitBoxDecorationBreak: "clone", boxDecorationBreak: "clone" }}
+                      >
+                        {dealTx.commodity || dealTx.title}
+                      </span>
                     </p>
                   )}
                   <p className="text-xs text-muted-foreground">
@@ -2177,7 +2184,7 @@ function LiveDealEngine() {
           )}
 
           {activity ? (
-            <div className="mt-0.5 space-y-2">
+            <div className="mt-1.5 space-y-2">
                 {/* The commodity name already shows on the Bid Registration card above — repeating
                     it here as its own pill just floated a second copy of the bid name with nothing
                     else around it. */}

@@ -216,7 +216,7 @@ function MemoryArcLabel() {
   return (
     <div
       className="pointer-events-none absolute z-10 flex -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-full bg-black px-2.5 py-0.5 text-center font-sans text-[11px] font-semibold uppercase leading-none tracking-[0.09em] text-white"
-      style={{ left: px(MEMORY.cx), top: py(MEMORY.cy - MEMORY.r * 0.62) }}
+      style={{ left: px(MEMORY.cx), top: py(MEMORY.cy - MEMORY.r * 0.42) }}
       aria-hidden
     >
       Step 5 · Memory
@@ -543,8 +543,10 @@ export function MapView({
             memoryState === "locked" && "cursor-not-allowed text-muted-foreground",
           )}
         >
-          <Database className={cn("h-4 w-4", memoryState === "open" && "text-primary")} />
-          <span className="text-[12px] font-medium leading-tight">Compounding CDA</span>
+          <span className="flex items-center gap-1.5">
+            <Database className={cn("h-4 w-4 shrink-0", memoryState === "open" && "text-primary")} />
+            <span className="text-[12px] font-medium leading-tight">Compounding CDA</span>
+          </span>
           <span className="text-[10px] leading-snug text-muted-foreground">
             Capital Deployment Assessment
           </span>

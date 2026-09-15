@@ -831,6 +831,90 @@ export const runAiProposal = createServerFn({ method: "POST" })
     return { output, id: proposal?.id ?? null };
   });
 
+/** Reads whatever the deal actually recorded — fields, bid/offer terms, uploaded documents — and
+ * asks the AI to name the material terms a person would want confirmed before signing intent.
+ * Every deal type (goods, services, a lease, a licence…) carries different terms, so this never
+ * hardcodes a fixed field list — a services deal has no "quantity/unit" the way a commodity trade
+ * does, and a fixed dl of trade-specific fields either sat blank or lied by omission for those. */
+export const extractMaterialTerms = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(txInput)
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const apiKey = process.env["LOVABLE_API_KEY"];
+
+    const { data: tx } = await supabase
+      .from("transactions")
+      .select("*")
+      .eq("id", data.transactionId)
+      .maybeSingle();
+    if (!tx) throw new Error("Transaction not found");
+
+    // A safe, always-available fallback if AI is unreachable — never leaves the confirmation
+    // screen with nothing on it.
+    const fallback = [
+      { label: "Transaction", value: tx.title },
+      ...(tx.commodity ? [{ label: "Commodity", value: tx.commodity }] : []),
+      ...(tx.quantity ? [{ label: "Quantity", value: `${tx.quantity} ${tx.unit ?? ""}`.trim() }] : []),
+      ...(tx.price ? [{ label: "Price", value: `${tx.price} ${tx.currency}` }] : []),
+      ...(tx.incoterms ? [{ label: "Incoterms", value: tx.incoterms }] : []),
+      ...(tx.jurisdiction ? [{ label: "Jurisdiction", value: tx.jurisdiction }] : []),
+    ];
+    if (!apiKey) return { terms: fallback, source: "fallback" as const };
+
+    const { data: bids } = await supabase
+      .from("bid_offers")
+      .select("direction, price, quantity, unit, currency, terms, status")
+      .eq("transaction_id", tx.id);
+    const { data: docs } = await supabase
+      .from("documents")
+      .select("name, doc_type, notes")
+      .eq("transaction_id", tx.id);
+
+    const prompt = [
+      `Transaction record: ${JSON.stringify(tx)}`,
+      `Bids/offers: ${JSON.stringify(bids ?? [])}`,
+      `Documents on file: ${JSON.stringify(docs ?? [])}`,
+    ].join("\n");
+
+    try {
+      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: AI_MODEL,
+          ...aiPlusOptions(AI_MODEL, "ai"),
+          messages: [
+            {
+              role: "system",
+              content:
+                "You read a trade record (which may be goods, services, a lease, a licence, or anything else two parties are trading) and name the material terms a party should read and confirm before expressing intent to transact. Pick whichever terms actually apply to THIS deal — never force in a field the record doesn't have, and never invent a value. Reply with ONLY a JSON array of {\"label\": string, \"value\": string}, 4-8 entries, most important first. No prose, no markdown fence.",
+            },
+            { role: "user", content: prompt },
+          ],
+        }),
+      });
+      if (!res.ok) return { terms: fallback, source: "fallback" as const };
+      const json = (await res.json()) as { choices: { message: { content: string } }[] };
+      const raw = (json.choices?.[0]?.message?.content ?? "").trim();
+      const cleaned = raw.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+      const parsed = JSON.parse(cleaned) as unknown;
+      if (
+        Array.isArray(parsed) &&
+        parsed.every(
+          (t): t is { label: string; value: string } =>
+            typeof t === "object" && t !== null && typeof (t as { label?: unknown }).label === "string" && typeof (t as { value?: unknown }).value === "string",
+        ) &&
+        parsed.length > 0
+      ) {
+        return { terms: parsed, source: "ai" as const };
+      }
+      return { terms: fallback, source: "fallback" as const };
+    } catch {
+      return { terms: fallback, source: "fallback" as const };
+    }
+  });
+
 const DOC_TYPES = ["identity", "term_sheet", "specification", "certificate", "contract", "other"] as const;
 
 function classifyByFilename(filename: string): (typeof DOC_TYPES)[number] {

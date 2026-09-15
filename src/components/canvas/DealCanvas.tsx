@@ -1334,7 +1334,7 @@ export function CounterpartyRecord({
       >
         <p className="label-caps text-black">
           {screeningDone
-            ? "Select which one to trade with"
+            ? ""
             : continued
               ? "Selected counterparties"
               : "Select a counterparty to continue"}
@@ -1506,7 +1506,7 @@ export function CounterpartyRecord({
             ? "Recording your choice…"
             : pickedId
               ? "Continue"
-              : "Tick who you want to trade with"}
+              : "Select who you want to trade with"}
         </Button>
       ) : (
         onContinue &&
