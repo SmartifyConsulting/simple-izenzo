@@ -2131,7 +2131,7 @@ function LiveDealEngine() {
             <MatchResultsPanel
               query={matchQuery}
               transactionId={dealTx?.id}
-              className="mt-4"
+              className="mt-1.5"
             />
           )}
 
