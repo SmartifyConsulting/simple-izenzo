@@ -2399,9 +2399,12 @@ function LiveDealEngine() {
                         aria-expanded={mediaResultsOpen}
                         className="label-caps flex min-w-0 flex-1 items-center justify-between gap-1.5 rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]"
                       >
-                        <span>
-                          {dbHasChosenParty ? "CHOSEN COUNTERPARTY" : "ONLINE MEDIA SCREENING RESULTS"}
+                        <span className="min-w-0 truncate">
+                          {dbHasChosenParty
+                            ? `CHOSEN COUNTERPARTY${chosenPartyName ? ` — ${chosenPartyName}` : ""}`
+                            : "ONLINE MEDIA SCREENING RESULTS"}
                         </span>
+
                         <span className="flex shrink-0 items-center gap-1.5">
                           <span className="text-[10px] font-semibold">
                             {mediaResults.length} counterpart{mediaResults.length === 1 ? "y" : "ies"}
