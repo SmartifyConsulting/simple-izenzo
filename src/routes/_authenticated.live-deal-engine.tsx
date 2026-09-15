@@ -2311,20 +2311,42 @@ function LiveDealEngine() {
                     ready. */}
                 {dealTx && mediaResults && mediaResults.length > 0 && (
                   <div className="rounded-2xl border border-border bg-card p-3">
-                    <button
-                      type="button"
-                      onClick={() => setMediaResultsOpen(dealTx.id, !mediaResultsOpen)}
-                      aria-expanded={mediaResultsOpen}
-                      className="label-caps flex w-full items-center justify-between gap-1.5 rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]"
-                    >
-                      <span>ONLINE MEDIA SCREENING RESULTS</span>
-                      <span className="flex shrink-0 items-center gap-1.5">
-                        <span className="text-[10px] font-semibold">
-                          {mediaResults.length} counterpart{mediaResults.length === 1 ? "y" : "ies"}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setMediaResultsOpen(dealTx.id, !mediaResultsOpen)}
+                        aria-expanded={mediaResultsOpen}
+                        className="label-caps flex min-w-0 flex-1 items-center justify-between gap-1.5 rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]"
+                      >
+                        <span>ONLINE MEDIA SCREENING RESULTS</span>
+                        <span className="flex shrink-0 items-center gap-1.5">
+                          <span className="text-[10px] font-semibold">
+                            {mediaResults.length} counterpart{mediaResults.length === 1 ? "y" : "ies"}
+                          </span>
+                          <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform", mediaResultsOpen && "rotate-180")} />
                         </span>
-                        <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform", mediaResultsOpen && "rotate-180")} />
-                      </span>
-                    </button>
+                      </button>
+                      {/* Choosing who to trade with sits on this heading row rather than in a wide
+                          button below the records. */}
+                      {!dbHasChosenParty && (
+                        <Button
+                          size="sm"
+                          className={cn(
+                            "shrink-0",
+                            !mediaPick && "bg-muted text-muted-foreground hover:bg-muted disabled:opacity-100",
+                          )}
+                          disabled={!mediaPick || finalizing}
+                          onClick={() => mediaPick && finalizeChoice(mediaPick)}
+                        >
+                          {finalizing
+                            ? "Recording your choice…"
+                            : mediaPick
+                              ? "Continue"
+                              : "Select who you want to trade with"}
+                        </Button>
+                      )}
+                    </div>
+
                     {mediaResultsOpen && (
                       <RadioGroup
                         value={mediaPick ?? ""}

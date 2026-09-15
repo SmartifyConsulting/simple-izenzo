@@ -1426,7 +1426,7 @@ export function CounterpartyRecord({
             aria-expanded={searchResultsExpanded}
             className="flex w-full items-center justify-between gap-2"
           >
-            <span className="label-caps text-slate-600">Search results ({candidates.length})</span>
+            <span className="label-caps text-slate-600">Online media search results ({candidates.length})</span>
             <ChevronDown
               className={cn(
                 "h-3.5 w-3.5 shrink-0 text-slate-500 transition-transform",
@@ -2361,11 +2361,11 @@ export function CanvasStart({
           disabled={!canBeginPicking}
           aria-label="Submit"
           title="Submit"
-          className="flex h-8 shrink-0 items-center gap-1.5 self-center rounded-full bg-emerald-500 px-3 text-xs font-semibold text-black transition-opacity hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex h-8 w-8 shrink-0 items-center justify-center self-center rounded-full bg-foreground text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Submit
-          <ArrowUp className="h-3.5 w-3.5" />
+          <ArrowUp className="h-4 w-4" />
         </button>
+
       </div>
 
       {pendingFiles.length > 0 && (
