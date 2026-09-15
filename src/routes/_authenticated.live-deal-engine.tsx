@@ -598,6 +598,9 @@ function LiveDealEngine() {
   // accepted or rejected, which is what lets the spine move on.
   const [choicePackDecided, setChoicePackDecided] = useState(false);
   const [intentPackDecided, setIntentPackDecided] = useState(false);
+  // Once every AI+ compliance recommendation has been decided, the panel disappears from the
+  // accordion list entirely rather than just folding itself closed.
+  const [wadPackDecided, setWadPackDecided] = useState(false);
 
   // The sealed Proof of Intent folds the same way — closed until the certificate is wanted.
   const [sealedPoiOpen, setSealedPoiOpen] = useState(false);
@@ -2733,9 +2736,15 @@ function LiveDealEngine() {
 
 
                 {/* Advisory only — AI+ cannot approve, reject, alter or bypass the WaD gate. Sits
-                    after Business Docs, once execution's own paperwork is actually on file. */}
-                {dealTx?.wad_completed_at && stepOverrides["businessDocs"] === "done" && (
-                  <DecisionPackPanel transactionId={dealTx.id} stageContext="wad_updated" />
+                    after Business Docs, once execution's own paperwork is actually on file —
+                    and disappears once every recommendation has been decided, rather than
+                    lingering folded in the accordion list. */}
+                {dealTx?.wad_completed_at && stepOverrides["businessDocs"] === "done" && !wadPackDecided && (
+                  <DecisionPackPanel
+                    transactionId={dealTx.id}
+                    stageContext="wad_updated"
+                    onAllDecided={setWadPackDecided}
+                  />
                 )}
 
                 {/* Only once Step 2's own documents (Business Docs) are in — not the moment the

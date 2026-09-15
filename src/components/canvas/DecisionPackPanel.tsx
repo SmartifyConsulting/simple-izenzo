@@ -76,21 +76,29 @@ export function DecisionPackPanel({
     };
   }, [transactionId, stageContext, run]);
 
+  // onAllDecided fires false the moment there's anything left pending, but only fires true once
+  // the fold-closing beat below has actually played — a caller that hides the whole panel on
+  // "all decided" (see the WaD one in live-deal-engine.tsx) shouldn't yank it away mid-decision,
+  // before the last "Accepted"/"Rejected" state and the fold were ever seen.
   useEffect(() => {
     if (!proposals) return;
     const allDecided = proposals.length > 0 && proposals.every((p) => Boolean(p.decided_at));
-    onAllDecided?.(allDecided);
+    if (!allDecided) onAllDecided?.(false);
   }, [proposals, onAllDecided]);
 
   // Folds itself back up once every proposal has been decided — a brief pause so the last
-  // "Accepted"/"Rejected" state is actually seen before the panel collapses on its own.
+  // "Accepted"/"Rejected" state is actually seen before the panel collapses on its own, then
+  // tells the caller it's fully decided.
   useEffect(() => {
     if (!proposals || proposals.length === 0) return;
     const allDecided = proposals.every((p) => Boolean(p.decided_at));
     if (!allDecided) return;
-    const id = setTimeout(() => setOpen(false), 1200);
+    const id = setTimeout(() => {
+      setOpen(false);
+      onAllDecided?.(true);
+    }, 1200);
     return () => clearTimeout(id);
-  }, [proposals]);
+  }, [proposals, onAllDecided]);
 
   async function act(id: string, decision: "accepted" | "rejected") {
     setDeciding(id);
