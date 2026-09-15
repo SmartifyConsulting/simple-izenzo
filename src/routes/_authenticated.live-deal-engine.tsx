@@ -323,6 +323,9 @@ function LiveDealEngine() {
   // immediately hijacked the workspace into a locked Intent panel, so the screening UI (and its
   // results) never had a chance to show. This one only ever reflects a real chosen row in the DB.
   const [dbHasChosenParty, setDbHasChosenParty] = useState(false);
+  /** Name of the chosen counterparty, so the folded frame can say who without being opened. */
+  const [chosenPartyName, setChosenPartyName] = useState<string | null>(null);
+
   /** Whether the deal map is shown above the stepper — folded away by hand if it isn't wanted. */
   const [mapOpen, setMapOpen] = useState(true);
   // Screening state is session-local and was never cleared on switching bids, so a fresh bid that
