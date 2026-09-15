@@ -521,6 +521,15 @@ function LiveDealEngine() {
     if (!dealTx || !dbHasChosenParty) return;
     setSearchResultsOpenByTx((prev) => ({ ...prev, [dealTx.id]: false }));
   }, [dealTx?.id, dbHasChosenParty]);
+  // The selection circles for the choice live on the screening records, so that list has to be
+  // open the moment a choice is what the bid is waiting on — otherwise there is nothing to pick
+  // with and the deal reads as stuck.
+  useEffect(() => {
+    if (!dealTx || !choicePending) return;
+    setMediaResultsOpenByTx((prev) =>
+      prev[dealTx.id] ? prev : { ...prev, [dealTx.id]: true },
+    );
+  }, [dealTx?.id, choicePending]);
   // The trade record, once everything has cleared — folded away by default.
   const [tradeSummaryOpen, setTradeSummaryOpen] = useState(false);
   // Once Intent is confirmed, its frame folds into a small accordion nested under Online Media
