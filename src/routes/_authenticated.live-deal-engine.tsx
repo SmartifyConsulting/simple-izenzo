@@ -1598,14 +1598,13 @@ function LiveDealEngine() {
                 </button>
               </div>
             </div>
-            <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
+            <div className="mt-3 min-h-0 flex-1">
               {/* The map is the visual "where am I" companion — the same states, the same click
-                  targets, opening the same step frames as the stepper. */}
-              {/* The diagram keeps a legible minimum width; on a very narrow column it scrolls
-                  sideways rather than shrinking its labels into illegibility. */}
+                  targets, opening the same step frames as the stepper. It scales to the panel, so
+                  neither a sideways nor a downward scrollbar appears around it. */}
               {mapOpen ? (
-                <div className="overflow-x-auto">
-                  <div className="min-w-[420px]">
+                <div>
+                  <div>
                   <MapView
                     tx={dealTx ?? null}
                     reload={() => void reloadDeal()}
@@ -1618,6 +1617,7 @@ function LiveDealEngine() {
                   </div>
                 </div>
               ) : (
+
                 <ClassicView
                   tx={dealTx ?? FLOWCHART_PREVIEW_TX}
                   reload={() => void reloadDeal()}
