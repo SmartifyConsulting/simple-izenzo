@@ -550,6 +550,16 @@ function LiveDealEngine() {
     if (!dealTx || !dbHasChosenParty) return;
     setSearchResultsOpenByTx((prev) => ({ ...prev, [dealTx.id]: false }));
   }, [dealTx?.id, dbHasChosenParty]);
+  // Online media screening taking over is what the search results make way for: the record folds
+  // itself the moment screening starts, leaving the screen to the screening list below it.
+  useEffect(() => {
+    if (!dealTx || !mediaRunning) return;
+    setSearchResultsOpenByTx((prev) => ({ ...prev, [dealTx.id]: false }));
+  }, [dealTx?.id, mediaRunning]);
+  // Documents: attachments and the certificates the deal produces, in their own folded frame
+  // under Bid Information. Never opened automatically — filing a certificate is quiet.
+  const [documentsOpen, setDocumentsOpen] = useState(false);
+
   // The selection circles for the choice live on the screening records, so that list has to be
   // open the moment a choice is what the bid is waiting on — otherwise there is nothing to pick
   // with and the deal reads as stuck.
