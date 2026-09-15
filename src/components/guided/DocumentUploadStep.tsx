@@ -319,22 +319,39 @@ export function DocumentUploadStep({
         </ul>
       )}
 
-      {/* Always offered, including where the upload advances by itself — someone who only typed a
-          description (no files) still needs a way to start the search on demand. */}
-      <Button
-        className="w-full"
-        disabled={uploading || reading || (docs.length === 0 && prompt.trim().length === 0)}
-        onClick={() => {
-          setSubmitted(true);
-          onSubmitted?.();
-          void (async () => {
-            await savePrompt();
-            await next();
-          })();
-        }}
-      >
-        {docs.length > 0 ? "Find Matching Interest" : autoAdvance ? "Submit" : "Next"}
-      </Button>
+      <div className="flex items-center gap-2">
+        {/* Always offered, including where the upload advances by itself — someone who only typed a
+            description (no files) still needs a way to start the search on demand. */}
+        <Button
+          className="flex-1"
+          disabled={uploading || reading || (docs.length === 0 && prompt.trim().length === 0)}
+          onClick={() => {
+            setSubmitted(true);
+            onSubmitted?.();
+            void (async () => {
+              await savePrompt();
+              await next();
+            })();
+          }}
+        >
+          {docs.length > 0 ? "Find Matching Interest" : autoAdvance ? "Submit" : "Next"}
+        </Button>
+        {docs.length === 0 && (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={uploading || reading}
+            title="Continue without attaching any documents"
+            onClick={() => {
+              setSubmitted(true);
+              onSubmitted?.();
+              void next();
+            }}
+          >
+            Skip
+          </Button>
+        )}
+      </div>
 
     </div>
   );

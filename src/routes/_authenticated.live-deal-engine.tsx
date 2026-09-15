@@ -542,9 +542,10 @@ function LiveDealEngine() {
   const choicePending = Boolean(
     mediaResults && mediaResults.length > 0 && !mediaRunning && !dbHasChosenParty,
   );
-  const searchResultsOpen = dealTx
-    ? (searchResultsOpenByTx[dealTx.id] ?? (choicePending || !hasChosen))
-    : true;
+  // Open by default always — collapsing it once a choice was made hid the full candidate list
+  // (every company found, each tagged "Selected" if shortlisted) behind an extra click, reading
+  // as if only the one chosen party had ever been found.
+  const searchResultsOpen = dealTx ? (searchResultsOpenByTx[dealTx.id] ?? true) : true;
   // Once a party is actually chosen the choice is settled: this folds back into the plain
   // "Search Results" record instead of staying open.
   useEffect(() => {
@@ -658,22 +659,24 @@ function LiveDealEngine() {
     },
   });
   const savedAttachments: Attachment[] = useMemo(
-    () => workspaceDocs.map((d) => ({
-      name: d.name,
-      kind:
-        d.doc_type === "identity"
-          ? "ID"
-          : d.doc_type === "nda"
-            ? "NDA"
-            : d.doc_type === "mou"
-              ? "MOU"
-              : d.doc_type === "contract"
-                ? "Contract"
-                : d.doc_type === "certificate"
-                  ? "Certificate"
+    () => workspaceDocs
+      // The sealed certificates (Confirmation of Intent, Proof of Intent) are filed for the
+      // record but shown in their own certificate views, not in the plain Documents list.
+      .filter((d) => d.doc_type !== "certificate")
+      .map((d) => ({
+        name: d.name,
+        kind:
+          d.doc_type === "identity"
+            ? "ID"
+            : d.doc_type === "nda"
+              ? "NDA"
+              : d.doc_type === "mou"
+                ? "MOU"
+                : d.doc_type === "contract"
+                  ? "Contract"
                   : "Document",
-      path: d.storage_path,
-    })),
+        path: d.storage_path,
+      })),
     [workspaceDocs],
   );
   // A bid that already has documents counts as submitted, as does one whose flag survived a
@@ -2019,19 +2022,22 @@ function LiveDealEngine() {
           {activity && dealTx && (
             <div className="glass-node mt-1.5 space-y-1.5 p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <button
-                  type="button"
-                  onClick={() => setBidInfoCollapsed(dealTx.id, bidInfoOpen)}
-                  aria-expanded={bidInfoOpen}
-                  className="label-caps flex items-center gap-1.5 rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)] transition-colors hover:brightness-110"
-                >
+                <span className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
                   BID INFORMATION
-                  <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform", bidInfoOpen && "rotate-180")} />
-                </button>
+                </span>
                 {/* The ID check status already shows once, next to the submitter's name on the
                     Bid Registration card above — showing it again here (from the same
                     per-transaction check, but computed separately) was what let one place say
                     "Verified" while this one still said "ID check pending". */}
+                <button
+                  type="button"
+                  onClick={() => setBidInfoCollapsed(dealTx.id, bidInfoOpen)}
+                  aria-expanded={bidInfoOpen}
+                  aria-label={bidInfoOpen ? "Collapse Bid Information" : "Expand Bid Information"}
+                  className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                >
+                  <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", bidInfoOpen && "rotate-180")} />
+                </button>
               </div>
               {bidInfoOpen && (
                 <>
@@ -2389,17 +2395,24 @@ function LiveDealEngine() {
                         type="button"
                         onClick={() => setMediaResultsOpen(dealTx.id, !mediaResultsOpen)}
                         aria-expanded={mediaResultsOpen}
-                        className="label-caps flex min-w-0 flex-1 items-center justify-between gap-1.5 rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]"
+                        className="flex min-w-0 flex-1 items-center justify-between gap-1.5 text-left"
                       >
-                        <span className="min-w-0 truncate">
-                          ONLINE SCANNING RESULTS
+                        <span className="flex min-w-0 items-center gap-2">
+                          <span className="label-caps shrink-0 rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+                            Online Scanning Results
+                          </span>
+                          {dbHasChosenParty && chosenPartyName && (
+                            <span className="min-w-0 truncate text-xs font-semibold text-foreground">
+                              {chosenPartyName}
+                            </span>
+                          )}
                         </span>
 
                         <span className="flex shrink-0 items-center gap-1.5">
-                          <span className="text-[10px] font-semibold">
+                          <span className="text-[10px] font-semibold text-muted-foreground">
                             {mediaResults.length} counterpart{mediaResults.length === 1 ? "y" : "ies"}
                           </span>
-                          <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform", mediaResultsOpen && "rotate-180")} />
+                          <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform", mediaResultsOpen && "rotate-180")} />
                         </span>
                       </button>
                       {/* The choice action lives at the bottom of the records below. */}
@@ -2436,14 +2449,14 @@ function LiveDealEngine() {
                               >
                                 {m.name}
                               </label>
-                              {/* The one intent was confirmed with, marked on its own row. */}
-                              {dealTx.intent_confirmed_at &&
-                                chosenPartyName &&
-                                m.name === chosenPartyName && (
-                                  <span className="shrink-0 rounded-full bg-success/15 px-1.5 py-0.5 text-[10px] font-medium text-success">
-                                    Confirmed Intent
-                                  </span>
-                                )}
+                              {/* The chosen counterparty, marked on its own row — reads "Selected"
+                                  once picked, and upgrades to "Confirmed Intent" once intent is
+                                  actually confirmed against them. */}
+                              {chosenPartyName && m.name === chosenPartyName && (
+                                <span className="shrink-0 rounded-full bg-success/15 px-1.5 py-0.5 text-[10px] font-medium text-success">
+                                  {dealTx.intent_confirmed_at ? "Confirmed Intent" : "Selected"}
+                                </span>
+                              )}
                             </div>
 
                             <ul className="mt-1.5 space-y-1">

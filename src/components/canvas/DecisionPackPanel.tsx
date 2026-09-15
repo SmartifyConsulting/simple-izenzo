@@ -25,6 +25,13 @@ const HEADING: Record<StageContext, string> = {
   finality_recorded: "AI+ closing notes",
 };
 
+const PILL_LABEL: Record<StageContext, string> = {
+  choice_made: "AI+ CHOICE CONSULT",
+  intent_confirmed: "AI+ FINAL CHOICE CONSULT",
+  wad_updated: "AI+ PROPOSALS",
+  finality_recorded: "AI+ PROPOSALS",
+};
+
 /**
  * AI+ proposes, a person decides. Nothing here changes the deal: each proposal is accepted or
  * rejected by the signed-in person, and that decision is written to the record on its own.
@@ -101,6 +108,20 @@ export function DecisionPackPanel({
     }
   }
 
+  const [selectingAll, setSelectingAll] = useState(false);
+  async function acceptAll() {
+    const ids = (proposals ?? []).filter((p) => !p.decided_at).map((p) => p.id);
+    if (ids.length === 0) return;
+    setSelectingAll(true);
+    try {
+      for (const id of ids) {
+        await act(id, "accepted");
+      }
+    } finally {
+      setSelectingAll(false);
+    }
+  }
+
   const pending = (proposals ?? []).filter((p) => !p.decided_at).length;
 
   return (
@@ -113,7 +134,7 @@ export function DecisionPackPanel({
       >
         <span className="flex items-center gap-2">
           <span className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
-            AI+ Proposals
+            {PILL_LABEL[stageContext]}
           </span>
           {busy ? (
             <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
@@ -134,10 +155,24 @@ export function DecisionPackPanel({
 
       {open && (
         <div className="space-y-2 px-3.5 pb-3">
-          <p className="text-[11px] text-muted-foreground">
-            {HEADING[stageContext]}. AI+ is advisory — it cannot select, change or seal anything. You
-            decide, and your decision is recorded against your name.
-          </p>
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-[11px] text-muted-foreground">
+              {HEADING[stageContext]}. AI+ is advisory — it cannot select, change or seal anything. You
+              decide, and your decision is recorded against your name.
+            </p>
+            {pending > 1 && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 shrink-0 gap-1 rounded-full px-2.5 text-[11px]"
+                disabled={selectingAll || deciding !== null}
+                onClick={() => void acceptAll()}
+              >
+                {selectingAll ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                Select all
+              </Button>
+            )}
+          </div>
 
           {error && <p className="text-xs text-destructive">{error}</p>}
 
