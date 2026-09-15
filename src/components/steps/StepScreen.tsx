@@ -142,15 +142,18 @@ function Panel({
         {/* Same heading treatment as the Bid Registration frame: small caps, muted. */}
         {/* font-sans is explicit: headings otherwise inherit the display face, which made this
             read in a different font from the LIVE WORKSPACE / BID INFORMATION labels. */}
-        {pill ? (
-          <h2 className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 font-sans text-[var(--lw-pill-fg)]">
-            {title}
-          </h2>
-        ) : (
-          <h2 className={cn("label-caps font-sans font-bold", light ? "text-slate-900" : "text-muted-foreground")}>
-            {title}
-          </h2>
-        )}
+        {title ? (
+          pill ? (
+            <h2 className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 font-sans text-[var(--lw-pill-fg)]">
+              {title}
+            </h2>
+          ) : (
+            <h2 className={cn("label-caps font-sans font-bold", light ? "text-slate-900" : "text-muted-foreground")}>
+              {title}
+            </h2>
+          )
+        ) : null}
+
         {description && (
           <p className={cn("mt-1 text-xs", light ? "text-slate-500" : "text-muted-foreground")}>{description}</p>
         )}
