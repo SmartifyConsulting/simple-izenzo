@@ -475,6 +475,17 @@ function LiveDealEngine() {
     setMediaResultsOpenByTx((prev) => ({ ...prev, [txId]: open }));
   }
   const mediaResultsOpen = dealTx ? Boolean(mediaResultsOpenByTx[dealTx.id]) : false;
+  // Search Results gets its own collapsed frame under Bid Information too — open by default while
+  // a counterparty is actively being picked, folded away once the flow moves on to media
+  // screening (unless explicitly reopened by hand).
+  const [searchResultsOpenByTx, setSearchResultsOpenByTx] = useState<Record<string, boolean>>({});
+  function setSearchResultsOpen(txId: string | undefined, open: boolean) {
+    if (!txId) return;
+    setSearchResultsOpenByTx((prev) => ({ ...prev, [txId]: open }));
+  }
+  const searchResultsOpen = dealTx
+    ? (searchResultsOpenByTx[dealTx.id] ?? !hasChosen)
+    : true;
   // The trade record, once everything has cleared — folded away by default.
   const [tradeSummaryOpen, setTradeSummaryOpen] = useState(false);
   // Once Intent is confirmed, its frame folds into a small accordion nested under Online Media
@@ -2218,7 +2229,22 @@ function LiveDealEngine() {
                   dealTx &&
                   (!stagePanel || (stagePanel === "intent" && dealTx.intent_confirmed_at)) &&
                   !dealTx.wad_completed_at && (
-                  <div className="space-y-2">
+                  <div className="rounded-2xl border border-border bg-card">
+                    <button
+                      type="button"
+                      onClick={() => setSearchResultsOpen(dealTx.id, !searchResultsOpen)}
+                      className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
+                      aria-expanded={searchResultsOpen}
+                    >
+                      <span className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+                        Search Results
+                      </span>
+                      <ChevronDown
+                        className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", searchResultsOpen && "rotate-180")}
+                      />
+                    </button>
+                    {searchResultsOpen && (
+                    <div className="space-y-2 px-4 pb-4">
                     {searchError && (
                       <p className="text-xs text-destructive">Search failed: {searchError}</p>
                     )}
@@ -2236,6 +2262,8 @@ function LiveDealEngine() {
                       onFinalize={finalizeChoice}
                       finalizing={finalizing}
                     />
+                    </div>
+                    )}
                   </div>
                 )}
 
