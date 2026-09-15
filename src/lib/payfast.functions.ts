@@ -69,16 +69,27 @@ export const startTokenPurchase = createServerFn({ method: "POST" })
     } as never);
     if (insErr) throw new Error(insErr.message);
 
-    const uuid = await createOnsitePayment(creds, {
-      amountZar,
-      itemName: `${data.tokens} Izenzo token${data.tokens === 1 ? "" : "s"}`,
-      mPaymentId,
-      returnUrl: `${data.origin}/credits`,
-      cancelUrl: `${data.origin}/credits`,
-      // The payment confirmation must reach the published site, not a preview address.
-      notifyUrl: `${PUBLIC_ORIGIN}/api/public/payfast/itn`,
-      emailAddress: email,
-    });
+    let uuid: string;
+    try {
+      uuid = await createOnsitePayment(creds, {
+        amountZar,
+        itemName: `${data.tokens} Izenzo token${data.tokens === 1 ? "" : "s"}`,
+        mPaymentId,
+        returnUrl: `${data.origin}/credits`,
+        cancelUrl: `${data.origin}/credits`,
+        // The payment confirmation must reach the published site, not a preview address.
+        notifyUrl: `${PUBLIC_ORIGIN}/api/public/payfast/itn`,
+        emailAddress: email,
+      });
+    } catch (err) {
+      // A refused attempt must not linger as pending.
+      await supabaseAdmin
+        .from("token_purchases")
+        .update({ status: "failed" } as never)
+        .eq("m_payment_id", mPaymentId);
+      throw err;
+    }
+
 
     return { uuid, mPaymentId, amountZar, amountUsd };
   });
