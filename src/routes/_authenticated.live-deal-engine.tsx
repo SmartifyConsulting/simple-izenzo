@@ -2392,7 +2392,19 @@ function LiveDealEngine() {
                       </ul>
                       </RadioGroup>
                     )}
-                    {/* The choice action lives on the heading row above. */}
+                    {/* Continue sits under the last screened record, where the reading ends. */}
+                    {mediaResultsOpen && !dbHasChosenParty && (
+                      <div className="mt-3 flex justify-end">
+                        <Button
+                          size="sm"
+                          disabled={!mediaPick || finalizing}
+                          onClick={() => mediaPick && finalizeChoice(mediaPick)}
+                        >
+                          {finalizing ? "Recording your choice…" : "Continue"}
+                        </Button>
+                      </div>
+                    )}
+
 
                   </div>
                 )}
