@@ -176,6 +176,34 @@ export const completeWad = createServerFn({ method: "POST" })
       })
       .eq("id", tx.id);
 
+    // File the clearance as a certificate against the deal, the same way Proof of Intent is —
+    // otherwise there was no filed record of the WaD case ever completing.
+    if (cleared) {
+      const body = [
+        "IZENZO — WITHOUT A DOUBT (WAD)",
+        "",
+        `Transaction: ${tx.title}`,
+        `Decision: ${data.decision}`,
+        `Cleared: ${now}`,
+        "",
+        `Fingerprint: ${fingerprint}`,
+      ].join("\n");
+      const path = `deals/${tx.id}/${Date.now()}-wad-cleared.txt`;
+      const { error: upErr } = await supabase.storage
+        .from("documents")
+        .upload(path, new Blob([body], { type: "text/plain" }));
+      if (!upErr) {
+        await supabase.from("documents").insert({
+          transaction_id: tx.id,
+          name: `Without a Doubt (WAD) — Cleared — ${tx.title}.txt`,
+          doc_type: "certificate",
+          notes: "Certificate",
+          sha256: fingerprint,
+          storage_path: path,
+        });
+      }
+    }
+
     await supabase.from("transaction_events").insert({
       transaction_id: tx.id,
       actor_id: userId,

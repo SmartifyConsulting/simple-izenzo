@@ -299,7 +299,7 @@ export function BugReportMenu() {
               </button>
             ))}
             <span className="mx-1 h-4 w-px bg-border" />
-            {(["all", ...(Object.keys(TYPE_META) as ReportType[])] as const).map((t) => (
+            {(["all", "bug"] as const).map((t) => (
               <button
                 key={t}
                 type="button"

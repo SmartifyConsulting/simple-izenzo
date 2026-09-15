@@ -28,7 +28,7 @@ const HEADING: Record<StageContext, string> = {
 const PILL_LABEL: Record<StageContext, string> = {
   choice_made: "AI+ CHOICE CONSULT",
   intent_confirmed: "AI+ FINAL CHOICE CONSULT",
-  wad_updated: "AI+ PROPOSALS",
+  wad_updated: "AI+ OVERALL COMPLIANCE CONSULT",
   finality_recorded: "AI+ PROPOSALS",
 };
 

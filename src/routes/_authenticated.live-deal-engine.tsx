@@ -680,24 +680,22 @@ function LiveDealEngine() {
     },
   });
   const savedAttachments: Attachment[] = useMemo(
-    () => workspaceDocs
-      // The sealed certificates (Confirmation of Intent, Proof of Intent) are filed for the
-      // record but shown in their own certificate views, not in the plain Documents list.
-      .filter((d) => d.doc_type !== "certificate")
-      .map((d) => ({
-        name: d.name,
-        kind:
-          d.doc_type === "identity"
-            ? "ID"
-            : d.doc_type === "nda"
-              ? "NDA"
-              : d.doc_type === "mou"
-                ? "MOU"
-                : d.doc_type === "contract"
-                  ? "Contract"
+    () => workspaceDocs.map((d) => ({
+      name: d.name,
+      kind:
+        d.doc_type === "identity"
+          ? "ID"
+          : d.doc_type === "nda"
+            ? "NDA"
+            : d.doc_type === "mou"
+              ? "MOU"
+              : d.doc_type === "contract"
+                ? "Contract"
+                : d.doc_type === "certificate"
+                  ? "Certificate"
                   : "Document",
-        path: d.storage_path,
-      })),
+      path: d.storage_path,
+    })),
     [workspaceDocs],
   );
   // A bid that already has documents counts as submitted, as does one whose flag survived a
@@ -2557,21 +2555,6 @@ function LiveDealEngine() {
                   />
                 )}
 
-                {/* The last advisory word before the Proof of Intent becomes immutable. */}
-                {dealTx?.intent_confirmed_at && !dealTx.poi_sealed_at && (
-                  <DecisionPackPanel
-                    transactionId={dealTx.id}
-                    stageContext="intent_confirmed"
-                    gating
-                    onAllDecided={setIntentPackDecided}
-                  />
-                )}
-
-                {/* Advisory only — AI+ cannot approve, reject, alter or bypass the WaD gate. */}
-                {dealTx?.wad_completed_at && (
-                  <DecisionPackPanel transactionId={dealTx.id} stageContext="wad_updated" />
-                )}
-
                 {/* Closing the loop after finality: informational only — nothing here can change a
                     completed transaction. */}
                 {dealTx?.stage === "finality" && (
@@ -2620,6 +2603,17 @@ function LiveDealEngine() {
                       </div>
                     )}
                   </div>
+                )}
+
+                {/* The last advisory word before the Proof of Intent becomes immutable — sits
+                    after the Confirmed Intent record it's advising on top of. */}
+                {dealTx?.intent_confirmed_at && !dealTx.poi_sealed_at && (
+                  <DecisionPackPanel
+                    transactionId={dealTx.id}
+                    stageContext="intent_confirmed"
+                    gating
+                    onAllDecided={setIntentPackDecided}
+                  />
                 )}
 
                 {/* Sealed Proof of Intent reads the same way: a folded record whose certificate is
@@ -2761,6 +2755,12 @@ function LiveDealEngine() {
                       </div>
                     )}
                   </div>
+                )}
+
+                {/* Advisory only — AI+ cannot approve, reject, alter or bypass the WaD gate. Sits
+                    after Business Docs, once execution's own paperwork is actually on file. */}
+                {dealTx?.wad_completed_at && stepOverrides["businessDocs"] === "done" && (
+                  <DecisionPackPanel transactionId={dealTx.id} stageContext="wad_updated" />
                 )}
 
               </div>
