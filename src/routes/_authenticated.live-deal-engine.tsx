@@ -2529,6 +2529,21 @@ function LiveDealEngine() {
                       </div>
                     )}
                   </div>
+                ) : /* The human decision on the AI+ proposals comes first: Intent only opens once
+                       every proposal from the Choice pack has been accepted or rejected, and
+                       sealing only once the pre-seal pack has been decided. */
+                dealTx && stagePanel === "intent" && dbHasChosenParty && !choicePackDecided ? (
+                  <div className="rounded-2xl border border-border bg-card px-3.5 py-3">
+                    <p className="text-xs text-muted-foreground">
+                      Accept or reject each AI+ proposal above, then Intent opens.
+                    </p>
+                  </div>
+                ) : dealTx && stagePanel === "poi" && dealTx.intent_confirmed_at && !dealTx.poi_sealed_at && !intentPackDecided ? (
+                  <div className="rounded-2xl border border-border bg-card px-3.5 py-3">
+                    <p className="text-xs text-muted-foreground">
+                      Accept or reject the AI+ proposals above before sealing the Proof of Intent.
+                    </p>
+                  </div>
                 ) : (
 
                   dealTx && stagePanel && (
@@ -2544,6 +2559,7 @@ function LiveDealEngine() {
                       onChangeParty={() => void reopenChoice()}
                     />
                   )
+
                 )}
 
                 {/* Only once Step 2's own documents (Business Docs) are in — not the moment the
