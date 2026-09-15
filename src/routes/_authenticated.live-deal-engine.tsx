@@ -7,7 +7,9 @@ import {
   Archive,
   BadgeCheck,
   CheckCircle2,
+  ChevronDown,
   Download,
+
   Eye,
   Maximize2,
   Minimize2,
@@ -456,6 +458,9 @@ function LiveDealEngine() {
     setMediaResultsOpenByTx((prev) => ({ ...prev, [txId]: open }));
   }
   const mediaResultsOpen = dealTx ? Boolean(mediaResultsOpenByTx[dealTx.id]) : false;
+  // The trade record, once everything has cleared — folded away by default.
+  const [tradeSummaryOpen, setTradeSummaryOpen] = useState(false);
+
   // Once the ask has been made for a bid, the description/drop frame never comes back — not while
   // the files are still saving, not on a refresh, not on a tab switch. Remembered per bid.
   const [submittedBids, setSubmittedBids] = useState<Set<string>>(() => new Set());
