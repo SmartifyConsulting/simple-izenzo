@@ -1495,11 +1495,9 @@ export function CounterpartyRecord({
             return (
             <div key={m.counterpartyId} className="rounded-xl border border-slate-300 bg-white p-3">
               <div className="flex w-full items-start gap-2.5">
-                {/* Same circle/checkbox the top list used to show, now living on the accordion
-                    record itself instead of duplicated in a separate list above. */}
-                {screeningDone ? (
-                  <RadioGroupItem id={`media-pick-${m.counterpartyId}`} value={m.counterpartyId} className="mt-0.5 shrink-0" />
-                ) : (
+                {/* Read-only record: the one place a party is picked is the Online Media Screening
+                    Results list in the workspace, so no second set of circles lives here. */}
+                {!screeningDone && (
                   <Checkbox
                     id={`media-pick-${m.counterpartyId}`}
                     checked={Boolean(cand?.shortlisted)}
