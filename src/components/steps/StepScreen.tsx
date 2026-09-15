@@ -1301,6 +1301,7 @@ function IntentStep({ tx, reload }: Props) {
   // on — lets the certificate visibly lose its draft watermark first, rather than the whole panel
   // jumping to the next step before the user ever sees it become a real record.
   const [confirmedLocally, setConfirmedLocally] = useState(false);
+  const qc = useQueryClient();
   const { profile } = useAuth();
   const signer = profile?.full_name ?? profile?.email ?? "—";
 
