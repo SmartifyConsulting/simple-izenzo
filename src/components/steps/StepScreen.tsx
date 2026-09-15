@@ -1464,8 +1464,8 @@ function IntentStep({ tx, reload }: Props) {
 
   return (
     <Panel
-      title="Intent Confirmation"
       description="Read the terms as they stand. Confirming does not seal them — that is the next step."
+
       footer={
         <div className="flex items-center justify-between">
           <label className="flex items-center gap-2 text-sm text-foreground">
