@@ -744,7 +744,11 @@ function LiveDealEngine() {
       if (dealTx.poi_sealed_at) {
         o["kycKyb"] = dealTx.wad_completed_at ? "done" : "active";
         o["wad"] = dealTx.wad_completed_at ? "done" : "open";
-        if (dealTx.wad_completed_at) o["businessDocs"] = dealTx.step === "business-docs" ? "active" : "done";
+        if (dealTx.wad_completed_at) {
+          o["businessDocs"] = dealTx.step === "business-docs" ? "active" : "done";
+          if (o["businessDocs"] === "done") o["execution"] = "active";
+        }
+
       }
     }
     return o;
