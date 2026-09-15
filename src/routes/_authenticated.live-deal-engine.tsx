@@ -1107,7 +1107,11 @@ function LiveDealEngine() {
       await advance(dealTx.id, "trading", "intent");
       setDealTx((prev) => (prev ? { ...prev, stage: "trading", step: "intent" } : prev));
       setStagePanel("intent");
+      // The screening record has served its purpose — fold it so Intent has the room.
+      setMediaResultsOpen(dealTx.id, false);
+      setDbHasChosenParty(true);
       toast.success("Choice recorded — confirm the intent to continue");
+
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
