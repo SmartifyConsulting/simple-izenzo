@@ -323,12 +323,19 @@ function LiveDealEngine() {
   const [mapOpen, setMapOpen] = useState(true);
   // Screening state is session-local and was never cleared on switching bids, so a fresh bid that
   // is still only searching could show a previous bid's leftover "online media screening results".
+  // stagePanel/mapPanel are the same class of bug: opening Intent on one bid and then switching to
+  // a brand-new bid left Intent forced open (with "complete the earlier steps first") on a deal
+  // that hasn't remotely reached that point yet, since resumedStep's auto-open effect only sets
+  // stagePanel — nothing ever cleared it on its own when the underlying deal changed.
   useEffect(() => {
     setScreening(false);
     setScreeningResults(null);
     setMediaRunning(false);
     setMediaResults(null);
     setMediaProgress(null);
+    setStagePanel(null);
+    setMapPanel(null);
+    setIntentDismissed(false);
   }, [dealTx?.id]);
   // Only re-derived when switching to a different deal — not on every step change within the
   // same one. Re-running this on every step change re-queried "chosen" the moment the step moved
