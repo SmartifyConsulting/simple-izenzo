@@ -1421,7 +1421,7 @@ export function CounterpartyRecord({
       >
         <p className="label-caps text-black">
           {screeningDone
-            ? ""
+            ? "Select who you want to trade with"
             : continued
               ? "Selected counterparties"
               : "Select a counterparty to continue"}
