@@ -2078,7 +2078,22 @@ function LiveDealEngine() {
                   ))}
                 </ul>
               )}
+
+              {/* Explicit go: collapses this frame and hands the workspace over to the search. */}
+              {workspaceDocs.length > 0 &&
+                !searchGoByTx.has(dealTx.id) &&
+                interestCount === 0 &&
+                flowStep !== "searching" && (
+                  <Button
+                    className="mt-2 w-full"
+                    disabled={rereading || workspaceDocsPending || !(documentSummary || readError)}
+                    onClick={() => goToSearch(dealTx.id)}
+                  >
+                    {rereading || !(documentSummary || readError) ? "Reading documents…" : "Submit"}
+                  </Button>
+                )}
                 </>
+
               )}
             </div>
           )}
