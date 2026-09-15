@@ -1762,8 +1762,9 @@ function PoiStep({ tx, reload }: Props) {
   return (
     <>
     <Panel
-      {/* No title: the frame around this already reads "Proof of Intent", and the sealing
-          sentence now sits as subtext under that heading. */}
+      // No title: the frame around this already reads "Proof of Intent", and the sealing
+      // sentence now sits as subtext under that heading.
+
 
       footer={
         <div className="flex items-center justify-between gap-3">
