@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/PasswordInput";
-import { mapAuthError } from "@/lib/auth";
+import { mapAuthError, useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
 function safeNext(next: string | undefined) {
@@ -32,6 +32,8 @@ export function SignInForm({
   compact?: boolean;
 }) {
   const navigate = useNavigate();
+  const router = useRouter();
+  const { refresh } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -42,9 +44,12 @@ export function SignInForm({
     setMessage("");
     setBusy(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      navigate({ to: safeNext(next), replace: true });
+      if (!data.session) throw new Error("Your sign-in could not be saved. Please try again.");
+      await refresh();
+      await router.invalidate();
+      await navigate({ to: safeNext(next), replace: true });
     } catch (err) {
       const msg = mapAuthError((err as Error).message);
       setMessage(msg);
@@ -65,7 +70,9 @@ export function SignInForm({
       return;
     }
     if (result.redirected) return;
-    navigate({ to: safeNext(next), replace: true });
+    await refresh();
+    await router.invalidate();
+    await navigate({ to: safeNext(next), replace: true });
   }
 
   return (

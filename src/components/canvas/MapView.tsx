@@ -83,8 +83,9 @@ const BOXES = {
   // Step 2 through 4 and Entry/Exit all shifted down 20 units together (relative positions
   // between them unchanged) to open up room below Step 1 for the arrow pointing into Step 2.
   poi: { x: 60, y: 462, w: 280, h: 48 },
-  withoutADoubt: { x: 60, y: 546, w: 280, h: 54 },
-  wad: { x: 60, y: 630, w: 280, h: 54 },
+  // The KYC/KYB/PEP/AML checks now run before Without a Doubt, so they sit above it.
+  wad: { x: 60, y: 546, w: 280, h: 54 },
+  withoutADoubt: { x: 60, y: 630, w: 280, h: 54 },
   businessDocs: { x: 60, y: 714, w: 280, h: 54 },
   // Step 3 (Execution, with Entry/Exit beside it) and Step 4 (Finality) sit well clear of Step 2,
   // all 40% flatter than before — and wider, so their detail lines still fit.
@@ -154,9 +155,9 @@ const ARROWS: string[] = [
     { x: cx(BOXES.poi), y: (TRADE_ENGINE_FRAME.y + TRADE_ENGINE_FRAME.h + COMPLIANCE_FRAME.y) / 2 },
     { x: cx(BOXES.poi), y: COMPLIANCE_FRAME.y - ARROW_GAP },
   ),
-  line(bottomOf(BOXES.poi), topOf(BOXES.withoutADoubt)),
-  line(bottomOf(BOXES.withoutADoubt), topOf(BOXES.wad)),
-  line(bottomOf(BOXES.wad), topOf(BOXES.businessDocs)),
+  line(bottomOf(BOXES.poi), topOf(BOXES.wad)),
+  line(bottomOf(BOXES.wad), topOf(BOXES.withoutADoubt)),
+  line(bottomOf(BOXES.withoutADoubt), topOf(BOXES.businessDocs)),
   // Step 2 into Step 3: straight down out of Business Docs, stopping just short of the Step 3
   // frame's edge — pointing at it (and the heading floating on it) rather than touching it.
   line(bottomOf(BOXES.businessDocs), { x: cx(BOXES.businessDocs), y: EXECUTION_FRAME.y - ARROW_GAP }),
@@ -468,8 +469,10 @@ export function MapView({
             should never read as "done" (ticked/green) just because the deal has moved past this
             point, since a counteroffer may never actually have happened. */}
         {node("counterOffer", "Counter Offer", "trading", "counterparties", RefreshCw, {
-          state: "open",
+          // Pulses while a counter offer is out and unanswered; otherwise a plain side-loop tile.
+          state: overrideStates?.["counterOffer"] ?? "open",
         })}
+
         {node("socialMedia", "Online Screening", "trading", "online-media", Users, {
           overrideKey: "onlineMedia",
         })}
@@ -479,13 +482,13 @@ export function MapView({
           overrideKey: "intent",
         })}
         {node("poi", "Proof of Intent", "trading", "poi", Building2, { overrideKey: "poi" })}
+        {node("wad", "KYC, KYB, PEP, AML", "compliance", "wad", Users, {
+          overrideKey: "kycKyb",
+        })}
         {node("withoutADoubt", "Without a Doubt", "compliance", "wad", ShieldCheck, {
           overrideKey: "wad",
           sub: "Hard gate · non-waivable",
           subTone: "gate",
-        })}
-        {node("wad", "KYC, KYB, PEP, AML", "compliance", "wad", Users, {
-          overrideKey: "wad",
         })}
         {node("businessDocs", "Business Docs", "execution", "business-docs", FolderClosed, {
           sub: "POI, NDA, MOU, Contract",
@@ -500,7 +503,7 @@ export function MapView({
           sub="Concept, Pre-feasibility, Feasibility, Bankability, Implementation"
           subSize="xs"
 
-          state={st("execution", "preparation")}
+          state={st("execution", "preparation", "execution")}
           lock={lock("execution", "preparation")}
           onClick={() => open("execution", "preparation")}
           plain
