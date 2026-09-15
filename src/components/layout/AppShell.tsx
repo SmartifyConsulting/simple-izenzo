@@ -112,6 +112,10 @@ export function AppShell({
                   wide
                     ? "text-[1.15rem] sm:text-[1.3rem]"
                     : "text-[1.75rem] sm:text-[2rem]",
+                  // pureBlack forces the page background to literal black regardless of theme —
+                  // on the cream theme, --foreground is a dark colour meant for a light
+                  // background, so it needs forcing to white here too or it's nearly invisible.
+                  pureBlack ? "text-white" : "",
                 )}
                 style={{ fontFamily: "var(--font-greeting)", fontWeight: 700 }}
               >
@@ -119,12 +123,19 @@ export function AppShell({
               </p>
             )}
             {title && (
-              <h1 className="mt-2 truncate text-sm font-semibold tracking-tight text-muted-foreground">
+              <h1
+                className={cn(
+                  "mt-2 truncate text-sm font-semibold tracking-tight",
+                  pureBlack ? "text-white/70" : "text-muted-foreground",
+                )}
+              >
                 {title}
               </h1>
             )}
             {description && (
-              <p className="mt-1 truncate text-xs text-muted-foreground">{description}</p>
+              <p className={cn("mt-1 truncate text-xs", pureBlack ? "text-white/50" : "text-muted-foreground")}>
+                {description}
+              </p>
             )}
           </div>
           {actions && <div>{actions}</div>}
