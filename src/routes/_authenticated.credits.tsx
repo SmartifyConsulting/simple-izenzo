@@ -156,12 +156,14 @@ function Credits() {
     .reduce((sum, r) => sum + Math.abs(r.delta), 0);
 
   /** Loads PayFast's onsite engine once, so the payment window can open in place. */
-  async function loadPayFastEngine() {
+  async function loadPayFastEngine(sandbox: boolean) {
     if (typeof window === "undefined") return;
     if ((window as unknown as { payfast_do_onsite_payment?: unknown }).payfast_do_onsite_payment) return;
     await new Promise<void>((resolve, reject) => {
       const script = document.createElement("script");
-      script.src = "https://www.payfast.co.za/onsite/engine.js";
+      script.src = sandbox
+        ? "https://sandbox.payfast.co.za/onsite/engine.js"
+        : "https://www.payfast.co.za/onsite/engine.js";
       script.onload = () => resolve();
       script.onerror = () => reject(new Error("The payment window could not be loaded."));
       document.head.appendChild(script);
@@ -184,7 +186,7 @@ function Credits() {
       const started = await startPurchase({
         data: { orgId: org.id, tokens: n, origin: window.location.origin },
       });
-      await loadPayFastEngine();
+      await loadPayFastEngine(payments?.sandbox !== false);
       const onsite = (
         window as unknown as {
           payfast_do_onsite_payment?: (opts: { uuid: string }, cb?: (ok: boolean) => void) => void;
