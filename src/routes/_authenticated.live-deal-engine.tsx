@@ -2299,7 +2299,10 @@ function LiveDealEngine() {
                     </button>
                     {confirmedIntentOpen && (
                       <div className="px-4 pb-4">
+                        {/* `bare`: this accordion already carries the "Confirmed Intent"
+                            heading, so the frame inside it must not add another one. */}
                         <InlineFrame
+                          bare
                           tx={dealTx}
                           stage="trading"
                           step="intent"
