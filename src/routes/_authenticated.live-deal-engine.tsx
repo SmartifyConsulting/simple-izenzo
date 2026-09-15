@@ -1903,7 +1903,7 @@ function LiveDealEngine() {
                 <div className="min-w-0 space-y-1">
                   <SubmitterIdentity orgId={dealTx.org_id} createdBy={null} currentCheckStatus={idCheck?.status ?? null} />
                   {(org as unknown as { created_at?: string } | null)?.created_at && (
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-[11px] text-muted-foreground">
                       Bidder Active Since:{" "}
                       {new Date((org as unknown as { created_at: string }).created_at).toLocaleDateString(
                         undefined,
@@ -1912,7 +1912,7 @@ function LiveDealEngine() {
                     </p>
                   )}
                   {(org?.country || dealTx.jurisdiction) && (
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-[11px] text-muted-foreground">
                       {org?.country ?? dealTx.jurisdiction}
                     </p>
                   )}
@@ -1930,7 +1930,7 @@ function LiveDealEngine() {
                       </span>
                     </p>
                   )}
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-[11px] text-muted-foreground">
                     Registered {new Date(activity.time ?? dealTx.created_at).toLocaleString()}
                   </p>
                 </div>
@@ -2139,7 +2139,7 @@ function LiveDealEngine() {
                 <div className="min-w-0 space-y-1">
                   {org?.id && <SubmitterIdentity orgId={org.id} createdBy={null} />}
                   {(org as unknown as { created_at?: string } | null)?.created_at && (
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-[11px] text-muted-foreground">
                       Bidder Active Since:{" "}
                       {new Date((org as unknown as { created_at: string }).created_at).toLocaleDateString(
                         undefined,
@@ -2149,7 +2149,7 @@ function LiveDealEngine() {
                   )}
                 </div>
                 <div className="min-w-0 space-y-1 text-right">
-                  {org?.country && <p className="text-xs text-muted-foreground">{org.country}</p>}
+                  {org?.country && <p className="text-[11px] text-muted-foreground">{org.country}</p>}
                 </div>
               </div>
 

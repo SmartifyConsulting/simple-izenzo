@@ -2377,7 +2377,7 @@ export function CanvasStart({
           disabled={!canBeginPicking}
           aria-label="Submit"
           title="Submit"
-          className="flex h-8 shrink-0 items-center gap-1.5 self-center rounded-full bg-primary px-3 text-xs font-semibold text-primary-foreground transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex h-8 shrink-0 items-center gap-1.5 self-center rounded-full bg-emerald-500 px-3 text-xs font-semibold text-black transition-opacity hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Submit
           <ArrowUp className="h-3.5 w-3.5" />
