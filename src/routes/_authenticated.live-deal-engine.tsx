@@ -2125,7 +2125,7 @@ function LiveDealEngine() {
                       initialPrompt={seedPrompt}
                       initialFiles={seedFiles}
                     />
-                  ) : null}
+                  )}
 
 
                 </div>
