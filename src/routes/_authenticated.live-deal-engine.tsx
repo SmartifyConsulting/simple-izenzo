@@ -618,14 +618,18 @@ function LiveDealEngine() {
     },
   });
 
-  // Counterparty search now starts itself the moment documents are in and no matches exist yet —
-  // no more manual "Find Counterparties" click.
+  // Counterparty search starts itself once documents are in — but only after the read has
+  // finished, so it searches on what the documents actually say rather than on their file names.
+  // A read that failed doesn't dead-end the deal: the search still runs (on the description and
+  // file names) once `readError` is set.
   const autoSearchStarted = useRef<string | null>(null);
   useEffect(() => {
     if (
       !dealTx ||
       workspaceDocsPending ||
       workspaceDocs.length === 0 ||
+      rereading ||
+      !(documentSummary || readError) ||
       interestCount > 0 ||
       screening ||
       mediaRunning ||
@@ -634,7 +638,8 @@ function LiveDealEngine() {
     ) return;
     autoSearchStarted.current = dealTx.id;
     void fetchInterest(dealTx.id);
-  }, [dealTx?.id, workspaceDocsPending, workspaceDocs.length, interestCount, screening, mediaRunning, flowStep]);
+  }, [dealTx?.id, workspaceDocsPending, workspaceDocs.length, rereading, documentSummary, readError, interestCount, screening, mediaRunning, flowStep]);
+
 
   // A short chime whenever the workflow moves itself on to the next step — search finishing,
   // media screening completing, an auto-advance firing — so a step change is audible even when
