@@ -1659,9 +1659,10 @@ function LiveDealEngine() {
                 </button>
               </div>
             </div>
-            <div className={cn("mt-3 min-h-0 flex-1", mapOpen ? "overflow-hidden" : "overflow-y-auto")}>
-              {/* The map scales to the panel, so neither a sideways nor a downward scrollbar
-                  appears around it; the step list keeps its own vertical scroll. */}
+            <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
+              {/* The map scales to fit the panel, so this scrollbar shouldn't usually need to
+                  move — but it's a real native scrollbar (not custom buttons) as a fallback for
+                  a short/narrow window where the scaled map is still taller than the panel. */}
               {mapOpen ? (
                 <MapView
                   tx={dealTx ?? null}
@@ -2232,7 +2233,7 @@ function LiveDealEngine() {
                     compliance checks clear. Collapsed by default: it's a record to check back on,
                     and Execution is what needs attention by then. */}
                 {dealTx?.wad_completed_at && stepOverrides["businessDocs"] === "done" && (
-                  <div className="mt-3 rounded-2xl border border-border bg-card">
+                  <div className="mt-1.5 rounded-2xl border border-border bg-card">
                     <button
                       type="button"
                       onClick={() => setTradeSummaryOpen((v) => !v)}
