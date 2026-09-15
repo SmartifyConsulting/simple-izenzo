@@ -605,7 +605,9 @@ export function MapView({
             Capital Deployment Assessment
           </span>
         </button>
+        </div>
       </div>
+
 
       {panel && !readOnly && tx && (
         <InlineFrame
