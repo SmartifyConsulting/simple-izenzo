@@ -1,40 +1,26 @@
-# Bring back the counterparty choice, and even out the frame spacing
+# View Proposal → full counterparty profile window
 
-## 1. Choosing a counterparty after Online Media Screening
+Today "View Proposal" opens a small box that only repeats your own trade terms. It becomes a large window that reads like Bid Information, but for the counterparty — pulled from that company's own profile and the material they have attached to it.
 
-The choice control still exists in the code, but it is now unreachable: the frame that holds it
-("Search Results") defaults to **closed** as soon as online media screening starts, and the frame
-itself is hidden whenever another gate panel (Express Intent) has been opened. So once screening
-finishes there is nothing on screen to pick with, and no Continue button.
+## What the window shows
 
-What changes:
+Header: counterparty name, match percentage, jurisdiction and sector, plus a "verified"/"unverified" marker where we have one.
 
-- When media screening has finished and no party has been chosen yet, the frame that carries the
-  selection always shows and opens by default instead of staying folded.
-- Its label reads "Choose Counterparty" in that state (it stays "Search Results" once a party has
-  been chosen), so it is obvious that a decision is waiting.
-- The circle selectors on each screened counterparty and the Continue button below them are visible
-  in that state, and the online media screening list inside it stays open.
-- Picking a party and pressing Continue behaves exactly as before: the choice is recorded and
-  Express Intent opens next. Changing party later still reopens the same choice frame.
+Body, in the same typography and two-column metadata style as Bid Information:
 
-## 2. Equal spacing between all Live Workspace frames
+1. **About them** — the company's profile summary (their AI brief if they have one, otherwise their published listing summary, otherwise the reason our search matched them). Bolded key terms exactly as Bid Information does.
+2. **Company details** — two columns: country, sector/industry, years in business, what they offer, terms of trade, website, contact name and email, phone.
+3. **Attachments and portfolio** — the items on their profile (title, description, image where present) listed like the attachment rows in Bid Information, each openable in a new tab.
+4. **The terms on the table** — the existing proposal block (commodity, volume, price, incoterms, jurisdiction) kept, moved to the bottom as a certificate-style panel.
 
-The gap between Bid Registration and Bid Information (6px) becomes the single spacing used between
-every frame in the Live Workspace: the pinned top block and what follows it, the workflow map /
-steps panel, the search progress frame, Search Results, Online Media Screening Results, Confirmed
-Intent, the gate panels (Intent, Proof of Intent, Without a Doubt, Business Docs) and Trade Summary.
-No frame keeps a larger or smaller gap than its neighbours.
+Footer keeps Close and Counter offer.
+
+When a counterparty has no profile on the platform yet, the window still opens and says plainly that this company has not published a profile, showing whatever we do hold (source, website, contact, our match reasoning).
 
 ## Technical notes
 
-- `src/routes/_authenticated.live-deal-engine.tsx`
-  - Derive a `choicePending` condition (media results present, not running, no chosen party) and use
-    it to (a) render the Search Results frame regardless of `stagePanel`, (b) default
-    `searchResultsOpen` to true, (c) switch the pill label.
-  - Normalise spacing: sticky header `mb-3` → `mb-1.5`, and the `mt-2` / `mt-4` frame offsets
-    (lines ~2061, 2126, 2131, 2323) plus the `space-y-1.5` stack to a single 1.5 rhythm.
-- `src/components/canvas/DealCanvas.tsx` (`CounterpartyRecord`) — keep the media-results accordion
-  expanded while a choice is pending and restore the "Select who you want to trade with" heading in
-  that state; no change to `screeningDone`, `onFinalize` or shortlist behaviour.
-- No database, server function or workflow-gating changes.
+- New server function `getCounterpartyProfile` in `src/lib/counterpartyProfile.functions.ts`: takes the counterparty id, loads the `counterparties` row (verifying the caller can access its transaction), then resolves a profile by matching the counterparty name against `organisations.name` and `responder_listings` (published listings first). Returns a narrow, public-safe shape: name, jurisdiction, sector/industry, country, years_in_business, offerings, terms_of_trade, website, primary contact name/email, phone, summary text, source, score, and portfolio items from `org_portfolio_items` (title, description, image_url).
+  - Uses the admin client inside the handler after the access check, because `organisations` RLS only exposes your own org — the function deliberately returns just the fields listed above, no credits, no internal ids beyond what's needed.
+- `ProposalDialog` in `src/components/canvas/DealCanvas.tsx`: takes the counterparty id as well as the name, widens to `sm:max-w-3xl` with `max-h-[85vh] overflow-y-auto`, and renders the sections above using the existing frame classes (`glass-node`, dl grids, attachment rows) and `highlightKeyTerms` for the summary. Loading state is the same slim green progress bar used while documents are read.
+- `setProposalFor` call sites pass the candidate id (already available on the row).
+- No schema changes, no workflow/gating changes.
