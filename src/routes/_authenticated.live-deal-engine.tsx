@@ -484,9 +484,23 @@ function LiveDealEngine() {
     if (!txId) return;
     setSearchResultsOpenByTx((prev) => ({ ...prev, [txId]: open }));
   }
+  // Online media screening is back, nothing is still running, and no party has actually been
+  // chosen yet: the choice is what the workspace is waiting for, so the frame carrying the
+  // selection circles and the Continue button must be on screen and open — regardless of any
+  // gate panel (Express Intent) that may have been opened, and regardless of `hasChosen`, which
+  // only means "the flow moved past Choice", not "a party was picked".
+  const choicePending = Boolean(
+    mediaResults && mediaResults.length > 0 && !mediaRunning && !dbHasChosenParty,
+  );
   const searchResultsOpen = dealTx
-    ? (searchResultsOpenByTx[dealTx.id] ?? !hasChosen)
+    ? (searchResultsOpenByTx[dealTx.id] ?? (choicePending || !hasChosen))
     : true;
+  // Once a party is actually chosen the choice is settled: this folds back into the plain
+  // "Search Results" record instead of staying open.
+  useEffect(() => {
+    if (!dealTx || !dbHasChosenParty) return;
+    setSearchResultsOpenByTx((prev) => ({ ...prev, [dealTx.id]: false }));
+  }, [dealTx?.id, dbHasChosenParty]);
   // The trade record, once everything has cleared — folded away by default.
   const [tradeSummaryOpen, setTradeSummaryOpen] = useState(false);
   // Once Intent is confirmed, its frame folds into a small accordion nested under Online Media
@@ -1357,6 +1371,25 @@ function LiveDealEngine() {
     setFlowStep("documents");
     setAttachments([]);
     setDocumentSummary(null);
+    // Nothing of the previous bid may survive into an empty workspace — no bidder details, no
+    // search or screening findings, no open gate panel.
+    setScreening(false);
+    setScreeningResults(null);
+    setScreeningProgress(null);
+    setMediaRunning(false);
+    setMediaResults(null);
+    setMediaProgress(null);
+    setHasChosen(false);
+    setDbHasChosenParty(false);
+    setIntentDismissed(false);
+    setStagePanel(null);
+    setMapPanel(null);
+    setSearchError(null);
+    setReadError(null);
+    setTradeSummaryOpen(false);
+    setConfirmedIntentOpen(false);
+    setDirection(null);
+    setPendingDirection(null);
     try {
       localStorage.removeItem(ACTIVE_DEAL_KEY);
     } catch {
@@ -1741,7 +1774,7 @@ function LiveDealEngine() {
               surface — the heading row, the Bid Registration frame, and the Bid Information
               frame together — so nothing scrolling underneath (e.g. counterparty results) can
               appear through it or in the gap above it. */}
-          <div className="sticky -top-3 z-20 -mx-3 -mt-3 mb-3 bg-card px-3 pb-3 pt-3 sm:-top-5 sm:-mx-5 sm:-mt-5 sm:px-5 sm:pt-5">
+          <div className="sticky -top-3 z-20 -mx-3 -mt-3 mb-1.5 bg-card px-3 pb-3 pt-3 sm:-top-5 sm:-mx-5 sm:-mt-5 sm:px-5 sm:pt-5">
           <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
             <p className="label-caps text-muted-foreground">Live Workspace</p>
             {dealTx && (
@@ -2120,12 +2153,12 @@ function LiveDealEngine() {
             <MatchResultsPanel
               query={matchQuery}
               transactionId={dealTx?.id}
-              className="mt-4"
+              className="mt-1.5"
             />
           )}
 
           {activity && dealTx && flowStep === "searching" && (
-            <div className="mt-2 overflow-hidden rounded-xl border border-border">
+            <div className="mt-1.5 overflow-hidden rounded-xl border border-border">
               <div className="flex items-center gap-3 bg-[#F1F5F9] px-4 py-3">
                 <p className="text-xs text-foreground">Running AI and AI+ search for matching counterparties…</p>
                 {interestCount === 0 ? (
@@ -2167,7 +2200,9 @@ function LiveDealEngine() {
                     match list open below it is what made the screen look stuck. */}
                 {(flowStep === "searching" || flowStep === "results") &&
                   dealTx &&
-                  (!stagePanel || (stagePanel === "intent" && dealTx.intent_confirmed_at)) &&
+                  (choicePending ||
+                    !stagePanel ||
+                    (stagePanel === "intent" && dealTx.intent_confirmed_at)) &&
                   !dealTx.wad_completed_at && (
                   <div className="rounded-2xl border border-border bg-card">
                     <button
@@ -2177,7 +2212,7 @@ function LiveDealEngine() {
                       aria-expanded={searchResultsOpen}
                     >
                       <span className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
-                        Search Results
+                        {choicePending ? "Choose Counterparty" : "Search Results"}
                       </span>
                       <ChevronDown
                         className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", searchResultsOpen && "rotate-180")}
@@ -2318,7 +2353,10 @@ function LiveDealEngine() {
                     </button>
                     {confirmedIntentOpen && (
                       <div className="px-3.5 pb-3">
+                        {/* `bare`: this accordion already carries the "Confirmed Intent"
+                            heading, so the frame inside it must not add another one. */}
                         <InlineFrame
+                          bare
                           tx={dealTx}
                           stage="trading"
                           step="intent"

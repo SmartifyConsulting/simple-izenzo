@@ -151,6 +151,16 @@ export function WorkspaceTaskbar() {
   const [cancelling, setCancelling] = useState(false);
   const cancelBidFn = useServerFn(cancelBid);
 
+  /** Closing the last tab must leave a genuinely empty workspace — otherwise a later visit
+   * resumes the bid that was just closed, name, bidder details and all. */
+  function forgetRememberedDeal() {
+    try {
+      localStorage.removeItem("izenzo:active-deal");
+    } catch {
+      // Best-effort only.
+    }
+  }
+
   async function cancelAndClose() {
     if (!closeConfirm) return;
     setCancelling(true);
@@ -164,6 +174,7 @@ export function WorkspaceTaskbar() {
       const remaining = windows.filter((w) => w.id !== closeConfirm.id && w.id !== "new");
       close(closeConfirm.id);
       setCloseConfirm(null);
+      if (remaining.length === 0) forgetRememberedDeal();
       if (wasShowing) {
         if (remaining.length > 0) {
           void navigate({ to: "/live-deal-engine", search: { tx: remaining[0]!.id } });
@@ -313,7 +324,14 @@ export function WorkspaceTaskbar() {
             </Button>
             <AlertDialogAction
               onClick={() => {
-                if (closeConfirm) close(closeConfirm.id);
+                if (closeConfirm) {
+                  const remaining = windows.filter((w) => w.id !== closeConfirm.id && w.id !== "new");
+                  close(closeConfirm.id);
+                  if (remaining.length === 0) {
+                    forgetRememberedDeal();
+                    void navigate({ to: "/live-deal-engine", search: { fresh: true, n: Date.now() } });
+                  }
+                }
                 setCloseConfirm(null);
               }}
             >
