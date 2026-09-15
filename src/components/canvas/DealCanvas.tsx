@@ -38,7 +38,9 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { CounterOfferDialog } from "./CounterOfferDialog";
 import { raiseChallenge, listChallenges, type MatchChallenge } from "@/lib/challenges.functions";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
