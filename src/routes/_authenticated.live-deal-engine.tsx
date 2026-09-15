@@ -2271,12 +2271,9 @@ function LiveDealEngine() {
                       aria-expanded={searchResultsOpen}
                     >
                       <span className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
-                        {dbHasChosenParty
-                          ? "Chosen Counterparty"
-                          : choicePending
-                            ? "Choose Counterparty"
-                            : "Search Results"}
+                        {dbHasChosenParty ? "Chosen Counterparty" : "Search Results"}
                       </span>
+
                       <ChevronDown
                         className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", searchResultsOpen && "rotate-180")}
                       />
@@ -2318,7 +2315,9 @@ function LiveDealEngine() {
                         aria-expanded={mediaResultsOpen}
                         className="label-caps flex min-w-0 flex-1 items-center justify-between gap-1.5 rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]"
                       >
-                        <span>ONLINE MEDIA SCREENING RESULTS</span>
+                        <span>
+                          {dbHasChosenParty ? "CHOSEN COUNTERPARTY" : "ONLINE MEDIA SCREENING RESULTS"}
+                        </span>
                         <span className="flex shrink-0 items-center gap-1.5">
                           <span className="text-[10px] font-semibold">
                             {mediaResults.length} counterpart{mediaResults.length === 1 ? "y" : "ies"}
@@ -2326,26 +2325,25 @@ function LiveDealEngine() {
                           <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform", mediaResultsOpen && "rotate-180")} />
                         </span>
                       </button>
-                      {/* Choosing who to trade with sits on this heading row rather than in a wide
-                          button below the records. */}
-                      {!dbHasChosenParty && (
+                      {/* The prompt reads as plain subtext; a real button only appears once a
+                          party has actually been picked. */}
+                      {!dbHasChosenParty && (mediaPick || finalizing) && (
                         <Button
                           size="sm"
-                          className={cn(
-                            "shrink-0",
-                            !mediaPick && "bg-muted text-muted-foreground hover:bg-muted disabled:opacity-100",
-                          )}
-                          disabled={!mediaPick || finalizing}
+                          className="shrink-0"
+                          disabled={finalizing}
                           onClick={() => mediaPick && finalizeChoice(mediaPick)}
                         >
-                          {finalizing
-                            ? "Recording your choice…"
-                            : mediaPick
-                              ? "Continue"
-                              : "Select who you want to trade with"}
+                          {finalizing ? "Recording your choice…" : "Continue"}
                         </Button>
                       )}
                     </div>
+                    {!dbHasChosenParty && !mediaPick && !finalizing && (
+                      <p className="mt-1.5 text-[11px] text-muted-foreground">
+                        Select who you want to trade with
+                      </p>
+                    )}
+
 
                     {mediaResultsOpen && (
                       <RadioGroup
