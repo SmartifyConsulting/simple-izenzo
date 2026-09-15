@@ -1,34 +1,18 @@
-# Fix "PayFast could not start this payment (400)"
+# Finish the PayFast payment fix
 
-No, please don't paste your PayFast details into the chat — they're already saved securely under Admin → Integrations, and I can read them from there. Pasting them here would expose them in the conversation.
+The screenshot is still coming from the old payment path. The current code only sends `email_address` when one is supplied, but the caller never supplies it. It also still sends the current preview address to PayFast and passes PayFast’s raw HTML directly into the alert.
 
-## What the error actually says
+## Changes
 
-PayFast answered with a web page instead of a payment reference. That happens when PayFast refuses the request outright — almost always for one of these reasons:
+1. Read the signed-in buyer’s saved email when Buy Tokens starts and include it in every PayFast request. If no email is available, stop before contacting PayFast and show a clear account-email message.
+2. Use `https://reelme.co.za/credits` for return and cancellation, and `https://reelme.co.za/api/public/payfast/itn` for PayFast’s confirmation callback, regardless of whether the purchase starts from preview or the live site.
+3. Extract PayFast’s actual validation message from an HTML error response on the server, but never send the HTML page to the screen. The user will see a short message such as “PayFast declined this payment: an email address is required.”
+4. Keep failed purchase records marked as failed rather than leaving them pending when PayFast refuses to create a payment.
+5. Test the live PayFast request with the saved credentials, confirm it returns a payment reference, then verify that Buy Tokens opens the PayFast window instead of the error alert.
 
-1. Onsite Payments is not switched on for the merchant account (it's an opt-in feature on PayFast's side).
-2. The environment doesn't match the credentials: sandbox needs PayFast's sandbox merchant details, live needs the live ones.
-3. The return / cancel / notify web addresses point at a preview address PayFast won't accept.
-4. The signature is built in a field order PayFast doesn't expect, or the passphrase saved doesn't match the one set in the PayFast dashboard.
+## Technical details
 
-## What I'll do
-
-1. Read the saved PayFast entry (which environment, whether a passphrase is stored, whether the merchant ID and key are present) without revealing the values.
-2. Send one test payment request from the server and capture PayFast's full reply, so the exact objection is known instead of guessed.
-3. Fix what the reply points at:
-   - correct the signed field order and passphrase handling if that's the objection;
-   - use the app's public address for return/cancel/notify instead of the preview address;
-   - keep the sandbox host for sandbox credentials and the live host for live ones.
-4. Turn the raw page dump into a plain message on the Buy Tokens screen, e.g. "PayFast declined this payment — Onsite Payments may not be enabled on the account yet", instead of a wall of page code.
-5. Re-run the test until PayFast returns a payment reference, then confirm the payment window opens.
-
-## If it turns out to be account-side
-
-If PayFast's reply says Onsite Payments isn't enabled, or the passphrase doesn't match, that has to be changed in your PayFast dashboard — I'll tell you exactly which setting and where, and tokens will keep working through the existing manual route until it's done.
-
-## Technical notes
-
-- `src/lib/payfast.server.ts` — `createOnsitePayment` field order, passphrase inclusion, host selection; surface PayFast's body as a short reason rather than raw HTML.
-- `src/lib/payfast.functions.ts` — `startTokenPurchase` currently derives return/cancel/notify from the browser `origin`; switch to the published domain so PayFast accepts them, keeping the ITN route at `/api/public/payfast/itn`.
-- `src/routes/_authenticated.credits.tsx` — map the thrown error to a readable inline message.
-- No change to the token credit path: tokens are still only added by the verified ITN callback.
+- `src/lib/payfast.functions.ts`: fetch the authenticated profile email, pass `emailAddress`, and use the fixed public callback addresses.
+- `src/lib/payfast.server.ts`: require the email field and convert HTML/JSON PayFast errors into a safe one-line reason.
+- `src/routes/_authenticated.credits.tsx`: retain the concise payment error message without displaying markup.
+- Do not expose or re-enter any PayFast credentials; the credentials already saved under Integrations remain in use.
