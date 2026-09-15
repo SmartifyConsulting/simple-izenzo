@@ -30,7 +30,7 @@ export const SPINE: StageDef[] = [
         blurb: "Scan LinkedIn, Facebook, TikTok, marketplaces and news for each shortlisted party.",
       },
       { key: "media", label: "Social / News Media", blurb: "Scan open media for signals on the deal and parties." },
-      { key: "intent", label: "Intent Confirmation", blurb: "Confirm the intent to transact on the stated terms." },
+      { key: "intent", label: "Confirm Intent", blurb: "Confirm the intent to transact on the stated terms." },
       { key: "poi", label: "Proof of Intent", blurb: "Seal the Proof of Intent. Costs 1 token (USD 10)." },
     ],
   },
@@ -38,7 +38,7 @@ export const SPINE: StageDef[] = [
     key: "compliance",
     label: "Compliance Gate",
     steps: [
-      { key: "wad", label: "WaD Case", blurb: "KYC, KYB, UBO, sanctions and PEP. 3 tokens (USD 30)." },
+      { key: "wad", label: "Without a Doubt (WAD)", blurb: "KYC, KYB, UBO, sanctions and PEP. 3 tokens (USD 30)." },
     ],
   },
   {
