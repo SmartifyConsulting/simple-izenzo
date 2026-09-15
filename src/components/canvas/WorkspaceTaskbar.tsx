@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { Plus, Search, X } from "lucide-react";
+import { toast } from "sonner";
 import {
   Command,
   CommandEmpty,
@@ -11,10 +13,21 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useDealWindows } from "@/lib/dealWindows";
 import { fallbackReference } from "@/lib/tx";
+import { cancelBid } from "@/lib/cancelBid.functions";
 import { cn } from "@/lib/utils";
 
 // The bid tab strip belongs to the signed-in workspace only, so it is opt-in per screen rather
@@ -125,10 +138,33 @@ function DealSearchDialog({
 export function WorkspaceTaskbar() {
   const { windows, setMode, close, reorder } = useDealWindows();
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  // The tab whose close (×) button was just clicked — closing never happens instantly, since a
+  // bid mid-negotiation shouldn't disappear from the taskbar without the person choosing whether
+  // that also means calling it off.
+  const [closeConfirm, setCloseConfirm] = useState<{ id: string; label: string } | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const cancelBidFn = useServerFn(cancelBid);
+
+  async function cancelAndClose() {
+    if (!closeConfirm) return;
+    setCancelling(true);
+    try {
+      await cancelBidFn({ data: { transactionId: closeConfirm.id } });
+      await qc.invalidateQueries({ queryKey: ["my-trades"] });
+      toast.success(`${closeConfirm.label} cancelled`);
+      close(closeConfirm.id);
+      setCloseConfirm(null);
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setCancelling(false);
+    }
+  }
 
   if (!isWorkspacePath(pathname)) return null;
 
@@ -227,13 +263,53 @@ export function WorkspaceTaskbar() {
               className="h-3 w-3 shrink-0 cursor-pointer text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
               onClick={(e) => {
                 e.stopPropagation();
-                close(w.id);
+                setCloseConfirm({ id: w.id, label: w.label });
               }}
             />
           </div>
         );
       })}
       </div>
+
+      <AlertDialog open={closeConfirm !== null} onOpenChange={(open) => !open && setCloseConfirm(null)}>
+        <AlertDialogContent>
+          {/* Same effect as Keep it open — dismissing here just leaves the tab exactly as it was. */}
+          <button
+            type="button"
+            onClick={() => setCloseConfirm(null)}
+            aria-label="Keep the tab open"
+            className="absolute right-4 top-4 rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Close {closeConfirm?.label}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Closing the tab saves your bid/offer. Reopen it anytime from Search or My Trades.
+              Cancelling marks it as cancelled and notifies any counterparty.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              disabled={cancelling}
+              onClick={() => void cancelAndClose()}
+            >
+              {cancelling ? "Cancelling…" : "Cancel"}
+            </Button>
+            <AlertDialogAction
+              onClick={() => {
+                if (closeConfirm) close(closeConfirm.id);
+                setCloseConfirm(null);
+              }}
+            >
+              Save and Close
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

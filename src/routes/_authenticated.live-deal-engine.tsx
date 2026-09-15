@@ -62,6 +62,7 @@ import { runBackgroundScreening, type ScreeningResult } from "@/lib/screening.fu
 import { runOnlineMediaChecks, type MediaCheckResult } from "@/lib/onlineMedia.functions";
 import { listVerificationsForTx } from "@/lib/didit.functions";
 import { summarizeBidDocuments } from "@/lib/docSummary.functions";
+import { cancelBid } from "@/lib/cancelBid.functions";
 import { readDocument } from "@/lib/documents.functions";
 
 import { pushRecentDeal } from "@/lib/recentDeals";
@@ -429,6 +430,7 @@ function LiveDealEngine() {
   const runMediaChecks = useServerFn(runOnlineMediaChecks);
   const listIdChecks = useServerFn(listVerificationsForTx);
   const summarizeDocs = useServerFn(summarizeBidDocuments);
+  const cancelBidFn = useServerFn(cancelBid);
   const fetchDocument = useServerFn(readDocument);
   const [rereading, setRereading] = useState(false);
   // Once interest is being fetched the submitted detail collapses out of the way, so the results
@@ -1083,18 +1085,22 @@ function LiveDealEngine() {
   async function cancelOrArchiveDeal(kind: "cancelled" | "archived") {
     if (!dealTx) return;
     try {
-      const { error } = await supabase
-        .from("transactions")
-        .update({ status: kind })
-        .eq("id", dealTx.id);
-      if (error) throw error;
-      await recordEvent({
-        transactionId: dealTx.id,
-        stage: dealTx.stage,
-        step: dealTx.step,
-        action: kind === "cancelled" ? "deal_cancelled" : "deal_archived",
-        summary: kind === "cancelled" ? "Bid/offer cancelled" : "Bid/offer archived",
-      });
+      if (kind === "cancelled") {
+        // Sets status, records the event and notifies any counterparty with a matching account —
+        // all in one place, so every path that can cancel a deal (this menu, and the taskbar tab's
+        // close button) behaves identically.
+        await cancelBidFn({ data: { transactionId: dealTx.id } });
+      } else {
+        const { error } = await supabase.from("transactions").update({ status: kind }).eq("id", dealTx.id);
+        if (error) throw error;
+        await recordEvent({
+          transactionId: dealTx.id,
+          stage: dealTx.stage,
+          step: dealTx.step,
+          action: "deal_archived",
+          summary: "Bid/offer archived",
+        });
+      }
       closeWindow(dealTx.id);
       try {
         localStorage.removeItem(ACTIVE_DEAL_KEY);

@@ -318,7 +318,10 @@ function MapNode({
         !plain && state === "open" && "text-foreground hover:border-primary/60",
         plain && state === "open" && "text-foreground",
         state === "done" && (plain ? "text-success" : "border-success/70 text-success"),
-        state === "active" && (plain ? "animate-throb-aqua text-primary" : "animate-throb-aqua border-primary text-primary"),
+        // animate-throb-aqua always draws its own 2px border, which read as a sharp-cornered box
+        // on a "plain" tile (border-0/rounded-none otherwise) — rounded-xl keeps its pulse the
+        // same shape as every other node's, instead of the only rectangular one on the map.
+        state === "active" && (plain ? "animate-throb-aqua rounded-xl text-primary" : "animate-throb-aqua border-primary text-primary"),
         locked && "cursor-not-allowed text-muted-foreground",
       )}
     >
