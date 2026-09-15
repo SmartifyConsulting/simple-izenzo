@@ -1467,12 +1467,145 @@ function IntentStep({ tx, reload }: Props) {
   );
 }
 
+/** The sealed Proof of Intent, shown as a standalone document rather than folded into the step
+ * panel — modelled on the paper trade-desk certificates this replaces. Auto-closes (with a fade)
+ * the moment it's shown right after sealing; opened again by hand from "View certificate" it just
+ * stays open until dismissed. */
+function CertificateOfIntentDialog({
+  open,
+  closing,
+  onOpenChange,
+  tx,
+  counterpartyName,
+}: {
+  open: boolean;
+  closing?: boolean;
+  onOpenChange: (open: boolean) => void;
+  tx: Transaction;
+  counterpartyName: string | null;
+}) {
+  const { data: evidence = [] } = useQuery({
+    queryKey: ["documents", tx.id],
+    enabled: open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("documents")
+        .select("id, name, sha256")
+        .eq("transaction_id", tx.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as { id: string; name: string; sha256: string | null }[];
+    },
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className={cn(
+          "max-w-md border-slate-200 bg-white p-0 text-slate-900 transition-opacity duration-300",
+          closing ? "opacity-0" : "opacity-100",
+        )}
+      >
+        <div className="p-6">
+          <p className="text-center font-mono text-[11px] uppercase tracking-[0.14em] text-primary">
+            Izenzo · Trade Desk
+          </p>
+          <DialogTitle className="mt-1 text-center text-xl font-bold tracking-tight text-slate-900">
+            Certificate of Intent
+          </DialogTitle>
+          <DialogDescription className="text-center font-mono text-[11px] uppercase tracking-wide text-slate-400">
+            Match · {shortHash(tx.id)} · WAD/A V1.2
+          </DialogDescription>
+
+          <div className="mt-4 space-y-3 border-t border-slate-200 pt-4 text-sm">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Counterparty</p>
+              <p className="font-semibold text-slate-900">{counterpartyName ?? "—"}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Commodity</p>
+              <p className="font-semibold text-slate-900">{tx.commodity || tx.title}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Volume</p>
+                <p className="font-semibold text-slate-900">
+                  {tx.quantity ? `${tx.quantity} ${tx.unit ?? ""}`.trim() : "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Price</p>
+                <p className="font-semibold text-slate-900">{money(tx.price, tx.currency)}</p>
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Incoterms</p>
+              <p className="font-semibold text-slate-900">{tx.incoterms || "—"}</p>
+            </div>
+          </div>
+
+          {evidence.length > 0 && (
+            <div className="mt-4 border-t border-slate-200 pt-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                Bound evidence · {evidence.length} file{evidence.length === 1 ? "" : "s"}
+              </p>
+              <ul className="mt-2 space-y-1.5">
+                {evidence.map((f) => (
+                  <li key={f.id} className="flex items-center gap-2 text-xs text-slate-700">
+                    <FileText className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    <span className="min-w-0 flex-1 truncate">{f.name}</span>
+                    <span className="shrink-0 font-mono text-[10px] text-slate-400">
+                      {(f.sha256 ?? f.id).slice(0, 8)}…
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {tx.poi_hash && (
+            <div className="mt-4 flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                <Lock className="h-4 w-4" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
+                  SHA-256 hash-sealed record
+                </p>
+                <p className="truncate font-mono text-[11px] text-emerald-800">{tx.poi_hash}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function PoiStep({ tx, reload }: Props) {
   const seal = useServerFn(sealProofOfIntent);
   const navigate = useNavigate();
   const { org } = useAuth();
   const [busy, setBusy] = useState(false);
   const shortOnTokens = (org?.credits ?? 0) < POI_COST;
+  const [certOpen, setCertOpen] = useState(false);
+  const [certClosing, setCertClosing] = useState(false);
+  const [sealedSnapshot, setSealedSnapshot] = useState<{ poi_sealed_at: string | null; poi_hash: string | null } | null>(null);
+
+  const { data: chosen } = useQuery({
+    queryKey: ["chosen-counterparty", tx.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("counterparties")
+        .select("name")
+        .eq("transaction_id", tx.id)
+        .eq("status", "chosen")
+        .order("chosen_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data?.name ?? null;
+    },
+  });
 
   // Screening is no longer gated here: Online Media Screening and Background Screening both run in
   // Step 1, before intent can be confirmed.
@@ -1508,6 +1641,9 @@ function PoiStep({ tx, reload }: Props) {
         .select("poi_sealed_at, poi_hash")
         .eq("id", tx.id)
         .maybeSingle();
+      // tx itself won't reflect the seal until reload() runs — the certificate shown right after
+      // sealing needs the just-written values, not the stale prop.
+      setSealedSnapshot(sealedTx ?? null);
       const name = `Proof of Intent — ${tx.title}.txt`;
       const path = `deals/${tx.id}/${Date.now()}-proof-of-intent.txt`;
       const body = certificateBody(sealedTx?.poi_sealed_at ?? null, sealedTx?.poi_hash ?? null);
@@ -1527,8 +1663,17 @@ function PoiStep({ tx, reload }: Props) {
         toast.warning("Sealed, but the certificate could not be filed against the deal.");
       }
 
-      reload();
       toast.success("Proof of Intent sealed");
+      // Show the certificate briefly, then let it fade before filing itself away with the other
+      // documents — reload() (which flips this panel to the sealed summary view) waits until
+      // after that close animation finishes, not before.
+      setCertOpen(true);
+      await new Promise((resolve) => setTimeout(resolve, 2400));
+      setCertClosing(true);
+      await new Promise((resolve) => setTimeout(resolve, 350));
+      setCertOpen(false);
+      setCertClosing(false);
+      reload();
     } catch (err) {
       reportGateError(err, navigate, tx);
     } finally {
@@ -1547,33 +1692,55 @@ function PoiStep({ tx, reload }: Props) {
   }
 
 
+  const certTx = {
+    ...tx,
+    poi_sealed_at: sealedSnapshot?.poi_sealed_at ?? tx.poi_sealed_at,
+    poi_hash: sealedSnapshot?.poi_hash ?? tx.poi_hash,
+  };
+  const certificateDialog = (
+    <CertificateOfIntentDialog
+      open={certOpen}
+      closing={certClosing}
+      onOpenChange={setCertOpen}
+      tx={certTx}
+      counterpartyName={chosen ?? null}
+    />
+  );
+
   if (tx.poi_sealed_at) {
     return (
-      <Panel
-        title="Proof of Intent — sealed"
-        description={`Sealed ${when(tx.poi_sealed_at)}`}
-        footer={
-          <div className="text-right">
-            <Button size="sm" variant="outline" className="gap-2" onClick={download}>
-              <Download className="h-3.5 w-3.5" /> Download
-            </Button>
-          </div>
-        }
-      >
-        <CertificateBlock
-          heading="Proof of Intent"
-          lines={[
-            { label: "Transaction", value: tx.title },
-            { label: "Quantity / Price", value: `${tx.quantity ?? "—"} ${tx.unit ?? ""} at ${tx.price ?? "—"} ${tx.currency}` },
-            { label: "Sealed", value: String(tx.poi_sealed_at) },
-          ]}
-          sealId={tx.poi_hash ?? null}
-        />
-      </Panel>
+      <>
+        <Panel
+          title="Proof of Intent — sealed"
+          description={`Sealed ${when(tx.poi_sealed_at)}`}
+          footer={
+            <div className="flex items-center justify-end gap-2">
+              <Button size="sm" variant="outline" className="gap-2" onClick={() => setCertOpen(true)}>
+                <FileText className="h-3.5 w-3.5" /> View certificate
+              </Button>
+              <Button size="sm" variant="outline" className="gap-2" onClick={download}>
+                <Download className="h-3.5 w-3.5" /> Download
+              </Button>
+            </div>
+          }
+        >
+          <CertificateBlock
+            heading="Proof of Intent"
+            lines={[
+              { label: "Transaction", value: tx.title },
+              { label: "Quantity / Price", value: `${tx.quantity ?? "—"} ${tx.unit ?? ""} at ${tx.price ?? "—"} ${tx.currency}` },
+              { label: "Sealed", value: String(tx.poi_sealed_at) },
+            ]}
+            sealId={tx.poi_hash ?? null}
+          />
+        </Panel>
+        {certificateDialog}
+      </>
     );
   }
 
   return (
+    <>
     <Panel
       title="Proof of Intent"
       footer={
@@ -1601,6 +1768,8 @@ function PoiStep({ tx, reload }: Props) {
         </p>
       )}
     </Panel>
+    {certificateDialog}
+    </>
   );
 }
 
