@@ -105,19 +105,23 @@ export const postIntentMessage = createServerFn({ method: "POST" })
       if (tx.org_id) recipientOrgIds.add(tx.org_id);
       const { data: chosen } = await supabase
         .from("counterparties")
-        .select("name")
+        .select("name, contact_email")
         .eq("transaction_id", data.transactionId)
         .eq("status", "chosen")
         .order("chosen_at", { ascending: false })
         .limit(1)
         .maybeSingle();
+      let matchedOrgId: string | null = null;
       if (chosen?.name) {
         const { data: matchedOrg } = await supabase
           .from("organisations")
           .select("id")
           .ilike("name", chosen.name)
           .maybeSingle();
-        if (matchedOrg?.id) recipientOrgIds.add(matchedOrg.id);
+        if (matchedOrg?.id) {
+          matchedOrgId = matchedOrg.id;
+          recipientOrgIds.add(matchedOrg.id);
+        }
       }
 
       const { data: recipients } = recipientOrgIds.size
@@ -129,6 +133,32 @@ export const postIntentMessage = createServerFn({ method: "POST" })
         : { data: [] as { id: string; email: string | null; full_name: string | null }[] };
 
       const dealName = tx.reference ?? tx.title;
+
+      // The chosen counterparty is very often an external company with no Izenzo account at all —
+      // no matching organisation row means no `profiles` recipients above, so without this they'd
+      // never hear about the challenge message even though they're the other party to it. Email
+      // them directly at the contact address on file instead of silently dropping the notice.
+      const chosenContactEmail = (chosen as { contact_email?: string | null } | null)?.contact_email;
+      if (!matchedOrgId && chosenContactEmail) {
+        try {
+          const { loadResendCreds, sendEmail, renderBrandedEmail } = await import("@/lib/resend.server");
+          const creds = await loadResendCreds();
+          if (creds?.enabled) {
+            await sendEmail(creds, {
+              to: chosenContactEmail,
+              subject: `New message on ${dealName}`,
+              html: renderBrandedEmail(
+                `<p><strong>${senderName}</strong> wrote on the Confirm Intent thread for ${dealName}:</p>` +
+                `<blockquote>${data.body}</blockquote>` +
+                `<p>Sign in to Izenzo, or create an account with this email address, to see the full deal and reply.</p>`,
+              ),
+            });
+          }
+        } catch {
+          // Best-effort — the message itself is already saved regardless.
+        }
+      }
+
       for (const r of recipients ?? []) {
         await supabase.from("notifications").insert({
           user_id: r.id,

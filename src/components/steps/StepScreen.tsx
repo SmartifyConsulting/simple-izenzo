@@ -79,17 +79,22 @@ function CertificateBlock({
 }) {
   return (
     <div className="relative overflow-hidden rounded-lg border-2 border-double border-foreground/70 bg-gradient-to-b from-muted/40 to-transparent p-5">
-      {draft && (
-        <span
-          aria-hidden
-          className="pointer-events-none absolute left-1/2 top-1/2 -z-10 -translate-x-1/2 -translate-y-1/2 -rotate-[24deg] select-none whitespace-nowrap text-6xl font-black uppercase tracking-widest text-muted-foreground/25"
-        >
-          Draft
-        </span>
-      )}
+      {/* Kept mounted (rather than removed outright) so the moment it stops being a draft, the
+          watermark fades out instead of snapping away instantly. */}
+      <span
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute left-1/2 top-1/2 -z-10 -translate-x-1/2 -translate-y-1/2 -rotate-[24deg] select-none whitespace-nowrap text-6xl font-black uppercase tracking-widest text-muted-foreground/25 transition-opacity duration-[1400ms] ease-out",
+          draft ? "opacity-100" : "opacity-0",
+        )}
+      >
+        Draft
+      </span>
       <div className="relative flex items-center justify-between gap-3 border-b border-border pb-3">
         <Logo />
-        <span className="label-caps text-muted-foreground">{draft ? "Draft — not yet confirmed" : "Certified record"}</span>
+        <span className="label-caps text-muted-foreground transition-opacity duration-[1400ms]">
+          {draft ? "Draft — not yet confirmed" : "Certified record"}
+        </span>
       </div>
       <p className="mt-4 text-center font-sans text-sm font-bold uppercase tracking-[0.14em] text-foreground">
         {heading}
@@ -1285,6 +1290,10 @@ function IntentChallengeDialog({
 function IntentStep({ tx, reload }: Props) {
   const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Set the instant the confirm write succeeds, before `reload()`/`advance()` move the workflow
+  // on — lets the certificate visibly lose its draft watermark first, rather than the whole panel
+  // jumping to the next step before the user ever sees it become a real record.
+  const [confirmedLocally, setConfirmedLocally] = useState(false);
   const { profile } = useAuth();
   const signer = profile?.full_name ?? profile?.email ?? "—";
 
@@ -1362,9 +1371,13 @@ function IntentStep({ tx, reload }: Props) {
 
       });
       await fileIntentCertificate(now);
+      // Let the certificate visibly shed its draft watermark before moving on — advancing
+      // immediately meant the panel changed before anyone actually saw it become a real record.
+      setConfirmedLocally(true);
+      toast.success("Intent confirmed");
+      await new Promise((resolve) => setTimeout(resolve, 1600));
       await advance(tx.id, "trading", "poi");
       reload();
-      toast.success("Intent confirmed");
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -1408,8 +1421,8 @@ function IntentStep({ tx, reload }: Props) {
             { label: "Counterparty", value: chosen ?? "—" },
             { label: "Signed by", value: signer },
           ]}
-          sealId={tx.intent_confirmed_at ? shortHash(tx.id) : null}
-          draft={!tx.intent_confirmed_at}
+          sealId={tx.intent_confirmed_at || confirmedLocally ? shortHash(tx.id) : null}
+          draft={!tx.intent_confirmed_at && !confirmedLocally}
         />
       )}
       {tx.intent_confirmed_at && (
