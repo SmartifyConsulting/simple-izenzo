@@ -184,9 +184,9 @@
   --destructive-foreground: hsl(0 0% 100%);
   --success: hsl(160 84% 39%);
   --success-foreground: hsl(0 0% 100%);
-  /* Active workspace tab on the cream stylesheet: green frame, black writing. */
+  /* Active workspace tab on the cream stylesheet: green frame, white writing. */
   --taskbar-active-bg: hsl(160 84% 39%);
-  --taskbar-active-fg: hsl(0 0% 0%);
+  --taskbar-active-fg: hsl(0 0% 100%);
   --taskbar-active-border: hsl(160 84% 39%);
   --warning: hsl(43 96% 56%);
   --warning-foreground: hsl(0 0% 0%);
@@ -249,9 +249,9 @@
   --destructive-foreground: oklch(1 0 0);
   --success: oklch(0.63 0.15 155);
   --success-foreground: oklch(1 0 0);
-  /* Active workspace tab on the cream stylesheet: green frame, black writing. */
+  /* Active workspace tab on the cream stylesheet: green frame, white writing. */
   --taskbar-active-bg: oklch(0.63 0.15 155);
-  --taskbar-active-fg: oklch(0 0 0);
+  --taskbar-active-fg: oklch(1 0 0);
   --taskbar-active-border: oklch(0.63 0.15 155);
   /* Step name pills (map frame headings, Steps list headers) on the cream stylesheet: solid
      black pill, white writing. */
