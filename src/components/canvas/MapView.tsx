@@ -209,14 +209,14 @@ function ArrowLayer() {
 }
 
 /**
- * "Step 5 · Memory" as a straight black pill centered above the Memory circle — not set on its
+ * "Step 5 · Memory" as a straight black pill inside the Memory circle, near its top — not on the
  * curve, so its text is a plain, always-horizontal heading like every other step label.
  */
 function MemoryArcLabel() {
   return (
     <div
-      className="pointer-events-none absolute z-10 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center whitespace-nowrap rounded-full bg-black px-2.5 py-0.5 text-center font-sans text-[11px] font-semibold uppercase leading-none tracking-[0.09em] text-white"
-      style={{ left: px(MEMORY.cx), top: py(MEMORY.cy - MEMORY.r) }}
+      className="pointer-events-none absolute z-10 flex -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-full bg-black px-2.5 py-0.5 text-center font-sans text-[11px] font-semibold uppercase leading-none tracking-[0.09em] text-white"
+      style={{ left: px(MEMORY.cx), top: py(MEMORY.cy - MEMORY.r * 0.62) }}
       aria-hidden
     >
       Step 5 · Memory

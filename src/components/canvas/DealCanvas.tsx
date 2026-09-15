@@ -794,7 +794,7 @@ export function InlineFrame({
   const canChangeParty =
     !viewOnly && Boolean(onChangeParty) && !tx.poi_sealed_at && (step === "intent" || step === "poi");
   return (
-    <div className="glass-node animate-node-rise mt-1 p-5 sm:p-6">
+    <div className="glass-node animate-node-rise mt-1 p-4">
       <div className="mb-4 flex items-start justify-between gap-4">
         <div className="min-w-0">
           {/* Same heading treatment as the Bid Registration / Bid Information frames: small
@@ -1337,7 +1337,7 @@ export function CounterpartyRecord({
             ? "Select which one to trade with"
             : continued
               ? "Selected counterparties"
-              : "Tick counterparties of interest to continue"}
+              : "Select a counterparty to continue"}
         </p>
         {CHALLENGES_FEATURE_ENABLED && txId && (
           <div className="flex shrink-0 items-center gap-1">
@@ -1373,13 +1373,22 @@ export function CounterpartyRecord({
       )}
 
       {candidates.length === 0 ? (
-        <p className="mt-2 text-xs text-slate-500">
-          {searching
-            ? "Searching for counterparties…"
-            : error
+        searching ? (
+          // Centered in the space this card takes up while nothing else is in it yet, rather
+          // than pinned to the top the moment the heading ends.
+          <div className="flex min-h-[72px] flex-col items-center justify-center gap-1.5 py-2">
+            <p className="text-xs text-slate-500">Searching for counterparties…</p>
+            <div className="h-1 w-1/2 overflow-hidden rounded-full bg-progress-track">
+              <div className="h-full w-1/3 animate-[slide-in-right_1.4s_ease-in-out_infinite] rounded-full bg-success" />
+            </div>
+          </div>
+        ) : (
+          <p className="mt-2 text-xs text-slate-500">
+            {error
               ? `Search could not finish: ${error}`
               : "No matches found yet — run the search again."}
-        </p>
+          </p>
+        )
       ) : mediaResults ? null : (
         // Once media results are in, the Online Media Screening accordion below carries the
         // selection control (circle/checkbox), match % and subtext itself — repeating the same
@@ -1450,11 +1459,11 @@ export function CounterpartyRecord({
 
 
       {mediaRunning && (
-        <div className="mt-3 space-y-1.5 border-t border-slate-300 pt-3">
+        <div className="mt-3 flex min-h-[72px] flex-col items-center justify-center gap-1.5 border-t border-slate-300 py-2 pt-[calc(0.5rem+1px)]">
           <p className="text-xs text-slate-600">Scanning LinkedIn, Facebook, TikTok, marketplaces and news…</p>
           {mediaProgress && mediaProgress.total > 0 && (
             <>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-progress-track">
+              <div className="h-1.5 w-1/2 overflow-hidden rounded-full bg-progress-track">
                 <div
                   className={cn(
                     "h-full rounded-full transition-all duration-500",
