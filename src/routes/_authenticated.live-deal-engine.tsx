@@ -360,20 +360,44 @@ function LiveDealEngine() {
     if (!dealTx?.id) return;
     let live = true;
     (async () => {
-      const { count } = await supabase
+      const { data, count } = await supabase
         .from("counterparties")
-        .select("id", { count: "exact", head: true })
+        .select("id, name", { count: "exact" })
         .eq("transaction_id", dealTx.id)
         .eq("status", "chosen");
       if (live) {
         setHasChosen((count ?? 0) > 0);
         setDbHasChosenParty((count ?? 0) > 0);
+        setChosenPartyName(data?.[0]?.name ?? null);
       }
     })();
     return () => {
       live = false;
     };
   }, [dealTx?.id]);
+  // `dbHasChosenParty` is also set optimistically by finalizeChoice/startMediaChecks, so the name
+  // is re-read whenever it flips rather than only on switching deals.
+  useEffect(() => {
+    if (!dealTx?.id) return;
+    if (!dbHasChosenParty) {
+      setChosenPartyName(null);
+      return;
+    }
+    let live = true;
+    (async () => {
+      const { data } = await supabase
+        .from("counterparties")
+        .select("name")
+        .eq("transaction_id", dealTx.id)
+        .eq("status", "chosen")
+        .limit(1);
+      if (live) setChosenPartyName(data?.[0]?.name ?? null);
+    })();
+    return () => {
+      live = false;
+    };
+  }, [dealTx?.id, dbHasChosenParty]);
+
 
   const resumedStep: "intent" | "poi" | "wad" | "business-docs" | null = dealTx?.wad_completed_at
     ? dealTx.step === "business-docs"
