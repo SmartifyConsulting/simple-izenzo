@@ -494,6 +494,12 @@ function LiveDealEngine() {
   const searchResultsOpen = dealTx
     ? (searchResultsOpenByTx[dealTx.id] ?? (choicePending || !hasChosen))
     : true;
+  // Once a party is actually chosen the choice is settled: this folds back into the plain
+  // "Search Results" record instead of staying open.
+  useEffect(() => {
+    if (!dealTx || !dbHasChosenParty) return;
+    setSearchResultsOpenByTx((prev) => ({ ...prev, [dealTx.id]: false }));
+  }, [dealTx?.id, dbHasChosenParty]);
   // The trade record, once everything has cleared — folded away by default.
   const [tradeSummaryOpen, setTradeSummaryOpen] = useState(false);
   // Once Intent is confirmed, its frame folds into a small accordion nested under Online Media
