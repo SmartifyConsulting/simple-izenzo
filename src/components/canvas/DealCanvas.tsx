@@ -1425,6 +1425,18 @@ export function CounterpartyRecord({
                   </span>
                 )}
               </label>
+              {/* Once a company is ticked, a negotiation can be opened with them from here. */}
+              {c.shortlisted && txId && (
+                <button
+                  type="button"
+                  title="Start a counter offer"
+                  onClick={() => setCounterOfferFor({ id: c.id, name: c.name })}
+                  className="shrink-0 rounded p-1 text-slate-500 hover:bg-slate-200 hover:text-slate-900"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </button>
+              )}
+
             </li>
           ))}
         </ul>
