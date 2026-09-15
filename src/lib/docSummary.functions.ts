@@ -111,6 +111,13 @@ async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
         } else if (XLSX_EXT.test(name)) {
           const text = await xlsxText(bytes);
           parts.push({ type: "text", text: `--- ${kind}: ${name} ---\n${text}` });
+        } else if (PPTX_EXT.test(name)) {
+          const text = await pptxText(bytes);
+          if (!text.trim()) {
+            unreadable.push(`${name} (no readable text on the slides)`);
+            continue;
+          }
+          parts.push({ type: "text", text: `--- ${kind}: ${name} ---\n${text}` });
         } else if (TEXT_EXT.test(name)) {
           const text = new TextDecoder().decode(bytes).slice(0, 200_000);
           parts.push({ type: "text", text: `--- ${kind}: ${name} ---\n${text}` });
