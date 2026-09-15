@@ -4,6 +4,9 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const TOKEN_PRICE_USD = 10;
 const USD_TO_ZAR = 18.5;
+/** The live site PayFast must call back with the payment confirmation. */
+const PUBLIC_ORIGIN = "https://reelme.co.za";
+
 
 /** Starts a token purchase through PayFast. Returns the Onsite Payment reference the browser uses
  * to open the PayFast window in place. Tokens are only credited once PayFast's ITN callback
