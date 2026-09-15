@@ -2271,12 +2271,9 @@ function LiveDealEngine() {
                       aria-expanded={searchResultsOpen}
                     >
                       <span className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
-                        {dbHasChosenParty
-                          ? "Chosen Counterparty"
-                          : choicePending
-                            ? "Choose Counterparty"
-                            : "Search Results"}
+                        {dbHasChosenParty ? "Chosen Counterparty" : "Search Results"}
                       </span>
+
                       <ChevronDown
                         className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", searchResultsOpen && "rotate-180")}
                       />
