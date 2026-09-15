@@ -269,7 +269,7 @@ export function WorkspaceTaskbar() {
               "group flex w-36 shrink-0 cursor-grab items-center gap-2 rounded-t-md border px-3 py-1.5 text-xs font-medium transition-colors active:cursor-grabbing",
               active
                 ? "border-[var(--taskbar-active-border)] border-b-transparent bg-[var(--taskbar-active-bg)] text-[var(--taskbar-active-fg)]"
-                : "border-border border-b-transparent bg-transparent text-muted-foreground hover:bg-card/50 hover:text-foreground",
+                : "border-border border-b-transparent bg-white text-black hover:bg-white/90",
               draggedId === w.id && "opacity-40",
               overId === w.id && draggedId !== w.id && "border-l-2 border-l-primary",
             )}
