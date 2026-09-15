@@ -1445,16 +1445,12 @@ function IntentStep({ tx, reload }: Props) {
     />
   );
 
-  // Already confirmed: this sits inside the "Confirmed Intent" accordion, which carries the
-  // heading — so no second panel, pill or close button around it. Just the line explaining where
-  // the deal stands, then the certificate.
+  // Already confirmed: this sits inside the "Confirmed Intent" accordion, which already carries
+  // both the heading and this same explanatory line as its subtext — just the certificate here.
   if (tx.intent_confirmed_at) {
     return (
       <div className="text-xs leading-relaxed">
-        <p className="text-muted-foreground">
-          Read the terms as they stand. Confirming does not seal them — that is the next step.
-        </p>
-        <div className="mt-3">{certificate}</div>
+        <div>{certificate}</div>
         <p className="mt-4 text-xs text-muted-foreground">
           Signed by {signer} · {when(tx.intent_confirmed_at)}
         </p>

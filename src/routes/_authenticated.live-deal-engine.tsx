@@ -2398,6 +2398,7 @@ function LiveDealEngine() {
                       onMediaContinue={startScreening}
                       onFinalize={finalizeChoice}
                       finalizing={finalizing}
+                      locked={Boolean(dealTx.intent_confirmed_at)}
                     />
                     </div>
                     )}
@@ -2731,9 +2732,16 @@ function LiveDealEngine() {
                 )}
 
 
+                {/* Advisory only — AI+ cannot approve, reject, alter or bypass the WaD gate. Sits
+                    after Business Docs, once execution's own paperwork is actually on file. */}
+                {dealTx?.wad_completed_at && stepOverrides["businessDocs"] === "done" && (
+                  <DecisionPackPanel transactionId={dealTx.id} stageContext="wad_updated" />
+                )}
+
                 {/* Only once Step 2's own documents (Business Docs) are in — not the moment the
                     compliance checks clear. Collapsed by default: it's a record to check back on,
-                    and Execution is what needs attention by then. */}
+                    and Execution is what needs attention by then. Sits below the AI+ compliance
+                    recommendations above it. */}
                 {dealTx?.wad_completed_at && stepOverrides["businessDocs"] === "done" && (
                   <div className="mt-1.5 rounded-2xl border border-border bg-card">
                     <button
@@ -2755,12 +2763,6 @@ function LiveDealEngine() {
                       </div>
                     )}
                   </div>
-                )}
-
-                {/* Advisory only — AI+ cannot approve, reject, alter or bypass the WaD gate. Sits
-                    after Business Docs, once execution's own paperwork is actually on file. */}
-                {dealTx?.wad_completed_at && stepOverrides["businessDocs"] === "done" && (
-                  <DecisionPackPanel transactionId={dealTx.id} stageContext="wad_updated" />
                 )}
 
               </div>

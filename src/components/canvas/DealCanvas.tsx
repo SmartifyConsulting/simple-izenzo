@@ -1151,6 +1151,7 @@ export function CounterpartyRecord({
   onMediaContinue,
   onFinalize,
   finalizing = false,
+  locked = false,
 }: {
   txId?: string | null;
   /** True while the AI/AI+ search is still running, so the panel polls for freshly saved rows. */
@@ -1158,6 +1159,10 @@ export function CounterpartyRecord({
   error?: string | null;
   /** Fires the background screening for the ticked counterparties. */
   onContinue?: (counterpartyIds: string[]) => void;
+  /** True once intent is confirmed — the shortlist/pick is settled by then, so the checkboxes and
+   * radio buttons here stop taking input rather than silently accepting a click that changes
+   * nothing (or that the server would reject anyway). */
+  locked?: boolean;
   /** True while those screening checks are being opened with the providers. */
   screening?: boolean;
   screeningResults?: ScreeningResult[] | null;
@@ -1366,6 +1371,7 @@ export function CounterpartyRecord({
   }
 
   async function toggle(c: CounterpartyCandidate, next: boolean) {
+    if (locked) return;
     qc.setQueryData<CounterpartyCandidate[]>(["counterparties", txId], (prev) =>
       (prev ?? []).map((row) => (row.id === c.id ? { ...row, shortlisted: next } : row)),
     );
@@ -1536,6 +1542,7 @@ export function CounterpartyRecord({
                 <RadioGroupItem
                   id={`shortlist-${c.id}`}
                   value={c.id}
+                  disabled={locked}
                   className="mt-0.5"
                 />
               ) : (
@@ -1543,6 +1550,7 @@ export function CounterpartyRecord({
                   id={`shortlist-${c.id}`}
                   checked={Boolean(c.shortlisted)}
                   onCheckedChange={(v) => toggle(c, Boolean(v))}
+                  disabled={locked}
                   className="mt-0.5"
                 />
               )}
