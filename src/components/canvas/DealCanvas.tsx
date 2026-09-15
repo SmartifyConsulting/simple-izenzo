@@ -1580,13 +1580,15 @@ export function CounterpartyRecord({
           mediaResults && mediaResults.length > 0 && "border-t border-slate-300 pt-3",
         )}
       >
+        {/* Nothing to prompt for until the search has actually returned companies. */}
         <p className="label-caps text-black">
-          {screeningDone
-            ? "Selected counterparties"
-            : continued
+          {candidates.length === 0 || searching
+            ? ""
+            : screeningDone || continued
               ? "Selected counterparties"
               : "Select a counterparty to continue"}
         </p>
+
         {CHALLENGES_FEATURE_ENABLED && txId && (
           <div className="flex shrink-0 items-center gap-1">
             <button
