@@ -127,7 +127,9 @@ const line = (a: Point, b: Point) => `M ${a.x} ${a.y} L ${b.x} ${b.y}`;
 /** An orthogonal run through the given turning points — every leg horizontal or vertical. */
 const path = (...pts: Point[]) => pts.map((p, i) => `${i ? "L" : "M"} ${p.x} ${p.y}`).join(" ");
 
-const ARROWS: string[] = [
+// Step 1's own internal connectors, plus the one leaving it for Step 2 — all hidden together when
+// the Trading frame is folded away.
+const TRADING_ARROWS: string[] = [
   // Trading step: Bid down into Load Deal Documents, straight across into Search (same centre-
   // line), down into the step chips, then across into Choice.
   line(bottomOf(BOXES.bid), topOf(BOXES.loadDocs)),
@@ -152,6 +154,9 @@ const ARROWS: string[] = [
     { x: cx(BOXES.poi), y: (TRADE_ENGINE_FRAME.y + TRADE_ENGINE_FRAME.h + COMPLIANCE_FRAME.y) / 2 },
     { x: cx(BOXES.poi), y: COMPLIANCE_FRAME.y - ARROW_GAP },
   ),
+];
+
+const REST_ARROWS: string[] = [
   line(bottomOf(BOXES.poi), topOf(BOXES.wad)),
   line(bottomOf(BOXES.wad), topOf(BOXES.withoutADoubt)),
   line(bottomOf(BOXES.withoutADoubt), topOf(BOXES.businessDocs)),
@@ -177,7 +182,8 @@ const ARROWS: string[] = [
   ),
 ];
 
-function ArrowLayer() {
+function ArrowLayer({ hideTrading }: { hideTrading?: boolean }) {
+  const shown = hideTrading ? REST_ARROWS : [...TRADING_ARROWS, ...REST_ARROWS];
   return (
     <svg
       viewBox={`0 0 ${W} ${H}`}
@@ -190,7 +196,7 @@ function ArrowLayer() {
           <path d="M0,0 L7,3.5 L0,7 Z" className="fill-muted-foreground" />
         </marker>
       </defs>
-      {ARROWS.map((d, i) => (
+      {shown.map((d, i) => (
         <path
           key={i}
           d={d}
@@ -204,6 +210,7 @@ function ArrowLayer() {
     </svg>
   );
 }
+
 
 /**
  * "Step 5 · Memory" as a straight pill inside the Memory circle, near its top — not on the curve,
