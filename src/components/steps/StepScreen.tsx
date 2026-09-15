@@ -1403,6 +1403,9 @@ function IntentStep({ tx, reload }: Props) {
       });
       await fileIntentCertificate(now);
       await fileProposal();
+      // The certificate must show up in the deal's document list straight away, not on the next
+      // refresh.
+      await qc.invalidateQueries({ queryKey: ["documents", tx.id] });
       // Let the certificate visibly shed its draft watermark before moving on — advancing
       // immediately meant the panel changed before anyone actually saw it become a real record.
       setConfirmedLocally(true);
