@@ -1,0 +1,1 @@
+ALTER TABLE public.ai_proposals ADD COLUMN IF NOT EXISTS related_counterparty TEXT;
