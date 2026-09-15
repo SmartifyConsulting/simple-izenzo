@@ -2404,17 +2404,8 @@ function LiveDealEngine() {
                       </ul>
                       </RadioGroup>
                     )}
-                    {mediaResultsOpen && !dbHasChosenParty && (
-                      <div className="mt-3 flex justify-end">
-                        <Button
-                          size="sm"
-                          disabled={!mediaPick || finalizing}
-                          onClick={() => mediaPick && finalizeChoice(mediaPick)}
-                        >
-                          {finalizing ? "Recording…" : "Elect to proceed — Confirm Intent"}
-                        </Button>
-                      </div>
-                    )}
+                    {/* The choice action lives on the heading row above. */}
+
                   </div>
                 )}
 
