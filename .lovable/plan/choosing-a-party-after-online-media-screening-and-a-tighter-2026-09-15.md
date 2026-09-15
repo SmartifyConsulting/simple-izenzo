@@ -1,54 +1,26 @@
-# Choosing a party after online media screening, and a tighter gap above it
+# Tidy the counterparty results headings and close the gap under Bid Information
 
-## 1. You can pick a party again
+## What changes
 
-Once online media screening comes back, the "Online Media Screening Results" list currently shows
-the parties but with no selection circles and no button, so there is no way on. Cause: the moment
-screening starts, the workspace marks the choice step as "moved past", and that same flag is what
-hides the circles and the confirm button on that list — so the controls disappear before you ever
-get to use them.
+1. **Bottom label and button removed.** The "Select who you want to trade with" caption and the wide grey button under the screening records disappear.
 
-After the fix:
+2. **The action moves onto the heading.** The "Online media screening results" heading row gets a small button on its right, in line with the collapse arrow. Until a party is picked it is greyed and reads "Select who you want to trade with"; once one is selected it turns blue and reads "Continue"; while it saves it reads "Recording your choice…". Clicking it does exactly what the old bottom button did.
 
-- The screening results list opens itself as soon as screening finishes.
-- Each listed party has a selection circle, and the button under the list reads "Elect to proceed —
-  Confirm Intent", enabled once one is picked. Both stay available until a party has actually been
-  recorded as chosen for this bid (not merely because screening was run).
-- If screening comes back with no parties at all, the list says so and the choice controls stay on
-  the search results above, so the bid is never left with nothing to click.
-- Only one set of selection controls shows: the ones on the screening results list. The duplicate
-  circles/Continue button inside the Choose Counterparty frame's own copy of the screening records
-  are removed so there is no second, conflicting place to pick.
+3. **Heading renamed.** The folded list above it becomes "Online media search results (8)" instead of "Search results (8)".
 
-## 2. The frame renames itself once a party is chosen
+4. **The empty gap under Bid Information goes away.** Once documents have been submitted, the row that used to hold the upload box is no longer drawn at all, so the next frame sits directly under Bid Information at the same spacing as the other frames.
 
-Once a counterparty has been chosen, the frame's pill reads **Chosen Counterparty** (instead of
-Choose Counterparty), and it folds closed as it does today. Before any pick it still reads Choose
-Counterparty, and before screening it reads Search Results.
-
-## 3. Tighter space between Bid Information and Choose Counterparty
-
-An always-present empty row sits between them (the slot that holds the upload control for a bid with
-no documents yet) and it adds a gap once the upload control is gone. That row only renders when it
-actually has something in it, so Choose Counterparty sits the same small distance below Bid
-Information as Bid Information sits below Bid Registration.
+Nothing about who can be picked, the screening itself, or the steps that follow changes.
 
 ## Technical detail
 
-- `src/routes/_authenticated.live-deal-engine.tsx`
-  - Online Media Screening Results frame (~2300–2385): replace the `!hasChosen` gates on the
-    `RadioGroup` (`disabled`), the `RadioGroupItem` render, and the Elect button block with
-    `!dbHasChosenParty`; add an effect that calls `setMediaResultsOpen(dealTx.id, true)` when
-    `choicePending` becomes true so the list is open when the pick is needed.
-  - Empty-results case: when `mediaResults` is non-null but empty, render the frame with a
-    "Screening returned no records" line instead of the radio list.
-  - Right-hand column row (~2088–2134): wrap in the same condition its only child uses
-    (`workspaceDocs.length === 0 && !submittedForThisBid && !workspaceDocsPending`) so no empty
-    `mt-1` flex row is left behind.
-- `src/components/canvas/DealCanvas.tsx` (`CounterpartyRecord`): in the internal media accordion
-  (~1490–1509) drop the `RadioGroupItem`/`Checkbox` column and the `screeningDone && onFinalize`
-  Continue button (~1747–1762), leaving that accordion as a read-only record. `mediaResults`
-  non-empty with zero candidates still renders the search-results record as today.
-- Frame pill label (~2266): `dbHasChosenParty ? "Chosen Counterparty" : choicePending ? "Choose
-  Counterparty" : "Search Results"`.
-- No changes to screening logic, gates, scoring or token costs.
+`src/components/canvas/DealCanvas.tsx` (`CounterpartyRecord`):
+- Line ~1429: label text → `Online media search results ({candidates.length})`.
+- Media heading row (~1476–1488): the collapse `button` becomes a flex row containing the heading button plus, when `screeningDone && onFinalize`, a `size="sm"` Button (`disabled={finalizing || !pickedId}`, `onClick={() => pickedId && onFinalize(pickedId)}`) with the three labels above; the outer element becomes a `div` so the action is not nested inside the toggle button.
+- Bottom block (~1745–1760): delete the `screeningDone && onFinalize` branch, keeping the existing `onContinue` shortlist button as the remaining branch.
+- Heading at ~1585: drop the `screeningDone ? "Select who you want to trade with"` case, leaving "Selected counterparties" / "Select a counterparty to continue".
+
+`src/routes/_authenticated.live-deal-engine.tsx`:
+- Line ~2103: gate the whole `{dealTx ? (...)}` upload row on the condition its child already uses — `dealTx && !workspaceDocsPending && workspaceDocs.length === 0 && !submittedForThisBid` — so no `mt-1` row remains after submission.
+
+Then typecheck and confirm the preview build is clean.
