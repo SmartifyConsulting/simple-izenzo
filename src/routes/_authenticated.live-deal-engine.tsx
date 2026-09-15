@@ -705,7 +705,11 @@ function LiveDealEngine() {
         if (dealTx.wad_completed_at) {
           o["businessDocs"] = dealTx.step === "business-docs" ? "active" : "done";
           // Business documents in: Execution is what's next, so that's where the pulse goes.
-          if (o["businessDocs"] === "done") o["execution"] = "active";
+          if (o["businessDocs"] === "done") {
+            o["execution"] = "active";
+            o["preparation"] = "active";
+          }
+
         }
 
       }
@@ -751,7 +755,11 @@ function LiveDealEngine() {
         o["wad"] = dealTx.wad_completed_at ? "done" : "open";
         if (dealTx.wad_completed_at) {
           o["businessDocs"] = dealTx.step === "business-docs" ? "active" : "done";
-          if (o["businessDocs"] === "done") o["execution"] = "active";
+          if (o["businessDocs"] === "done") {
+            o["execution"] = "active";
+            o["preparation"] = "active";
+          }
+
         }
 
       }
