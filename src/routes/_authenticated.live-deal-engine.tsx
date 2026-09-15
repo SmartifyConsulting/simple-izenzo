@@ -2100,8 +2100,48 @@ function LiveDealEngine() {
               )}
 
 
-              {savedAttachments.length > 0 && (
-                <ul className="mt-2 space-y-1 border-t border-border pt-2">
+              {/* The file list moved out of here into its own Documents frame below. */}
+
+              {/* Explicit go: collapses this frame and hands the workspace over to the search. */}
+              {workspaceDocs.length > 0 &&
+                !searchGoByTx.has(dealTx.id) &&
+                interestCount === 0 &&
+                flowStep !== "searching" && (
+                  <Button
+                    className="mt-2 w-full bg-emerald-500 text-black hover:bg-emerald-400"
+                    disabled={rereading || workspaceDocsPending || !(documentSummary || readError)}
+                    onClick={() => goToSearch(dealTx.id)}
+                  >
+                    {rereading || !(documentSummary || readError) ? "Reading documents…" : "Submit"}
+                  </Button>
+                )}
+                </>
+
+              )}
+            </div>
+          )}
+
+          {/* Documents: everything on file for this bid — the attachments and the certificates the
+              deal produces as it goes. Folded by default and never opened on its own, so a freshly
+              filed certificate does not pop the frame open. */}
+          {dealTx && savedAttachments.length > 0 && (
+            <div className="glass-node mt-1.5 rounded-2xl">
+              <button
+                type="button"
+                onClick={() => setDocumentsOpen((v) => !v)}
+                aria-expanded={documentsOpen}
+                className="flex w-full items-center justify-between gap-2 p-3 text-left"
+              >
+                <span className="label-caps flex items-center gap-1.5 rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+                  DOCUMENTS
+                  <span className="text-[10px] font-semibold">{savedAttachments.length}</span>
+                </span>
+                <ChevronDown
+                  className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", documentsOpen && "rotate-180")}
+                />
+              </button>
+              {documentsOpen && (
+                <ul className="space-y-1 px-3 pb-3">
                   {savedAttachments.map((a, i) => (
                     <li
                       key={i}
@@ -2142,25 +2182,9 @@ function LiveDealEngine() {
                   ))}
                 </ul>
               )}
-
-              {/* Explicit go: collapses this frame and hands the workspace over to the search. */}
-              {workspaceDocs.length > 0 &&
-                !searchGoByTx.has(dealTx.id) &&
-                interestCount === 0 &&
-                flowStep !== "searching" && (
-                  <Button
-                    className="mt-2 w-full bg-emerald-500 text-black hover:bg-emerald-400"
-                    disabled={rereading || workspaceDocsPending || !(documentSummary || readError)}
-                    onClick={() => goToSearch(dealTx.id)}
-                  >
-                    {rereading || !(documentSummary || readError) ? "Reading documents…" : "Submit"}
-                  </Button>
-                )}
-                </>
-
-              )}
             </div>
           )}
+
 
           </div>
 
