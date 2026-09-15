@@ -469,8 +469,10 @@ export function MapView({
             should never read as "done" (ticked/green) just because the deal has moved past this
             point, since a counteroffer may never actually have happened. */}
         {node("counterOffer", "Counter Offer", "trading", "counterparties", RefreshCw, {
-          state: "open",
+          // Pulses while a counter offer is out and unanswered; otherwise a plain side-loop tile.
+          state: overrideStates?.["counterOffer"] ?? "open",
         })}
+
         {node("socialMedia", "Online Screening", "trading", "online-media", Users, {
           overrideKey: "onlineMedia",
         })}
@@ -501,7 +503,7 @@ export function MapView({
           sub="Concept, Pre-feasibility, Feasibility, Bankability, Implementation"
           subSize="xs"
 
-          state={st("execution", "preparation")}
+          state={st("execution", "preparation", "execution")}
           lock={lock("execution", "preparation")}
           onClick={() => open("execution", "preparation")}
           plain
