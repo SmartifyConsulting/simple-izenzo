@@ -51,6 +51,31 @@ export async function loadResendCreds(): Promise<ResendCreds> {
   throw new Error("Email sending is not connected yet. Add Resend under Admin → Integrations.");
 }
 
+/** Wraps a transactional email's own body HTML in the shared Izenzo letterhead/footer so every
+ * notification the platform sends (counter offers, outreach, intent challenges, and any future
+ * one) reads as coming from Izenzo rather than a bare unbranded message. Recreated in inline-CSS
+ * HTML rather than a hosted logo image, since a remote image is blocked by default in most mail
+ * clients and would otherwise show as a broken box until the recipient chooses to load it. */
+export function renderBrandedEmail(bodyHtml: string): string {
+  return `
+<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;background:#f4f4f5;padding:24px 0;">
+  <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e5e7eb;">
+    <div style="background:#0d0f14;padding:20px 28px;">
+      <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+        <td style="background:#14b8a6;width:28px;height:28px;border-radius:7px;text-align:center;vertical-align:middle;font-weight:700;color:#0d0f14;font-size:14px;line-height:28px;">I</td>
+        <td style="padding-left:10px;vertical-align:middle;font-weight:700;font-size:17px;color:#ffffff;letter-spacing:0.01em;">Izenzo</td>
+      </tr></table>
+    </div>
+    <div style="padding:28px;color:#1f2937;font-size:14px;line-height:1.6;">
+      ${bodyHtml}
+    </div>
+    <div style="padding:16px 28px;background:#f9fafb;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:11px;">
+      Izenzo — governance-first trade infrastructure. This is an automated message; do not reply directly to this address.
+    </div>
+  </div>
+</div>`.trim();
+}
+
 export async function sendEmail(
   creds: ResendCreds,
   opts: { to: string; subject: string; html: string },

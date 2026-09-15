@@ -93,16 +93,17 @@ export const sendCounterOffer = createServerFn({ method: "POST" })
     const to = (cp as { contact_email?: string | null }).contact_email ?? null;
     if (to) {
       try {
-        const { loadResendCreds, sendEmail } = await import("@/lib/resend.server");
+        const { loadResendCreds, sendEmail, renderBrandedEmail } = await import("@/lib/resend.server");
         const creds = await loadResendCreds();
         if (creds?.enabled) {
           await sendEmail(creds, {
             to,
             subject: `Counter offer — ${label}`,
-            html:
+            html: renderBrandedEmail(
               `<p>A counter offer has been proposed on <strong>${label}</strong>.</p>` +
               `<p style="white-space:pre-wrap">${data.terms.replace(/</g, "&lt;")}</p>` +
               `<p>Sign in to Izenzo to reply.</p>`,
+            ),
           });
           emailed = true;
         } else {

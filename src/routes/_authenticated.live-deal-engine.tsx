@@ -1796,6 +1796,11 @@ function LiveDealEngine() {
                       )}
                     </p>
                   )}
+                  {(org?.country || dealTx.jurisdiction) && (
+                    <p className="text-xs text-muted-foreground">
+                      {org?.country ?? dealTx.jurisdiction}
+                    </p>
+                  )}
                 </div>
                 <div className="min-w-0 space-y-1 text-right">
                   {(dealTx.commodity || dealTx.title) && !GENERIC_TITLES.has(dealTx.title) && (
@@ -1813,11 +1818,6 @@ function LiveDealEngine() {
                   <p className="text-xs text-muted-foreground">
                     Registered {new Date(activity.time ?? dealTx.created_at).toLocaleString()}
                   </p>
-                  {(org?.country || dealTx.jurisdiction) && (
-                    <p className="text-xs text-muted-foreground">
-                      {org?.country ?? dealTx.jurisdiction}
-                    </p>
-                  )}
                 </div>
               </div>
             </div>

@@ -44,8 +44,9 @@ function nodeState(stage: StageKey, step: string, tx: Transaction | null): NodeS
 // Workspace: everything is placed on this canvas and scaled to the container with percentages, so
 // tiles and their connecting lines always stay aligned however wide that column is.
 const W = 960;
-// Grown 20 units (Step 2-4 shifted down the same amount) to make room for the arrow into Step 2.
-const H = 940;
+// Trimmed (was 940) now that Step 2's frame is shorter and Step 3/4 sit higher, so the map fits
+// its panel without needing to scroll.
+const H = 875;
 const px = (v: number) => `${(v / W) * 100}%`;
 const py = (v: number) => `${(v / H) * 100}%`;
 
@@ -69,8 +70,9 @@ const BOXES = {
   // Search Results now sits in line between Search and Choice, all on the same row.
   steps: { x: 406.7, y: 148, w: 140, h: 64 },
   // Offer/Choice/Counter Offer/Online Media Screening move further right to leave room for the
-  // Search Results card between Search and Choice.
-  offer: { x: 570, y: 58, w: 160, h: 56 },
+  // Search Results card between Search and Choice. Moved down so its arrow into Choice is the
+  // same 20-unit span as Choice into Online Screening.
+  offer: { x: 570, y: 76, w: 160, h: 56 },
   choice: { x: 570, y: 152, w: 160, h: 56 },
   // Counter Offer sits at the very right edge of the Trading frame, level with Choice and Search.
   counterOffer: { x: 750, y: 148, w: 150, h: 64 },
@@ -88,17 +90,21 @@ const BOXES = {
   // fit on the canvas. Step 2 through 4 and Entry/Exit all shifted down 20 units together
   // (relative positions between them unchanged) to open up room below Step 1 for the arrow
   // pointing into Step 2.
-  poi: { x: 60, y: 462, w: 280, h: 48 },
+  // Lifted a further 15 units (with the frame around them and everything below shortened/shifted
+  // to match) now that their own arrows no longer need the extra room.
+  poi: { x: 60, y: 447, w: 280, h: 48 },
   // The KYC/KYB/PEP/AML checks now run before Without a Doubt, so they sit above it.
-  wad: { x: 60, y: 530, w: 280, h: 54 },
-  withoutADoubt: { x: 60, y: 604, w: 280, h: 54 },
-  businessDocs: { x: 60, y: 678, w: 280, h: 54 },
+  wad: { x: 60, y: 515, w: 280, h: 54 },
+  withoutADoubt: { x: 60, y: 589, w: 280, h: 54 },
+  businessDocs: { x: 60, y: 663, w: 280, h: 54 },
   // Step 3 (Execution, with Entry/Exit beside it) and Step 4 (Finality) sit well clear of Step 2,
   // all 40% flatter than before — and wider, so their detail lines still fit.
-  execution: { x: 45, y: 841, w: 310, h: 58 },
+  // Step 3/4 row lifted 57 units total — Step 2's frame is shorter now that its arrows are all a
+  // uniform 20 units, so the gap it used to need below Business Docs is gone.
+  execution: { x: 45, y: 784, w: 310, h: 58 },
   // Width trimmed 20% (was 140) and re-centred on the same midpoint.
-  entryExit: { x: 424, y: 851, w: 112, h: 37 },
-  finality: { x: 605, y: 841, w: 310, h: 58 },
+  entryExit: { x: 424, y: 794, w: 112, h: 37 },
+  finality: { x: 605, y: 784, w: 310, h: 58 },
 
 } as const satisfies Record<string, Box>;
 
@@ -109,13 +115,16 @@ const BOXES = {
 const TRADE_ENGINE_FRAME: Box = { x: 14, y: 24, w: 932, h: 343 };
 // Taller again now its four checks are spread further apart. Shifted down 20 units (with
 // everything below it) to open up room below Step 1 for the arrow pointing into Step 2.
-const COMPLIANCE_FRAME: Box = { x: 30, y: 422, w: 340, h: 376 };
+// Shortened (was 376) now that Step 2's checks all sit on uniform 20-unit arrows and no longer
+// need the taller spread — trimmed to just clear Business Docs with a little breathing room.
+const COMPLIANCE_FRAME: Box = { x: 30, y: 422, w: 340, h: 319 };
 // Execution and Entry/Exit+Finality get the same bordered, labelled group frame as Steps 1 and
-// 2, with the gap above trimmed slightly so the row fits on the canvas.
-const EXECUTION_FRAME: Box = { x: 30, y: 833, w: 340, h: 73 };
-const FINALITY_FRAME: Box = { x: 590, y: 833, w: 340, h: 73 };
+// 2. Lifted 57 units total to sit just below Step 2's now-shorter frame instead of leaving a gap
+// where Step 2's old height used to reach.
+const EXECUTION_FRAME: Box = { x: 30, y: 776, w: 340, h: 73 };
+const FINALITY_FRAME: Box = { x: 590, y: 776, w: 340, h: 73 };
 // Width trimmed 20% (was 180), centred in the same gap between Step 3 and 4.
-const ENTRY_EXIT_FRAME: Box = { x: 408, y: 833, w: 144, h: 73 };
+const ENTRY_EXIT_FRAME: Box = { x: 408, y: 776, w: 144, h: 73 };
 // Kept beside Step 2 (not stacked under it) and re-centred on GRC's now-taller frame.
 const MEMORY = { cx: 570, cy: 610, r: 110 };
 
@@ -433,7 +442,7 @@ export function MapView({
 
         <Frame box={TRADE_ENGINE_FRAME} label="Step 1 · Trading" />
         <Frame box={COMPLIANCE_FRAME} label="Step 2 · GRC" />
-        <Frame box={EXECUTION_FRAME} label="Step 3 · Execution" />
+        <Frame box={EXECUTION_FRAME} label="Step 3 · Project Preparation and Execution" />
         <Frame box={ENTRY_EXIT_FRAME} />
         <Frame box={FINALITY_FRAME} label="Step 4 · Finality" />
 

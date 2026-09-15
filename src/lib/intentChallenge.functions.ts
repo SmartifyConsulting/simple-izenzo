@@ -139,15 +139,16 @@ export const postIntentMessage = createServerFn({ method: "POST" })
         });
         if (r.email) {
           try {
-            const { loadResendCreds, sendEmail } = await import("@/lib/resend.server");
+            const { loadResendCreds, sendEmail, renderBrandedEmail } = await import("@/lib/resend.server");
             const creds = await loadResendCreds();
             await sendEmail(creds, {
               to: r.email,
               subject: `New message on ${dealName}`,
-              html:
+              html: renderBrandedEmail(
                 `<p><strong>${senderName}</strong> wrote on the Confirm Intent thread for ${dealName}:</p>` +
                 `<blockquote>${data.body}</blockquote>` +
                 `<p><a href="https://izenzo.co.za/live-deal-engine?tx=${data.transactionId}">Open the deal</a></p>`,
+              ),
             });
           } catch {
             // Resend isn't configured yet, or the send failed — the in-app notification already
