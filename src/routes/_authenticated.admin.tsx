@@ -62,7 +62,7 @@ const ADMIN_TABS: AdminTab[] = [
   { value: "payments", label: "Payments", Component: PaymentsTab, Icon: CreditCard },
   { value: "integrations", label: "Integrations", Component: IntegrationsTab, Icon: Plug, superuserOnly: true },
   { value: "activity-log", label: "Activity Log", Component: AuditLogTab, Icon: History, superuserOnly: true },
-  { value: "tokens", label: "Tokens", Component: TokensTab, Icon: Coins, hidden: true },
+  { value: "tokens", label: "Tokens", Component: TokensTab, Icon: Coins },
 ];
 
 function AdminPage() {

@@ -224,13 +224,14 @@ function ArrowLayer() {
 }
 
 /**
- * "Step 5 · Memory" as a straight black pill inside the Memory circle, near its top — not on the
- * curve, so its text is a plain, always-horizontal heading like every other step label.
+ * "Step 5 · Memory" as a straight pill inside the Memory circle, near its top — not on the curve,
+ * so its text is a plain, always-horizontal heading like every other step label, in the same
+ * light-grey/black-text style as the Step 1/2 frame pills.
  */
 function MemoryArcLabel() {
   return (
     <div
-      className="pointer-events-none absolute z-10 flex -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-full bg-black px-2.5 py-0.5 text-center font-sans text-[11px] font-semibold uppercase leading-none tracking-[0.09em] text-white"
+      className="pointer-events-none absolute z-10 flex -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-full bg-[var(--step-pill-bg)] px-2.5 py-0.5 text-center font-sans text-[11px] font-semibold uppercase leading-none tracking-[0.09em] text-[var(--step-pill-fg)]"
       style={{ left: px(MEMORY.cx), top: py(MEMORY.cy - MEMORY.r * 0.42) }}
       aria-hidden
     >
@@ -442,7 +443,7 @@ export function MapView({
 
         <Frame box={TRADE_ENGINE_FRAME} label="Step 1 · Trading" />
         <Frame box={COMPLIANCE_FRAME} label="Step 2 · GRC" />
-        <Frame box={EXECUTION_FRAME} label="Step 3 · Project Preparation and Execution" />
+        <Frame box={EXECUTION_FRAME} label="Step 3 · Execution" />
         <Frame box={ENTRY_EXIT_FRAME} />
         <Frame box={FINALITY_FRAME} label="Step 4 · Finality" />
 
@@ -513,11 +514,11 @@ export function MapView({
           overrideKey: "businessDocs",
         })}
 
-        {/* Step 3 — execution. The word "Execution" is the frame's heading, so the tile carries only
-            its detail line. */}
+        {/* Step 3 — execution. The frame heading stays "Step 3 · Execution"; this tile spells out
+            what that covers. */}
         <MapNode
           box={BOXES.execution}
-          label=""
+          label="Project Preparation and Execution"
           sub="Concept, Pre-feasibility, Feasibility, Bankability, Implementation"
           subSize="xs"
 
