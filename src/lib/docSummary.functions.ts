@@ -113,6 +113,10 @@ async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
           parts.push({ type: "text", text: `--- ${kind}: ${name} ---\n${text}` });
         } else if (PPTX_EXT.test(name)) {
           const text = await pptxText(bytes);
+          if (!text.trim()) {
+            unreadable.push(`${name} (no readable text on the slides)`);
+            continue;
+          }
           parts.push({ type: "text", text: `--- ${kind}: ${name} ---\n${text}` });
         } else if (TEXT_EXT.test(name)) {
           const text = new TextDecoder().decode(bytes).slice(0, 200_000);
@@ -271,31 +275,28 @@ async function docxText(bytes: Uint8Array): Promise<string> {
   return xmlToText(strFromU8(doc)).slice(0, 200_000);
 }
 
-/** Pulls the visible text off every slide of a .pptx, in slide order — title, body and any other
- * placeholder/shape text runs, which is where a slide deck's actual content lives. */
+/** Pulls the visible text out of a .pptx — every slide's text boxes, slide by slide. */
 async function pptxText(bytes: Uint8Array): Promise<string> {
   const { unzipSync, strFromU8 } = await import("fflate");
   const files = unzipSync(bytes);
   const slidePaths = Object.keys(files)
     .filter((p) => /^ppt\/slides\/slide\d+\.xml$/.test(p))
     .sort((a, b) => {
-      const na = Number(/slide(\d+)\.xml$/.exec(a)?.[1] ?? 0);
-      const nb = Number(/slide(\d+)\.xml$/.exec(b)?.[1] ?? 0);
-      return na - nb;
+      const n = (s: string) => Number(s.match(/slide(\d+)\.xml$/)?.[1] ?? 0);
+      return n(a) - n(b);
     });
   const out: string[] = [];
   for (const path of slidePaths) {
-    const xml = strFromU8(files[path]!);
-    // Text runs live in <a:t>...</a:t>; a paragraph break is <a:p>, not a Word-style </w:p>.
-    const runs = [...xml.matchAll(/<a:t>([\s\S]*?)<\/a:t>/g)].map((m) => decodeXmlEntities(m[1] ?? ""));
-    const slideText = runs.join(" ").replace(/\s+/g, " ").trim();
-    if (slideText) out.push(`Slide ${out.length + 1}: ${slideText}`);
+    const raw = files[path];
+    if (!raw) continue;
+    const xml = strFromU8(raw);
+    const text = [...xml.matchAll(/<a:t>([\s\S]*?)<\/a:t>/g)]
+      .map((m) => xmlToText(m[1] ?? "").trim())
+      .filter(Boolean)
+      .join("\n");
+    if (text) out.push(`[Slide ${out.length + 1}]\n${text}`);
   }
-  return out.join("\n").slice(0, 200_000);
-}
-
-function decodeXmlEntities(s: string) {
-  return s.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&").replace(/&apos;/g, "'").replace(/&quot;/g, '"');
+  return out.join("\n\n").slice(0, 200_000);
 }
 
 /** Pulls the cell values out of a .xlsx — shared strings plus any inline/number cells. */
