@@ -2334,14 +2334,10 @@ function LiveDealEngine() {
                     workspace now — no duplicate frames down here. */}
 
 
-                {/* Once a party is chosen the gate panel takes over the workspace — leaving the
-                    match list open below it is what made the screen look stuck. */}
-                {(flowStep === "searching" || flowStep === "results") &&
-                  dealTx &&
-                  (choicePending ||
-                    !stagePanel ||
-                    (stagePanel === "intent" && dealTx.intent_confirmed_at)) &&
-                  !dealTx.wad_completed_at && (
+                {/* The search record stays on the page for the rest of the deal — folded once the
+                    flow has moved on, but never removed. Which step the workspace happens to be
+                    asking about no longer decides whether it exists. */}
+                {dealTx && (flowStep === "searching" || flowStep === "results" || interestCount > 0) && (
                   <div className="rounded-2xl border border-border bg-card">
                     <button
                       type="button"
@@ -2349,9 +2345,18 @@ function LiveDealEngine() {
                       className="flex w-full items-center justify-between gap-2 px-3.5 py-2 text-left"
                       aria-expanded={searchResultsOpen}
                     >
-                      <span className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
-                        {dbHasChosenParty ? "Chosen Counterparty" : "Search Results"}
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className="label-caps shrink-0 rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+                          {dbHasChosenParty ? "Chosen Counterparty" : "Search Results"}
+                        </span>
+                        {/* Who was chosen, readable without opening the frame. */}
+                        {dbHasChosenParty && chosenPartyName && (
+                          <span className="min-w-0 truncate text-xs font-semibold text-foreground">
+                            {chosenPartyName}
+                          </span>
+                        )}
                       </span>
+
 
                       <ChevronDown
                         className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", searchResultsOpen && "rotate-180")}
