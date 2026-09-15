@@ -87,6 +87,14 @@ function Credits() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
+  const startPurchase = useServerFn(startTokenPurchase);
+  const purchaseStatus = useServerFn(getTokenPurchaseStatus);
+  const payfastCheck = useServerFn(payfastAvailable);
+  const { data: payments } = useQuery({
+    queryKey: ["payfast-available"],
+    queryFn: () => payfastCheck({}),
+  });
+
   const [amount, setAmount] = useState(1);
   const [orgFilter, setOrgFilter] = useState("all");
   const isAdmin = roles.includes("admin");
