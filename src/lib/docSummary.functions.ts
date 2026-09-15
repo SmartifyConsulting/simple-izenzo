@@ -53,6 +53,7 @@ async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
     const PDF_EXT = /\.pdf$/i;
     const DOCX_EXT = /\.docx$/i;
     const XLSX_EXT = /\.xlsx$/i;
+    const PPTX_EXT = /\.pptx$/i;
     const TEXT_EXT = /\.(txt|md|csv|tsv|json|rtf|log)$/i;
 
     type Part =
