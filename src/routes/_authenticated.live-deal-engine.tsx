@@ -2435,6 +2435,35 @@ function LiveDealEngine() {
                   </div>
                 )}
 
+                {/* AI+ is advisory, never the decision-maker: after the person makes the Choice it
+                    offers proposals, each with a numeric probability, and the person accepts or
+                    rejects them before Intent is available. */}
+                {dealTx && dbHasChosenParty && !dealTx.poi_sealed_at && (
+                  <DecisionPackPanel
+                    transactionId={dealTx.id}
+                    stageContext="choice_made"
+                    gating={!dealTx.intent_confirmed_at}
+                    onAllDecided={setChoicePackDecided}
+                  />
+                )}
+
+                {/* The last advisory word before the Proof of Intent becomes immutable. */}
+                {dealTx?.intent_confirmed_at && !dealTx.poi_sealed_at && (
+                  <DecisionPackPanel
+                    transactionId={dealTx.id}
+                    stageContext="intent_confirmed"
+                    gating
+                    onAllDecided={setIntentPackDecided}
+                  />
+                )}
+
+                {/* Advisory only — AI+ cannot approve, reject, alter or bypass the WaD gate. */}
+                {dealTx?.wad_completed_at && (
+                  <DecisionPackPanel transactionId={dealTx.id} stageContext="wad_updated" />
+                )}
+
+
+
                 {/* Once Intent is confirmed its frame is no longer the thing needing attention —
                     fold it into a small accordion under the screening results instead of leaving
                     it open at full size. */}
