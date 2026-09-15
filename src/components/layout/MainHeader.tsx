@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Logo } from "@/components/Logo";
+import { BugReportMenu } from "@/components/BugReportMenu";
 
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
 import { ThemeToggle } from "@/components/guided/ThemeToggle";
@@ -97,7 +98,7 @@ export function MainHeader() {
         <div className="ml-auto flex shrink-0 items-center gap-3">
           {user ? (
             <>
-              
+              <BugReportMenu />
               <Link
                 to="/inbox"
                 title="Inbox"
