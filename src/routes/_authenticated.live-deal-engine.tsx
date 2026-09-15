@@ -2325,18 +2325,8 @@ function LiveDealEngine() {
                           <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform", mediaResultsOpen && "rotate-180")} />
                         </span>
                       </button>
-                      {/* The prompt reads as plain subtext; a real button only appears once a
-                          party has actually been picked. */}
-                      {!dbHasChosenParty && (mediaPick || finalizing) && (
-                        <Button
-                          size="sm"
-                          className="shrink-0"
-                          disabled={finalizing}
-                          onClick={() => mediaPick && finalizeChoice(mediaPick)}
-                        >
-                          {finalizing ? "Recording your choice…" : "Continue"}
-                        </Button>
-                      )}
+                      {/* The choice action lives at the bottom of the records below. */}
+
                     </div>
                     {!dbHasChosenParty && !mediaPick && !finalizing && (
                       <p className="mt-1.5 text-[11px] text-muted-foreground">
