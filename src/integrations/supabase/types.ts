@@ -40,33 +40,63 @@ export type Database = {
           adopted_at: string | null
           adopted_by: string | null
           created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision: Database["public"]["Enums"]["ai_proposal_decision"] | null
+          decision_pack_id: string | null
           id: string
           kind: string
           model: string | null
           output: string | null
+          probability: number | null
           prompt: string | null
+          proposal_type: Database["public"]["Enums"]["ai_proposal_type"] | null
+          rationale: string | null
+          source_references: Json
+          stage_context: string | null
+          superseded_by: string | null
           transaction_id: string
         }
         Insert: {
           adopted_at?: string | null
           adopted_by?: string | null
           created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision?: Database["public"]["Enums"]["ai_proposal_decision"] | null
+          decision_pack_id?: string | null
           id?: string
           kind?: string
           model?: string | null
           output?: string | null
+          probability?: number | null
           prompt?: string | null
+          proposal_type?: Database["public"]["Enums"]["ai_proposal_type"] | null
+          rationale?: string | null
+          source_references?: Json
+          stage_context?: string | null
+          superseded_by?: string | null
           transaction_id: string
         }
         Update: {
           adopted_at?: string | null
           adopted_by?: string | null
           created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision?: Database["public"]["Enums"]["ai_proposal_decision"] | null
+          decision_pack_id?: string | null
           id?: string
           kind?: string
           model?: string | null
           output?: string | null
+          probability?: number | null
           prompt?: string | null
+          proposal_type?: Database["public"]["Enums"]["ai_proposal_type"] | null
+          rationale?: string | null
+          source_references?: Json
+          stage_context?: string | null
+          superseded_by?: string | null
           transaction_id?: string
         }
         Relationships: [
@@ -3531,6 +3561,15 @@ export type Database = {
       }
     }
     Enums: {
+      ai_proposal_decision: "accepted" | "rejected"
+      ai_proposal_type:
+        | "counterparty"
+        | "pricing"
+        | "risk"
+        | "structure"
+        | "timing"
+        | "substitution"
+        | "bundle"
       ai_suggestion_confidence: "low" | "medium" | "high"
       ai_suggestion_rejection_reason:
         | "duplicate"
@@ -3778,6 +3817,16 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      ai_proposal_decision: ["accepted", "rejected"],
+      ai_proposal_type: [
+        "counterparty",
+        "pricing",
+        "risk",
+        "structure",
+        "timing",
+        "substitution",
+        "bundle",
+      ],
       ai_suggestion_confidence: ["low", "medium", "high"],
       ai_suggestion_rejection_reason: [
         "duplicate",
