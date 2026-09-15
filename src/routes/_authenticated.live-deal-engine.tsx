@@ -1806,7 +1806,7 @@ function LiveDealEngine() {
                       {/* box-decoration-break: clone gives each wrapped line its own pill instead
                           of one pill stretching across every line the name wraps onto. */}
                       <span
-                        className="inline whitespace-normal break-words rounded-full bg-emerald-600 px-2.5 py-0.5 text-sm font-semibold leading-[1.9] text-white"
+                        className="inline whitespace-normal break-words rounded-full bg-emerald-600 px-2.5 py-0.5 text-xs font-semibold leading-[1.9] text-white"
                         style={{ WebkitBoxDecorationBreak: "clone", boxDecorationBreak: "clone" }}
                       >
                         {dealTx.commodity || dealTx.title}

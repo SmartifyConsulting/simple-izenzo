@@ -136,7 +136,7 @@ function Panel({
         {/* Same heading treatment as the Bid Registration frame: small caps, muted. */}
         {/* font-sans is explicit: headings otherwise inherit the display face, which made this
             read in a different font from the LIVE WORKSPACE / BID INFORMATION labels. */}
-        <h2 className={cn("label-caps font-sans", light ? "text-slate-900" : "text-muted-foreground")}>
+        <h2 className={cn("label-caps font-sans font-bold", light ? "text-slate-900" : "text-muted-foreground")}>
           {title}
         </h2>
         {description && (
@@ -1531,7 +1531,6 @@ function PoiStep({ tx, reload }: Props) {
   return (
     <Panel
       title="Seal the Proof of Intent"
-      description={`This is a hard gate. It costs ${POI_COST} token (USD 10) and cannot be undone.`}
       footer={
         <div className="flex items-center justify-between gap-3">
           <TokenGateFooter cost={POI_COST} />
@@ -1800,7 +1799,6 @@ function WadStep({ tx, reload }: Props) {
   return (
     <Panel
       title="Without a Doubt"
-      description={`Costs ${WAD_COST} tokens (USD 30) on decision.`}
       footer={
         <div className="flex flex-wrap items-center justify-between gap-3">
           <TokenGateFooter cost={WAD_COST} />
