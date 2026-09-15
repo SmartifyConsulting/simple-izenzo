@@ -812,6 +812,66 @@ export type Database = {
           },
         ]
       }
+      counter_offers: {
+        Row: {
+          counterparty_id: string
+          created_at: string
+          created_by: string | null
+          currency: string | null
+          direction: string
+          id: string
+          price: number | null
+          quantity: number | null
+          status: string
+          terms: string
+          transaction_id: string
+          unit: string | null
+        }
+        Insert: {
+          counterparty_id: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          direction?: string
+          id?: string
+          price?: number | null
+          quantity?: number | null
+          status?: string
+          terms: string
+          transaction_id: string
+          unit?: string | null
+        }
+        Update: {
+          counterparty_id?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          direction?: string
+          id?: string
+          price?: number | null
+          quantity?: number | null
+          status?: string
+          terms?: string
+          transaction_id?: string
+          unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "counter_offers_counterparty_id_fkey"
+            columns: ["counterparty_id"]
+            isOneToOne: false
+            referencedRelation: "counterparties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "counter_offers_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       counterparties: {
         Row: {
           chosen_at: string | null
@@ -2734,6 +2794,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "support_tickets_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      token_purchases: {
+        Row: {
+          amount_usd: number
+          amount_zar: number
+          created_at: string
+          created_by: string | null
+          credited_at: string | null
+          id: string
+          m_payment_id: string
+          org_id: string
+          pf_payment_id: string | null
+          status: string
+          tokens: number
+        }
+        Insert: {
+          amount_usd: number
+          amount_zar: number
+          created_at?: string
+          created_by?: string | null
+          credited_at?: string | null
+          id?: string
+          m_payment_id: string
+          org_id: string
+          pf_payment_id?: string | null
+          status?: string
+          tokens: number
+        }
+        Update: {
+          amount_usd?: number
+          amount_zar?: number
+          created_at?: string
+          created_by?: string | null
+          credited_at?: string | null
+          id?: string
+          m_payment_id?: string
+          org_id?: string
+          pf_payment_id?: string | null
+          status?: string
+          tokens?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "token_purchases_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organisations"
