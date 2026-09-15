@@ -297,7 +297,7 @@ export function WorkspaceTaskbar() {
               disabled={cancelling}
               onClick={() => void cancelAndClose()}
             >
-              {cancelling ? "Cancelling…" : "Cancel"}
+              {cancelling ? "Cancelling…" : "Cancel Bid"}
             </Button>
             <AlertDialogAction
               onClick={() => {
