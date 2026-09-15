@@ -92,9 +92,6 @@ function CertificateBlock({
       </span>
       <div className="relative flex items-center justify-between gap-3 border-b border-border pb-3">
         <Logo />
-        <span className="label-caps text-muted-foreground transition-opacity duration-[1400ms]">
-          {draft ? "Draft — not yet confirmed" : "Certified record"}
-        </span>
       </div>
       <p className="mt-4 text-center font-sans text-sm font-bold uppercase tracking-[0.14em] text-foreground">
         {heading}
@@ -122,6 +119,7 @@ function Panel({
   children,
   footer,
   tone = "default",
+  pill = false,
 }: {
   title: string;
   description?: string;
@@ -130,6 +128,9 @@ function Panel({
   /** "light" forces a white card with black text — used for Confirm Intent, which reads like a
    * document that's about to be signed rather than another in-app step panel. */
   tone?: "default" | "light";
+  /** Renders the title as the same grey/white rounded pill used for Live Workspace frame
+   * headings, instead of the plain small-caps label — used for Confirm Intent. */
+  pill?: boolean;
 }) {
   const light = tone === "light";
   return (
@@ -141,9 +142,15 @@ function Panel({
         {/* Same heading treatment as the Bid Registration frame: small caps, muted. */}
         {/* font-sans is explicit: headings otherwise inherit the display face, which made this
             read in a different font from the LIVE WORKSPACE / BID INFORMATION labels. */}
-        <h2 className={cn("label-caps font-sans font-bold", light ? "text-slate-900" : "text-muted-foreground")}>
-          {title}
-        </h2>
+        {pill ? (
+          <h2 className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 font-sans text-[var(--lw-pill-fg)]">
+            {title}
+          </h2>
+        ) : (
+          <h2 className={cn("label-caps font-sans font-bold", light ? "text-slate-900" : "text-muted-foreground")}>
+            {title}
+          </h2>
+        )}
         {description && (
           <p className={cn("mt-1 text-xs", light ? "text-slate-500" : "text-muted-foreground")}>{description}</p>
         )}
@@ -1387,8 +1394,9 @@ function IntentStep({ tx, reload }: Props) {
 
   return (
     <Panel
-      title="Confirm intent"
+      title="Confirm Intent"
       description="Read the terms as they stand. Confirming does not seal them — that is the next step."
+      pill
       footer={
         <div className="flex items-center justify-between">
           <label className="flex items-center gap-2 text-sm text-foreground">
@@ -1398,7 +1406,7 @@ function IntentStep({ tx, reload }: Props) {
           <div className="flex items-center gap-2">
             <IntentChallengeButton tx={tx} />
             <Button size="sm" onClick={confirm} disabled={!agreed || busy || Boolean(tx.intent_confirmed_at)}>
-              {tx.intent_confirmed_at ? "Intent confirmed" : "Confirm intent"}
+              {tx.intent_confirmed_at ? "Intent confirmed" : "Confirm Intent"}
             </Button>
           </div>
         </div>
@@ -1543,7 +1551,7 @@ function PoiStep({ tx, reload }: Props) {
 
   return (
     <Panel
-      title="Seal the Proof of Intent"
+      title="Proof of Intent"
       footer={
         <div className="flex items-center justify-between gap-3">
           <TokenGateFooter cost={POI_COST} />

@@ -432,10 +432,9 @@ export function MapView({
         <Frame box={ENTRY_EXIT_FRAME} />
         <Frame box={FINALITY_FRAME} label="Step 4 · Finality" />
 
-        {/* Mirrors Search's own state (same overrideKey) — once the pulse has moved on to Choice,
-            the search is done, so its results read as green/ticked here too, not a plain
-            placeholder forever. */}
-        {node("steps", "Search Results", "trading", "search", ListChecks, { overrideKey: "search" })}
+        {/* Its own state, separate from Search: it pulses only once actual results are back, not
+            while the search is merely in progress and there's nothing to show yet. */}
+        {node("steps", "Search Results", "trading", "search", ListChecks, { overrideKey: "searchResults" })}
 
         {/* Step 1 — trading. Bid and Load Deal Documents drive the workspace beside the map. */}
         {node("bid", "Bid", "trading", "bid-offer", Gavel, {
@@ -482,7 +481,7 @@ export function MapView({
         })}
 
         {/* Step 2 — compliance & governance */}
-        {node("expressIntent", "Express Intent", "trading", "intent", ShieldCheck, {
+        {node("expressIntent", "Confirm Intent", "trading", "intent", ShieldCheck, {
           overrideKey: "intent",
         })}
         {node("poi", "Proof of Intent", "trading", "poi", Building2, { overrideKey: "poi" })}

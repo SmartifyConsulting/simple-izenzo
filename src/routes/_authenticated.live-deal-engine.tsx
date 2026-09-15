@@ -337,6 +337,13 @@ function LiveDealEngine() {
     setStagePanel(null);
     setMapPanel(null);
     setIntentDismissed(false);
+    // documentSummary/readError left over from the previous bid made the polling query above
+    // disable itself (`enabled: !documentSummary`) before the new bid's own documents had been
+    // read, which let the auto-search effect see a truthy (but stale) summary and kick off the
+    // AI/AI+ search immediately — the search progress bar appearing before this bid's documents
+    // had actually been summarised.
+    setDocumentSummary(null);
+    setReadError(null);
   }, [dealTx?.id]);
   // Only re-derived when switching to a different deal — not on every step change within the
   // same one. Re-running this on every step change re-queried "chosen" the moment the step moved
@@ -470,6 +477,9 @@ function LiveDealEngine() {
   const mediaResultsOpen = dealTx ? Boolean(mediaResultsOpenByTx[dealTx.id]) : false;
   // The trade record, once everything has cleared — folded away by default.
   const [tradeSummaryOpen, setTradeSummaryOpen] = useState(false);
+  // Once Intent is confirmed, its frame folds into a small accordion nested under Online Media
+  // Screening Results rather than staying open as its own full-size panel.
+  const [confirmedIntentOpen, setConfirmedIntentOpen] = useState(false);
 
   // Once the ask has been made for a bid, the description/drop frame never comes back — not while
   // the files are still saving, not on a refresh, not on a tab switch. Remembered per bid.
@@ -716,11 +726,15 @@ function LiveDealEngine() {
     // starts pulsing alongside the operation that is genuinely running.
     if (flowStep === "searching") {
       o["search"] = "active";
+      // The Search Results tile pulses once actual results are back, not while the search is
+      // merely in progress and there's nothing to show yet.
+      o["searchResults"] = "open";
       o["onlineMedia"] = "open";
       o["choice"] = "open";
       return o;
     }
     o["search"] = "done";
+    o["searchResults"] = "active";
 
     // Trust a persisted, unambiguous fact over this session's own local flow flags — hasChosen,
     // mediaResults and intentDismissed are plain React state that start back at their initial
@@ -730,6 +744,7 @@ function LiveDealEngine() {
     // then cleared in the new session.
     if (dealTx.intent_confirmed_at) {
       o["choice"] = "done";
+      o["searchResults"] = "done";
       o["onlineMedia"] = "done";
       o["intent"] = "done";
       o["poi"] = dealTx.poi_sealed_at ? "done" : "active";
@@ -760,6 +775,7 @@ function LiveDealEngine() {
       return o;
     }
     o["choice"] = "done";
+    o["searchResults"] = "done";
 
     // Online media screening runs only once the choice has been made and continued, and leads
     // straight into Express Intent once it's back — there's no separate background-screening gate
@@ -1855,10 +1871,8 @@ function LiveDealEngine() {
                   aria-expanded={bidInfoOpen}
                   className="label-caps flex items-center gap-1.5 rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)] transition-colors hover:brightness-110"
                 >
-                  <span aria-hidden className="w-2.5 text-center font-mono">
-                    {bidInfoOpen ? "−" : "+"}
-                  </span>
                   BID INFORMATION
+                  <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform", bidInfoOpen && "rotate-180")} />
                 </button>
                 {/* The ID check status already shows once, next to the submitter's name on the
                     Bid Registration card above — showing it again here (from the same
@@ -2002,14 +2016,12 @@ function LiveDealEngine() {
                 aria-expanded={mediaResultsOpen}
                 className="label-caps flex w-full items-center justify-between gap-1.5 rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]"
               >
-                <span className="flex items-center gap-1.5">
-                  <span aria-hidden className="w-2.5 text-center font-mono">
-                    {mediaResultsOpen ? "−" : "+"}
+                <span>ONLINE MEDIA SCREENING RESULTS</span>
+                <span className="flex shrink-0 items-center gap-1.5">
+                  <span className="text-[10px] font-semibold">
+                    {mediaResults.length} counterpart{mediaResults.length === 1 ? "y" : "ies"}
                   </span>
-                  ONLINE MEDIA SCREENING RESULTS
-                </span>
-                <span className="shrink-0 text-[10px] font-semibold">
-                  {mediaResults.length} counterpart{mediaResults.length === 1 ? "y" : "ies"}
+                  <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform", mediaResultsOpen && "rotate-180")} />
                 </span>
               </button>
               {mediaResultsOpen && (
@@ -2204,7 +2216,7 @@ function LiveDealEngine() {
                     match list open below it is what made the screen look stuck. */}
                 {(flowStep === "searching" || flowStep === "results") &&
                   dealTx &&
-                  !stagePanel &&
+                  (!stagePanel || (stagePanel === "intent" && dealTx.intent_confirmed_at)) &&
                   !dealTx.wad_completed_at && (
                   <div className="space-y-2">
                     {searchError && (
@@ -2227,19 +2239,51 @@ function LiveDealEngine() {
                   </div>
                 )}
 
-                {dealTx && stagePanel && (
-                  <InlineFrame
-                    tx={dealTx}
-                    stage={stagePanel === "wad" ? "compliance" : stagePanel === "business-docs" ? "execution" : "trading"}
-                    step={stagePanel}
-                    reload={() => void reloadDeal()}
-                    onClose={() => {
-                      setStagePanel(null);
-                      if (stagePanel === "intent" && !dealTx.intent_confirmed_at) setIntentDismissed(true);
-                    }}
-                    onChangeParty={() => void reopenChoice()}
-
-                  />
+                {/* Once Intent is confirmed its frame is no longer the thing needing attention —
+                    fold it into a small accordion under the screening results instead of leaving
+                    it open at full size. */}
+                {dealTx && stagePanel === "intent" && dealTx.intent_confirmed_at ? (
+                  <div className="rounded-2xl border border-border bg-card">
+                    <button
+                      type="button"
+                      onClick={() => setConfirmedIntentOpen((v) => !v)}
+                      className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
+                      aria-expanded={confirmedIntentOpen}
+                    >
+                      <span className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+                        Confirmed Intent
+                      </span>
+                      <ChevronDown
+                        className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", confirmedIntentOpen && "rotate-180")}
+                      />
+                    </button>
+                    {confirmedIntentOpen && (
+                      <div className="px-4 pb-4">
+                        <InlineFrame
+                          tx={dealTx}
+                          stage="trading"
+                          step="intent"
+                          reload={() => void reloadDeal()}
+                          onClose={() => setStagePanel(null)}
+                          onChangeParty={() => void reopenChoice()}
+                        />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  dealTx && stagePanel && (
+                    <InlineFrame
+                      tx={dealTx}
+                      stage={stagePanel === "wad" ? "compliance" : stagePanel === "business-docs" ? "execution" : "trading"}
+                      step={stagePanel}
+                      reload={() => void reloadDeal()}
+                      onClose={() => {
+                        setStagePanel(null);
+                        if (stagePanel === "intent" && !dealTx.intent_confirmed_at) setIntentDismissed(true);
+                      }}
+                      onChangeParty={() => void reopenChoice()}
+                    />
+                  )
                 )}
 
                 {/* Only once Step 2's own documents (Business Docs) are in — not the moment the

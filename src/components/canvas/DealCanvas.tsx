@@ -803,7 +803,11 @@ export function InlineFrame({
           <p className="label-caps inline-block truncate rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 font-sans text-[var(--lw-pill-fg)]">
             {def?.label ?? step}
           </p>
-          {def?.blurb && <p className="mt-1 text-[13px] text-muted-foreground">{def.blurb}</p>}
+          {/* Intent and Proof of Intent show their own heading + description inside the panel
+              below, so the outer blurb here would just repeat it. */}
+          {def?.blurb && step !== "intent" && step !== "poi" && (
+            <p className="mt-1 text-[13px] text-muted-foreground">{def.blurb}</p>
+          )}
           {viewOnly && (
             <p className="mt-1 text-[13px] font-medium text-muted-foreground">
               Read-only — this step is already complete.
