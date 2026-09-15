@@ -2462,7 +2462,39 @@ function LiveDealEngine() {
                       </div>
                     )}
                   </div>
+                ) : dealTx && stagePanel === "poi" && dealTx.poi_sealed_at ? (
+                  /* Sealed Proof of Intent reads the same way: a folded record whose certificate
+                     is there when it's wanted. */
+                  <div className="rounded-2xl border border-border bg-card">
+                    <button
+                      type="button"
+                      onClick={() => setSealedPoiOpen((v) => !v)}
+                      className="flex w-full items-center justify-between gap-2 px-3.5 py-2 text-left"
+                      aria-expanded={sealedPoiOpen}
+                    >
+                      <span className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+                        Proof of Intent
+                      </span>
+                      <ChevronDown
+                        className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", sealedPoiOpen && "rotate-180")}
+                      />
+                    </button>
+                    {sealedPoiOpen && (
+                      <div className="px-3.5 pb-3">
+                        <InlineFrame
+                          bare
+                          tx={dealTx}
+                          stage="trading"
+                          step="poi"
+                          reload={() => void reloadDeal()}
+                          onClose={() => setStagePanel(null)}
+                          onChangeParty={() => void reopenChoice()}
+                        />
+                      </div>
+                    )}
+                  </div>
                 ) : (
+
                   dealTx && stagePanel && (
                     <InlineFrame
                       tx={dealTx}
