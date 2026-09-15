@@ -2320,14 +2320,14 @@ function LiveDealEngine() {
                       <RadioGroup
                         value={mediaPick ?? ""}
                         onValueChange={setMediaPick}
-                        disabled={hasChosen}
+                        disabled={dbHasChosenParty}
                         asChild
                       >
                       <ul className="mt-2 space-y-2">
                         {mediaResults.map((m) => (
                           <li key={m.counterpartyId} className="rounded-lg border border-border p-2.5">
                             <div className="flex items-start gap-2">
-                              {!hasChosen && (
+                              {!dbHasChosenParty && (
                                 <RadioGroupItem
                                   id={`media-elect-${m.counterpartyId}`}
                                   value={m.counterpartyId}
@@ -2336,7 +2336,7 @@ function LiveDealEngine() {
                               )}
                               <label
                                 htmlFor={`media-elect-${m.counterpartyId}`}
-                                className={cn("min-w-0 flex-1 text-xs font-semibold text-foreground", !hasChosen && "cursor-pointer")}
+                                className={cn("min-w-0 flex-1 text-xs font-semibold text-foreground", !dbHasChosenParty && "cursor-pointer")}
                               >
                                 {m.name}
                               </label>
@@ -2373,7 +2373,7 @@ function LiveDealEngine() {
                       </ul>
                       </RadioGroup>
                     )}
-                    {mediaResultsOpen && !hasChosen && (
+                    {mediaResultsOpen && !dbHasChosenParty && (
                       <div className="mt-3 flex justify-end">
                         <Button
                           size="sm"
@@ -2384,6 +2384,21 @@ function LiveDealEngine() {
                         </Button>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* Screening came back with nothing at all — say so, rather than leaving an empty
+                    space where the choice controls would be. The search results above keep their
+                    own selection controls in that case. */}
+                {dealTx && mediaResults && mediaResults.length === 0 && (
+                  <div className="rounded-2xl border border-border bg-card p-3">
+                    <p className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+                      ONLINE MEDIA SCREENING RESULTS
+                    </p>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Screening returned no records — pick a counterparty from the search results above to
+                      continue.
+                    </p>
                   </div>
                 )}
 
