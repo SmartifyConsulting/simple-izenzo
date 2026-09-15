@@ -380,6 +380,9 @@ export function MapView({
   overrideStates?: Record<string, NodeState> | undefined;
 }) {
   const [panel, setPanel] = useState<{ stage: StageKey; step: string; viewOnly: boolean } | null>(null);
+  // Step 1's frame folds itself away once the pulse moves on; this reopens it by hand.
+  const [step1Open, setStep1Open] = useState(false);
+
 
   // A "done" tile is a past stage — clicking it does nothing for now. A real read-only view of
   // completed steps is planned for a later phase; showing the live editable upload/search/results
