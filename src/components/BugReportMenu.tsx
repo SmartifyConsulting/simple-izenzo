@@ -3,14 +3,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bug,
   CheckCircle2,
+  ImageIcon,
   Loader2,
   Mic,
   RotateCcw,
   Search,
   Send,
-  Sparkles,
   Square,
-  Wrench,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -39,12 +38,13 @@ type BugReport = {
   description: string | null;
   created_via: string;
   status: string;
+  image_path: string | null;
 };
 
-const TYPE_META: Record<ReportType, { icon: typeof Bug; border: string; label: string }> = {
+const TYPE_META: Record<ReportType, { icon: typeof Bug | null; border: string; label: string }> = {
   bug: { icon: Bug, border: "border-l-destructive", label: "Bug" },
-  fix: { icon: Wrench, border: "border-l-primary", label: "Fix" },
-  nice_to_have: { icon: Sparkles, border: "border-l-muted-foreground", label: "Nice to have" },
+  fix: { icon: null, border: "border-l-primary", label: "Fix" },
+  nice_to_have: { icon: null, border: "border-l-muted-foreground", label: "Nice to have" },
 };
 
 /** Bug / fix / nice-to-have reporting, opened from the bug icon beside the inbox icon. */
@@ -73,7 +73,9 @@ export function BugReportMenu() {
       if (statusFilter !== "all") query = query.eq("status", statusFilter);
       const { data, error } = await query.order("created_at", { ascending: false }).limit(200);
       if (error) throw error;
-      return (data ?? []) as BugReport[];
+      // image_path isn't in the generated Supabase types yet (migration 0012 adds the column) —
+      // cast through unknown until types are regenerated after that migration runs.
+      return (data ?? []) as unknown as BugReport[];
     },
   });
 
@@ -113,6 +115,33 @@ export function BugReportMenu() {
     },
     onError: () => toast.error("Failed to update"),
   });
+
+  // A screenshot dropped straight onto a record — attached to that report, not a separate upload
+  // flow. One image per report: dropping a new one replaces whatever was there.
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const attachImage = useMutation({
+    mutationFn: async ({ id, file }: { id: string; file: File }) => {
+      const path = `${id}/${Date.now()}-${file.name}`;
+      const { error: upErr } = await supabase.storage.from("bug-report-images").upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      // Cast through unknown for the same reason as the read above — image_path predates the
+      // regenerated types.
+      const { error } = await supabase
+        .from("bug_reports")
+        .update({ image_path: path } as unknown as never)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Screenshot attached");
+      void queryClient.invalidateQueries({ queryKey: ["bug-reports"] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Could not attach the screenshot"),
+  });
+
+  function imageUrl(path: string) {
+    return supabase.storage.from("bug-report-images").getPublicUrl(path).data.publicUrl;
+  }
 
   async function startRecording() {
     try {
@@ -210,7 +239,7 @@ export function BugReportMenu() {
                     : "bg-muted text-muted-foreground hover:bg-muted/80"
                 }`}
               >
-                <Icon className="h-3.5 w-3.5" />
+                {Icon && <Icon className="h-3.5 w-3.5" />}
                 {TYPE_META[t].label}
               </button>
             );
@@ -325,14 +354,33 @@ export function BugReportMenu() {
             {filtered.map((r) => {
               const meta = TYPE_META[r.type as ReportType] ?? TYPE_META.bug;
               const Icon = meta.icon;
+              const dragOver = dragOverId === r.id;
               return (
                 <div
                   key={r.id}
-                  className={`space-y-1 rounded-lg border border-l-4 border-border p-2.5 ${meta.border}`}
+                  onDragOver={(e) => {
+                    if (!e.dataTransfer.types.includes("Files")) return;
+                    e.preventDefault();
+                    setDragOverId(r.id);
+                  }}
+                  onDragLeave={() => setDragOverId((id) => (id === r.id ? null : id))}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOverId(null);
+                    const file = Array.from(e.dataTransfer.files).find((f) => f.type.startsWith("image/"));
+                    if (!file) {
+                      toast.error("Drop an image file to attach it.");
+                      return;
+                    }
+                    attachImage.mutate({ id: r.id, file });
+                  }}
+                  className={`space-y-1 rounded-lg border border-l-4 border-border p-2.5 transition-colors ${meta.border} ${
+                    dragOver ? "border-primary bg-primary/5" : ""
+                  }`}
                 >
                   <div className="flex items-start justify-between gap-1.5">
                     <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                      <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      {Icon && <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />}
                       <span className="break-words text-sm font-medium">{r.title}</span>
                       {r.created_via === "voice" && (
                         <Mic className="h-3 w-3 text-muted-foreground" />
@@ -363,6 +411,20 @@ export function BugReportMenu() {
                     {r.display_name ?? "Unknown"} · {new Date(r.created_at).toLocaleDateString()}
                     {isAdmin && r.status === "done" && " · done"}
                   </div>
+                  {r.image_path ? (
+                    <a href={imageUrl(r.image_path)} target="_blank" rel="noreferrer">
+                      <img
+                        src={imageUrl(r.image_path)}
+                        alt="Attached screenshot"
+                        className="mt-1 max-h-32 rounded-md border border-border object-cover"
+                      />
+                    </a>
+                  ) : (
+                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground/70">
+                      <ImageIcon className="h-3 w-3" />
+                      Drop a screenshot here to attach it
+                    </div>
+                  )}
                 </div>
               );
             })}
