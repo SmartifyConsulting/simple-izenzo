@@ -121,7 +121,7 @@ function Panel({
   tone = "default",
   pill = false,
 }: {
-  title: string;
+  title?: string;
   description?: string;
   children: ReactNode;
   footer?: ReactNode;
