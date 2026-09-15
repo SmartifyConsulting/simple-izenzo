@@ -764,8 +764,13 @@ function LiveDealEngine() {
 
       }
     }
+    // A counter offer that has gone out and not been answered is what everything now waits on, so
+    // the pulse sits on Counter Offer until a reply is recorded.
+    if (openCounterOffer) o["counterOffer"] = "active";
     return o;
   }, [
+    openCounterOffer,
+
     dealTx,
     flowStep,
     mediaRunning,
