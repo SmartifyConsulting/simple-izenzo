@@ -1752,7 +1752,7 @@ function LiveDealEngine() {
               surface — the heading row, the Bid Registration frame, and the Bid Information
               frame together — so nothing scrolling underneath (e.g. counterparty results) can
               appear through it or in the gap above it. */}
-          <div className="sticky -top-3 z-20 -mx-3 -mt-3 mb-3 bg-card px-3 pb-3 pt-3 sm:-top-5 sm:-mx-5 sm:-mt-5 sm:px-5 sm:pt-5">
+          <div className="sticky -top-3 z-20 -mx-3 -mt-3 mb-1.5 bg-card px-3 pb-3 pt-3 sm:-top-5 sm:-mx-5 sm:-mt-5 sm:px-5 sm:pt-5">
           <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
             <p className="label-caps text-muted-foreground">Live Workspace</p>
             {dealTx && (
