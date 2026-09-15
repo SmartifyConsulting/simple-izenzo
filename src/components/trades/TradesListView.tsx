@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { fallbackReference, type Transaction } from "@/lib/tx";
+import { SPINE, type StageKey } from "@/lib/spine";
 import { cn } from "@/lib/utils";
 
 type Direction = "bid" | "offer";
@@ -128,6 +129,10 @@ function toCsv(rows: TxRow[]) {
 
 type ScopeFilter = "all" | "mine";
 const SCOPE_FILTERS: ScopeFilter[] = ["all", "mine"];
+const STAGE_LABEL: Record<StageKey, string> = Object.fromEntries(
+  SPINE.map((s) => [s.key, s.label.replace(/ Gate$/, "")]),
+) as Record<StageKey, string>;
+const STAGE_FILTERS: StageKey[] = SPINE.map((s) => s.key);
 
 /** The "nav menu view" of a deal list — search/filter/list-or-card, identical between /trades and
  * the Dashboard's canvas/list toggle so both surfaces behave the same way. */
@@ -145,6 +150,17 @@ export function TradesListView() {
       else next.add(s);
       // Never let every pill switch off — fall back to "all" rather than showing nothing.
       return next.size === 0 ? new Set(["all"]) : next;
+    });
+  }
+  // Empty set = no stage constraint (show every stage) — same "neutral means unconstrained" idea
+  // as scope above, so stage filtering is additive on top of All/My Trades rather than exclusive.
+  const [stages, setStages] = useState<Set<StageKey>>(new Set());
+  function toggleStage(s: StageKey) {
+    setStages((prev) => {
+      const next = new Set(prev);
+      if (next.has(s)) next.delete(s);
+      else next.add(s);
+      return next;
     });
   }
   const [view, setView] = useState<"list" | "card">("list");
@@ -188,6 +204,7 @@ export function TradesListView() {
     // "My Trades" — the ones this org itself registered (as opposed to every deal it can see
     // because it was picked as somebody else's counterparty).
     if (scope.has("mine")) rows = rows.filter((t) => t.org_id === org?.id);
+    if (stages.size > 0) rows = rows.filter((t) => stages.has(t.stage));
     if (query.trim()) {
       const q = query.trim().toLowerCase();
       rows = rows.filter(
@@ -199,7 +216,7 @@ export function TradesListView() {
       );
     }
     return rows;
-  }, [txs, scope, query, org?.id]);
+  }, [txs, scope, stages, query, org?.id]);
 
   function exportCsv() {
     const blob = new Blob([toCsv(filtered)], { type: "text/csv;charset=utf-8" });
@@ -237,6 +254,24 @@ export function TradesListView() {
                 )}
               >
                 {s === "all" ? "All" : "My Trades"}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {STAGE_FILTERS.map((s) => (
+              <button
+                key={s}
+                type="button"
+                aria-pressed={stages.has(s)}
+                onClick={() => toggleStage(s)}
+                className={cn(
+                  "label-caps rounded-full border px-3 py-1 text-[11px] transition-colors",
+                  stages.has(s)
+                    ? "border-transparent bg-foreground text-background"
+                    : "border-border bg-transparent text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {STAGE_LABEL[s]}
               </button>
             ))}
           </div>

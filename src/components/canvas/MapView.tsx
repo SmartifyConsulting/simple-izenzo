@@ -485,8 +485,10 @@ export function MapView({
             should never read as "done" (ticked/green) just because the deal has moved past this
             point, since a counteroffer may never actually have happened. */}
         {node("counterOffer", "Counter Offer", "trading", "counterparties", RefreshCw, {
-          // Pulses while a counter offer is out and unanswered; otherwise a plain side-loop tile.
-          state: overrideStates?.["counterOffer"] ?? "open",
+          // Pulses while a counter offer is out and unanswered; otherwise a plain side-loop tile —
+          // but it still reads as locked like its neighbours until there's actually a deal to
+          // counter on, instead of always showing the brighter "open" colour regardless of state.
+          state: overrideStates?.["counterOffer"] ?? (lock("trading", "counterparties") ? "locked" : "open"),
         })}
 
         {node("socialMedia", "Online Screening", "trading", "online-media", Users, {
