@@ -1257,6 +1257,12 @@ export function CounterpartyRecord({
   // on whoever is chosen. The moment media results are back (and nothing is still running) is
   // the moment the user can pick which party they actually want to trade with.
   const screeningDone = !mediaRunning && mediaResults !== null && mediaResults.length > 0;
+  // The selection circles live on the screening records, so that list has to be open the moment
+  // screening finishes — otherwise there is nothing to pick with.
+  useEffect(() => {
+    if (screeningDone) setMediaExpanded(true);
+  }, [screeningDone]);
+
 
   return (
     <div
