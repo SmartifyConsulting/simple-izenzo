@@ -51,7 +51,9 @@ accordion.
     (`intent_confirmed_at`, `poi_sealed_at`) rather than from `stagePanel`, so they persist;
     keep the active-gate `InlineFrame` branch for the step still needing action.
   - Move the `savedAttachments` list into a new collapsed Documents accordion rendered after
-    the Bid Information frame, with certificate rows appended.
+    the Bid Information frame, with certificate rows appended; its open state defaults to closed
+    and is never forced open when a certificate is filed.
+
 - `src/components/steps/StepScreen.tsx`: in the POI step, drop the inner heading when rendered
   `bare` and emit the sealing sentence as subtext under the pill.
 - No schema, gating or governance changes: the AI+ advisory decision flow, WaD gate and seal
