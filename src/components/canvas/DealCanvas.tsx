@@ -1589,7 +1589,19 @@ export function CounterpartyRecord({
           )}
         </DialogContent>
       </Dialog>
+
+      {txId && counterOfferFor && (
+        <CounterOfferDialog
+          open
+          onOpenChange={(o) => !o && setCounterOfferFor(null)}
+          txId={txId}
+          counterpartyId={counterOfferFor.id}
+          counterpartyName={counterOfferFor.name}
+          {...(onContinue ? { onProceed: () => onContinue([counterOfferFor.id]) } : {})}
+        />
+      )}
     </div>
+
   );
 }
 
