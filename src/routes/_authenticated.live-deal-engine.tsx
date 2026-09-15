@@ -10,6 +10,7 @@ import {
   Download,
 
   Eye,
+  Lock,
   Maximize2,
   Minimize2,
   Minus,
@@ -1890,12 +1891,14 @@ function LiveDealEngine() {
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <AlertDialogTrigger asChild>
-                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                        <Ban className="mr-2 h-3.5 w-3.5" />
-                        Cancel bid/offer
-                      </DropdownMenuItem>
-                    </AlertDialogTrigger>
+                    {!dealTx.poi_sealed_at && (
+                      <AlertDialogTrigger asChild>
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                          <Ban className="mr-2 h-3.5 w-3.5" />
+                          Cancel bid/offer
+                        </DropdownMenuItem>
+                      </AlertDialogTrigger>
+                    )}
                     <DropdownMenuItem onSelect={() => void cancelOrArchiveDeal("archived")}>
                       <Archive className="mr-2 h-3.5 w-3.5" />
                       Archive
@@ -1920,6 +1923,16 @@ function LiveDealEngine() {
               </AlertDialog>
             )}
           </div>
+
+          {/* Once Proof of Intent is sealed, the record up to that point is immutable at the
+              database level (see protect_sealed_transaction) — this banner says so in the UI
+              instead of letting someone try to edit something that will just be rejected. */}
+          {dealTx?.poi_sealed_at && (
+            <div className="mb-1.5 flex items-center gap-1.5 rounded-full border border-success/30 bg-success/10 px-3 py-1.5 text-[11px] font-medium text-success">
+              <Lock className="h-3 w-3 shrink-0" />
+              Proof of Intent sealed — everything above is now read-only.
+            </div>
+          )}
 
           {/* Bid Registration — the very top of the workspace, pinned above everything else that
               scrolls beneath it. The BID/OFF id sits on the same line as the heading (not its own
