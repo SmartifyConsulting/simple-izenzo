@@ -206,6 +206,9 @@ export const runDecisionPack = createServerFn({ method: "POST" })
       `Counterparties: ${JSON.stringify(parties ?? [])}`,
       `Bids/offers: ${JSON.stringify(bids ?? [])}`,
       `Documents on file: ${JSON.stringify(docs ?? [])}`,
+      `What the documents say (read by Izenzo): ${tx.document_summary ?? "not read yet"}`,
+      `Decisions this person has already made on earlier AI+ advice for this bid: ${JSON.stringify(priorDecisions ?? [])}`,
+      "Take the document contents and those earlier decisions as settled context: do not repeat advice that was already rejected, and build on what was accepted.",
     ].join("\n");
 
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
