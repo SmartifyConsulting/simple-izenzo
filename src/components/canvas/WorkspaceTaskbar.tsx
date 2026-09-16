@@ -162,12 +162,14 @@ export function WorkspaceTaskbar() {
         .from("transactions")
         .select("id, reference, title, commodity, status, created_at")
         .eq("org_id", org!.id)
-        .order("created_at", { ascending: true })
-        .limit(50);
+        // Newest first for the limit, then flipped so the taskbar reads oldest-left/newest-right.
+        .order("created_at", { ascending: false })
+        .limit(10);
       if (error) throw error;
       return (data ?? [])
         .map((t) => t as { id: string; reference: string | null; title: string | null; commodity: string | null; status: string | null })
         .filter((t) => (t.status ?? "") !== "cancelled")
+        .reverse()
         .map((t) => ({
           id: t.id,
           label: t.reference ?? fallbackReference(t.id, "bid"),
