@@ -139,19 +139,9 @@ const STAGE_FILTERS: StageKey[] = SPINE.map((s) => s.key);
 export function TradesListView() {
   const { org } = useAuth();
   const [query, setQuery] = useState("");
-  // Multiple filter pills can be active at once — "mine" narrows the rows, "all" is the neutral
-  // default that adds no constraint, so toggling both on is the same as "mine" alone but both
-  // stay visibly selected.
-  const [scope, setScope] = useState<Set<ScopeFilter>>(new Set(["all"]));
-  function toggleScope(s: ScopeFilter) {
-    setScope((prev) => {
-      const next = new Set(prev);
-      if (next.has(s)) next.delete(s);
-      else next.add(s);
-      // Never let every pill switch off — fall back to "all" rather than showing nothing.
-      return next.size === 0 ? new Set(["all"]) : next;
-    });
-  }
+  // "All" and "My Trades" are mutually exclusive — one is always selected, never both and never
+  // neither, so this reads as a single choice rather than two independent toggles.
+  const [scope, setScope] = useState<ScopeFilter>("all");
   // Empty set = no stage constraint (show every stage) — same "neutral means unconstrained" idea
   // as scope above, so stage filtering is additive on top of All/My Trades rather than exclusive.
   const [stages, setStages] = useState<Set<StageKey>>(new Set());
@@ -203,7 +193,7 @@ export function TradesListView() {
     let rows = txs;
     // "My Trades" — the ones this org itself registered (as opposed to every deal it can see
     // because it was picked as somebody else's counterparty).
-    if (scope.has("mine")) rows = rows.filter((t) => t.org_id === org?.id);
+    if (scope === "mine") rows = rows.filter((t) => t.org_id === org?.id);
     if (stages.size > 0) rows = rows.filter((t) => stages.has(t.stage));
     if (query.trim()) {
       const q = query.trim().toLowerCase();
@@ -244,11 +234,11 @@ export function TradesListView() {
               <button
                 key={s}
                 type="button"
-                aria-pressed={scope.has(s)}
-                onClick={() => toggleScope(s)}
+                aria-pressed={scope === s}
+                onClick={() => setScope(s)}
                 className={cn(
                   "label-caps rounded-full border px-3 py-1 text-[11px] transition-colors",
-                  scope.has(s)
+                  scope === s
                     ? "border-transparent bg-foreground text-background"
                     : "border-border bg-transparent text-muted-foreground hover:text-foreground",
                 )}

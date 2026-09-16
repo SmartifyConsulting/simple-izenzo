@@ -46,8 +46,9 @@ function nodeState(stage: StageKey, step: string, tx: Transaction | null): NodeS
 // tiles and their connecting lines always stay aligned however wide that column is.
 const W = 960;
 // Grown (was 816) to fit Step 3 and Step 4's individual sub-step tiles, matching the vertical
-// stepper's own item list instead of collapsing each step into a single combined tile.
-const H = 1010;
+// stepper's own item list instead of collapsing each step into a single combined tile — and
+// again to make room for Step 5's bigger circle without crowding the row above it.
+const H = 1050;
 const px = (v: number) => `${(v / W) * 100}%`;
 const py = (v: number) => `${(v / H) * 100}%`;
 
@@ -81,26 +82,28 @@ const BOXES = {
   // Express Intent lives inside Step 1's own frame, directly under Online Screening.
   expressIntent: { x: 510, y: 282, w: 280, h: 48 },
   // Step 2 (GRC)'s remaining checks — every connecting arrow between them is the same 20-unit span
-  // as Online Screening → Express Intent above. Vertical gaps tightened so the whole diagram fits
-  // its panel without scrolling.
-  poi: { x: 60, y: 405, w: 280, h: 48 },
+  // as Online Screening → Express Intent above, including Without a Doubt into Business Docs
+  // (previously a much longer drop than every other gap in this column).
+  poi: { x: 60, y: 430, w: 280, h: 48 },
   // KYC/KYB/PEP/AML no longer gets its own tile (still runs, just not shown separately), so
   // Without a Doubt sits directly under Proof of Intent now.
-  withoutADoubt: { x: 60, y: 473, w: 280, h: 54 },
-  businessDocs: { x: 60, y: 621, w: 280, h: 54 },
+  withoutADoubt: { x: 60, y: 498, w: 280, h: 54 },
+  businessDocs: { x: 60, y: 572, w: 280, h: 54 },
   // Step 3 (Execution, with Entry/Exit beside it) and Step 4 (Finality) each get their own column,
   // one tile per row matching the vertical stepper's own item list instead of a single combined
   // tile — same row heights and gaps down both columns so they read as a matched pair.
-  concept: { x: 45, y: 725, w: 310, h: 36 },
-  prefeasibility: { x: 45, y: 775, w: 310, h: 36 },
-  feasibility: { x: 45, y: 825, w: 310, h: 36 },
-  bankability: { x: 45, y: 875, w: 310, h: 36 },
-  implementation: { x: 45, y: 925, w: 310, h: 36 },
-  // Vertically centred in the same tall row as the Execution/Finality columns beside it.
-  entryExit: { x: 424, y: 832, w: 112, h: 37 },
-  payment: { x: 605, y: 725, w: 310, h: 36 },
-  signoff: { x: 605, y: 825, w: 310, h: 36 },
-  handover: { x: 605, y: 925, w: 310, h: 36 },
+  concept: { x: 45, y: 765, w: 310, h: 36 },
+  prefeasibility: { x: 45, y: 815, w: 310, h: 36 },
+  feasibility: { x: 45, y: 865, w: 310, h: 36 },
+  bankability: { x: 45, y: 915, w: 310, h: 36 },
+  implementation: { x: 45, y: 965, w: 310, h: 36 },
+  // Vertically centred in its own, shorter frame — no longer stretched to match the tall
+  // Execution/Finality columns beside it, just tall enough for the tile itself, the same height
+  // as Search Results' own tile.
+  entryExit: { x: 424, y: 872, w: 112, h: 37 },
+  payment: { x: 605, y: 765, w: 310, h: 36 },
+  signoff: { x: 605, y: 865, w: 310, h: 36 },
+  handover: { x: 605, y: 965, w: 310, h: 36 },
 
 } as const satisfies Record<string, Box>;
 
@@ -108,16 +111,22 @@ const BOXES = {
 // Results card, the counterparty tiles (Offer, Choice, Counter Offer, Online Screening) and
 // Express Intent — trimmed to its actual content height.
 const TRADE_ENGINE_FRAME: Box = { x: 14, y: 18, w: 932, h: 330 };
-// Step 2's frame follows a clean, even gap below Step 1, with room for the connecting arrow.
-const COMPLIANCE_FRAME: Box = { x: 30, y: 380, w: 340, h: 313 };
+// Step 2's frame follows a clean, even gap below Step 1, with room for the connecting arrow — and
+// sits a little lower than it used to, so that arrow has a visible run of its own into the frame's
+// border instead of the two nearly touching.
+const COMPLIANCE_FRAME: Box = { x: 30, y: 405, w: 340, h: 239 };
 // Execution and Entry/Exit+Finality get the same bordered, labelled group frame as Steps 1 and 2.
 // Tall enough to hold Execution's five sub-step tiles (and Finality's three) stacked one per row.
-const EXECUTION_FRAME: Box = { x: 30, y: 715, w: 340, h: 270 };
-const FINALITY_FRAME: Box = { x: 590, y: 715, w: 340, h: 270 };
-// Width trimmed 20% (was 180), centred in the same gap between Step 3 and 4.
-const ENTRY_EXIT_FRAME: Box = { x: 408, y: 715, w: 144, h: 270 };
-// Kept beside Step 2 (not stacked under it) and re-centred between Step 2 and Step 4.
-const MEMORY = { cx: 570, cy: 588, r: 105 };
+// Sits a little lower than Step 2's own bottom edge to leave room for Step 5's bigger circle
+// beside it.
+const EXECUTION_FRAME: Box = { x: 30, y: 755, w: 340, h: 270 };
+const FINALITY_FRAME: Box = { x: 590, y: 755, w: 340, h: 270 };
+// Shorter now — just tall enough for its own tile, the same height as Search Results, rather than
+// stretched to match the Execution/Finality columns either side of it — centred in that same row.
+const ENTRY_EXIT_FRAME: Box = { x: 408, y: 858, w: 144, h: 64 };
+// Kept beside Step 2 (not stacked under it). 65% bigger than it was — this is where AI+ actually
+// draws from and keeps learning, so it earns the biggest shape on the map.
+const MEMORY = { cx: 570, cy: 555, r: 173 };
 
 
 
@@ -136,10 +145,7 @@ type Point = { x: number; y: number };
 const line = (a: Point, b: Point) => `M ${a.x} ${a.y} L ${b.x} ${b.y}`;
 /** An orthogonal run through the given turning points — every leg horizontal or vertical. */
 const path = (...pts: Point[]) => pts.map((p, i) => `${i ? "L" : "M"} ${p.x} ${p.y}`).join(" ");
-/** A connector that reads both ways — an arrowhead at each end instead of just the destination —
- * for the Offer/Choice loop, where the counterparty can go back the other way just as easily. */
-type Arrow = string | { d: string; bidirectional: true };
-const twoWay = (a: Point, b: Point): Arrow => ({ d: line(a, b), bidirectional: true });
+type Arrow = string;
 
 // Step 1's own internal connectors, plus the one leaving it for Step 2 — all hidden together when
 // the Trading frame is folded away.
@@ -151,10 +157,12 @@ const TRADING_ARROWS: Arrow[] = [
   // Search Results now sits in line between Search and Choice, all on Search's row.
   line(rightOf(BOXES.search), leftOf(BOXES.steps)),
   line(rightOf(BOXES.steps), leftOf(BOXES.choice)),
-  // Counterparty loop: Offer into Choice (two-way — a fresh choice can send the counterparty back
-  // to another Offer just as easily as it can come from one), then Choice out to Counter Offer and
-  // back, then Social Media.
-  twoWay(bottomOf(BOXES.offer), topOf(BOXES.choice)),
+  // Counterparty loop: Offer into Choice and back — two separate one-directional arrows side by
+  // side, the same treatment as the Choice/Counter Offer loop just below, rather than one line
+  // with an arrowhead at each end.
+  path({ x: cx(BOXES.offer) - 11, y: BOXES.offer.y + BOXES.offer.h }, { x: cx(BOXES.offer) - 11, y: BOXES.choice.y }),
+  path({ x: cx(BOXES.offer) + 11, y: BOXES.choice.y }, { x: cx(BOXES.offer) + 11, y: BOXES.offer.y + BOXES.offer.h }),
+  // Choice out to Counter Offer and back, then Social Media.
   path({ x: BOXES.choice.x + BOXES.choice.w, y: cy(BOXES.choice) - 11 }, { x: BOXES.counterOffer.x, y: cy(BOXES.choice) - 11 }),
   path({ x: BOXES.counterOffer.x, y: cy(BOXES.choice) + 11 }, { x: BOXES.choice.x + BOXES.choice.w, y: cy(BOXES.choice) + 11 }),
   path(topOf(BOXES.counterOffer), { x: cx(BOXES.counterOffer), y: cy(BOXES.offer) }, rightOf(BOXES.offer)),
@@ -223,26 +231,18 @@ function ArrowLayer() {
         <marker id="map-arrowhead" markerWidth="7" markerHeight="7" refX="6.5" refY="3.5" orient="auto">
           <path d="M0,0 L7,3.5 L0,7 Z" className="fill-muted-foreground" />
         </marker>
-        <marker id="map-arrowhead-start" markerWidth="7" markerHeight="7" refX="0.5" refY="3.5" orient="auto-start-reverse">
-          <path d="M0,0 L7,3.5 L0,7 Z" className="fill-muted-foreground" />
-        </marker>
       </defs>
-      {shown.map((arrow, i) => {
-        const bidirectional = typeof arrow !== "string" && arrow.bidirectional;
-        const d = typeof arrow === "string" ? arrow : arrow.d;
-        return (
-          <path
-            key={i}
-            d={d}
-            fill="none"
-            className="stroke-muted-foreground/60"
-            strokeWidth={1.25}
-            strokeLinejoin="round"
-            markerEnd="url(#map-arrowhead)"
-            {...(bidirectional ? { markerStart: "url(#map-arrowhead-start)" } : {})}
-          />
-        );
-      })}
+      {shown.map((d, i) => (
+        <path
+          key={i}
+          d={d}
+          fill="none"
+          className="stroke-muted-foreground/60"
+          strokeWidth={1.25}
+          strokeLinejoin="round"
+          markerEnd="url(#map-arrowhead)"
+        />
+      ))}
     </svg>
   );
 }
@@ -554,18 +554,18 @@ export function MapView({
         {/* Step 3 — execution. The frame heading stays "Step 3 · Execution"; each tile below it is
             one item from the vertical stepper's own Execution list, in the same order: Project
             Preparation's three sub-steps, then Bankability, then Implementation. */}
-        {node("concept", "Concept", "execution", "preparation", undefined, { plain: true })}
-        {node("prefeasibility", "Pre-feasibility", "execution", "preparation", undefined, { plain: true })}
-        {node("feasibility", "Feasibility", "execution", "preparation", undefined, { plain: true })}
-        {node("bankability", "Bankability", "execution", "bankability", undefined, { plain: true })}
-        {node("implementation", "Implementation", "execution", "implementation", undefined, { plain: true })}
+        {node("concept", "Concept", "execution", "preparation")}
+        {node("prefeasibility", "Pre-feasibility", "execution", "preparation")}
+        {node("feasibility", "Feasibility", "execution", "preparation")}
+        {node("bankability", "Bankability", "execution", "bankability")}
+        {node("implementation", "Implementation", "execution", "implementation")}
         {/* Entry/Exit sits between the Step 3 and Step 4 frames, on its own. */}
         {node("entryExit", "Entry / Exit", "execution", "stakeholders", LogIn, { plain: true })}
         {/* Step 4 — finality. "Finality" is the frame heading; each tile below it is one item from
             the vertical stepper's own Finality list, in the same order. */}
-        {node("payment", "Payment", "finality", "type", undefined, { plain: true })}
-        {node("signoff", "Signoff", "finality", "validation", undefined, { plain: true })}
-        {node("handover", "Handover", "finality", "record", undefined, { plain: true })}
+        {node("payment", "Payment", "finality", "type")}
+        {node("signoff", "Signoff", "finality", "validation")}
+        {node("handover", "Handover", "finality", "record")}
 
 
         {/* Step 5 — memory */}
@@ -584,12 +584,13 @@ export function MapView({
             aspectRatio: "1 / 1",
           }}
           className={cn(
-            // Border always reads like the other steps' group frames (a steady border-border)
-            // rather than dimming when locked — only the text/icon show that state.
-            "absolute rounded-full border border-border bg-card/40 px-5 text-center font-sans transition-colors",
-            memoryState === "open" && "text-foreground hover:border-primary/60",
-            memoryState === "done" && "border-success/70 text-success",
-            memoryState === "active" && "animate-throb-aqua border-primary text-primary",
+            // This is where AI+ actually draws from and keeps learning — a gold fill with a
+            // steady black outline sets it apart from every other tile on the map, rather than
+            // reading as just another step.
+            "absolute rounded-full border-2 border-black bg-amber-400/35 px-5 text-center font-sans transition-colors",
+            memoryState === "open" && "text-foreground hover:bg-amber-400/50",
+            memoryState === "done" && "text-success",
+            memoryState === "active" && "animate-throb-aqua text-primary",
             memoryState === "locked" && "cursor-not-allowed text-muted-foreground",
           )}
         >
