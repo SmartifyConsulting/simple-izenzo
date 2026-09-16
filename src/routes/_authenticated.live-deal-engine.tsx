@@ -2036,6 +2036,28 @@ function LiveDealEngine() {
                   </p>
                 </div>
               </div>
+
+              {/* The description + drop zone lives here, inside Bid Registration, and nowhere
+                  else — it used to appear as its own floating box in the workspace, which read
+                  like a stray panel reappearing mid-deal. The moment the first file lands the
+                  row disappears for good; later files are added from the Documents frame. */}
+              {!workspaceDocsPending && workspaceDocs.length === 0 && !submittedForThisBid && (
+                <div className="mt-2">
+                  <DocumentUploadStep
+                    // A stale resumed deal can mount this before the freshly-seeded one replaces
+                    // it — keying on the transaction keeps the seed-once effect on the right deal.
+                    key={dealTx.id}
+                    transactionId={dealTx.id}
+                    reference={(dealTx as unknown as { reference?: string | null }).reference ?? draftReference}
+                    onNext={() => goToSearch(dealTx.id)}
+                    onSubmitted={() => markSubmitted(dealTx.id)}
+                    onFirstClassified={({ directionGuess }) => void applyDirectionGuess(directionGuess)}
+                    initialPrompt={seedPrompt}
+                    initialFiles={seedFiles}
+                    hideActions
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -2207,39 +2229,6 @@ function LiveDealEngine() {
 
 
           </div>
-
-            {/* Only rendered when the upload control itself is — an always-present empty row here
-                added a gap between Bid Information and the frames below it. */}
-            {dealTx && !workspaceDocsPending && workspaceDocs.length === 0 && !submittedForThisBid ? (
-              <div className="mt-1 flex items-start justify-end gap-4">
-                <div className="w-1/2 max-w-[260px] shrink-0">
-                  {(
-                    <DocumentUploadStep
-                      // A stale resumed deal (from the "keep working on your last bid"
-                      // localStorage effect) can mount this before the freshly-seeded one
-                      // replaces it — without a key tied to the transaction, the seed-once
-                      // effect below would fire for the wrong deal and never run again once the
-                      // real one arrives, silently dropping any prompt/files carried from the
-                      // homepage.
-                      key={dealTx.id}
-                      transactionId={dealTx.id}
-                      reference={(dealTx as unknown as { reference?: string | null }).reference ?? draftReference}
-                      // Firing this is what actually hands the workspace over to the search —
-                      // Bid Information folds away right here, and the auto-search effect (gated
-                      // on searchGoByTx) picks up once the read this triggered has landed.
-                      onNext={() => goToSearch(dealTx.id)}
-                      onSubmitted={() => markSubmitted(dealTx.id)}
-                      onFirstClassified={({ directionGuess }) => void applyDirectionGuess(directionGuess)}
-                      initialPrompt={seedPrompt}
-                      initialFiles={seedFiles}
-                    />
-                  )}
-
-
-                </div>
-              </div>
-            ) : null}
-
 
           {/* No deal yet: shows the upload/search starting card. If a `seed` came from the
               homepage's search bar, CanvasStart auto-creates the deal on mount instead of
