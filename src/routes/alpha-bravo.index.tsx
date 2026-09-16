@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { Banknote, Database, Hammer, ShieldCheck, Sparkles, Target } from "lucide-react";
 import { HeroMatchCard } from "@/components/marketing/HeroMatchCard";
 import { SubmitBidButton } from "@/components/marketing/SubmitBidButton";
@@ -66,26 +66,9 @@ function AlphaBravoHome() {
           <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
             <Sparkles className="h-3.5 w-3.5" /> AI-Powered Trade Matching
           </span>
-          <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-            Pre-vetted · Governed marketplace
-          </p>
           <h1 className="mt-3 max-w-3xl text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl">
-            Find the right Trade
-            <br />
-            in ~5 minutes.
+            Governance Infrastructure
           </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-            Post your opportunity brief and get matched with verified Counterparties — fit scores,
-            verified contacts, and ready-to-send outreach, all under one cryptographic record.
-          </p>
-          <div className="mt-4">
-            <Link
-              to="/alpha-bravo/how-it-works"
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
-            >
-              No subscriptions, pay as you go.
-            </Link>
-          </div>
           <div className="mt-4">
             <SubmitBidButton size="sm" />
           </div>

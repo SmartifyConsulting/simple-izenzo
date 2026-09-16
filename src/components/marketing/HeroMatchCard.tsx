@@ -188,7 +188,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
                 setDragOver(false);
                 if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
               }}
-              aria-label="Drop files here or click to browse"
+              aria-label="Drop deal documents here or click to browse"
               className={cn(
                 "flex min-w-0 flex-1 basis-1/2 items-center justify-center gap-2 rounded-xl border border-dashed px-2 text-xs transition-colors",
                 dragOver
@@ -200,7 +200,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
               <span className="truncate">
                 {fileNames.length > 0
                   ? `${fileNames.length} file${fileNames.length === 1 ? "" : "s"} attached`
-                  : "Drop files here or click to browse"}
+                  : "Drop deal documents here or click to browse"}
               </span>
             </button>
 

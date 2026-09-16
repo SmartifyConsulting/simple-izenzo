@@ -4,7 +4,7 @@ import { SignInModal } from "@/components/auth/SignInModal";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
-/** The "Start a Trade" CTA used across every Alpha-Bravo marketing page. Signed in, it opens the
+/** The "Post a Trade" CTA used across every Alpha-Bravo marketing page. Signed in, it opens the
  * Live Workspace straight away. Signed out, it opens the sign-in pop-up — whose forms already
  * carry on to the Live Workspace the moment the sign-in succeeds — so this button always ends up
  * in the same place. */
@@ -32,7 +32,7 @@ export function SubmitBidButton({
         if (user) navigate({ to: "/live-deal-engine", search: { fresh: true } });
       }}
     >
-      Start a Trade
+      Post a Trade
     </Button>
   );
 
