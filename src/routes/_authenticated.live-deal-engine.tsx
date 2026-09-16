@@ -2054,7 +2054,6 @@ function LiveDealEngine() {
                     onFirstClassified={({ directionGuess }) => void applyDirectionGuess(directionGuess)}
                     initialPrompt={seedPrompt}
                     initialFiles={seedFiles}
-                    hideActions
                   />
                 </div>
               )}
