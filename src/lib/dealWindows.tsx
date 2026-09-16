@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { useAuth } from "@/lib/auth";
 
 export type WindowMode = "docked" | "minimized" | "maximized" | "popped";
 
@@ -15,21 +16,29 @@ export type DealWindow = {
   y: number;
 };
 
-const KEY = "izenzo:deal-windows";
+const KEY_PREFIX = "izenzo:deal-windows";
 
-function readAll(): DealWindow[] {
+/** Scoped per signed-in user (not just per browser) — a shared computer with more than one
+ * Izenzo account otherwise leaked whoever used it last's open bid tabs into the next person's
+ * session, since a plain browser-wide key doesn't know who's actually logged in. Falls back to a
+ * generic bucket only for the brief window before auth resolves. */
+function keyFor(userId: string | null) {
+  return userId ? `${KEY_PREFIX}:${userId}` : `${KEY_PREFIX}:anon`;
+}
+
+function readAll(key: string): DealWindow[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(KEY);
+    const raw = window.localStorage.getItem(key);
     return raw ? (JSON.parse(raw) as DealWindow[]) : [];
   } catch {
     return [];
   }
 }
 
-function writeAll(windows: DealWindow[]) {
+function writeAll(key: string, windows: DealWindow[]) {
   try {
-    window.localStorage.setItem(KEY, JSON.stringify(windows));
+    window.localStorage.setItem(key, JSON.stringify(windows));
   } catch {
     // Best-effort only — losing the taskbar's persisted state isn't worth failing over.
   }
@@ -68,19 +77,25 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
   // hydration mismatch, since the server always sees an empty store.
   const [windows, setWindows] = useState<DealWindow[]>([]);
   const popped = useRef(new Map<string, Window>());
+  const { user } = useAuth();
+  // A ref (not just the userId itself) so the callbacks below — declared once, with stable deps —
+  // always read whichever key is current without needing to be recreated on every auth change.
+  const keyRef = useRef(keyFor(null));
 
   useEffect(() => {
-    setWindows(readAll());
+    const key = keyFor(user?.id ?? null);
+    keyRef.current = key;
+    setWindows(readAll(key));
     const onStorage = (e: StorageEvent) => {
-      if (e.key === KEY) setWindows(readAll());
+      if (e.key === key) setWindows(readAll(key));
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
-  }, []);
+  }, [user?.id]);
 
   const persist = useCallback((next: DealWindow[]) => {
     setWindows(next);
-    writeAll(next);
+    writeAll(keyRef.current, next);
   }, []);
 
   const open = useCallback(
@@ -90,7 +105,7 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
         existing.focus();
         return;
       }
-      const current = readAll();
+      const current = readAll(keyRef.current);
       const already = current.find((w) => w.id === id);
       if (already) {
         persist(current.map((w) => (w.id === id ? { ...w, mode: "docked", label } : w)));
@@ -107,7 +122,7 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback(
     (id: string, label: string, name?: string) => {
-      const current = readAll();
+      const current = readAll(keyRef.current);
       const already = current.find((w) => w.id === id);
       if (already) {
         // Keeps the tab's label current — a brand-new bid/offer opens as "New workspace" and
@@ -129,7 +144,7 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
 
   const setMode = useCallback(
     (id: string, mode: WindowMode) => {
-      const current = readAll();
+      const current = readAll(keyRef.current);
       if (mode === "popped") {
         const url = `/live-deal-engine?tx=${encodeURIComponent(id)}&popout=1`;
         const w = window.open(url, `izenzo-deal-${id}`, "width=1100,height=760");
@@ -154,7 +169,7 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
 
   const move = useCallback(
     (id: string, x: number, y: number) => {
-      persist(readAll().map((w) => (w.id === id ? { ...w, x, y } : w)));
+      persist(readAll(keyRef.current).map((w) => (w.id === id ? { ...w, x, y } : w)));
     },
     [persist],
   );
@@ -164,7 +179,7 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
       const w = popped.current.get(id);
       if (w && !w.closed) w.close();
       popped.current.delete(id);
-      persist(readAll().filter((win) => win.id !== id));
+      persist(readAll(keyRef.current).filter((win) => win.id !== id));
     },
     [persist],
   );
@@ -179,7 +194,7 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
   const reorder = useCallback(
     (draggedId: string, targetId: string) => {
       if (draggedId === targetId) return;
-      const current = readAll();
+      const current = readAll(keyRef.current);
       const dragged = current.find((w) => w.id === draggedId);
       if (!dragged) return;
       const withoutDragged = current.filter((w) => w.id !== draggedId);
