@@ -42,6 +42,8 @@ export type Org = {
   ai_brief?: string | null;
   ai_brief_generated_at?: string | null;
   terms_of_trade?: string | null;
+  /** Shareable code a colleague can enter to join this organisation as a member. */
+  invite_code?: string | null;
 };
 
 type AuthValue = {
