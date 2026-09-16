@@ -2616,11 +2616,8 @@ function LiveDealEngine() {
                   />
                 )}
 
-                {/* Closing the loop after finality: informational only — nothing here can change a
-                    completed transaction. */}
-                {dealTx?.stage === "finality" && (
-                  <DecisionPackPanel transactionId={dealTx.id} stageContext="finality_recorded" />
-                )}
+                {/* No further AI+ recommendations appear later in the deal: the person answers the
+                    one set at Choice and then proceeds on their own. */}
 
 
 

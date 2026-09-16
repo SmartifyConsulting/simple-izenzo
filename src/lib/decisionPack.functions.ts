@@ -134,6 +134,16 @@ export const runDecisionPack = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!tx) throw new Error("Transaction not found");
 
+    const { data: docs } = await supabase
+      .from("documents")
+      .select("name, doc_type, notes, created_at")
+      .eq("transaction_id", tx.id)
+      .order("created_at", { ascending: true });
+    const newestDocAt = (docs ?? []).reduce<string | null>(
+      (latest, d) => (d.created_at && (!latest || d.created_at > latest) ? d.created_at : latest),
+      null,
+    );
+
     // An already-answered pack for this event is returned rather than re-run, so a person is
     // never asked to decide the same advice twice.
     const { data: existing } = await supabase
@@ -144,7 +154,17 @@ export const runDecisionPack = createServerFn({ method: "POST" })
       .is("superseded_by", null)
       .order("created_at", { ascending: true });
     if (existing && existing.length > 0) {
-      return { packId: existing[0]!.decision_pack_id, proposals: existing, reused: true };
+      const anyDecided = existing.some((p) => p.decided_at);
+      // AI+ memory: documents uploaded after this advice was produced mean the advice was formed
+      // on an out-of-date picture. If nobody has answered it yet, it is superseded and re-run
+      // against everything now on file. A pack a person has already decided is never re-asked.
+      const stale =
+        !anyDecided &&
+        Boolean(newestDocAt) &&
+        existing.some((p) => p.created_at && newestDocAt! > p.created_at);
+      if (!stale) {
+        return { packId: existing[0]!.decision_pack_id, proposals: existing, reused: true };
+      }
     }
 
     const { data: parties } = await supabase
@@ -155,10 +175,16 @@ export const runDecisionPack = createServerFn({ method: "POST" })
       .from("bid_offers")
       .select("direction, price, quantity, unit, currency, terms, status")
       .eq("transaction_id", tx.id);
-    const { data: docs } = await supabase
-      .from("documents")
-      .select("name, doc_type, notes")
-      .eq("transaction_id", tx.id);
+
+    // AI+ memory of this bid: what the documents say, and what the person has already accepted
+    // or rejected here, so later advice builds on the record instead of ignoring it.
+    const { data: priorDecisions } = await supabase
+      .from("ai_proposals")
+      .select("proposal_type, output, decision, related_counterparty, stage_context")
+      .eq("transaction_id", tx.id)
+      .not("decided_at", "is", null)
+      .order("decided_at", { ascending: true });
+
 
     const system = [
       "You are Izenzo AI+. You are advisory only: you never decide, never select, never adopt, and never change the transaction.",
@@ -180,6 +206,9 @@ export const runDecisionPack = createServerFn({ method: "POST" })
       `Counterparties: ${JSON.stringify(parties ?? [])}`,
       `Bids/offers: ${JSON.stringify(bids ?? [])}`,
       `Documents on file: ${JSON.stringify(docs ?? [])}`,
+      `What the documents say (read by Izenzo): ${tx.document_summary ?? "not read yet"}`,
+      `Decisions this person has already made on earlier AI+ advice for this bid: ${JSON.stringify(priorDecisions ?? [])}`,
+      "Take the document contents and those earlier decisions as settled context: do not repeat advice that was already rejected, and build on what was accepted.",
     ].join("\n");
 
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -240,6 +269,20 @@ export const runDecisionPack = createServerFn({ method: "POST" })
       )
       .select();
     if (error) throw new Error(error.message);
+
+    // Any earlier, still-undecided advice for this same event is retired in favour of the pack
+    // just produced, so the person is only ever shown one live set of recommendations.
+    const supersededId = (inserted ?? [])[0]?.id;
+    if (supersededId) {
+      await supabase
+        .from("ai_proposals")
+        .update({ superseded_by: supersededId })
+        .eq("transaction_id", tx.id)
+        .eq("stage_context", data.stageContext)
+        .is("superseded_by", null)
+        .is("decided_at", null)
+        .neq("decision_pack_id", packId);
+    }
 
     await supabase.from("transaction_events").insert({
       transaction_id: tx.id,
