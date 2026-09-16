@@ -76,7 +76,9 @@ async function firecrawlPost(
     if (!res.ok) {
       const detail = (await res.text()).slice(0, 300);
       if (res.status === 402 || res.status === 403) {
-        throw new Error(`Firecrawl has no credit left for this request [${res.status}]: ${detail}`);
+        const { alertLowFunds } = await import("@/lib/opsAlerts.server");
+        void alertLowFunds("Firecrawl", res.status, detail);
+        throw new Error("Web search is out of credit right now — support has been notified.");
       }
       throw new Error(`Firecrawl refused the request [${res.status}]: ${detail}`);
     }

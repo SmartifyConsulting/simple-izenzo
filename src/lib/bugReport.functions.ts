@@ -45,8 +45,11 @@ export const transcribeBugReport = createServerFn({ method: "POST" })
       const detail = await res.text().catch(() => "");
       console.error("Bug report transcription failed", res.status, detail);
       if (res.status === 429) throw new Error("Too many requests — try again in a moment.");
-      if (res.status === 402 || res.status === 403)
+      if (res.status === 402 || res.status === 403) {
+        const { alertLowFunds } = await import("@/lib/opsAlerts.server");
+        void alertLowFunds("Voice transcription (AI Gateway)", res.status, detail);
         throw new Error("Voice notes are unavailable right now — please type the report instead.");
+      }
       throw new Error("Could not transcribe that recording — please type the report instead.");
     }
 

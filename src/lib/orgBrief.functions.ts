@@ -69,7 +69,11 @@ export const generateOrgBrief = createServerFn({ method: "POST" })
       }),
     });
     if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
-    if (res.status === 402) throw new Error("AI credits are exhausted for this workspace.");
+    if (res.status === 402) {
+      const { alertLowFunds } = await import("@/lib/opsAlerts.server");
+      void alertLowFunds("AI Gateway", 402);
+      throw new Error("AI credits are exhausted for this workspace — support has been notified.");
+    }
     if (!res.ok) throw new Error("The company brief could not be written just now.");
     const json = (await res.json()) as { choices: { message: { content: string } }[] };
     const brief = (json.choices?.[0]?.message?.content ?? "").trim();

@@ -191,7 +191,11 @@ async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
         }),
       });
       if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
-      if (res.status === 402) throw new Error("AI credits are exhausted for this workspace.");
+      if (res.status === 402) {
+        const { alertLowFunds } = await import("@/lib/opsAlerts.server");
+        void alertLowFunds("AI Gateway", 402);
+        throw new Error("AI credits are exhausted for this workspace — support has been notified.");
+      }
       if (!res.ok) {
         const body = await res.text().catch(() => "");
         throw new Error(

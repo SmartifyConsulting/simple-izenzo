@@ -78,7 +78,7 @@ export function renderBrandedEmail(bodyHtml: string): string {
 
 export async function sendEmail(
   creds: ResendCreds,
-  opts: { to: string; subject: string; html: string },
+  opts: { to: string; cc?: string[]; bcc?: string[]; subject: string; html: string },
 ): Promise<void> {
   const url = creds.viaGateway
     ? "https://connector-gateway.lovable.dev/resend/emails"
@@ -95,12 +95,21 @@ export async function sendEmail(
     body: JSON.stringify({
       from: creds.fromAddress,
       to: [opts.to],
+      ...(opts.cc && opts.cc.length > 0 ? { cc: opts.cc } : {}),
+      ...(opts.bcc && opts.bcc.length > 0 ? { bcc: opts.bcc } : {}),
       subject: opts.subject,
       html: opts.html,
     }),
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(`Resend could not send the email (${res.status}): ${body || res.statusText}`);
+    // Resend's own low-balance / suspended-account responses are worth flagging separately —
+    // callers that send transactional email people are waiting on check this before surfacing a
+    // generic failure.
+    if (res.status === 402 || /insufficient|low balance|credit/i.test(body)) {
+      const { alertLowFunds } = await import("@/lib/opsAlerts.server");
+      void alertLowFunds("Resend (email sending)", res.status, body);
+    }
+    throw new Error(`Could not send the email — please try again shortly (${res.status}).`);
   }
 }
