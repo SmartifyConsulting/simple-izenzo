@@ -27,7 +27,10 @@ const NAV = [
   { to: "/alpha-bravo/how-it-works", label: "How It Works" },
   { to: "/alpha-bravo/intelligence-fabric", label: "The Intelligence Fabric" },
   { to: "/alpha-bravo/pricing", label: "Pricing" },
-  { to: "/alpha-bravo/trades", label: "Trades" },
+  // Signed out, this is the public showcase of illustrative matches; signed in, "Trades" should
+  // mean the person's own trades (with the All/My Trades/stage filters) — not the marketing page
+  // they've already moved past.
+  { to: "/alpha-bravo/trades", signedInTo: "/trades", label: "Trades" },
 ] as const;
 
 export function MainHeader() {
@@ -62,20 +65,23 @@ export function MainHeader() {
         </Link>
 
         <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-2 whitespace-nowrap text-sm text-muted-foreground lg:flex">
-          {NAV.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              className={cn(
-                "rounded-full border border-transparent px-3 py-1.5 transition-colors",
-                isActive(item.to)
-                  ? "bg-foreground text-background"
-                  : "hover:bg-foreground/10 hover:text-foreground",
-              )}
-            >
-              {item.label}
-            </Link>
-          ))}
+          {NAV.map((item) => {
+            const to = user && "signedInTo" in item ? item.signedInTo : item.to;
+            return (
+              <Link
+                key={item.to}
+                to={to}
+                className={cn(
+                  "rounded-full border border-transparent px-3 py-1.5 transition-colors",
+                  isActive(to)
+                    ? "bg-foreground text-background"
+                    : "hover:bg-foreground/10 hover:text-foreground",
+                )}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
 
         {/* Narrow screens keep every destination behind one menu button. */}
@@ -87,11 +93,14 @@ export function MainHeader() {
             <Menu className="h-5 w-5" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {NAV.map((item) => (
-              <DropdownMenuItem key={item.to} asChild>
-                <Link to={item.to}>{item.label}</Link>
-              </DropdownMenuItem>
-            ))}
+            {NAV.map((item) => {
+              const to = user && "signedInTo" in item ? item.signedInTo : item.to;
+              return (
+                <DropdownMenuItem key={item.to} asChild>
+                  <Link to={to}>{item.label}</Link>
+                </DropdownMenuItem>
+              );
+            })}
           </DropdownMenuContent>
         </DropdownMenu>
 
