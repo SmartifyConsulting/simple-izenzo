@@ -250,7 +250,7 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
 
   return (
     <DealWindowsContext.Provider
-      value={{ windows, open, register, setMode, move, close, isPoppedElsewhere, reorder }}
+      value={{ windows, open, register, setMode, move, close, isPoppedElsewhere, reorder, hydrate }}
     >
       {children}
     </DealWindowsContext.Provider>
