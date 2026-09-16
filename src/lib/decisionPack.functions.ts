@@ -270,6 +270,20 @@ export const runDecisionPack = createServerFn({ method: "POST" })
       .select();
     if (error) throw new Error(error.message);
 
+    // Any earlier, still-undecided advice for this same event is retired in favour of the pack
+    // just produced, so the person is only ever shown one live set of recommendations.
+    const supersededId = (inserted ?? [])[0]?.id;
+    if (supersededId) {
+      await supabase
+        .from("ai_proposals")
+        .update({ superseded_by: supersededId })
+        .eq("transaction_id", tx.id)
+        .eq("stage_context", data.stageContext)
+        .is("superseded_by", null)
+        .is("decided_at", null)
+        .neq("decision_pack_id", packId);
+    }
+
     await supabase.from("transaction_events").insert({
       transaction_id: tx.id,
       actor_id: userId,
