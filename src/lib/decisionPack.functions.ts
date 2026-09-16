@@ -134,6 +134,16 @@ export const runDecisionPack = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!tx) throw new Error("Transaction not found");
 
+    const { data: docs } = await supabase
+      .from("documents")
+      .select("name, doc_type, notes, created_at")
+      .eq("transaction_id", tx.id)
+      .order("created_at", { ascending: true });
+    const newestDocAt = (docs ?? []).reduce<string | null>(
+      (latest, d) => (d.created_at && (!latest || d.created_at > latest) ? d.created_at : latest),
+      null,
+    );
+
     // An already-answered pack for this event is returned rather than re-run, so a person is
     // never asked to decide the same advice twice.
     const { data: existing } = await supabase
@@ -144,7 +154,17 @@ export const runDecisionPack = createServerFn({ method: "POST" })
       .is("superseded_by", null)
       .order("created_at", { ascending: true });
     if (existing && existing.length > 0) {
-      return { packId: existing[0]!.decision_pack_id, proposals: existing, reused: true };
+      const anyDecided = existing.some((p) => p.decided_at);
+      // AI+ memory: documents uploaded after this advice was produced mean the advice was formed
+      // on an out-of-date picture. If nobody has answered it yet, it is superseded and re-run
+      // against everything now on file. A pack a person has already decided is never re-asked.
+      const stale =
+        !anyDecided &&
+        Boolean(newestDocAt) &&
+        existing.some((p) => p.created_at && newestDocAt! > p.created_at);
+      if (!stale) {
+        return { packId: existing[0]!.decision_pack_id, proposals: existing, reused: true };
+      }
     }
 
     const { data: parties } = await supabase
@@ -155,10 +175,16 @@ export const runDecisionPack = createServerFn({ method: "POST" })
       .from("bid_offers")
       .select("direction, price, quantity, unit, currency, terms, status")
       .eq("transaction_id", tx.id);
-    const { data: docs } = await supabase
-      .from("documents")
-      .select("name, doc_type, notes")
-      .eq("transaction_id", tx.id);
+
+    // AI+ memory of this bid: what the documents say, and what the person has already accepted
+    // or rejected here, so later advice builds on the record instead of ignoring it.
+    const { data: priorDecisions } = await supabase
+      .from("ai_proposals")
+      .select("proposal_type, output, decision, related_counterparty, stage_context")
+      .eq("transaction_id", tx.id)
+      .not("decided_at", "is", null)
+      .order("decided_at", { ascending: true });
+
 
     const system = [
       "You are Izenzo AI+. You are advisory only: you never decide, never select, never adopt, and never change the transaction.",
