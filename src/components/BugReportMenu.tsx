@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type ClipboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bug,
@@ -120,6 +120,25 @@ export function BugReportMenu() {
   function removePendingFile(index: number) {
     setPendingFiles((prev) => prev.filter((_, i) => i !== index));
   }
+
+  /** Ctrl+V of a screenshot copied from Paint/Snipping Tool/anywhere else — the clipboard carries
+   * the image data directly, with no need to save it to a file first. */
+  function handlePaste(e: ClipboardEvent<HTMLDivElement>) {
+    const images = Array.from(e.clipboardData.items)
+      .filter((item) => item.type.startsWith("image/"))
+      .map((item) => item.getAsFile())
+      .filter((f): f is File => f !== null);
+    if (images.length === 0) return;
+    e.preventDefault();
+    const named = images.map(
+      (f, i) => new File([f], f.name || `pasted-screenshot-${Date.now()}-${i}.png`, { type: f.type }),
+    );
+    addPendingFiles(named);
+  }
+
+  // Full-size look at one attachment — the thumbnail grid is too small to actually read a
+  // screenshot.
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const submitMutation = useMutation({
     mutationFn: async ({ title, via, files }: { title: string; via: "typed" | "voice"; files: File[] }) => {
@@ -394,13 +413,19 @@ export function BugReportMenu() {
                     <div className="mt-1 flex flex-wrap gap-1.5">
                       {attachments.map((path, i) =>
                         IMAGE_NAME.test(path) ? (
-                          <a key={i} href={bucketUrl(path)} target="_blank" rel="noreferrer">
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => setPreviewUrl(bucketUrl(path))}
+                            className="shrink-0"
+                            title="View screenshot"
+                          >
                             <img
                               src={bucketUrl(path)}
                               alt="Attached screenshot"
-                              className="h-16 w-16 rounded-md border border-border object-cover"
+                              className="h-16 w-16 rounded-md border border-border object-cover transition-opacity hover:opacity-80"
                             />
-                          </a>
+                          </button>
                         ) : (
                           <a
                             key={i}
@@ -430,10 +455,13 @@ export function BugReportMenu() {
     </Sheet>
 
     <Dialog open={composerOpen} onOpenChange={(v) => !busy && setComposerOpen(v)}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" onPaste={handlePaste}>
         <DialogHeader>
           <DialogTitle>New Bug/Fix</DialogTitle>
-          <DialogDescription>Type it, or record a voice note — attach screenshots or any file.</DialogDescription>
+          <DialogDescription>
+            Type it, or record a voice note — paste a screenshot straight from Paint/Snipping Tool
+            (Ctrl+V) or drop any file.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex items-start gap-1.5">
@@ -530,6 +558,17 @@ export function BugReportMenu() {
             {submitMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send"}
           </Button>
         </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog open={previewUrl !== null} onOpenChange={(v) => !v && setPreviewUrl(null)}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Screenshot</DialogTitle>
+        </DialogHeader>
+        {previewUrl && (
+          <img src={previewUrl} alt="Attached screenshot, full size" className="max-h-[75vh] w-full rounded-lg object-contain" />
+        )}
       </DialogContent>
     </Dialog>
     </>
