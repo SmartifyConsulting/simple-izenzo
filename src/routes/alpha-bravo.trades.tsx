@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/alpha-bravo/trades")({
   head: () => ({
-    meta: [{ title: "Trades — Izenzo Alpha-Bravo" }],
+    meta: [{ title: "Trades — Izenzo" }],
   }),
   component: Trades,
 });

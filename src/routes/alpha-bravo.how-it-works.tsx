@@ -4,7 +4,7 @@ import { SPINE } from "@/lib/spine";
 
 export const Route = createFileRoute("/alpha-bravo/how-it-works")({
   head: () => ({
-    meta: [{ title: "How It Works — Izenzo Alpha-Bravo" }],
+    meta: [{ title: "How It Works — Izenzo" }],
   }),
   component: HowItWorks,
 });

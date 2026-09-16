@@ -8,7 +8,7 @@ import {
 
 export const Route = createFileRoute("/alpha-bravo/responders/location/$jurisdiction")({
   head: () => ({
-    meta: [{ title: "Counterparties by Location — Izenzo Alpha-Bravo" }],
+    meta: [{ title: "Counterparties by Location — Izenzo" }],
   }),
   component: RespondersByLocation,
 });

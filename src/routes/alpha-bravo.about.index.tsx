@@ -4,7 +4,7 @@ import { INSIGHT_ARTICLES } from "@/lib/alphaBravoInsights";
 
 export const Route = createFileRoute("/alpha-bravo/about/")({
   head: () => ({
-    meta: [{ title: "About — Izenzo Alpha-Bravo" }],
+    meta: [{ title: "About — Izenzo" }],
   }),
   component: About,
 });

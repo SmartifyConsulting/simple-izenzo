@@ -7,7 +7,7 @@ import { AlphaBravoShell } from "@/components/layout/AlphaBravoShell";
 export const Route = createFileRoute("/alpha-bravo")({
   head: () => ({
     meta: [
-      { title: "Izenzo Alpha-Bravo | Matching Bidders with Counterparties" },
+      { title: "Izenzo | Matching Bidders with Counterparties" },
       {
         name: "description",
         content:

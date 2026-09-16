@@ -10,7 +10,7 @@ const KEY = "izenzo:style-preset";
 const EVENT = "izenzo:style-preset-change";
 
 export const STYLE_PRESETS: { id: StylePreset; label: string; description: string }[] = [
-  { id: "cream", label: "Cream", description: "Alpha-Bravo — cream ground, royal blue" },
+  { id: "cream", label: "Cream", description: "Cream & Cobalt — cream ground, royal blue" },
   { id: "black", label: "Black", description: "Ink & Aqua — dark ground, teal signal" },
   { id: "grid", label: "Green Grid", description: "Ink & Aqua with the marketing grid pattern" },
 ];

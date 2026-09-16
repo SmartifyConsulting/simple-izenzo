@@ -4,7 +4,7 @@ import { WAD_COST } from "@/lib/spine";
 
 export const Route = createFileRoute("/alpha-bravo/trust-center")({
   head: () => ({
-    meta: [{ title: "Trust Center — Izenzo Alpha-Bravo" }],
+    meta: [{ title: "Trust Center — Izenzo" }],
   }),
   component: TrustCenter,
 });

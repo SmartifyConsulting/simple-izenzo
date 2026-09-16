@@ -4,7 +4,7 @@ import { ResponderDirectory, ResponderFacetLinks } from "@/components/marketing/
 
 export const Route = createFileRoute("/alpha-bravo/responders/")({
   head: () => ({
-    meta: [{ title: "Counterparties — Izenzo Alpha-Bravo" }],
+    meta: [{ title: "Counterparties — Izenzo" }],
   }),
   component: Responders,
 });

@@ -9,7 +9,7 @@ export const Route = createFileRoute("/alpha-bravo/about/$slug")({
     return article;
   },
   head: ({ loaderData }) => ({
-    meta: loaderData ? [{ title: `${loaderData.title} — Izenzo Alpha-Bravo` }] : [],
+    meta: loaderData ? [{ title: `${loaderData.title} — Izenzo` }] : [],
   }),
   component: InsightArticlePage,
 });

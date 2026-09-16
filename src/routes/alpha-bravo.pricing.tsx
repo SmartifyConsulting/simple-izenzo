@@ -6,7 +6,7 @@ import { POI_COST, WAD_COST, TOKEN_PRICE_USD } from "@/lib/spine";
 
 export const Route = createFileRoute("/alpha-bravo/pricing")({
   head: () => ({
-    meta: [{ title: "Pricing — Izenzo Alpha-Bravo" }],
+    meta: [{ title: "Pricing — Izenzo" }],
   }),
   component: Pricing,
 });

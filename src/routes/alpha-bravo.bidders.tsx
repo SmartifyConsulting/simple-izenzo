@@ -9,7 +9,7 @@ import {
 
 export const Route = createFileRoute("/alpha-bravo/bidders")({
   head: () => ({
-    meta: [{ title: "Bidders — Izenzo Alpha-Bravo" }],
+    meta: [{ title: "Bidders — Izenzo" }],
   }),
   component: Bidders,
 });

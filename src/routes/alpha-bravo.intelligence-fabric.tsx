@@ -4,7 +4,7 @@ import { SubmitBidButton } from "@/components/marketing/SubmitBidButton";
 
 export const Route = createFileRoute("/alpha-bravo/intelligence-fabric")({
   head: () => ({
-    meta: [{ title: "The Intelligence Fabric — Izenzo Alpha-Bravo" }],
+    meta: [{ title: "The Intelligence Fabric — Izenzo" }],
   }),
   component: IntelligenceFabric,
 });
