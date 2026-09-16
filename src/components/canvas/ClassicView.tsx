@@ -20,7 +20,6 @@ import {
   Search,
   ShieldCheck,
   Upload,
-  UserCheck,
 } from "lucide-react";
 import { InlineFrame } from "./DealCanvas";
 import { lockReason, stepIndex, type StageKey } from "@/lib/spine";
@@ -90,7 +89,6 @@ const STEPS: StepDef[] = [
     label: "Compliance & Governance",
     items: [
       { key: "poi", label: "Proof of Intent", stage: "trading", step: "poi", icon: FileText },
-      { key: "kycKyb", label: "KYC, KYB, PEP, AML", stage: "compliance", step: "wad", icon: UserCheck },
       {
         key: "wad",
         label: "Without a Doubt",

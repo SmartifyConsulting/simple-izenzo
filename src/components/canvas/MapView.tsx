@@ -83,9 +83,9 @@ const BOXES = {
   // as Online Screening → Express Intent above. Vertical gaps tightened so the whole diagram fits
   // its panel without scrolling.
   poi: { x: 60, y: 405, w: 280, h: 48 },
-  // The KYC/KYB/PEP/AML checks now run before Without a Doubt, so they sit above it.
-  wad: { x: 60, y: 473, w: 280, h: 54 },
-  withoutADoubt: { x: 60, y: 547, w: 280, h: 54 },
+  // KYC/KYB/PEP/AML no longer gets its own tile (still runs, just not shown separately), so
+  // Without a Doubt sits directly under Proof of Intent now.
+  withoutADoubt: { x: 60, y: 473, w: 280, h: 54 },
   businessDocs: { x: 60, y: 621, w: 280, h: 54 },
   // Step 3 (Execution, with Entry/Exit beside it) and Step 4 (Finality) follow Step 2's shorter
   // frame, so the bottom row lands inside the visible area.
@@ -162,8 +162,10 @@ const TRADING_ARROWS: string[] = [
 ];
 
 const REST_ARROWS: string[] = [
-  line(bottomOf(BOXES.poi), topOf(BOXES.wad)),
-  line(bottomOf(BOXES.wad), topOf(BOXES.withoutADoubt)),
+  // The KYC/KYB/PEP/AML tile itself is no longer shown separately (it still runs, and still
+  // drives its own pulse state — just folded into Without a Doubt visually), so this arrow now
+  // runs straight from Proof of Intent to Without a Doubt instead of stopping at it first.
+  line(bottomOf(BOXES.poi), topOf(BOXES.withoutADoubt)),
   line(bottomOf(BOXES.withoutADoubt), topOf(BOXES.businessDocs)),
   // Step 2 into Step 3: straight down out of Business Docs, stopping just short of the Step 3
   // frame's edge — pointing at it (and the heading floating on it) rather than touching it.
@@ -539,9 +541,6 @@ export function MapView({
         {/* Step 2 — compliance & governance */}
         {node("poi", "Proof of Intent", "trading", "poi", Building2, { overrideKey: "poi" })}
 
-        {node("wad", "KYC, KYB, PEP, AML", "compliance", "wad", Users, {
-          overrideKey: "kycKyb",
-        })}
         {node("withoutADoubt", "Without a Doubt", "compliance", "wad", ShieldCheck, {
           overrideKey: "wad",
           sub: "Hard gate · non-waivable",
