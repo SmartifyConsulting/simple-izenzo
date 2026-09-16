@@ -92,6 +92,13 @@
       "when": 1789494961376,
       "tag": "0012_add_related_counterparty_to_ai_proposals",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1789546268275,
+      "tag": "0013_activity_log_transaction_id",
+      "breakpoints": true
     }
   ]
 }

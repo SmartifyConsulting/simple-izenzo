@@ -35,6 +35,7 @@ export function DocumentUploadStep({
   initialPrompt,
   initialFiles,
   onSubmitted,
+  hideActions = false,
 
 }: {
   transactionId: string;
@@ -57,6 +58,9 @@ export function DocumentUploadStep({
    * mount, so the caller doesn't have to make someone repeat themselves. */
   initialPrompt?: string;
   initialFiles?: File[];
+  /** Hides only the Next/Skip row — used where the surrounding frame already carries its own
+   * Submit action, so there aren't two buttons doing the same thing. */
+  hideActions?: boolean;
 }) {
 
   const qc = useQueryClient();
@@ -319,6 +323,7 @@ export function DocumentUploadStep({
         </ul>
       )}
 
+      {!hideActions && (
       <div className="flex items-center gap-2">
         {/* Always offered, including where the upload advances by itself — someone who only typed a
             description (no files) still needs a way to start the search on demand. */}
@@ -352,6 +357,7 @@ export function DocumentUploadStep({
           </Button>
         )}
       </div>
+      )}
 
     </div>
   );
