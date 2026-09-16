@@ -3,18 +3,30 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bug,
   CheckCircle2,
+  FileText,
   ImageIcon,
   Loader2,
   Mic,
+  Plus,
   RotateCcw,
   Search,
-  Send,
   Square,
+  UploadCloud,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Sheet,
   SheetContent,
@@ -39,6 +51,7 @@ type BugReport = {
   created_via: string;
   status: string;
   image_path: string | null;
+  attachment_paths: string[] | null;
 };
 
 const TYPE_META: Record<ReportType, { icon: typeof Bug | null; border: string; label: string }> = {
@@ -47,6 +60,20 @@ const TYPE_META: Record<ReportType, { icon: typeof Bug | null; border: string; l
   nice_to_have: { icon: null, border: "border-l-muted-foreground", label: "Nice to have" },
 };
 
+const IMAGE_NAME = /\.(png|jpe?g|webp|gif|heic|heif)$/i;
+
+function bucketUrl(path: string) {
+  return supabase.storage.from("bug-report-images").getPublicUrl(path).data.publicUrl;
+}
+
+/** Every attachment a report has on file — the legacy single image_path (pre-modal reports) plus
+ * the newer attachment_paths array, so nothing filed before this modal existed disappears. */
+function attachmentsOf(r: BugReport): string[] {
+  const fromArray = r.attachment_paths ?? [];
+  if (r.image_path && !fromArray.includes(r.image_path)) return [r.image_path, ...fromArray];
+  return fromArray;
+}
+
 /** Bug / fix / nice-to-have reporting, opened from the bug icon beside the inbox icon. */
 export function BugReportMenu() {
   const { user, profile, roles } = useAuth();
@@ -54,13 +81,18 @@ export function BugReportMenu() {
   const queryClient = useQueryClient();
 
   const [open, setOpen] = useState(false);
+  const [composerOpen, setComposerOpen] = useState(false);
   const [text, setText] = useState("");
-  const [type, setType] = useState<ReportType>("bug");
+  const [type] = useState<ReportType>("bug");
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"open" | "done" | "all">("open");
-  const [typeFilter, setTypeFilter] = useState<ReportType | "all">("all");
+
+  // Staged in the composer modal until Send — screenshots and any other file, dropped or browsed.
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [composerDragOver, setComposerDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -73,31 +105,62 @@ export function BugReportMenu() {
       if (statusFilter !== "all") query = query.eq("status", statusFilter);
       const { data, error } = await query.order("created_at", { ascending: false }).limit(200);
       if (error) throw error;
-      // image_path isn't in the generated Supabase types yet (migration 0012 adds the column) —
-      // cast through unknown until types are regenerated after that migration runs.
+      // attachment_paths/image_path predate the regenerated Supabase types — cast through unknown
+      // until types are regenerated after those migrations run.
       return (data ?? []) as unknown as BugReport[];
     },
   });
 
+  function addPendingFiles(files: FileList | File[]) {
+    const list = Array.from(files);
+    if (list.length === 0) return;
+    setPendingFiles((prev) => [...prev, ...list]);
+  }
+
+  function removePendingFile(index: number) {
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
+  }
+
   const submitMutation = useMutation({
-    mutationFn: async ({ title, via }: { title: string; via: "typed" | "voice" }) => {
+    mutationFn: async ({ title, via, files }: { title: string; via: "typed" | "voice"; files: File[] }) => {
       const trimmed = title.trim();
       if (!trimmed) throw new Error("Nothing to send yet.");
       if (!user) throw new Error("Please sign in first.");
       const displayName =
         profile?.full_name || profile?.email || user.email?.split("@")[0] || "Unknown";
-      const { error } = await supabase.from("bug_reports").insert({
-        user_id: user.id,
-        display_name: displayName,
-        type,
-        title: trimmed.slice(0, 300),
-        created_via: via,
-      });
+      const { data: inserted, error } = await supabase
+        .from("bug_reports")
+        .insert({
+          user_id: user.id,
+          display_name: displayName,
+          type,
+          title: trimmed.slice(0, 300),
+          created_via: via,
+        })
+        .select()
+        .single();
       if (error) throw error;
+
+      if (files.length > 0 && inserted) {
+        const paths: string[] = [];
+        for (const file of files) {
+          const path = `${inserted.id}/${Date.now()}-${file.name}`;
+          const { error: upErr } = await supabase.storage.from("bug-report-images").upload(path, file);
+          if (!upErr) paths.push(path);
+        }
+        if (paths.length > 0) {
+          await supabase
+            .from("bug_reports")
+            .update({ attachment_paths: paths } as unknown as never)
+            .eq("id", inserted.id);
+        }
+      }
     },
     onSuccess: () => {
       toast.success("Thanks — report submitted");
       setText("");
+      setPendingFiles([]);
+      setComposerOpen(false);
       void queryClient.invalidateQueries({ queryKey: ["bug-reports"] });
     },
     onError: (e: Error) => toast.error(e.message || "Failed to submit"),
@@ -116,32 +179,30 @@ export function BugReportMenu() {
     onError: () => toast.error("Failed to update"),
   });
 
-  // A screenshot dropped straight onto a record — attached to that report, not a separate upload
-  // flow. One image per report: dropping a new one replaces whatever was there.
+  // A file dropped straight onto an existing record — appended to whatever's already attached,
+  // not a replacement.
   const [dragOverId, setDragOverId] = useState<string | null>(null);
-  const attachImage = useMutation({
-    mutationFn: async ({ id, file }: { id: string; file: File }) => {
-      const path = `${id}/${Date.now()}-${file.name}`;
-      const { error: upErr } = await supabase.storage.from("bug-report-images").upload(path, file, { upsert: true });
-      if (upErr) throw upErr;
-      // Cast through unknown for the same reason as the read above — image_path predates the
-      // regenerated types.
+  const attachFiles = useMutation({
+    mutationFn: async ({ id, files, existing }: { id: string; files: File[]; existing: string[] }) => {
+      const paths: string[] = [];
+      for (const file of files) {
+        const path = `${id}/${Date.now()}-${file.name}`;
+        const { error: upErr } = await supabase.storage.from("bug-report-images").upload(path, file);
+        if (!upErr) paths.push(path);
+      }
+      if (paths.length === 0) throw new Error("Could not upload the file.");
       const { error } = await supabase
         .from("bug_reports")
-        .update({ image_path: path } as unknown as never)
+        .update({ attachment_paths: [...existing, ...paths] } as unknown as never)
         .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Screenshot attached");
+      toast.success("Attached");
       void queryClient.invalidateQueries({ queryKey: ["bug-reports"] });
     },
-    onError: (e: Error) => toast.error(e.message || "Could not attach the screenshot"),
+    onError: (e: Error) => toast.error(e.message || "Could not attach the file"),
   });
-
-  function imageUrl(path: string) {
-    return supabase.storage.from("bug-report-images").getPublicUrl(path).data.publicUrl;
-  }
 
   async function startRecording() {
     try {
@@ -184,7 +245,7 @@ export function BugReportMenu() {
       const { text: transcript } = await transcribeBugReport({
         data: { audioBase64: base64, mimeType: blob.type },
       });
-      await submitMutation.mutateAsync({ title: transcript, via: "voice" });
+      await submitMutation.mutateAsync({ title: transcript, via: "voice", files: pendingFiles });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Transcription failed");
     } finally {
@@ -194,7 +255,6 @@ export function BugReportMenu() {
 
   const q = search.trim().toLowerCase();
   const filtered = reports.filter((r) => {
-    if (typeFilter !== "all" && r.type !== typeFilter) return false;
     if (!q) return true;
     return (
       r.title.toLowerCase().includes(q) ||
@@ -206,6 +266,7 @@ export function BugReportMenu() {
   const busy = submitMutation.isPending || transcribing;
 
   return (
+    <>
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger
         aria-label="Report a bug"
@@ -224,53 +285,9 @@ export function BugReportMenu() {
           </SheetTitle>
         </SheetHeader>
 
-
-        <div className="flex items-center gap-1.5">
-          <Input
-            placeholder={`Report a ${TYPE_META[type].label.toLowerCase()}…`}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                submitMutation.mutate({ title: text, via: "typed" });
-              }
-            }}
-            maxLength={300}
-            className="h-10 flex-1 text-sm"
-            disabled={busy}
-          />
-          <Button
-            type="button"
-            onClick={recording ? stopRecording : () => void startRecording()}
-            disabled={busy}
-            size="icon"
-            variant={recording ? "destructive" : "secondary"}
-            className="h-10 w-10 shrink-0"
-            title={recording ? "Stop recording" : "Record a voice note"}
-          >
-            {transcribing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : recording ? (
-              <Square className="h-4 w-4" />
-            ) : (
-              <Mic className="h-4 w-4" />
-            )}
-          </Button>
-          <Button
-            type="button"
-            onClick={() => submitMutation.mutate({ title: text, via: "typed" })}
-            disabled={!text.trim() || busy}
-            size="icon"
-            className="h-10 w-10 shrink-0 rounded-full"
-          >
-            {submitMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
+        <Button type="button" className="w-full gap-1.5" onClick={() => setComposerOpen(true)}>
+          <Plus className="h-4 w-4" /> New Bug/Fix
+        </Button>
 
         <div className="relative">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -298,21 +315,6 @@ export function BugReportMenu() {
                 {s}
               </button>
             ))}
-            <span className="mx-1 h-4 w-px bg-border" />
-            {(["all", "bug"] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTypeFilter(t as ReportType | "all")}
-                className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-                  typeFilter === t
-                    ? "bg-secondary text-secondary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
-              >
-                {t === "all" ? "All types" : TYPE_META[t as ReportType].label}
-              </button>
-            ))}
           </div>
         )}
 
@@ -334,6 +336,7 @@ export function BugReportMenu() {
               const meta = TYPE_META[r.type as ReportType] ?? TYPE_META.bug;
               const Icon = meta.icon;
               const dragOver = dragOverId === r.id;
+              const attachments = attachmentsOf(r);
               return (
                 <div
                   key={r.id}
@@ -346,12 +349,9 @@ export function BugReportMenu() {
                   onDrop={(e) => {
                     e.preventDefault();
                     setDragOverId(null);
-                    const file = Array.from(e.dataTransfer.files).find((f) => f.type.startsWith("image/"));
-                    if (!file) {
-                      toast.error("Drop an image file to attach it.");
-                      return;
-                    }
-                    attachImage.mutate({ id: r.id, file });
+                    const files = Array.from(e.dataTransfer.files);
+                    if (files.length === 0) return;
+                    attachFiles.mutate({ id: r.id, files, existing: attachments });
                   }}
                   className={`space-y-1 rounded-lg border border-l-4 border-border p-2.5 transition-colors ${meta.border} ${
                     dragOver ? "border-primary bg-primary/5" : ""
@@ -390,18 +390,35 @@ export function BugReportMenu() {
                     {r.display_name ?? "Unknown"} · {new Date(r.created_at).toLocaleDateString()}
                     {isAdmin && r.status === "done" && " · done"}
                   </div>
-                  {r.image_path ? (
-                    <a href={imageUrl(r.image_path)} target="_blank" rel="noreferrer">
-                      <img
-                        src={imageUrl(r.image_path)}
-                        alt="Attached screenshot"
-                        className="mt-1 max-h-32 rounded-md border border-border object-cover"
-                      />
-                    </a>
+                  {attachments.length > 0 ? (
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {attachments.map((path, i) =>
+                        IMAGE_NAME.test(path) ? (
+                          <a key={i} href={bucketUrl(path)} target="_blank" rel="noreferrer">
+                            <img
+                              src={bucketUrl(path)}
+                              alt="Attached screenshot"
+                              className="h-16 w-16 rounded-md border border-border object-cover"
+                            />
+                          </a>
+                        ) : (
+                          <a
+                            key={i}
+                            href={bucketUrl(path)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] text-foreground hover:border-primary/50"
+                          >
+                            <FileText className="h-3 w-3 shrink-0" />
+                            {path.split("/").slice(1).join("/")}
+                          </a>
+                        ),
+                      )}
+                    </div>
                   ) : (
                     <div className="flex items-center gap-1 text-[11px] text-muted-foreground/70">
                       <ImageIcon className="h-3 w-3" />
-                      Drop a screenshot here to attach it
+                      Drop a screenshot or file here to attach it
                     </div>
                   )}
                 </div>
@@ -411,5 +428,110 @@ export function BugReportMenu() {
         )}
       </SheetContent>
     </Sheet>
+
+    <Dialog open={composerOpen} onOpenChange={(v) => !busy && setComposerOpen(v)}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>New Bug/Fix</DialogTitle>
+          <DialogDescription>Type it, or record a voice note — attach screenshots or any file.</DialogDescription>
+        </DialogHeader>
+
+        <div className="flex items-start gap-1.5">
+          <Textarea
+            placeholder="What's the bug or fix?"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            maxLength={300}
+            rows={3}
+            className="flex-1 text-sm"
+            disabled={busy}
+          />
+          <Button
+            type="button"
+            onClick={recording ? stopRecording : () => void startRecording()}
+            disabled={busy}
+            size="icon"
+            variant={recording ? "destructive" : "secondary"}
+            className="h-10 w-10 shrink-0"
+            title={recording ? "Stop recording" : "Record a voice note"}
+          >
+            {transcribing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : recording ? (
+              <Square className="h-4 w-4" />
+            ) : (
+              <Mic className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setComposerDragOver(true);
+          }}
+          onDragLeave={() => setComposerDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setComposerDragOver(false);
+            if (e.dataTransfer.files.length) addPendingFiles(e.dataTransfer.files);
+          }}
+          className={`flex w-full flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed p-5 text-center transition-colors ${
+            composerDragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+          }`}
+        >
+          <UploadCloud className="h-5 w-5 text-muted-foreground" />
+          <span className="text-xs font-medium">Drop screenshots or files here, or click to browse</span>
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            if (e.target.files) addPendingFiles(e.target.files);
+            e.target.value = "";
+          }}
+        />
+
+        {pendingFiles.length > 0 && (
+          <ul className="space-y-1">
+            {pendingFiles.map((f, i) => (
+              <li
+                key={i}
+                className="flex items-center gap-2 rounded-lg border border-border px-2.5 py-1.5 text-xs"
+              >
+                {IMAGE_NAME.test(f.name) ? (
+                  <ImageIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                ) : (
+                  <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                )}
+                <span className="min-w-0 flex-1 truncate">{f.name}</span>
+                <button
+                  type="button"
+                  onClick={() => removePendingFile(i)}
+                  className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <DialogFooter>
+          <Button
+            type="button"
+            disabled={!text.trim() || busy}
+            onClick={() => submitMutation.mutate({ title: text, via: "typed", files: pendingFiles })}
+          >
+            {submitMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
