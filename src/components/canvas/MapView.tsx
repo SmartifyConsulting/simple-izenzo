@@ -44,9 +44,9 @@ function nodeState(stage: StageKey, step: string, tx: Transaction | null): NodeS
 // Workspace: everything is placed on this canvas and scaled to the container with percentages, so
 // tiles and their connecting lines always stay aligned however wide that column is.
 const W = 960;
-// Trimmed (was 940) now that Step 2's frame is shorter and Step 3/4 sit higher, so the map fits
-// its panel without needing to scroll.
-const H = 816;
+// Grown (was 816) to fit Step 3 and Step 4's individual sub-step tiles, matching the vertical
+// stepper's own item list instead of collapsing each step into a single combined tile.
+const H = 1010;
 const px = (v: number) => `${(v / W) * 100}%`;
 const py = (v: number) => `${(v / H) * 100}%`;
 
@@ -87,12 +87,19 @@ const BOXES = {
   // Without a Doubt sits directly under Proof of Intent now.
   withoutADoubt: { x: 60, y: 473, w: 280, h: 54 },
   businessDocs: { x: 60, y: 621, w: 280, h: 54 },
-  // Step 3 (Execution, with Entry/Exit beside it) and Step 4 (Finality) follow Step 2's shorter
-  // frame, so the bottom row lands inside the visible area.
-  execution: { x: 45, y: 731, w: 310, h: 58 },
-  // Width trimmed 20% (was 140) and re-centred on the same midpoint.
-  entryExit: { x: 424, y: 741, w: 112, h: 37 },
-  finality: { x: 605, y: 731, w: 310, h: 58 },
+  // Step 3 (Execution, with Entry/Exit beside it) and Step 4 (Finality) each get their own column,
+  // one tile per row matching the vertical stepper's own item list instead of a single combined
+  // tile — same row heights and gaps down both columns so they read as a matched pair.
+  concept: { x: 45, y: 725, w: 310, h: 36 },
+  prefeasibility: { x: 45, y: 775, w: 310, h: 36 },
+  feasibility: { x: 45, y: 825, w: 310, h: 36 },
+  bankability: { x: 45, y: 875, w: 310, h: 36 },
+  implementation: { x: 45, y: 925, w: 310, h: 36 },
+  // Vertically centred in the same tall row as the Execution/Finality columns beside it.
+  entryExit: { x: 424, y: 832, w: 112, h: 37 },
+  payment: { x: 605, y: 725, w: 310, h: 36 },
+  signoff: { x: 605, y: 825, w: 310, h: 36 },
+  handover: { x: 605, y: 925, w: 310, h: 36 },
 
 } as const satisfies Record<string, Box>;
 
@@ -103,10 +110,11 @@ const TRADE_ENGINE_FRAME: Box = { x: 14, y: 18, w: 932, h: 330 };
 // Step 2's frame follows a clean, even gap below Step 1, with room for the connecting arrow.
 const COMPLIANCE_FRAME: Box = { x: 30, y: 380, w: 340, h: 313 };
 // Execution and Entry/Exit+Finality get the same bordered, labelled group frame as Steps 1 and 2.
-const EXECUTION_FRAME: Box = { x: 30, y: 723, w: 340, h: 73 };
-const FINALITY_FRAME: Box = { x: 590, y: 723, w: 340, h: 73 };
+// Tall enough to hold Execution's five sub-step tiles (and Finality's three) stacked one per row.
+const EXECUTION_FRAME: Box = { x: 30, y: 715, w: 340, h: 270 };
+const FINALITY_FRAME: Box = { x: 590, y: 715, w: 340, h: 270 };
 // Width trimmed 20% (was 180), centred in the same gap between Step 3 and 4.
-const ENTRY_EXIT_FRAME: Box = { x: 408, y: 723, w: 144, h: 73 };
+const ENTRY_EXIT_FRAME: Box = { x: 408, y: 715, w: 144, h: 270 };
 // Kept beside Step 2 (not stacked under it) and re-centred between Step 2 and Step 4.
 const MEMORY = { cx: 570, cy: 588, r: 105 };
 // Once the pulse has moved past Step 1, its whole frame folds into this slim ticked bar and
@@ -170,6 +178,16 @@ const REST_ARROWS: string[] = [
   // Step 2 into Step 3: straight down out of Business Docs, stopping just short of the Step 3
   // frame's edge — pointing at it (and the heading floating on it) rather than touching it.
   line(bottomOf(BOXES.businessDocs), { x: cx(BOXES.businessDocs), y: EXECUTION_FRAME.y - ARROW_GAP }),
+  // Execution's own sub-steps, top to bottom — Project Preparation's three (Concept,
+  // Pre-feasibility, Feasibility) into Bankability, then across into Execution's own
+  // Implementation, matching the vertical stepper's item order exactly.
+  line(bottomOf(BOXES.concept), topOf(BOXES.prefeasibility)),
+  line(bottomOf(BOXES.prefeasibility), topOf(BOXES.feasibility)),
+  line(bottomOf(BOXES.feasibility), topOf(BOXES.bankability)),
+  line(bottomOf(BOXES.bankability), topOf(BOXES.implementation)),
+  // Finality's own sub-steps, top to bottom.
+  line(bottomOf(BOXES.payment), topOf(BOXES.signoff)),
+  line(bottomOf(BOXES.signoff), topOf(BOXES.handover)),
   // Execution, Entry/Exit and Finality sit in a single row — connectors run frame edge to frame
   // edge with a small gap at each end, so the tip points at the frame/heading without touching it.
   line(
@@ -183,8 +201,8 @@ const REST_ARROWS: string[] = [
   // Step 4 into Memory: straight up out of the Finality frame, then a single right-angle turn
   // left into the circle at its centre height, rather than looping down and back up.
   path(
-    { x: cx(BOXES.finality), y: FINALITY_FRAME.y - ARROW_GAP },
-    { x: cx(BOXES.finality), y: MEMORY.cy },
+    { x: cx(FINALITY_FRAME), y: FINALITY_FRAME.y - ARROW_GAP },
+    { x: cx(FINALITY_FRAME), y: MEMORY.cy },
     { x: MEMORY.cx + MEMORY.r + ARROW_GAP, y: MEMORY.cy },
   ),
 ];
@@ -551,24 +569,21 @@ export function MapView({
           overrideKey: "businessDocs",
         })}
 
-        {/* Step 3 — execution. The frame heading stays "Step 3 · Execution"; this tile spells out
-            what that covers. */}
-        <MapNode
-          box={BOXES.execution}
-          label="Project Preparation and Execution"
-          state={st("execution", "preparation", "execution")}
-          lock={lock("execution", "preparation")}
-          onClick={() => open("execution", "preparation")}
-          plain
-        />
+        {/* Step 3 — execution. The frame heading stays "Step 3 · Execution"; each tile below it is
+            one item from the vertical stepper's own Execution list, in the same order: Project
+            Preparation's three sub-steps, then Bankability, then Implementation. */}
+        {node("concept", "Concept", "execution", "preparation", undefined, { plain: true })}
+        {node("prefeasibility", "Pre-feasibility", "execution", "preparation", undefined, { plain: true })}
+        {node("feasibility", "Feasibility", "execution", "preparation", undefined, { plain: true })}
+        {node("bankability", "Bankability", "execution", "bankability", undefined, { plain: true })}
+        {node("implementation", "Implementation", "execution", "implementation", undefined, { plain: true })}
         {/* Entry/Exit sits between the Step 3 and Step 4 frames, on its own. */}
         {node("entryExit", "Entry / Exit", "execution", "stakeholders", LogIn, { plain: true })}
-        {/* Step 4 — finality. "Finality" is the frame heading, so the tile shows only its detail. */}
-        {node("finality", "", "finality", "entry", undefined, {
-          sub: "Payment, Signoff, Handover",
-          subSize: "sm",
-          plain: true,
-        })}
+        {/* Step 4 — finality. "Finality" is the frame heading; each tile below it is one item from
+            the vertical stepper's own Finality list, in the same order. */}
+        {node("payment", "Payment", "finality", "type", undefined, { plain: true })}
+        {node("signoff", "Signoff", "finality", "validation", undefined, { plain: true })}
+        {node("handover", "Handover", "finality", "record", undefined, { plain: true })}
 
 
         {/* Step 5 — memory */}
