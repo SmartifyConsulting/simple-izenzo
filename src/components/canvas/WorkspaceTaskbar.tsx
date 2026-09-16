@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -136,7 +136,8 @@ function DealSearchDialog({
  * of pill buttons. Rendered once from the root so it persists across every authenticated page,
  * not just Live Deal Engine — but never shows on the marketing site itself. */
 export function WorkspaceTaskbar() {
-  const { windows, setMode, close, reorder } = useDealWindows();
+  const { windows, setMode, close, reorder, hydrate } = useDealWindows();
+  const { org } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -150,6 +151,36 @@ export function WorkspaceTaskbar() {
   const [closeConfirm, setCloseConfirm] = useState<{ id: string; label: string } | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const cancelBidFn = useServerFn(cancelBid);
+
+  // The person's own bids, so the tab strip survives a reload or a new device instead of only
+  // remembering what this browser session happened to open. Cancelled bids are left out.
+  const { data: savedDeals } = useQuery({
+    queryKey: ["taskbar-deals", org?.id],
+    enabled: Boolean(org?.id),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("id, reference, title, commodity, status, created_at")
+        .eq("org_id", org!.id)
+        // Newest first for the limit, then flipped so the taskbar reads oldest-left/newest-right.
+        .order("created_at", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return (data ?? [])
+        .map((t) => t as { id: string; reference: string | null; title: string | null; commodity: string | null; status: string | null })
+        .filter((t) => (t.status ?? "") !== "cancelled")
+        .reverse()
+        .map((t) => ({
+          id: t.id,
+          label: t.reference ?? fallbackReference(t.id, "bid"),
+          name: t.commodity ?? t.title ?? undefined,
+        }));
+    },
+  });
+
+  useEffect(() => {
+    if (savedDeals && savedDeals.length > 0) hydrate(savedDeals);
+  }, [savedDeals, hydrate]);
 
   /** Closing the last tab must leave a genuinely empty workspace — otherwise a later visit
    * resumes the bid that was just closed, name, bidder details and all. */

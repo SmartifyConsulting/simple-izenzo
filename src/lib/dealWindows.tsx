@@ -16,6 +16,28 @@ export type DealWindow = {
 };
 
 const KEY = "izenzo:deal-windows";
+/** Tabs the person deliberately closed. Kept separately so restoring their bids from the database
+ * on a fresh visit doesn't drag back a tab they just shut. */
+const CLOSED_KEY = "izenzo:deal-windows-closed";
+
+function readClosed(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(CLOSED_KEY);
+    return raw ? (JSON.parse(raw) as string[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function rememberClosed(id: string) {
+  try {
+    const next = Array.from(new Set([...readClosed(), id])).slice(-200);
+    window.localStorage.setItem(CLOSED_KEY, JSON.stringify(next));
+  } catch {
+    // Best-effort only.
+  }
+}
 
 function readAll(): DealWindow[] {
   if (typeof window === "undefined") return [];
@@ -51,6 +73,9 @@ type DealWindowsValue = {
   isPoppedElsewhere: (id: string) => boolean;
   /** Reorders the taskbar by moving `draggedId` to sit right before `targetId`. */
   reorder: (draggedId: string, targetId: string) => void;
+  /** Puts the person's own bids back on the taskbar (oldest first, newest on the right) without
+   * touching any tab already open or reopening one they closed. */
+  hydrate: (items: { id: string; label: string; name?: string | undefined }[]) => void;
 };
 
 const DealWindowsContext = createContext<DealWindowsValue | null>(null);
@@ -127,6 +152,37 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
     [persist],
   );
 
+  const hydrate = useCallback(
+    (items: { id: string; label: string; name?: string | undefined }[]) => {
+      const current = readAll();
+      const closed = new Set(readClosed());
+      const known = new Set(current.map((w) => w.id));
+      const missing = items.filter((i) => !known.has(i.id) && !closed.has(i.id));
+      if (missing.length === 0) {
+        // Still keep labels honest for tabs opened before their reference existed.
+        const fixed = current.map((w) => {
+          const match = items.find((i) => i.id === w.id);
+          return match && (w.label !== match.label || w.name !== match.name)
+            ? { ...w, label: match.label, name: match.name }
+            : w;
+        });
+        if (fixed.some((w, i) => w !== current[i])) persist(fixed);
+        return;
+      }
+      const restored: DealWindow[] = missing.map((i, n) => ({
+        id: i.id,
+        label: i.label,
+        name: i.name,
+        // Restored tabs sit on the taskbar; nothing steals the canvas from whatever is open.
+        mode: "minimized",
+        x: 80 + (current.length + n) * 24,
+        y: 80 + (current.length + n) * 24,
+      }));
+      persist([...restored, ...current]);
+    },
+    [persist],
+  );
+
   const setMode = useCallback(
     (id: string, mode: WindowMode) => {
       const current = readAll();
@@ -164,6 +220,7 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
       const w = popped.current.get(id);
       if (w && !w.closed) w.close();
       popped.current.delete(id);
+      rememberClosed(id);
       persist(readAll().filter((win) => win.id !== id));
     },
     [persist],
@@ -193,7 +250,7 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
 
   return (
     <DealWindowsContext.Provider
-      value={{ windows, open, register, setMode, move, close, isPoppedElsewhere, reorder }}
+      value={{ windows, open, register, setMode, move, close, isPoppedElsewhere, reorder, hydrate }}
     >
       {children}
     </DealWindowsContext.Provider>

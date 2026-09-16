@@ -1,0 +1,2 @@
+ALTER TABLE public.user_activity_log ADD COLUMN IF NOT EXISTS transaction_id UUID;
+CREATE INDEX IF NOT EXISTS user_activity_log_transaction_id_idx ON public.user_activity_log (transaction_id, created_at DESC);
