@@ -5,7 +5,7 @@ import { Trash2 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { OrganisationsPanel } from "@/components/account/OrganisationsPanel";
-import { VerificationPanel } from "@/components/verification/VerificationPanel";
+import { AuthorityToActPanel } from "@/components/verification/AuthorityToActPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -131,10 +131,7 @@ function SettingsPage() {
             </div>
 
             <div className="space-y-6">
-              <VerificationPanel
-                checks={["id_document", "aml", "kyb"]}
-                description="Verify your identity (KYC), a sanctions/PEP screen (AML), and your company (KYB). Each result arrives on its own — there is nothing to fill in here."
-              />
+              <AuthorityToActPanel />
 
               <div className="space-y-4 rounded-md border border-border p-5">
                 <h2 className="text-sm font-semibold">Notification rules</h2>

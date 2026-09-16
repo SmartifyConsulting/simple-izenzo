@@ -16,6 +16,7 @@ import {
   Users,
 } from "lucide-react";
 import { InlineFrame } from "./DealCanvas";
+import { ArtefactHint } from "./ArtefactHint";
 import { lockReason, stepIndex, type StageKey } from "@/lib/spine";
 import { cn } from "@/lib/utils";
 import type { Transaction } from "@/lib/tx";
@@ -309,6 +310,7 @@ function MapNode({
   subTone,
   plain,
   subSize,
+  step,
 }: {
   box: Box;
   label: string;
@@ -325,6 +327,9 @@ function MapNode({
   /** Execution/Finality's own sub-text reads larger than the compact gate/manual-doc notes on
    * other tiles. */
   subSize?: "xs" | "sm" | undefined;
+  /** The spine step this tile represents — drives the hoverable artefact icon, when this step
+   * actually produces one. */
+  step?: string | undefined;
 }) {
   const locked = state === "locked";
   return (
@@ -353,6 +358,7 @@ function MapNode({
         {Icon && <Icon className={cn("h-3.5 w-3.5 shrink-0", state === "open" && "text-primary")} />}
         <span className="whitespace-normal break-words leading-tight">{label}</span>
         {state === "done" && <CheckCircle2 className="h-3 w-3 shrink-0 text-success" />}
+        {step && <ArtefactHint step={step} />}
       </span>
       {sub && (
         <span
@@ -447,6 +453,7 @@ export function MapView({
       box={BOXES[key]}
       label={label}
       icon={icon}
+      step={step}
       {...(opts?.sub ? { sub: opts.sub } : {})}
       {...(opts?.subTone ? { subTone: opts.subTone } : {})}
       {...(opts?.plain ? { plain: true } : {})}

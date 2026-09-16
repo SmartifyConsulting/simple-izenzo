@@ -22,6 +22,7 @@ import {
   Upload,
 } from "lucide-react";
 import { InlineFrame } from "./DealCanvas";
+import { ArtefactHint } from "./ArtefactHint";
 import { lockReason, stepIndex, type StageKey } from "@/lib/spine";
 import { cn } from "@/lib/utils";
 import type { Transaction } from "@/lib/tx";
@@ -209,7 +210,10 @@ function SubRow({
         Icon && <Icon className="h-3.5 w-3.5 shrink-0" />
       )}
       <span className="min-w-0 flex-1">
-        <span className="block break-words">{item.label}</span>
+        <span className="flex items-center gap-1.5 break-words">
+          {item.label}
+          <ArtefactHint step={item.step} />
+        </span>
         {item.sub && (
           <span className="block text-[9px] font-semibold uppercase tracking-wide text-[#C1653D]">
             {item.sub}

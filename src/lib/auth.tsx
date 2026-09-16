@@ -14,6 +14,14 @@ export type Profile = {
   login_count?: number | null;
   email_verified_at?: string | null;
   avatar_url?: string | null;
+  /** Manually captured at registration — no photo/document scan. KYC/KYB/AML/PEP happen later,
+   * scoped to a specific deal, at the WaD gate. */
+  id_number_type?: "id" | "passport" | null;
+  id_number?: string | null;
+  /** Compulsory proof that this person may act (bid, sign, trade) on their organisation's behalf. */
+  authority_to_act_path?: string | null;
+  authority_to_act_name?: string | null;
+  authority_to_act_uploaded_at?: string | null;
 };
 
 export type Org = {

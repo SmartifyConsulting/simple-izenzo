@@ -67,7 +67,7 @@ function AlphaBravoHome() {
             <Sparkles className="h-3.5 w-3.5" /> AI-Powered Trade Matching
           </span>
           <h1 className="mt-3 max-w-3xl text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl">
-            Governance Infrastructure
+            Governance Infrastructure Marketplace
           </h1>
           <div className="mt-4">
             <SubmitBidButton size="sm" />
