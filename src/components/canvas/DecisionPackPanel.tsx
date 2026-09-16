@@ -26,7 +26,7 @@ const HEADING: Record<StageContext, string> = {
 };
 
 const PILL_LABEL: Record<StageContext, string> = {
-  choice_made: "AI+ CHOICE RECOMMENDATIONS",
+  choice_made: "AI+ ALTERNATIVE RECOMMENDATIONS",
   intent_confirmed: "AI+ FINAL CHOICE RECOMMENDATIONS",
   wad_updated: "AI+ OVERALL COMPLIANCE RECOMMENDATIONS",
   finality_recorded: "AI+ PROPOSALS",

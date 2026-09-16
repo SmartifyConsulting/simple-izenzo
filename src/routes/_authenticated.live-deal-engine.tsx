@@ -63,7 +63,7 @@ import { searchCounterparties } from "@/lib/izenzo.functions";
 import { listCounterOffers } from "@/lib/counterOffer.functions";
 
 import { runBackgroundScreening, type ScreeningResult } from "@/lib/screening.functions";
-import { runOnlineMediaChecks, type MediaCheckResult } from "@/lib/onlineMedia.functions";
+import { runOnlineMediaChecks, type MediaCheckResult, type MediaFinding } from "@/lib/onlineMedia.functions";
 import { listVerificationsForTx } from "@/lib/didit.functions";
 import { summarizeBidDocuments } from "@/lib/docSummary.functions";
 import { cancelBid } from "@/lib/cancelBid.functions";
@@ -395,6 +395,41 @@ function LiveDealEngine() {
       live = false;
     };
   }, [dealTx?.id]);
+  // media_flags on each counterparty is where Online Media Screening's findings are actually
+  // persisted (see onlineMedia.functions.ts) — mediaResults above is otherwise plain session-local
+  // state that resets to null on every fresh page load, which made the whole "Online Scanning
+  // Results" accordion vanish on reload even though the checks had already run. Read it straight
+  // back from the counterparties that have it, rather than only ever setting it from a live run.
+  useEffect(() => {
+    if (!dealTx?.id) return;
+    let live = true;
+    (async () => {
+      const { data } = await supabase
+        .from("counterparties")
+        .select("id, name, media_flags")
+        .eq("transaction_id", dealTx.id)
+        .not("media_flags", "is", null);
+      if (!live) return;
+      const rows = (data ?? []) as unknown as {
+        id: string;
+        name: string;
+        media_flags: { findings?: MediaFinding[] } | null;
+      }[];
+      if (rows.length > 0) {
+        setMediaResults((prev) =>
+          prev ??
+          rows.map((r) => ({
+            counterpartyId: r.id,
+            name: r.name,
+            findings: r.media_flags?.findings ?? [],
+          })),
+        );
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [dealTx?.id]);
   // `dbHasChosenParty` is also set optimistically by finalizeChoice/startMediaChecks, so the name
   // is re-read whenever it flips rather than only on switching deals.
   useEffect(() => {
@@ -594,13 +629,9 @@ function LiveDealEngine() {
   // Once Intent is confirmed, its frame folds into a small accordion nested under Online Media
   // Screening Results rather than staying open as its own full-size panel.
   const [confirmedIntentOpen, setConfirmedIntentOpen] = useState(false);
-  // AI+ proposes; a person decides. These track whether every proposal in each pack has been
-  // accepted or rejected, which is what lets the spine move on.
+  // AI+ proposes; a person decides. Tracks whether every proposal in the Choice pack has been
+  // accepted or rejected, which is what lets Intent open.
   const [choicePackDecided, setChoicePackDecided] = useState(false);
-  const [intentPackDecided, setIntentPackDecided] = useState(false);
-  // Once every AI+ compliance recommendation has been decided, the panel disappears from the
-  // accordion list entirely rather than just folding itself closed.
-  const [wadPackDecided, setWadPackDecided] = useState(false);
 
   // The sealed Proof of Intent folds the same way — closed until the certificate is wanted.
   const [sealedPoiOpen, setSealedPoiOpen] = useState(false);
@@ -1009,7 +1040,7 @@ function LiveDealEngine() {
     // applies: clear it so it can be granted again for this party. A *sealed* Proof of Intent is
     // a governance milestone and is never unwound — the deal stays with the party it names.
     if (dealTx.poi_sealed_at) {
-      toast.error("The Proof of Intent is sealed for this bid — the counterparty can no longer change.");
+      toast.error("Intent is sealed for this bid — the counterparty can no longer change.");
       return;
     }
     if (dealTx.intent_confirmed_at) {
@@ -1955,7 +1986,7 @@ function LiveDealEngine() {
           {dealTx?.poi_sealed_at && (
             <div className="mb-1.5 flex items-center gap-1.5 rounded-full border border-success/30 bg-success/10 px-3 py-1.5 text-[11px] font-medium text-success">
               <Lock className="h-3 w-3 shrink-0" />
-              Proof of Intent sealed — everything above is now read-only.
+              Intent sealed — everything above is now read-only.
             </div>
           )}
 
@@ -2597,18 +2628,7 @@ function LiveDealEngine() {
                   </div>
                 )}
 
-                {/* The last advisory word before the Proof of Intent becomes immutable — sits
-                    after the Confirmed Intent record it's advising on top of. */}
-                {dealTx?.intent_confirmed_at && !dealTx.poi_sealed_at && (
-                  <DecisionPackPanel
-                    transactionId={dealTx.id}
-                    stageContext="intent_confirmed"
-                    gating
-                    onAllDecided={setIntentPackDecided}
-                  />
-                )}
-
-                {/* Sealed Proof of Intent reads the same way: a folded record whose certificate is
+                {/* Sealed intent reads the same way: a folded record whose certificate is
                     there when it's wanted, with the sealing sentence as subtext under the pill
                     rather than a second heading inside the frame. */}
                 {dealTx?.poi_sealed_at && (
@@ -2621,7 +2641,7 @@ function LiveDealEngine() {
                     >
                       <span className="min-w-0">
                         <span className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
-                          Proof of Intent
+                          Seal Intent
                         </span>
                         <span className="mt-1 block text-[11px] text-muted-foreground">
                           Sealing writes the transaction state to an immutable record with a fingerprint.
@@ -2648,7 +2668,7 @@ function LiveDealEngine() {
                   </div>
                 )}
 
-                {/* Cleared WaD case — same folded-record treatment as Proof of Intent above. */}
+                {/* Cleared WaD case — same folded-record treatment as Seal Intent above. */}
                 {dealTx?.wad_completed_at && (
                   <div className="rounded-2xl border border-border bg-card">
                     <button
@@ -2685,18 +2705,11 @@ function LiveDealEngine() {
                 )}
 
                 {/* The human decision on the AI+ proposals comes first: Intent only opens once
-                    every proposal from the Choice pack has been accepted or rejected, and
-                    sealing only once the pre-seal pack has been decided. */}
+                    every proposal from the Choice pack has been accepted or rejected. */}
                 {dealTx && stagePanel === "intent" && !dealTx.intent_confirmed_at && dbHasChosenParty && !choicePackDecided ? (
                   <div className="rounded-2xl border border-border bg-card px-3.5 py-3">
                     <p className="text-xs text-muted-foreground">
                       Accept or reject each AI+ proposal above, then Intent opens.
-                    </p>
-                  </div>
-                ) : dealTx && stagePanel === "poi" && dealTx.intent_confirmed_at && !dealTx.poi_sealed_at && !intentPackDecided ? (
-                  <div className="rounded-2xl border border-border bg-card px-3.5 py-3">
-                    <p className="text-xs text-muted-foreground">
-                      Accept or reject the AI+ proposals above before sealing the Proof of Intent.
                     </p>
                   </div>
                 ) : (
@@ -2723,22 +2736,9 @@ function LiveDealEngine() {
                 )}
 
 
-                {/* Advisory only — AI+ cannot approve, reject, alter or bypass the WaD gate. Sits
-                    after Business Docs, once execution's own paperwork is actually on file —
-                    and disappears once every recommendation has been decided, rather than
-                    lingering folded in the accordion list. */}
-                {dealTx?.wad_completed_at && stepOverrides["businessDocs"] === "done" && !wadPackDecided && (
-                  <DecisionPackPanel
-                    transactionId={dealTx.id}
-                    stageContext="wad_updated"
-                    onAllDecided={setWadPackDecided}
-                  />
-                )}
-
                 {/* Only once Step 2's own documents (Business Docs) are in — not the moment the
                     compliance checks clear. Collapsed by default: it's a record to check back on,
-                    and Execution is what needs attention by then. Sits below the AI+ compliance
-                    recommendations above it. */}
+                    and Execution is what needs attention by then. */}
                 {dealTx?.wad_completed_at && stepOverrides["businessDocs"] === "done" && (
                   <div className="mt-1.5 rounded-2xl border border-border bg-card">
                     <button

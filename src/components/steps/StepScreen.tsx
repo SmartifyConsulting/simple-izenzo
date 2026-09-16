@@ -1446,15 +1446,14 @@ function IntentStep({ tx, reload }: Props) {
   );
 
   // Already confirmed: this sits inside the "Confirmed Intent" accordion, which already carries
-  // both the heading and this same explanatory line as its subtext — just the certificate here.
+  // both the heading and this same explanatory line as its subtext — the full certificate is
+  // filed as a document already, so this just needs to say, briefly, that it happened.
   if (tx.intent_confirmed_at) {
     return (
-      <div className="text-xs leading-relaxed">
-        <div>{certificate}</div>
-        <p className="mt-4 text-xs text-muted-foreground">
-          Signed by {signer} · {when(tx.intent_confirmed_at)}
-        </p>
-      </div>
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        Confirmed with <span className="font-medium text-foreground">{chosen ?? "the counterparty"}</span> —
+        signed by {signer} on {when(tx.intent_confirmed_at)}.
+      </p>
     );
   }
 
@@ -1659,7 +1658,7 @@ function PoiStep({ tx, reload }: Props) {
       // tx itself won't reflect the seal until reload() runs — the certificate shown right after
       // sealing needs the just-written values, not the stale prop.
       setSealedSnapshot(sealedTx ?? null);
-      const name = `Proof of Intent — ${tx.title}.txt`;
+      const name = `Seal Intent — ${tx.title}.txt`;
       const path = `deals/${tx.id}/${Date.now()}-proof-of-intent.txt`;
       const body = certificateBody(sealedTx?.poi_sealed_at ?? null, sealedTx?.poi_hash ?? null);
       const { error: upErr } = await supabase.storage
@@ -1678,7 +1677,7 @@ function PoiStep({ tx, reload }: Props) {
         toast.warning("Sealed, but the certificate could not be filed against the deal.");
       }
 
-      toast.success("Proof of Intent sealed");
+      toast.success("Intent sealed");
       reload();
     } catch (err) {
       reportGateError(err, navigate, tx);
@@ -1714,7 +1713,7 @@ function PoiStep({ tx, reload }: Props) {
   );
 
   if (tx.poi_sealed_at) {
-    // No panel heading of its own: this sits inside the workspace's folded "Proof of Intent"
+    // No panel heading of its own: this sits inside the workspace's folded "Seal Intent"
     // frame, which already names it. Just the sealing line, the certificate, and its actions.
     return (
       <>
@@ -1722,7 +1721,7 @@ function PoiStep({ tx, reload }: Props) {
           <p className="text-muted-foreground">Sealed {when(tx.poi_sealed_at)}</p>
           <div className="mt-3">
             <CertificateBlock
-              heading="Proof of Intent"
+              heading="Seal Intent"
               lines={[
                 { label: "Transaction", value: tx.title },
                 { label: "Quantity / Price", value: `${tx.quantity ?? "—"} ${tx.unit ?? ""} at ${tx.price ?? "—"} ${tx.currency}` },
@@ -1749,7 +1748,7 @@ function PoiStep({ tx, reload }: Props) {
   return (
     <>
     <Panel
-      // No title: the frame around this already reads "Proof of Intent", and the sealing
+      // No title: the frame around this already reads "Seal Intent", and the sealing
       // sentence now sits as subtext under that heading.
 
 
@@ -1757,7 +1756,7 @@ function PoiStep({ tx, reload }: Props) {
         <div className="flex items-center justify-between gap-3">
           <TokenGateFooter cost={POI_COST} />
           <Button size="sm" onClick={doSeal} disabled={busy || !tx.intent_confirmed_at || shortOnTokens}>
-            {busy ? "Sealing…" : "Seal Proof of Intent"}
+            {busy ? "Sealing…" : "Seal Intent"}
           </Button>
         </div>
       }
@@ -2029,7 +2028,7 @@ function WadStep({ tx, reload }: Props) {
               Block
             </Button>
             <Button size="sm" disabled={busy || shortOnTokens} onClick={() => decide("cleared")}>
-              Clear WaD
+              Complete Verification
             </Button>
           </div>
         </div>

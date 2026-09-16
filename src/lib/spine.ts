@@ -33,7 +33,7 @@ export const SPINE: StageDef[] = [
       { key: "intent", label: "Confirm Intent", blurb: "Confirm the intent to transact on the stated terms." },
       {
         key: "poi",
-        label: "Proof of Intent",
+        label: "Seal Intent",
         blurb:
           "Sealing writes the transaction state to an immutable record with a fingerprint. Compliance, execution, finality and memory stay locked until it exists.",
       },
@@ -117,14 +117,14 @@ export function lockReason(
   if (!tx) return null;
   const poi = Boolean(tx.poi_sealed_at);
   const wad = Boolean(tx.wad_completed_at);
-  if (stage === "compliance" && !poi) return "Proof of Intent required";
+  if (stage === "compliance" && !poi) return "Seal Intent required";
   if (stage === "execution" || stage === "finality" || stage === "memory") {
-    if (!poi) return "Proof of Intent required";
+    if (!poi) return "Seal Intent required";
     if (!wad) return "WaD verification required";
   }
 
-  // A bid whose Proof of Intent is already sealed must never be stranded behind a lock: WaD is
-  // reachable on the strength of the seal, even if the bid's own marker still lags at Proof of Intent.
+  // A bid whose intent is already sealed must never be stranded behind a lock: WaD is
+  // reachable on the strength of the seal, even if the bid's own marker still lags at Seal Intent.
   if (stage === "compliance" && poi) return null;
 
   const targetIdx = stepIndex(stage, step);

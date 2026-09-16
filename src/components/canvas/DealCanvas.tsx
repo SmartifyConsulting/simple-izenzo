@@ -502,14 +502,14 @@ export function DealCanvas({
           ticked list, the way Deal Creation does, and attention moves on to Without a Doubt. */}
       {poiSealed && (
         <div className={cn("mt-3", stepsBoxClass)}>
-          <GateBar label="Proof of Intent" cleared />
+          <GateBar label="Seal Intent" cleared />
           <div className="space-y-1.5">
             {[
               "Counterparties surfaced",
               "Counterparty chosen",
               "Background screening complete",
               "Intent confirmed",
-              "Proof of Intent sealed",
+              "Intent sealed",
             ].map((label) => (
               <div key={label} className="flex items-center gap-2 text-xs text-emerald-500">
                 <CheckCircle2 className="h-4 w-4 shrink-0" />
@@ -525,7 +525,7 @@ export function DealCanvas({
 
           <Connector />
           <GateGroup
-            title="Proof of Intent"
+            title="Seal Intent"
             align={focusSide === "offer" ? "right" : "left"}
             forceOpen={Boolean(openProofOfIntent)}
           >
@@ -649,7 +649,7 @@ export function DealCanvas({
             </div>
             {visible("trading", "poi") && (
               <div className={stepsBoxClass}>
-                <GateBar label="Proof of Intent" cleared={poi} />
+                <GateBar label="Seal Intent" cleared={poi} />
               </div>
             )}
           </GateGroup>
@@ -1423,48 +1423,9 @@ export function CounterpartyRecord({
     <div
       className="rounded-2xl border-2 border-primary bg-slate-100 p-4"
     >
-      {/* The record of what the search found, kept plain inside the workspace's Search Results
-          frame — no second heading, and no repeat of the screening findings, which have their own
-          frame below in the workspace. */}
-      {candidates.length > 0 && mediaResults && mediaResults.length > 0 && (
-        <ul className="space-y-1.5 pb-3">
-          {[...candidates]
-            .sort((a, b) => Number(Boolean(b.shortlisted)) - Number(Boolean(a.shortlisted)))
-            .map((c) => (
-              <li key={`sr-${c.id}`} className="flex items-center gap-2">
-                <span className="min-w-0 flex-1 truncate text-xs text-slate-800">{c.name}</span>
-                {c.shortlisted && (
-                  <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
-                    Selected
-                  </span>
-                )}
-                {c.score != null && (
-                  <span className="shrink-0 rounded-full border border-foreground bg-foreground px-2 py-0.5 text-[10px] font-semibold text-background">
-                    {c.score}%
-                  </span>
-                )}
-                {c.shortlisted && txId && (
-                  <button
-                    type="button"
-                    title="View proposal"
-                    onClick={() => setProposalFor({ id: c.id, name: c.name })}
-                    className="shrink-0 rounded p-1 text-slate-500 hover:bg-slate-200 hover:text-slate-900"
-                  >
-                    <FileText className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </li>
-            ))}
-        </ul>
-      )}
-
-
-      <div
-        className={cn(
-          "flex items-center justify-between gap-2",
-          mediaResults && mediaResults.length > 0 && "border-t border-slate-300 pt-3",
-        )}
-      >
+      {/* Heading sits at the top of the frame, before the results list below it, so it reads as
+          the frame's title rather than a divider buried partway down. */}
+      <div className="flex items-center justify-between gap-2">
         {/* Nothing to prompt for until the search has actually returned companies. */}
         <p className="label-caps text-black">
           {candidates.length === 0 || searching
@@ -1497,6 +1458,41 @@ export function CounterpartyRecord({
           </div>
         )}
       </div>
+
+      {/* The record of what the search found, kept plain inside the workspace's Search Results
+          frame — no second heading, and no repeat of the screening findings, which have their own
+          frame below in the workspace. */}
+      {candidates.length > 0 && mediaResults && mediaResults.length > 0 && (
+        <ul className="mt-3 space-y-1.5 border-t border-slate-300 pt-3">
+          {[...candidates]
+            .sort((a, b) => Number(Boolean(b.shortlisted)) - Number(Boolean(a.shortlisted)))
+            .map((c) => (
+              <li key={`sr-${c.id}`} className="flex items-center gap-2">
+                <span className="min-w-0 flex-1 truncate text-xs text-slate-800">{c.name}</span>
+                {c.shortlisted && (
+                  <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
+                    Selected
+                  </span>
+                )}
+                {c.score != null && (
+                  <span className="shrink-0 rounded-full border border-foreground bg-foreground px-2 py-0.5 text-[10px] font-semibold text-background">
+                    {c.score}%
+                  </span>
+                )}
+                {c.shortlisted && txId && (
+                  <button
+                    type="button"
+                    title="View proposal"
+                    onClick={() => setProposalFor({ id: c.id, name: c.name })}
+                    className="shrink-0 rounded p-1 text-slate-500 hover:bg-slate-200 hover:text-slate-900"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </li>
+            ))}
+        </ul>
+      )}
 
       {CHALLENGES_FEATURE_ENABLED && openChallenge && (
         <div className="mt-2 rounded-md border border-destructive/40 bg-destructive/10 p-2.5">

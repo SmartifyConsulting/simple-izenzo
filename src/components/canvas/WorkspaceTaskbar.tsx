@@ -13,6 +13,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -272,6 +273,7 @@ export function WorkspaceTaskbar() {
       </div>
       <DealSearchDialog open={searchOpen} onOpenChange={setSearchOpen} onPick={openDeal} />
 
+      <TooltipProvider delayDuration={300}>
       <div className="flex items-end gap-1 overflow-x-auto">
       {deals.map((w) => {
         const active = w.mode !== "minimized";
@@ -308,14 +310,18 @@ export function WorkspaceTaskbar() {
               overId === w.id && draggedId !== w.id && "border-l-2 border-l-primary",
             )}
           >
-            <button
-              type="button"
-              className="min-w-0 flex-1 truncate text-center font-sans text-[12px] font-bold uppercase tracking-wide"
-              onClick={() => activate(w.id, w.mode)}
-              title={w.name ? `${w.label} — ${w.name}` : w.label}
-            >
-              {w.label}
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="min-w-0 flex-1 truncate text-center font-sans text-[12px] font-bold uppercase tracking-wide"
+                  onClick={() => activate(w.id, w.mode)}
+                >
+                  {w.label}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">{w.name ? `${w.label} — ${w.name}` : w.label}</TooltipContent>
+            </Tooltip>
             <X
               className="h-3 w-3 shrink-0 cursor-pointer text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
               onClick={(e) => {
@@ -327,6 +333,7 @@ export function WorkspaceTaskbar() {
         );
       })}
       </div>
+      </TooltipProvider>
 
       <AlertDialog open={closeConfirm !== null} onOpenChange={(open) => !open && setCloseConfirm(null)}>
         <AlertDialogContent>

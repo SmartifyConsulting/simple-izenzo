@@ -36,6 +36,13 @@ export const STAGE_CONTEXTS = [
 
 export type StageContext = (typeof STAGE_CONTEXTS)[number];
 
+const STAGE_LABEL: Record<StageContext, string> = {
+  choice_made: "Choice",
+  intent_confirmed: "Before Sealing Intent",
+  wad_updated: "Compliance Case",
+  finality_recorded: "Finality",
+};
+
 const STAGE_BRIEF: Record<StageContext, string> = {
   choice_made:
     "A counterparty has just been chosen by a person. Advise on that choice: is the counterparty sound, is the pricing sane, what risks and structuring points matter, is the timing right, is a substitution or a bundle worth considering.",
@@ -313,6 +320,60 @@ export const decideProposal = createServerFn({ method: "POST" })
         decidedAt,
       },
     });
+
+    // Once every proposal in this pack has a decision, file the whole pack — every option AI+
+    // put forward and what was chosen for each — as an audit document against the deal, so the
+    // reasoning behind the outcome is on the record, not just the outcome itself.
+    const { data: packProposals } = proposal.decision_pack_id
+      ? await supabase
+          .from("ai_proposals")
+          .select("*")
+          .eq("decision_pack_id", proposal.decision_pack_id)
+          .is("superseded_by", null)
+      : { data: null };
+    const pack = packProposals ?? [];
+    const allDecided = pack.length > 0 && pack.every((p) => p.id === proposal.id || p.decided_at);
+    if (allDecided) {
+      const { data: tx } = await supabase
+        .from("transactions")
+        .select("title")
+        .eq("id", proposal.transaction_id)
+        .maybeSingle();
+      const deciderIds = [...new Set(pack.map((p) => p.decided_by).filter((id): id is string => Boolean(id)))];
+      const { data: deciders } = deciderIds.length
+        ? await supabase.from("profiles").select("id, full_name, email").in("id", deciderIds)
+        : { data: [] as { id: string; full_name: string | null; email: string | null }[] };
+      const nameOf = (id: string | null) => {
+        const d = (deciders ?? []).find((p) => p.id === id);
+        return d?.full_name || d?.email || "A person";
+      };
+      const stageContext = proposal.stage_context as StageContext;
+      const body = [
+        `IZENZO — AI+ DECISION AUDIT — ${STAGE_LABEL[stageContext]}`,
+        "",
+        ...pack
+          .map((p, i) => [
+            `${i + 1}. [${p.proposal_type ?? "option"}] ${p.output}`,
+            p.rationale ? `   Rationale: ${p.rationale}` : null,
+            p.probability != null ? `   Probability: ${Math.round(Number(p.probability) * 100)}%` : null,
+            p.related_counterparty ? `   Counterparty: ${p.related_counterparty}` : null,
+            `   Decision: ${(p.id === proposal.id ? data.decision : p.decision) ?? "—"} by ${nameOf(p.id === proposal.id ? userId : p.decided_by)} at ${p.id === proposal.id ? decidedAt : p.decided_at}`,
+          ].filter((line): line is string => Boolean(line)).join("\n")),
+      ].join("\n");
+      const path = `deals/${proposal.transaction_id}/${Date.now()}-ai-plus-audit-${stageContext}.txt`;
+      const { error: upErr } = await supabase.storage
+        .from("documents")
+        .upload(path, new Blob([body], { type: "text/plain" }));
+      if (!upErr) {
+        await supabase.from("documents").insert({
+          transaction_id: proposal.transaction_id,
+          name: `AI+ Decisions — ${STAGE_LABEL[stageContext]} — ${tx?.title ?? ""}.txt`,
+          doc_type: "audit",
+          notes: "AI+ decision audit",
+          storage_path: path,
+        });
+      }
+    }
 
     return { decidedAt, decision: data.decision };
   });

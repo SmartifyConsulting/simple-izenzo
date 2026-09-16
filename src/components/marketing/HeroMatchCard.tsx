@@ -1,21 +1,25 @@
 import { useRef, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowUp, ExternalLink, ShieldCheck, FileCheck2, Loader2, RotateCcw, Sparkles, UploadCloud, X } from "lucide-react";
+import { ArrowUp, ShieldCheck, FileCheck2, Loader2, RotateCcw, Sparkles, UploadCloud, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { seedNext, stashHeroFiles, useHeroSearch } from "@/lib/heroSearchContext";
 
-/** Reads the same public directory the Responders page reads, so a signed-out visitor actually
- * sees rows. The private counterparty table this used to query is per-transaction and unreadable
- * when signed out, which made the preview come back empty every time. */
-function useIllustrativeMatches(enabled: boolean, prompt: string) {
-  const terms = prompt
+function extractTerms(prompt: string) {
+  return prompt
     .toLowerCase()
     .split(/[^a-z0-9]+/i)
     .filter((w) => w.length > 3)
     .slice(0, 6);
+}
+
+/** Reads the same public directory the Responders page reads, so a signed-out visitor actually
+ * sees rows. The private counterparty table this used to query is per-transaction and unreadable
+ * when signed out, which made the preview come back empty every time. */
+function useIllustrativeMatches(enabled: boolean, prompt: string) {
+  const terms = extractTerms(prompt);
 
   return useQuery({
     queryKey: ["hero-illustrative-matches", terms.join(",")],
@@ -45,15 +49,22 @@ function useIllustrativeMatches(enabled: boolean, prompt: string) {
   });
 }
 
-const BAND_LABEL = {
-  verified: "Verified",
-  registered: "On Izenzo",
-  unclaimed: "Unclaimed",
-} as const;
-
 function bandOf(l: { verified_at: string | null; org_id: string | null }) {
   if (l.verified_at) return "verified" as const;
   return l.org_id ? ("registered" as const) : ("unclaimed" as const);
+}
+
+/** A fit percentage for the teaser report — real term overlap against what was typed when there
+ * is a prompt to match against, or a steady band-based estimate while just browsing. Never shown
+ * with the counterparty's own name attached: enough to make the number of good matches feel real
+ * and worth signing up for, without handing over the actual matches for free. */
+function fitScore(m: { name: string; sector: string | null; jurisdiction: string | null; summary: string | null; verified_at: string | null; org_id: string | null }, terms: string[]) {
+  if (terms.length === 0) {
+    return bandOf(m) === "verified" ? 96 : bandOf(m) === "registered" ? 84 : 70;
+  }
+  const haystack = `${m.name} ${m.sector ?? ""} ${m.jurisdiction ?? ""} ${m.summary ?? ""}`.toLowerCase();
+  const hits = terms.filter((t) => haystack.includes(t)).length;
+  return Math.max(Math.round((hits / terms.length) * 100), 60);
 }
 
 /** The homepage's upload-and-preview card. Uploading a file here does not run any real analysis
@@ -155,7 +166,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
       )}
 
       {searched && (
-        <h2 className="mt-1 text-base font-medium tracking-tight text-foreground">Top 5 matches</h2>
+        <h2 className="mt-1 text-base font-medium tracking-tight text-foreground">Search complete</h2>
       )}
 
       {!searched && !searching && (
@@ -261,73 +272,47 @@ export function HeroMatchCard({ className }: { className?: string }) {
 
       {searched && (
         <>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {!isLoading && total > 0 ? (
-              <>
-                <span className="font-medium text-foreground">
-                  {total} match{total === 1 ? "" : "es"} found
-                </span>
-                {total > 5 ? " — showing your top 5. " : ". "}
-                Real Counterparty records, sign up to unlock full contacts.
-              </>
-            ) : (
-              "Your top 5 — real Counterparty records, sign up to unlock full contacts."
-            )}
-          </p>
+          <div className="mt-4">
+            {isLoading && <p className="text-center text-sm text-muted-foreground">Loading…</p>}
 
-          <div className="mt-4 space-y-3">
-            {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
-
-
-            {!isLoading && (!matches || matches.length === 0) && (
-              <p className="text-sm text-muted-foreground">
+            {!isLoading && total === 0 && (
+              <p className="text-center text-sm text-muted-foreground">
                 No Counterparties on file yet — sign up and be the first match.
               </p>
             )}
 
-            {matches?.map((m) => (
-              <div key={m.id} className="rounded-xl border border-border p-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-primary">
-                  {BAND_LABEL[bandOf(m)]}
-                  {m.sector ? ` · ${m.sector}` : ""}
-                  
-                </p>
-                <p className="mt-1 text-sm font-medium text-foreground">{m.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {m.jurisdiction ?? "Jurisdiction pending"}
-                  {m.source === "web_search" ? " · Found on the web" : ""}
-                </p>
-                {/* What was found about this match — omitted when nothing was recorded. */}
-                {m.summary && (
-                  <p className="mt-1.5 text-xs leading-relaxed text-foreground/80">{m.summary}</p>
-                )}
-                {m.source_url && (
-                  <a
-                    href={m.source_url}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
-                  >
-                    <ExternalLink className="h-3 w-3" /> Where it was found
-                  </a>
-                )}
-              </div>
-
-            ))}
-
-            {/* More than five found: "See more" opens the Live Workspace with the full list in its
-                panel, carrying the typed description so the panel filters on the same search. */}
-            {!isLoading && total > 5 && (
-              <Link
-                to="/live-deal-engine"
-                search={{ panel: "matches" as const, ...(prompt.trim() ? { q: prompt.trim() } : {}) }}
-                aria-label="See more matches"
-                className="mx-auto flex h-9 w-fit items-center justify-center rounded-full border border-border px-4 text-xs font-medium text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
-              >
-                See more
-              </Link>
-            )}
-
+            {!isLoading && total > 0 && (() => {
+              const terms = extractTerms(prompt);
+              const fits = (matches ?? []).map((m) => fitScore(m, terms));
+              const topFit = fits.length ? Math.max(...fits) : null;
+              const strongFits = fits.filter((f) => f >= 90).length;
+              return (
+                <div className="rounded-2xl border border-border bg-muted/30 p-5 text-center">
+                  <p className="text-3xl font-semibold tracking-tight text-foreground">{total}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    counterpart{total === 1 ? "y" : "ies"} found{prompt.trim() ? " for your search" : ""}
+                  </p>
+                  {topFit !== null && (
+                    <p className="mt-3 text-sm text-foreground">
+                      {strongFits > 0 ? (
+                        <>
+                          <span className="font-semibold text-primary">{strongFits}</span> of them{" "}
+                          {strongFits === 1 ? "has" : "have"} a{" "}
+                          <span className="font-semibold text-primary">{topFit}%</span> fit or better.
+                        </>
+                      ) : (
+                        <>
+                          Best fit so far: <span className="font-semibold text-primary">{topFit}%</span>.
+                        </>
+                      )}
+                    </p>
+                  )}
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Sign up to see who they are and unlock full contacts.
+                  </p>
+                </div>
+              );
+            })()}
           </div>
 
 
