@@ -363,13 +363,19 @@ function LiveDealEngine() {
     setStagePanel(null);
     setMapPanel(null);
     setIntentDismissed(false);
-    // documentSummary/readError left over from the previous bid made the polling query above
-    // disable itself (`enabled: !documentSummary`) before the new bid's own documents had been
-    // read, which let the auto-search effect see a truthy (but stale) summary and kick off the
-    // AI/AI+ search immediately — the search progress bar appearing before this bid's documents
-    // had actually been summarised.
-    setDocumentSummary(null);
-    setReadError(null);
+    // Start from whatever this bid's own row already has, never a previous bid's leftover value
+    // (the earlier bug this guarded against) — but unlike hardcoding null, this doesn't also wipe
+    // out a summary (or a recorded read failure) the new bid already had saved. Resetting to null
+    // unconditionally here ran *after* the loader above had already set the real value (both fire
+    // off the same dealTx.id change), so an old bid's saved summary got overwritten back to null
+    // the moment its tab was opened, which then made the "not yet summarised" fast path re-run the
+    // AI read on every document again — even though nothing about the bid had changed.
+    const freshTx = dealTx as unknown as {
+      document_summary?: string | null;
+      document_summary_error?: string | null;
+    } | null;
+    setDocumentSummary(freshTx?.document_summary ?? null);
+    setReadError(freshTx?.document_summary_error ?? null);
   }, [dealTx?.id]);
   // Only re-derived when switching to a different deal — not on every step change within the
   // same one. Re-running this on every step change re-queried "chosen" the moment the step moved
@@ -791,6 +797,16 @@ function LiveDealEngine() {
     if (!dealTx || workspaceDocs.length === 0 || rereading) return;
     const txId = dealTx.id;
     if (summarizedDocCount.current[txId] === workspaceDocs.length) return;
+    // A bid opened for the first time this session has no entry in the ref yet, which otherwise
+    // looks identical to "never summarised" even when it already has a summary (or a recorded read
+    // failure) saved from an earlier session — trust that existing outcome instead of re-reading
+    // every document again just because this is the first time this tab has been clicked since the
+    // page loaded. A genuine failed read still surfaces via readError and the "Try again" button;
+    // it just doesn't retry itself automatically.
+    if (summarizedDocCount.current[txId] === undefined && (documentSummary || readError)) {
+      summarizedDocCount.current[txId] = workspaceDocs.length;
+      return;
+    }
     if (rereadDebounceRef.current) clearTimeout(rereadDebounceRef.current);
     rereadDebounceRef.current = setTimeout(() => {
       summarizedDocCount.current[txId] = workspaceDocs.length;
@@ -799,7 +815,7 @@ function LiveDealEngine() {
     return () => {
       if (rereadDebounceRef.current) clearTimeout(rereadDebounceRef.current);
     };
-  }, [dealTx?.id, workspaceDocs.length, rereading]);
+  }, [dealTx?.id, workspaceDocs.length, rereading, documentSummary, readError]);
 
 
   // Has interest already been fetched for this bid? Drives the "Fetch Interest" button, so it
