@@ -10,6 +10,10 @@
 
 Behaviour that stays exactly as it is: AI+ only advises, it never selects, changes or seals anything; every accept/reject is recorded against the signed-in person's name and cannot be changed afterwards; percentages stay numeric.
 
+## New documents keep AI+ up to date
+
+When further documents are uploaded to a bid, AI+ must not carry on from an out-of-date picture. After the new files are read, AI+ refreshes its memory of the bid — the document summaries plus the recommendations already accepted or rejected — so any later decision it is asked about is based on everything on file. This does not reopen a pack the person has already answered; it only means the next time advice is needed, it reflects the new documents.
+
 ## Multi-tenant check
 
 Verified against the live database — recommendations and filed documents are already tenant-scoped, so no changes are needed:
