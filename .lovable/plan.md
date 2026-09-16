@@ -1,33 +1,31 @@
-# One-page handover: the Izenzo trade workflow
+# Technical handover pack for your client's developer
 
-A single plain-language document you can send to the client, describing every stage of the workflow, what each step means, what it costs, and what must happen before the next stage opens.
+A single pack answering the six things she asked for, so her team can integrate without guessing. Saved to your Files as `Izenzo-Integration-Handover` (a document plus the type file itself).
 
-## What gets produced
+## The six items
 
-One document saved to your Files, named `Izenzo-Trade-Workflow-Handover`, written for a business reader — no technical terms, no file names.
+| # | What she asked for | What goes in the pack |
+|---|---|---|
+| 1 | Generated database types | The generated types file exactly as it stands, copied into the pack unchanged |
+| 2 | Transaction, bid, organisation and member schemas | Field-by-field tables for transactions, bid offers, organisations and organisation members: field name, type, whether it is required, and what it means |
+| 3 | POI, WaD, Execution, Finality and Memory interfaces | The record shape and the event shape for each of those five stages, plus the list of every value the stage/step fields can take |
+| 4 | Authentication and tenant context | How sign-in works, how a request is authenticated on the server, and how everything is scoped to one organisation |
+| 5 | Function invocation and callbacks | How to call the app's own server operations, and the two inbound callback endpoints (payment notifications and identity-verification webhooks) with their expected request and response |
+| 6 | Sandbox and production endpoints | The two stable base URLs — preview/sandbox and production — written out in full |
 
-## What it contains
+## Detail per section
 
-1. **How the workflow works** — a short opening paragraph: the trade moves through five gates in order, a person always makes the decision, and each decision is recorded permanently.
+**Schemas (2).** Taken from the live database so it matches reality, not an older draft. Includes the reference format (BID…/OFF…), the stage and step fields that drive the workflow, and the sealing/completion timestamps and fingerprints on a transaction.
 
-2. **The five gates, in order**, each with its steps and a one-line definition per step, taken from the wording already used in the app:
-   - Trading Gate — Bid/Offer, Upload Docs, Search, AI, AI+, Counterparties, Choice, Online Media Screening, Social/News Media, Confirm Intent, Seal Intent
-   - Compliance Gate — Without a Doubt (KYC, KYB, UBO, sanctions, PEP, authority to act)
-   - Execution Gate — Business Docs, Execution Entry, Project Preparation, Bankability, Implementation, Stakeholder Entry/Exit
-   - Finality Gate — Finality Entry, Finality Type, Finality Evidence, Change or Value Event, Validation & Acceptance, Finality Record
-   - Memory Gate — Memory Ledger
+**Stage interfaces (3).** For each of the five stages: the table that stores its record, the fields on it, and the append-only event written when it happens — actor, stage, step, action, summary, payload and fingerprint. Also the ordered stage/step list and the gating rules (Compliance needs Intent sealed; Execution, Finality and Memory need Without a Doubt cleared; sealed records are immutable).
 
-3. **Costs** — Seal Intent costs 1 token (USD 10); clearing Without a Doubt costs 3 tokens (USD 30).
+**Authentication and tenant context (4).** Email/password and Google sign-in; the session token that must accompany server calls; the protected area of the app; and the tenant rule — every row is scoped by organisation, membership decides access, roles are held separately from profiles, and access to a transaction is checked in the database rather than the browser.
 
-4. **What locks what** — Compliance stays locked until Intent is sealed; Execution, Finality and Memory stay locked until Without a Doubt is cleared; sealed records cannot be changed afterwards.
+**Invocation and callbacks (5).** The app's own operations are typed server calls that carry the signed-in user's token automatically, not public HTTP. Where an outside system must reach in, it uses the public callback endpoints; both verify the caller before doing anything. The pack gives method, path, headers, a sample body, and the success/failure responses, and states plainly that there is no general public API key flow today. If she wants one, that is a separate build.
 
-5. **The role of AI and AI+** — advisory only: it proposes, a named person accepts or rejects, and both the proposal and the person's decision are recorded with a timestamp.
-
-6. **Certificates and evidence** — Confirmed Intent, Sealed Proof of Intent and the WaD clearance certificate are each filed against the bid with a fingerprint, and appear in the deal's documents.
-
-7. **Where to see each stage in the app** — the Live Workspace shows the current stage in the right-hand panel; each stage can also be opened on its own page.
+**Endpoints (6).** Sandbox and production base URLs, with a note that the callback paths sit under the same origins and that the two environments share one backend.
 
 ## Notes
 
-- Wording is taken from the definitions already in the app so the document and the screens say the same thing.
-- Nothing in the app changes; this only adds a document to your Files.
+- Nothing in the app changes; this only produces a document and a copy of the type file in your Files.
+- Secrets, keys and passwords are never included — only the names of the credentials her side would need to hold.
