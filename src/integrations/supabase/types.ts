@@ -2108,6 +2108,21 @@ export type Database = {
           },
         ]
       }
+      ops_alerts: {
+        Row: {
+          last_sent_at: string
+          service: string
+        }
+        Insert: {
+          last_sent_at?: string
+          service: string
+        }
+        Update: {
+          last_sent_at?: string
+          service?: string
+        }
+        Relationships: []
+      }
       org_members: {
         Row: {
           created_at: string
@@ -2287,6 +2302,9 @@ export type Database = {
       }
       profiles: {
         Row: {
+          authority_to_act_name: string | null
+          authority_to_act_path: string | null
+          authority_to_act_uploaded_at: string | null
           avatar_url: string | null
           contact_number: string | null
           created_at: string
@@ -2294,6 +2312,8 @@ export type Database = {
           email_verified_at: string | null
           full_name: string | null
           id: string
+          id_number: string | null
+          id_number_type: string | null
           last_accessed_at: string | null
           last_name: string | null
           login_count: number
@@ -2303,6 +2323,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          authority_to_act_name?: string | null
+          authority_to_act_path?: string | null
+          authority_to_act_uploaded_at?: string | null
           avatar_url?: string | null
           contact_number?: string | null
           created_at?: string
@@ -2310,6 +2333,8 @@ export type Database = {
           email_verified_at?: string | null
           full_name?: string | null
           id: string
+          id_number?: string | null
+          id_number_type?: string | null
           last_accessed_at?: string | null
           last_name?: string | null
           login_count?: number
@@ -2319,6 +2344,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          authority_to_act_name?: string | null
+          authority_to_act_path?: string | null
+          authority_to_act_uploaded_at?: string | null
           avatar_url?: string | null
           contact_number?: string | null
           created_at?: string
@@ -2326,6 +2354,8 @@ export type Database = {
           email_verified_at?: string | null
           full_name?: string | null
           id?: string
+          id_number?: string | null
+          id_number_type?: string | null
           last_accessed_at?: string | null
           last_name?: string | null
           login_count?: number
