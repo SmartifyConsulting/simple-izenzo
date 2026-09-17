@@ -870,7 +870,10 @@ function AiStep({ tx, reload, kind }: Props & { kind: "ai" | "ai_plus" }) {
         .from("ai_proposals")
         .select("*")
         .eq("transaction_id", tx.id)
-        .eq("kind", kind)
+        // AI+ advice is stored under either name: `ai_plus` from the hosted model and
+        // `ai_plus_decision_pack` from the client's protected service.
+        .in("kind", kind === "ai_plus" ? ["ai_plus", "ai_plus_decision_pack"] : ["ai"])
+
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
