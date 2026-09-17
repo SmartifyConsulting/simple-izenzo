@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -30,7 +30,12 @@ import {
   type RecordedActivity,
 } from "@/components/canvas/DealCanvas";
 import { TradeSummary } from "@/components/canvas/TradeSummary";
-import { DecisionPackPanel } from "@/components/canvas/DecisionPackPanel";
+// Performance only: the AI+ panel, the map and the classic stepper are each large and only one of
+// them is on screen at a time, so they load as their own chunks instead of inside the first
+// workspace download. Same components, same props, same behaviour.
+const DecisionPackPanel = lazy(() =>
+  import("@/components/canvas/DecisionPackPanel").then((m) => ({ default: m.DecisionPackPanel })),
+);
 
 import { SubmitterIdentity } from "@/components/canvas/SubmitterIdentity";
 import { MatchResultsPanel } from "@/components/canvas/MatchResultsPanel";
