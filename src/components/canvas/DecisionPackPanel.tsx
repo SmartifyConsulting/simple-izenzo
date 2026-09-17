@@ -235,17 +235,36 @@ export function DecisionPackPanel({
                         )}
                       </div>
                       <p className="mt-1 text-xs font-semibold">{p.output}</p>
-                      {p.rationale && (
-                        <p className="mt-1 text-[11px] text-muted-foreground">{p.rationale}</p>
+                      {pct !== null && (
+                        <p className="mt-1 text-[11px] text-muted-foreground">
+                          AI+ puts this at {pct}% likely to be the right course.
+                        </p>
                       )}
-                      {refs.length > 0 && (
-                        <ul className="mt-1 space-y-0.5">
-                          {refs.map((r, i) => (
-                            <li key={i} className="truncate text-[10px] text-muted-foreground">
-                              {r}
-                            </li>
-                          ))}
-                        </ul>
+                      {/* The reasoning is the point of the recommendation: it is labelled and given
+                          room so the person can weigh it before accepting or rejecting. */}
+                      {p.rationale && (
+                        <div className="mt-2 rounded-lg bg-muted/50 p-2.5">
+                          <p className="label-caps text-[10px] text-muted-foreground">
+                            Why AI+ recommends this
+                          </p>
+                          <p className="mt-1 whitespace-pre-line text-[11px] leading-relaxed text-foreground">
+                            {p.rationale}
+                          </p>
+                          {refs.length > 0 && (
+                            <>
+                              <p className="label-caps mt-2 text-[10px] text-muted-foreground">
+                                Based on
+                              </p>
+                              <ul className="mt-0.5 space-y-0.5">
+                                {refs.map((r, i) => (
+                                  <li key={i} className="text-[10px] text-muted-foreground">
+                                    {r}
+                                  </li>
+                                ))}
+                              </ul>
+                            </>
+                          )}
+                        </div>
                       )}
                     </div>
 

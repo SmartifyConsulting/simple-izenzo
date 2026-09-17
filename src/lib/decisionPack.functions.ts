@@ -99,6 +99,13 @@ function validate(raw: RawProposal[]) {
       rejected.push(`empty proposal for ${type}`);
       continue;
     }
+    // A recommendation without a stated reason is not usable advice: the person deciding has to
+    // be able to see why it is being put to them, so an unexplained proposal is dropped.
+    const rationale = String(r.rationale ?? "").trim();
+    if (!rationale) {
+      rejected.push(`no explanation given for ${type}`);
+      continue;
+    }
     const refs = Array.isArray(r.source_references)
       ? r.source_references.map((s) => String(s)).filter(Boolean).slice(0, 8)
       : [];
@@ -107,7 +114,7 @@ function validate(raw: RawProposal[]) {
       proposal_type: type,
       probability: p,
       output: summary,
-      rationale: String(r.rationale ?? "").trim(),
+      rationale,
       source_references: refs,
       related_counterparty: counterparty || null,
     });
@@ -188,7 +195,9 @@ export const runDecisionPack = createServerFn({ method: "POST" })
 
     const system = [
       "You are Izenzo AI+. You are advisory only: you never decide, never select, never adopt, and never change the transaction.",
-      "Return STRICT JSON: {\"proposals\":[{\"proposal_type\":\"counterparty|pricing|risk|structure|timing|substitution|bundle\",\"probability\":0.0,\"summary\":\"one sentence\",\"rationale\":\"why, in plain professional language\",\"source_references\":[\"…\"],\"counterparty\":\"the exact counterparty name this proposal is about, from the Counterparties list below, or null if it isn't about a specific one\"}]}",
+      "Return STRICT JSON: {\"proposals\":[{\"proposal_type\":\"counterparty|pricing|risk|structure|timing|substitution|bundle\",\"probability\":0.0,\"summary\":\"one sentence\",\"rationale\":\"why you are recommending this\",\"source_references\":[\"…\"],\"counterparty\":\"the exact counterparty name this proposal is about, from the Counterparties list below, or null if it isn't about a specific one\"}]}",
+      "\"rationale\" is mandatory and is the explanation the person reads before accepting or rejecting. Write two to four sentences in plain professional language that (1) state the specific evidence you are relying on — name the document, the screening finding, the search result, the price, the quantity, the term or the counterparty record, (2) explain the reasoning that leads from that evidence to the recommendation, and (3) say what it would improve or what risk it would avoid. Never write a bare restatement of the summary, a single vague line, or an explanation that cites nothing on file.",
+      "\"source_references\" must name the actual things you relied on, exactly as they appear in the information below (document titles, counterparty names, screening or search findings, specific fields). Do not invent sources, and do not return an empty list when your rationale cites something.",
       "probability is a number between 0 and 1 expressing how likely the proposal is to be the right course. Never use words like low, medium or high for it.",
       "Always set \"counterparty\" to the specific party's name whenever a proposal concerns one — never leave it null just because the type isn't \"counterparty\" (a pricing or risk proposal can still be about a specific party).",
       "Return between 2 and 6 proposals. No prose outside the JSON.",
@@ -401,7 +410,10 @@ export const decideProposal = createServerFn({ method: "POST" })
         ...pack
           .map((p, i) => [
             `${i + 1}. [${p.proposal_type ?? "option"}] ${p.output}`,
-            p.rationale ? `   Rationale: ${p.rationale}` : null,
+            p.rationale ? `   Why AI+ recommended this: ${p.rationale}` : null,
+            Array.isArray(p.source_references) && p.source_references.length > 0
+              ? `   Based on: ${(p.source_references as unknown[]).map((s) => String(s)).join("; ")}`
+              : null,
             p.probability != null ? `   Probability: ${Math.round(Number(p.probability) * 100)}%` : null,
             p.related_counterparty ? `   Counterparty: ${p.related_counterparty}` : null,
             `   Decision: ${(p.id === proposal.id ? data.decision : p.decision) ?? "—"} by ${nameOf(p.id === proposal.id ? userId : p.decided_by)} at ${p.id === proposal.id ? decidedAt : p.decided_at}`,
