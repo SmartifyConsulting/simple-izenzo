@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Coins, Mail, Menu } from "lucide-react";
+import { ClipboardCheck, Coins, Mail, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Logo } from "@/components/Logo";
 import { BugReportMenu } from "@/components/BugReportMenu";
+import { UatSignoffDialog } from "@/components/uat/UatSignoffDialog";
 
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
 import { ThemeToggle } from "@/components/guided/ThemeToggle";
@@ -35,6 +37,7 @@ const NAV = [
 
 export function MainHeader() {
   const { user, org } = useAuth();
+  const [uatOpen, setUatOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isHome = pathname === "/alpha-bravo" || pathname === "/alpha-bravo/";
   // Whatever was typed into the homepage search bar, so signing in carries it into the workspace.
@@ -107,6 +110,16 @@ export function MainHeader() {
         <div className="ml-auto flex shrink-0 items-center gap-3">
           {user ? (
             <>
+              <button
+                type="button"
+                onClick={() => setUatOpen(true)}
+                title="UAT Sign-off"
+                aria-label="UAT Sign-off"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-foreground/80 transition-colors hover:text-primary"
+              >
+                <ClipboardCheck className="h-5 w-5" strokeWidth={2.25} />
+              </button>
+              <UatSignoffDialog open={uatOpen} onOpenChange={setUatOpen} />
               <BugReportMenu />
               <Link
                 to="/inbox"

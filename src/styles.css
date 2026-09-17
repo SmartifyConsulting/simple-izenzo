@@ -5,6 +5,9 @@
 /* Alpha-Bravo re-skin fonts — Space Grotesk for headings, Inter for body, matching the
  * cream/blue reference look used for that demo skin only. */
 @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap");
+/* Great Vibes — the cursive/script face used for the UAT sign-off electronic signature preview
+ * (UatSignoffDialog), and the signature image that gets embedded into the final signed PDF. */
+@import url("https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap");
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
