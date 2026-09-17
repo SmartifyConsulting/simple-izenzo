@@ -64,6 +64,9 @@ const ADMIN_TABS: AdminTab[] = [
   { value: "integrations", label: "Integrations", Component: IntegrationsTab, Icon: Plug, superuserOnly: true },
   { value: "activity-log", label: "Activity Log", Component: AuditLogTab, Icon: History, superuserOnly: true },
   { value: "tokens", label: "Tokens", Component: TokensTab, Icon: Coins },
+  // Issuing/rotating/revoking keys is administrator-only in the database itself
+  // (admin_api_* routines), so this stays inside the admin-gated page.
+  { value: "api-keys", label: "API Keys", Component: ApiKeysTab, Icon: KeyRound },
 ];
 
 function AdminPage() {
