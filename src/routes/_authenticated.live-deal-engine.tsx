@@ -1937,6 +1937,7 @@ function LiveDealEngine() {
               {/* The map scales to fit the panel, so this scrollbar shouldn't usually need to
                   move — but it's a real native scrollbar (not custom buttons) as a fallback for
                   a short/narrow window where the scaled map is still taller than the panel. */}
+              <Suspense fallback={<div className="h-[420px]" aria-hidden />}>
               {mapOpen ? (
                 <MapView
                   tx={dealTx ?? null}
