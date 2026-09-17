@@ -146,7 +146,16 @@ export function canonicalBody(request: DecisionRequest): string {
   return JSON.stringify(request);
 }
 
-export async function signBody(secret: string, body: string): Promise<string> {
+/**
+ * Signs exactly what Appendix C signs: the stamped time, the one-off number and the body,
+ * joined with dots, HMAC SHA-256, hex, prefixed `sha256=`.
+ */
+export async function signBody(
+  secret: string,
+  timestamp: string,
+  nonce: string,
+  body: string,
+): Promise<string> {
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey(
     "raw",
@@ -155,11 +164,13 @@ export async function signBody(secret: string, body: string): Promise<string> {
     false,
     ["sign"],
   );
-  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(body));
-  return Array.from(new Uint8Array(sig))
+  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(`${timestamp}.${nonce}.${body}`));
+  const hex = Array.from(new Uint8Array(sig))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
+  return `sha256=${hex}`;
 }
+
 
 export async function sha256Hex(body: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(body));
