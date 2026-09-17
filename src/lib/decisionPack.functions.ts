@@ -240,7 +240,18 @@ export const runDecisionPack = createServerFn({ method: "POST" })
       void alertLowFunds("AI Gateway", 402);
       throw new Error("AI credits are exhausted for this workspace — support has been notified.");
     }
-    if (!res.ok) throw new Error("AI+ analysis failed");
+    if (res.status === 403) {
+      const body = await res.text();
+      throw new Error(
+        body.includes("credit_limit_reached")
+          ? "The workspace AI spending limit has been reached, so AI+ cannot run. A workspace admin needs to raise the limit."
+          : `AI+ analysis was blocked: ${body.slice(0, 300)}`,
+      );
+    }
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`AI+ analysis failed (${res.status}). ${body.slice(0, 300)}`);
+    }
 
     const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
     const content = json.choices?.[0]?.message?.content ?? "";
