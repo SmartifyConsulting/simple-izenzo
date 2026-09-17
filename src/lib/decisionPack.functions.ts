@@ -534,7 +534,10 @@ export const runDecisionPack = createServerFn({ method: "POST" })
         // through unknown until types are regenerated after that migration runs.
         clean.map((c) => ({
           transaction_id: tx.id,
-          kind: "ai_plus",
+          // Their contract names the protected service's packs `ai_plus_decision_pack`; advice
+          // from the hosted model keeps the existing `ai_plus` name so older records still read.
+          kind: external ? "ai_plus_decision_pack" : "ai_plus",
+
           model,
 
           decision_pack_id: packId,
