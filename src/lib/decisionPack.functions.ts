@@ -99,6 +99,13 @@ function validate(raw: RawProposal[]) {
       rejected.push(`empty proposal for ${type}`);
       continue;
     }
+    // A recommendation without a stated reason is not usable advice: the person deciding has to
+    // be able to see why it is being put to them, so an unexplained proposal is dropped.
+    const rationale = String(r.rationale ?? "").trim();
+    if (!rationale) {
+      rejected.push(`no explanation given for ${type}`);
+      continue;
+    }
     const refs = Array.isArray(r.source_references)
       ? r.source_references.map((s) => String(s)).filter(Boolean).slice(0, 8)
       : [];
