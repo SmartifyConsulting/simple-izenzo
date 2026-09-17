@@ -163,7 +163,7 @@ describe("calling the service", () => {
     const result = await callAiPlus(config, request, `${TX}:choice_made`, "corr-1");
     expect(result.ok).toBe(true);
 
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe("https://ai-plus.example.test/v1/decision");
     const headers = init.headers as Record<string, string>;
     expect(headers["X-Izenzo-Key-Id"]).toBe("key-1");
@@ -178,8 +178,9 @@ describe("calling the service", () => {
     await callAiPlus(config, request, `${TX}:choice_made`, "corr-1");
     await callAiPlus(config, request, `${TX}:choice_made`, "corr-2");
     const keys = fetchMock.mock.calls.map(
-      (c) => (c[1] as RequestInit as { headers: Record<string, string> }).headers["Idempotency-Key"],
+      (c) => ((c as unknown as [string, RequestInit])[1].headers as Record<string, string>)["Idempotency-Key"],
     );
+
     expect(keys[0]).toBe(keys[1]);
   });
 
