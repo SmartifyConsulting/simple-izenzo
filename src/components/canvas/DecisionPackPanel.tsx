@@ -183,6 +183,9 @@ export function DecisionPackPanel({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base">
               <Sparkles className="h-4 w-4 text-orange-500" /> AI+ Recommendations
+              <span className="label-caps rounded-full bg-orange-500/10 px-2 py-0.5 text-[9px] font-semibold text-orange-600">
+                Powered by AI+
+              </span>
             </DialogTitle>
             <DialogDescription className="text-[11px]">
               {HEADING[stageContext]}. AI+ is advisory — it cannot select, change or seal anything.

@@ -504,7 +504,7 @@ export function MapView({
         })}
         {node("search", "Search", "trading", "search", Search, {
           overrideKey: "search",
-          sub: "AI and AI+",
+          sub: "Using AI",
           ...(searching ? { state: "active" as NodeState } : {}),
         })}
         {searching && (
