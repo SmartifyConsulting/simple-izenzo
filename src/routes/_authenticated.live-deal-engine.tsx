@@ -1960,6 +1960,7 @@ function LiveDealEngine() {
                   overrideStates={stepOverrides}
                 />
               )}
+              </Suspense>
 
             </div>
           </div>
