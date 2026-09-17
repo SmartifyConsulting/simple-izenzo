@@ -40,8 +40,10 @@ const DecisionPackPanel = lazy(() =>
 import { SubmitterIdentity } from "@/components/canvas/SubmitterIdentity";
 import { MatchResultsPanel } from "@/components/canvas/MatchResultsPanel";
 
-import { ClassicView } from "@/components/canvas/ClassicView";
-import { MapView } from "@/components/canvas/MapView";
+const ClassicView = lazy(() =>
+  import("@/components/canvas/ClassicView").then((m) => ({ default: m.ClassicView })),
+);
+const MapView = lazy(() => import("@/components/canvas/MapView").then((m) => ({ default: m.MapView })));
 import { DocumentUploadStep } from "@/components/guided/DocumentUploadStep";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
