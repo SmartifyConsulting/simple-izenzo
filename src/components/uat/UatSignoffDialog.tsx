@@ -127,9 +127,9 @@ export function UatSignoffDialog({ open, onOpenChange }: { open: boolean; onOpen
 
         <div className="space-y-4">
           <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs leading-relaxed text-muted-foreground">
-            {DOCUMENT_INTRO.filter(Boolean).map((line, i) => (
-              <p key={i} className={i > 0 ? "mt-1.5" : ""}>
-                {line}
+            {DOCUMENT_INTRO.map((paragraph, i) => (
+              <p key={i} className={i > 0 ? "mt-2" : ""}>
+                {paragraph}
               </p>
             ))}
             <p className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-foreground">
