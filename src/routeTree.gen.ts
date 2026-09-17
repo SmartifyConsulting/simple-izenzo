@@ -25,6 +25,7 @@ import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as WalkthroughRouteImport } from './routes/walkthrough'
 import { Route as AuthenticatedActivityRouteImport } from './routes/_authenticated.activity'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
+import { Route as AuthenticatedApiRouteImport } from './routes/_authenticated.api'
 import { Route as AuthenticatedAuditorRouteImport } from './routes/_authenticated.auditor'
 import { Route as AuthenticatedComplianceRouteImport } from './routes/_authenticated.compliance'
 import { Route as AuthenticatedCreditsRouteImport } from './routes/_authenticated.credits'
@@ -148,6 +149,11 @@ const AuthenticatedActivityRoute = AuthenticatedActivityRouteImport.update({
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedApiRoute = AuthenticatedApiRouteImport.update({
+  id: '/api',
+  path: '/api',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedAuditorRoute = AuthenticatedAuditorRouteImport.update({
@@ -408,6 +414,7 @@ export interface FileRoutesByFullPath {
   '/walkthrough': typeof WalkthroughRoute
   '/activity': typeof AuthenticatedActivityRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/api': typeof AuthenticatedApiRoute
   '/auditor': typeof AuthenticatedAuditorRoute
   '/compliance': typeof AuthenticatedComplianceRoute
   '/credits': typeof AuthenticatedCreditsRoute
@@ -469,6 +476,7 @@ export interface FileRoutesByTo {
   '/walkthrough': typeof WalkthroughRoute
   '/activity': typeof AuthenticatedActivityRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/api': typeof AuthenticatedApiRoute
   '/auditor': typeof AuthenticatedAuditorRoute
   '/compliance': typeof AuthenticatedComplianceRoute
   '/credits': typeof AuthenticatedCreditsRoute
@@ -531,6 +539,7 @@ export interface FileRoutesById {
   '/walkthrough': typeof WalkthroughRoute
   '/_authenticated/activity': typeof AuthenticatedActivityRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/api': typeof AuthenticatedApiRoute
   '/_authenticated/auditor': typeof AuthenticatedAuditorRoute
   '/_authenticated/compliance': typeof AuthenticatedComplianceRoute
   '/_authenticated/credits': typeof AuthenticatedCreditsRoute
@@ -595,6 +604,7 @@ export interface FileRouteTypes {
     | '/walkthrough'
     | '/activity'
     | '/admin'
+    | '/api'
     | '/auditor'
     | '/compliance'
     | '/credits'
@@ -656,6 +666,7 @@ export interface FileRouteTypes {
     | '/walkthrough'
     | '/activity'
     | '/admin'
+    | '/api'
     | '/auditor'
     | '/compliance'
     | '/credits'
@@ -717,6 +728,7 @@ export interface FileRouteTypes {
     | '/walkthrough'
     | '/_authenticated/activity'
     | '/_authenticated/admin'
+    | '/_authenticated/api'
     | '/_authenticated/auditor'
     | '/_authenticated/compliance'
     | '/_authenticated/credits'
@@ -902,6 +914,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/api': {
+      id: '/_authenticated/api'
+      path: '/api'
+      fullPath: '/api'
+      preLoaderRoute: typeof AuthenticatedApiRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/auditor': {
@@ -1225,6 +1244,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteChildren {
   AuthenticatedActivityRoute: typeof AuthenticatedActivityRoute
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedApiRoute: typeof AuthenticatedApiRoute
   AuthenticatedAuditorRoute: typeof AuthenticatedAuditorRoute
   AuthenticatedComplianceRoute: typeof AuthenticatedComplianceRoute
   AuthenticatedCreditsRoute: typeof AuthenticatedCreditsRoute
@@ -1252,6 +1272,7 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedActivityRoute: AuthenticatedActivityRoute,
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedApiRoute: AuthenticatedApiRoute,
   AuthenticatedAuditorRoute: AuthenticatedAuditorRoute,
   AuthenticatedComplianceRoute: AuthenticatedComplianceRoute,
   AuthenticatedCreditsRoute: AuthenticatedCreditsRoute,
