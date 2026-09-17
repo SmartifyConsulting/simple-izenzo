@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -30,13 +30,20 @@ import {
   type RecordedActivity,
 } from "@/components/canvas/DealCanvas";
 import { TradeSummary } from "@/components/canvas/TradeSummary";
-import { DecisionPackPanel } from "@/components/canvas/DecisionPackPanel";
+// Performance only: the AI+ panel, the map and the classic stepper are each large and only one of
+// them is on screen at a time, so they load as their own chunks instead of inside the first
+// workspace download. Same components, same props, same behaviour.
+const DecisionPackPanel = lazy(() =>
+  import("@/components/canvas/DecisionPackPanel").then((m) => ({ default: m.DecisionPackPanel })),
+);
 
 import { SubmitterIdentity } from "@/components/canvas/SubmitterIdentity";
 import { MatchResultsPanel } from "@/components/canvas/MatchResultsPanel";
 
-import { ClassicView } from "@/components/canvas/ClassicView";
-import { MapView } from "@/components/canvas/MapView";
+const ClassicView = lazy(() =>
+  import("@/components/canvas/ClassicView").then((m) => ({ default: m.ClassicView })),
+);
+const MapView = lazy(() => import("@/components/canvas/MapView").then((m) => ({ default: m.MapView })));
 import { DocumentUploadStep } from "@/components/guided/DocumentUploadStep";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -334,7 +341,9 @@ function LiveDealEngine() {
   const { data: shortlistedNames = [] } = useQuery({
     queryKey: ["shortlisted-names", dealTx?.id],
     enabled: Boolean(dealTx?.id),
-    refetchInterval: 4000,
+    // The shortlist can still change while the person is choosing, so it keeps polling until a
+    // counterparty is actually recorded — after that the list is settled and the poll stops.
+    refetchInterval: dbHasChosenParty ? false : 4000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("counterparties")
@@ -1930,6 +1939,7 @@ function LiveDealEngine() {
               {/* The map scales to fit the panel, so this scrollbar shouldn't usually need to
                   move — but it's a real native scrollbar (not custom buttons) as a fallback for
                   a short/narrow window where the scaled map is still taller than the panel. */}
+              <Suspense fallback={<div className="h-[420px]" aria-hidden />}>
               {mapOpen ? (
                 <MapView
                   tx={dealTx ?? null}
@@ -1952,6 +1962,7 @@ function LiveDealEngine() {
                   overrideStates={stepOverrides}
                 />
               )}
+              </Suspense>
 
             </div>
           </div>
@@ -2610,12 +2621,14 @@ function LiveDealEngine() {
                     offers proposals, each with a numeric probability, and the person accepts or
                     rejects them before Intent is available. */}
                 {dealTx && dbHasChosenParty && !dealTx.poi_sealed_at && (
-                  <DecisionPackPanel
-                    transactionId={dealTx.id}
-                    stageContext="choice_made"
-                    gating={!dealTx.intent_confirmed_at}
-                    onAllDecided={setChoicePackDecided}
-                  />
+                  <Suspense fallback={null}>
+                    <DecisionPackPanel
+                      transactionId={dealTx.id}
+                      stageContext="choice_made"
+                      gating={!dealTx.intent_confirmed_at}
+                      onAllDecided={setChoicePackDecided}
+                    />
+                  </Suspense>
                 )}
 
                 {/* No further AI+ recommendations appear later in the deal: the person answers the
