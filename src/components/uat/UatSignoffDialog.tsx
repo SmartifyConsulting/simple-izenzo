@@ -239,11 +239,19 @@ export function UatSignoffDialog({ open, onOpenChange }: { open: boolean; onOpen
                       </p>
                       <p className="text-sm text-foreground">{fmtDate(new Date().toISOString())}</p>
                     </div>
-                    <Button type="submit" className="w-full gap-2" disabled={busy || !signaturePreview}>
-                      {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                      Sign & Confirm
-                    </Button>
                   </div>
+                )}
+
+                {/* The submit button is always visible so the form never looks unfinished; it stays
+                 * disabled until an authorised signer name has produced a signature preview. */}
+                <Button type="submit" className="w-full gap-2" disabled={busy || !matched || !signaturePreview}>
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  Sign &amp; Confirm
+                </Button>
+                {!matched && (
+                  <p className="text-center text-[11px] text-muted-foreground">
+                    Enter an authorised signer&apos;s full name to enable signing.
+                  </p>
                 )}
               </form>
             )}
