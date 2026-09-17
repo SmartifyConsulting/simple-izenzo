@@ -297,9 +297,11 @@ export async function callAiPlus(
   correlationId: string,
 ): Promise<AiPlusCallResult> {
   const body = canonicalBody(request);
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  const nonce = crypto.randomUUID().replaceAll("-", "");
   let signature: string;
   try {
-    signature = await signBody(config.hmacSecret, body);
+    signature = await signBody(config.hmacSecret, timestamp, nonce, body);
   } catch {
     return { ok: false, status: null, error: "Could not sign the AI+ request." };
   }
@@ -309,19 +311,22 @@ export async function callAiPlus(
   // call completing, so abandoning it is always safe.
   const timer = setTimeout(() => controller.abort(), AI_PLUS_TIMEOUT_MS);
   try {
-    const res = await fetch(`${config.privateUrl}/v1/decision`, {
+    const res = await fetch(`${config.privateUrl}${AI_PLUS_PATH}`, {
       method: "POST",
       signal: controller.signal,
       headers: {
         "Content-Type": "application/json",
-        "X-Izenzo-Key-Id": config.hmacKeyId,
-        "X-Izenzo-Signature": `sha256=${signature}`,
+        "X-Izenzo-Key-ID": config.hmacKeyId,
+        "X-Izenzo-Timestamp": timestamp,
+        "X-Izenzo-Nonce": nonce,
+        "X-Izenzo-Signature": signature,
         "X-Izenzo-Invocation-Id": request.invocation_id,
-        "X-Izenzo-Correlation-Id": correlationId,
+        "X-Correlation-ID": correlationId,
         "Idempotency-Key": idempotencyKey,
       },
       body,
     });
+
 
     const text = await res.text();
     if (!res.ok) {
