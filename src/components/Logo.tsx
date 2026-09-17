@@ -2,8 +2,9 @@ import { Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /** The Izenzo mark: a small rounded-square icon plus wordmark, matching the reference
- * marketing site (compliance-matching.lovable.app). `variant`/`onDark` are kept for callers
+ * marketing site. `variant`/`onDark` are kept for callers
  * that pass them, but the mark now reads the same on light and dark surfaces. */
+
 export function Logo({
   className,
   iconOnly,
