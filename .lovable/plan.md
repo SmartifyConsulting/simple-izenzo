@@ -1,69 +1,60 @@
-# Let users create their own API keys, then reissue two handover files
+# Move API Keys back into Admin, then reissue two handover files
 
-Short answer: two of the three files need redoing, not all three.
+Short answer on the documents: two of the three need redoing, not all three.
 
-- The handover document describes API keys as administrator-only, and that is changing — reissue as v6.
-- The code package predates the new API screen and this change — rebuild as v4.
-- The AI+ status sheet is untouched by this work — `Izenzo-AIPlus-Build-Status-v2.docx` stays as is.
+- The handover document should reflect where API keys now live — reissue as v6.
+- The code package predates the API screen changes — rebuild as v4.
+- The AI+ status sheet is untouched by this work — `Izenzo-AIPlus-Build-Status-v2.docx` stays as it is.
 
-## 1. Fix the permission rule in the database
+## 1. Remove API Keys from the main navigation
 
-The new API screen calls five database routines that still refuse anyone who
-is not a platform administrator, so an ordinary user pressing "Create key"
-gets a permission error today. Those routines will be replaced so that:
+Take the top-level "API" item out of the header menu and remove the
+stand-alone API page, so there is only one place to manage keys.
 
-- Any signed-in user may create, suspend, reactivate, rotate and revoke keys
-  **for their own organisation only**, in both sandbox and live.
-- A user cannot touch another organisation's keys — the check is made in the
-  database, so it holds even outside this screen.
-- Administrators keep full access as before.
-- The live-key rule stays: a named commercial owner and compliance owner are
-  still required.
-- Expiry, revocation reasons and the recorded "who did this" stay exactly as
-  they are.
+## 2. Put API Keys back in Admin as a tab
 
-The Admin and Integrations screens remain administrator-only; nothing about
-that changes.
+Add "API Keys" as a tab alongside the other Admin tabs, showing the same
+screen that exists today: issue, suspend, reactivate, rotate and revoke keys,
+sandbox and live, with the named commercial and compliance owners required for
+live keys.
 
-## 2. Confirm reading is scoped the same way
+## 3. Keep the administrator restriction on
 
-Check that the rule controlling who can *see* keys also limits people to
-their own organisation, and correct it if it does not. No other table's rules
-are touched.
+No database change at all. The five key routines keep their existing
+administrator-only rule, which is exactly what the backend note describes —
+so nothing needs relaxing in the SQL editor, and only administrators reach the
+tab in the first place. Everything stays consistent between the screen and the
+database.
 
-## 3. Check it end to end
+## 4. Check it
 
-Sign in as an ordinary (non-admin) user in the running app, create a sandbox
-key, rotate it, revoke it, and confirm no other organisation's keys are
-visible. Then confirm an administrator still sees and manages everything.
+Sign in as an administrator and confirm the Admin tab issues, rotates and
+revokes a sandbox key. Sign in as an ordinary user and confirm there is no API
+item in the menu and no reachable API page.
 
-## 4. Reissue the two documents
+## 5. Reissue the two documents
 
-- `Izenzo-Integration-Handover-v6.docx` — update the API-keys section to
-  describe self-service key management and the own-organisation limit, note
-  that the five routines are now in the tracked migrations, and refresh the
-  companion-file list.
-- `Izenzo-Codebase-Handover-v4.zip` — rebuild from the clean source so it
-  contains the new API screen, the top-level API navigation, the new
-  migration and the current example environment file (names only, no values).
+- `Izenzo-Integration-Handover-v6.docx` — API keys described as an
+  administrator-only Admin tab, with the database-side restriction stated
+  plainly, and the companion-file list refreshed.
+- `Izenzo-Codebase-Handover-v4.zip` — rebuilt from the clean source so it
+  matches the final arrangement, with the example environment file listing
+  variable names only, never values.
 
 Both are checked page by page as images, and the package contents listed to
-confirm no keys, no build output and no dependency folders. The three older
-files (v5 document, v3 package) are removed afterwards so the folder again
-holds exactly three items.
+confirm no keys, no build output and no dependency folders. The superseded v5
+document and v3 package are removed afterwards, so the folder again holds
+exactly three items.
 
 ## Technical notes
 
-- One migration replaces `admin_api_create_key`, `admin_api_suspend_key`,
-  `admin_api_reactivate_key`, `admin_api_revoke_key` and
-  `admin_api_rotate_key` via `CREATE OR REPLACE FUNCTION`, swapping the
-  `has_role(auth.uid(),'admin')` gate for `admin OR caller belongs to
-  p_org_id` (via `org_members` / `profiles.org_id`), resolved from the key row
-  for the id-only routines. Signatures, return types and `SECURITY DEFINER`
-  stay unchanged, so `ApiKeysTab.tsx` needs no change.
-- `api_keys` RLS/SELECT is verified to be org-scoped for `authenticated`.
-- No change to POI, WaD, Execution, Finality, AI/AI+ behaviour, auth, or any
-  other table or policy.
+- Delete `src/routes/_authenticated.api.tsx` and its nav entry in
+  `MainHeader.tsx`; register `ApiKeysTab` as a tab in
+  `_authenticated.admin.tsx` behind the existing admin guard.
+- `ApiKeysTab.tsx` itself is reused unchanged, including its
+  `admin_api_*` calls.
+- No migration, no RLS change, no change to POI, WaD, Execution, Finality,
+  AI/AI+ behaviour or auth.
 
 ## Still on your side
 
