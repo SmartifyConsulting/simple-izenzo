@@ -85,16 +85,19 @@ type RawProposal = {
   counterparty?: string | null;
 };
 
+type CleanProposal = {
+  proposal_type: ProposalType;
+  probability: number;
+  output: string;
+  rationale: string;
+  source_references: string[];
+  related_counterparty: string | null;
+};
+
 /** Nothing unvalidated is ever written: a bad type or an out-of-range probability is dropped. */
 function validate(raw: RawProposal[]) {
-  const clean: {
-    proposal_type: ProposalType;
-    probability: number;
-    output: string;
-    rationale: string;
-    source_references: string[];
-    related_counterparty: string | null;
-  }[] = [];
+  const clean: CleanProposal[] = [];
+
   const rejected: string[] = [];
 
   for (const r of raw) {
