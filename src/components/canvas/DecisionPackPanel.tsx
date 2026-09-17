@@ -28,6 +28,7 @@ type Proposal = {
 const HEADING: Record<StageContext, string> = {
   choice_made: "AI+ advice on your choice",
   intent_confirmed: "AI+ advice before sealing",
+  poi_sealed: "AI+ notes on the sealed Proof of Intent",
   wad_updated: "AI+ advice on the compliance case",
   finality_recorded: "AI+ closing notes",
 };
@@ -35,9 +36,11 @@ const HEADING: Record<StageContext, string> = {
 const PILL_LABEL: Record<StageContext, string> = {
   choice_made: "AI+ RECOMMENDATIONS",
   intent_confirmed: "AI+ RECOMMENDATIONS",
+  poi_sealed: "AI+ RECOMMENDATIONS",
   wad_updated: "AI+ RECOMMENDATIONS",
   finality_recorded: "AI+ RECOMMENDATIONS",
 };
+
 
 /**
  * AI+ proposes, a person decides. Nothing here changes the deal: each recommendation is accepted
