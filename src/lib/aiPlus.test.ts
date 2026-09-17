@@ -96,13 +96,16 @@ describe("Appendix A request", () => {
     ]);
   });
 
-  it("signs the exact bytes that are sent, reproducibly", async () => {
+  it("signs timestamp, nonce and body together, reproducibly (Appendix C)", async () => {
     const body = canonicalBody(request);
-    const a = await signBody(config.hmacSecret, body);
-    const b = await signBody(config.hmacSecret, body);
+    const a = await signBody(config.hmacSecret, "1757664000", "nonce-1", body);
+    const b = await signBody(config.hmacSecret, "1757664000", "nonce-1", body);
     expect(a).toBe(b);
-    expect(a).toMatch(/^[0-9a-f]{64}$/);
-    expect(await signBody("a-different-secret", body)).not.toBe(a);
+    expect(a).toMatch(/^sha256=[0-9a-f]{64}$/);
+    // A different timestamp or nonce must change the signature, or a captured call could be replayed.
+    expect(await signBody(config.hmacSecret, "1757664001", "nonce-1", body)).not.toBe(a);
+    expect(await signBody(config.hmacSecret, "1757664000", "nonce-2", body)).not.toBe(a);
+    expect(await signBody("a-different-secret", "1757664000", "nonce-1", body)).not.toBe(a);
   });
 });
 
@@ -164,12 +167,14 @@ describe("calling the service", () => {
     expect(result.ok).toBe(true);
 
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url).toBe("https://ai-plus.example.test/v1/decision");
+    expect(url).toBe("https://ai-plus.example.test/internal/v1/decision-packs");
     const headers = init.headers as Record<string, string>;
-    expect(headers["X-Izenzo-Key-Id"]).toBe("key-1");
+    expect(headers["X-Izenzo-Key-ID"]).toBe("key-1");
     expect(headers["X-Izenzo-Signature"]).toMatch(/^sha256=[0-9a-f]{64}$/);
+    expect(headers["X-Izenzo-Timestamp"]).toMatch(/^[0-9]{10}$/);
+    expect(headers["X-Izenzo-Nonce"]).toMatch(/^[0-9a-f]{32}$/);
     expect(headers["Idempotency-Key"]).toBe(`${TX}:choice_made`);
-    expect(headers["X-Izenzo-Correlation-Id"]).toBe("corr-1");
+    expect(headers["X-Correlation-ID"]).toBe("corr-1");
   });
 
   it("sends the same idempotency key when the same moment is retried", async () => {
@@ -232,5 +237,53 @@ describe("calling the service", () => {
     const result = await callAiPlus(config, request, "k", "c");
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toContain("different transaction");
+  });
+
+  it("refuses a pack for a different stage", async () => {
+    vi.stubGlobal("fetch", respond(validPack({ stage: "finality" })));
+    const result = await callAiPlus(config, request, "k", "c");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain("different stage");
+  });
+
+  it("sends a fresh timestamp and nonce on every call", async () => {
+    const fetchMock = respond(validPack());
+    vi.stubGlobal("fetch", fetchMock);
+    await callAiPlus(config, request, "k", "c1");
+    await callAiPlus(config, request, "k", "c2");
+    const nonces = fetchMock.mock.calls.map(
+      (c) => ((c as unknown as [string, RequestInit])[1].headers as Record<string, string>)["X-Izenzo-Nonce"],
+    );
+    expect(nonces[0]).not.toBe(nonces[1]);
+  });
+});
+
+describe("tenant isolation", () => {
+  it("carries the raising organisation on the request and never another one", () => {
+    expect(request.transaction.org_id).toBe(ORG);
+    const other = buildDecisionRequest({
+      environment: "sandbox",
+      invocationId: "11111111-1111-4111-8111-111111111111",
+      transactionId: TX,
+      orgId: "55555555-5555-4555-8555-555555555555",
+      counterpartyOrgId: null,
+      stage: "trading",
+      step: "choice",
+      eventType: "choice_made",
+      eventAt: "2026-09-12T08:00:00Z",
+      attributes: {},
+    });
+    expect(other.transaction.org_id).not.toBe(ORG);
+    // The org is part of the signed body, so it cannot be swapped in transit.
+    expect(canonicalBody(other)).not.toBe(canonicalBody(request));
+  });
+
+  it("refuses a pack that answers a transaction the caller did not raise", async () => {
+    vi.stubGlobal(
+      "fetch",
+      respond(validPack({ transaction_id: "66666666-6666-4666-8666-666666666666" })),
+    );
+    const result = await callAiPlus(config, request, "k", "c");
+    expect(result.ok).toBe(false);
   });
 });
