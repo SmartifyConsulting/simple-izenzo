@@ -367,7 +367,7 @@ function MapNode({
       {sub && (
         <span
           className={cn(
-            "w-full font-semibold uppercase leading-snug tracking-wide",
+            "w-full text-center font-semibold uppercase leading-snug tracking-wide",
             subSize === "sm" ? "text-[10px]" : "text-[9.5px]",
             subTone === "gate"
               ? "text-[#C1653D]"
