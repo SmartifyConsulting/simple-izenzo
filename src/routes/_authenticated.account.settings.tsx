@@ -5,7 +5,6 @@ import { Trash2 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { OrganisationsPanel } from "@/components/account/OrganisationsPanel";
-import { AuthorityToActPanel } from "@/components/verification/AuthorityToActPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -104,6 +103,17 @@ function SettingsPage() {
                     <Input id="last_name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
                   </div>
                 </div>
+                {profile?.id_number && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="id_number">
+                      {profile.id_number_type === "passport" ? "Passport number" : "ID number"}
+                    </Label>
+                    <Input id="id_number" value={profile.id_number} disabled />
+                    <p className="text-xs text-muted-foreground">
+                      Captured at sign-up. Contact support to change.
+                    </p>
+                  </div>
+                )}
                 <div className="space-y-1.5">
                   <Label htmlFor="email">Email address</Label>
                   <Input id="email" value={profile?.email ?? ""} disabled />
@@ -131,8 +141,6 @@ function SettingsPage() {
             </div>
 
             <div className="space-y-6">
-              <AuthorityToActPanel />
-
               <div className="space-y-4 rounded-md border border-border p-5">
                 <h2 className="text-sm font-semibold">Notification rules</h2>
                 {[

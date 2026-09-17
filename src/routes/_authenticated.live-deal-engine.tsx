@@ -148,7 +148,7 @@ function highlightKeyTerms(text: string): React.ReactNode[] {
 
 type Attachment = {
   name: string;
-  kind: "ID" | "ID front" | "ID back" | "Document" | "NDA" | "MOU" | "Contract" | "Certificate";
+  kind: "ID" | "ID front" | "ID back" | "Document" | "NDA" | "MOU" | "Contract" | "Certificate" | "Authority to Act";
   /** Location of the stored file in the private `documents` bucket, so it can be opened later. */
   path?: string | null;
 };
@@ -735,7 +735,9 @@ function LiveDealEngine() {
                 ? "Contract"
                 : d.doc_type === "certificate"
                   ? "Certificate"
-                  : "Document",
+                  : d.doc_type === "authority-to-act"
+                    ? "Authority to Act"
+                    : "Document",
       path: d.storage_path,
     })),
     [workspaceDocs],
