@@ -1,26 +1,36 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { AuthorityToActPanel } from "@/components/verification/AuthorityToActPanel";
 
-/** Blocks the workspace until registration's two compulsory items are on file: an ID/passport
- * number (typed, not scanned) and an Authority to Act document. Unlike the old identity-check
- * gate, this has no "do this later" — Authority to Act is compulsory, and there is no hosted
- * provider page to bounce off, so there's nothing stopping it finishing right here. */
-export function RegistrationDetailsDialog({ open }: { open: boolean }) {
+/** Asks for registration's two remaining items — an ID/passport number (typed, not scanned) and
+ * an Authority to Act document — over the workspace the person was headed to. "Do this later"
+ * returns them to the app rather than trapping them here; this only ever catches someone who
+ * skipped it during sign-up (or an account that pre-dates this step), so it must not be a dead
+ * end the way the old identity-check gate risked being. */
+export function RegistrationDetailsDialog({
+  open,
+  onDismiss,
+}: {
+  open: boolean;
+  onDismiss: () => void;
+}) {
   return (
-    <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent
-        onInteractOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
-        className="[&>button]:hidden"
-      >
+    <Dialog open={open} onOpenChange={(next) => { if (!next) onDismiss(); }}>
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Complete your registration</DialogTitle>
           <DialogDescription>
-            Two things are needed before your workspace opens — nothing to scan or photograph.
+            Two things are needed to trade on Izenzo — nothing to scan or photograph.
           </DialogDescription>
         </DialogHeader>
 
-        <AuthorityToActPanel />
+        <AuthorityToActPanel onSaved={onDismiss} />
+
+        <div className="flex justify-end">
+          <Button type="button" variant="outline" size="sm" onClick={onDismiss}>
+            Do this later
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

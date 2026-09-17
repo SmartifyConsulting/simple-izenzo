@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PasswordInput } from "@/components/PasswordInput";
+import { AuthorityToActPanel } from "@/components/verification/AuthorityToActPanel";
 import { mapAuthError } from "@/lib/auth";
 import { generateOrgBrief } from "@/lib/orgBrief.functions";
 import { COUNTRIES } from "@/lib/countries";
@@ -50,7 +51,7 @@ export function SignUpForm({
   compact?: boolean;
 }) {
   const navigate = useNavigate();
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -153,9 +154,10 @@ export function SignUpForm({
       }
 
       toast.success("Account created");
-      // Identity verification is now a modal gate the authenticated layout shows over whatever
-      // page needs it, not a separate route — heading straight to the destination is enough.
-      navigate({ to: safeNext(next), replace: true });
+      // One last step before heading in: an ID/passport number and an Authority to Act document.
+      // Skippable — the authenticated layout shows the same step again as a dismissible dialog for
+      // anyone who skips it here, so this is never a dead end.
+      setStep(3);
     } catch (err) {
       const msg = mapAuthError((err as Error).message);
       setMessage(msg);
@@ -189,25 +191,21 @@ export function SignUpForm({
       )}
 
       <div className={cn(compact ? "mb-2" : "mb-4", !hideHeader && "mt-7", "flex items-center gap-2")}>
-        <span
-          className={
-            "flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold " +
-            (step === 1 ? "bg-foreground text-background" : "bg-muted text-muted-foreground")
-          }
-        >
-          1
-        </span>
-        <span className="h-px w-6 bg-border" />
-        <span
-          className={
-            "flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold " +
-            (step === 2 ? "bg-foreground text-background" : "bg-muted text-muted-foreground")
-          }
-        >
-          2
-        </span>
+        {([1, 2, 3] as const).map((n, i) => (
+          <span key={n} className="flex items-center gap-2">
+            {i > 0 && <span className="h-px w-6 bg-border" />}
+            <span
+              className={cn(
+                "flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold",
+                step === n ? "bg-foreground text-background" : "bg-muted text-muted-foreground",
+              )}
+            >
+              {n}
+            </span>
+          </span>
+        ))}
         <p className="ml-2 text-xs text-muted-foreground">
-          {step === 1 ? "Your details" : "Organisation details"}
+          {step === 1 ? "Your details" : step === 2 ? "Organisation details" : "Complete registration"}
         </p>
       </div>
 
@@ -291,7 +289,7 @@ export function SignUpForm({
               Continue with Google
             </Button>
           </form>
-        ) : (
+        ) : step === 2 ? (
           <form onSubmit={onSubmit} className={compact ? "space-y-1.5" : "space-y-4"}>
             <div className="space-y-1.5">
               <Label>Registering as</Label>
@@ -445,10 +443,22 @@ export function SignUpForm({
               </Button>
             </div>
           </form>
+        ) : (
+          <div className={compact ? "space-y-2" : "space-y-4"}>
+            <AuthorityToActPanel onSaved={() => navigate({ to: safeNext(next), replace: true })} />
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => navigate({ to: safeNext(next), replace: true })}
+            >
+              Skip for now
+            </Button>
+          </div>
         )}
       </div>
 
-      {!hideFooterLink && (
+      {!hideFooterLink && step !== 3 && (
         <p className={cn("text-center text-sm text-muted-foreground", compact ? "mt-3" : "mt-6")}>
           Already have an account?{" "}
           <Link to="/auth" search={{ mode: "signin", next }} className="font-medium text-foreground hover:underline">

@@ -5,7 +5,7 @@ import {
   useNavigate,
   useRouterState,
 } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { VerifyEmailDialog } from "@/components/auth/VerifyEmailDialog";
@@ -71,8 +71,19 @@ function RequireEmailVerified() {
   // Registration is done once both compulsory items are on file: an ID/passport number (typed,
   // never scanned) and an Authority to Act document. KYC, KYB, AML and PEP no longer gate
   // registration at all — those only run later, scoped to a specific deal, at the WaD gate.
+  // Sign-up itself now asks for these as its own third step; this dialog only ever catches
+  // someone who chose "Do this later" there (or an account that pre-dates this step) — dismissing
+  // it again lasts for this browser session, same as the old identity-check gate did.
+  const [registrationDismissed, setRegistrationDismissed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.sessionStorage.getItem("izenzo:registration-later") === "1";
+  });
   const needsRegistrationDetails =
-    !loading && !!profile && !needsOrg && (!profile.id_number || !profile.authority_to_act_path);
+    !loading &&
+    !!profile &&
+    !needsOrg &&
+    (!profile.id_number || !profile.authority_to_act_path) &&
+    !registrationDismissed;
 
   useEffect(() => {
     if (!mustVerify && needsOrg && !onOrgSetup) navigate({ to: "/account/settings", replace: true });
@@ -84,7 +95,13 @@ function RequireEmailVerified() {
       <ActivityTracker />
       <Outlet />
       <VerifyEmailDialog open={mustVerify} />
-      <RegistrationDetailsDialog open={!mustVerify && needsRegistrationDetails} />
+      <RegistrationDetailsDialog
+        open={!mustVerify && needsRegistrationDetails}
+        onDismiss={() => {
+          if (typeof window !== "undefined") window.sessionStorage.setItem("izenzo:registration-later", "1");
+          setRegistrationDismissed(true);
+        }}
+      />
     </>
   );
 }
