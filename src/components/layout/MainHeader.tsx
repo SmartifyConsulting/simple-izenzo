@@ -33,9 +33,7 @@ const NAV = [
   // mean the person's own trades (with the All/My Trades/stage filters) — not the marketing page
   // they've already moved past.
   { to: "/alpha-bravo/trades", signedInTo: "/trades", label: "Trades" },
-  // Self-service API key management — open to anyone, signed in or not; a signed-out visitor is
-  // sent to sign in/register before landing on the page.
-  { to: "/api", label: "API" },
+  // API key management is administrator-only and lives in Admin → API Keys, not in this menu.
 ] as const;
 
 export function MainHeader() {

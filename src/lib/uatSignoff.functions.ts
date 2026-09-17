@@ -31,13 +31,11 @@ export const UAT_CHECKLIST: string[] = [
   "Business documents filed",
 ];
 
+/** Whole paragraphs, not hard-wrapped fragments — the modal lets them wrap to its own width and
+ * the PDF wraps them to the page width, so they read as normal prose in both places. */
 export const DOCUMENT_INTRO = [
-  "This document confirms User Acceptance Testing (UAT) sign-off for the Izenzo Trading Gateway",
-  "platform, covering the workflow through Step 1 (Trading) and Step 2 (Compliance & Governance).",
-  "",
-  "By signing below, the authorised signer confirms that each item on the checklist below has been",
-  "reviewed and found to work as expected, and that the project is accepted to this point, pending",
-  "any items separately logged for follow-up.",
+  "This document confirms User Acceptance Testing (UAT) sign-off for the Izenzo Trading Gateway platform, covering the workflow through Step 1 (Trading) and Step 2 (Compliance & Governance).",
+  "By signing below, the authorised signer confirms that each item on the checklist below has been reviewed and found to work as expected, and that the project is accepted to this point, pending any items separately logged for follow-up.",
 ];
 
 const DOCUMENT_BODY = [
@@ -48,6 +46,30 @@ const DOCUMENT_BODY = [
   "",
   "This signed document serves as the definitive record of project acceptance to this point.",
 ];
+
+/** Greedy word wrap against the real measured width of the embedded font, so paragraphs break at
+ * word boundaries inside the page margins instead of at arbitrary authored points. */
+function wrapToWidth(
+  text: string,
+  maxWidth: number,
+  size: number,
+  font: { widthOfTextAtSize: (t: string, s: number) => number },
+): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let line = "";
+  for (const word of words) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (line && font.widthOfTextAtSize(candidate, size) > maxWidth) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = candidate;
+    }
+  }
+  if (line) lines.push(line);
+  return lines.length > 0 ? lines : [""];
+}
 
 function fmtDate(d: Date) {
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
@@ -70,13 +92,17 @@ async function buildSignedPdf(opts: {
   page.drawText(`UAT Sign-Off — ${PROJECT_NAME}`, { x: 50, y, size: 18, font: bold, color: rgb(0.1, 0.1, 0.3) });
   y -= 36;
 
-  for (const line of DOCUMENT_BODY) {
-    if (line === "") {
+  for (const paragraph of DOCUMENT_BODY) {
+    if (paragraph === "") {
       y -= 10;
       continue;
     }
-    page.drawText(line, { x: 50, y, size: 11, font, color: rgb(0.15, 0.15, 0.15) });
-    y -= 18;
+    const indent = paragraph.startsWith("  ") ? 12 : 0;
+    for (const line of wrapToWidth(paragraph.trim(), 495 - indent, 11, font)) {
+      page.drawText(line, { x: 50 + indent, y, size: 11, font, color: rgb(0.15, 0.15, 0.15) });
+      y -= 16;
+    }
+    y -= 4;
   }
 
   // Signature block.

@@ -127,9 +127,9 @@ export function UatSignoffDialog({ open, onOpenChange }: { open: boolean; onOpen
 
         <div className="space-y-4">
           <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs leading-relaxed text-muted-foreground">
-            {DOCUMENT_INTRO.filter(Boolean).map((line, i) => (
-              <p key={i} className={i > 0 ? "mt-1.5" : ""}>
-                {line}
+            {DOCUMENT_INTRO.map((paragraph, i) => (
+              <p key={i} className={i > 0 ? "mt-2" : ""}>
+                {paragraph}
               </p>
             ))}
             <p className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-foreground">
@@ -239,11 +239,19 @@ export function UatSignoffDialog({ open, onOpenChange }: { open: boolean; onOpen
                       </p>
                       <p className="text-sm text-foreground">{fmtDate(new Date().toISOString())}</p>
                     </div>
-                    <Button type="submit" className="w-full gap-2" disabled={busy || !signaturePreview}>
-                      {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                      Sign & Confirm
-                    </Button>
                   </div>
+                )}
+
+                {/* The submit button is always visible so the form never looks unfinished; it stays
+                 * disabled until an authorised signer name has produced a signature preview. */}
+                <Button type="submit" className="w-full gap-2" disabled={busy || !matched || !signaturePreview}>
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  Sign &amp; Confirm
+                </Button>
+                {!matched && (
+                  <p className="text-center text-[11px] text-muted-foreground">
+                    Enter an authorised signer&apos;s full name to enable signing.
+                  </p>
                 )}
               </form>
             )}
