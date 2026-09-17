@@ -341,7 +341,9 @@ function LiveDealEngine() {
   const { data: shortlistedNames = [] } = useQuery({
     queryKey: ["shortlisted-names", dealTx?.id],
     enabled: Boolean(dealTx?.id),
-    refetchInterval: 4000,
+    // The shortlist can still change while the person is choosing, so it keeps polling until a
+    // counterparty is actually recorded — after that the list is settled and the poll stops.
+    refetchInterval: dbHasChosenParty ? false : 4000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("counterparties")
