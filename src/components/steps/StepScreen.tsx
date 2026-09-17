@@ -1993,8 +1993,10 @@ function WadStep({ tx, reload }: Props) {
           ),
         },
       });
+      notifyAiPlus(tx.id, "wad_updated");
       if (decision === "cleared") await fileCertificate();
       reload();
+
       toast.success(`WaD ${decision}`);
     } catch (err) {
       reportGateError(err, navigate, tx);
