@@ -90,8 +90,11 @@ const PACK_KEYS = [
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-/** How long we wait for their service before treating the call as unavailable. */
-export const AI_PLUS_TIMEOUT_MS = 45_000;
+/** How long we wait for their service before treating the call as unavailable (Appendix C). */
+export const AI_PLUS_TIMEOUT_MS = 8_000;
+
+/** The path their service exposes (Appendix C). */
+export const AI_PLUS_PATH = "/internal/v1/decision-packs";
 
 /**
  * Reads the AI+ configuration out of the encrypted integration store. Returns `enabled: false`
@@ -143,7 +146,16 @@ export function canonicalBody(request: DecisionRequest): string {
   return JSON.stringify(request);
 }
 
-export async function signBody(secret: string, body: string): Promise<string> {
+/**
+ * Signs exactly what Appendix C signs: the stamped time, the one-off number and the body,
+ * joined with dots, HMAC SHA-256, hex, prefixed `sha256=`.
+ */
+export async function signBody(
+  secret: string,
+  timestamp: string,
+  nonce: string,
+  body: string,
+): Promise<string> {
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey(
     "raw",
@@ -152,11 +164,13 @@ export async function signBody(secret: string, body: string): Promise<string> {
     false,
     ["sign"],
   );
-  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(body));
-  return Array.from(new Uint8Array(sig))
+  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(`${timestamp}.${nonce}.${body}`));
+  const hex = Array.from(new Uint8Array(sig))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
+  return `sha256=${hex}`;
 }
+
 
 export async function sha256Hex(body: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(body));
@@ -283,9 +297,11 @@ export async function callAiPlus(
   correlationId: string,
 ): Promise<AiPlusCallResult> {
   const body = canonicalBody(request);
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  const nonce = crypto.randomUUID().replaceAll("-", "");
   let signature: string;
   try {
-    signature = await signBody(config.hmacSecret, body);
+    signature = await signBody(config.hmacSecret, timestamp, nonce, body);
   } catch {
     return { ok: false, status: null, error: "Could not sign the AI+ request." };
   }
@@ -295,19 +311,22 @@ export async function callAiPlus(
   // call completing, so abandoning it is always safe.
   const timer = setTimeout(() => controller.abort(), AI_PLUS_TIMEOUT_MS);
   try {
-    const res = await fetch(`${config.privateUrl}/v1/decision`, {
+    const res = await fetch(`${config.privateUrl}${AI_PLUS_PATH}`, {
       method: "POST",
       signal: controller.signal,
       headers: {
         "Content-Type": "application/json",
-        "X-Izenzo-Key-Id": config.hmacKeyId,
-        "X-Izenzo-Signature": `sha256=${signature}`,
+        "X-Izenzo-Key-ID": config.hmacKeyId,
+        "X-Izenzo-Timestamp": timestamp,
+        "X-Izenzo-Nonce": nonce,
+        "X-Izenzo-Signature": signature,
         "X-Izenzo-Invocation-Id": request.invocation_id,
-        "X-Izenzo-Correlation-Id": correlationId,
+        "X-Correlation-ID": correlationId,
         "Idempotency-Key": idempotencyKey,
       },
       body,
     });
+
 
     const text = await res.text();
     if (!res.ok) {
@@ -340,6 +359,14 @@ export async function callAiPlus(
         error: "AI+ reply was for a different transaction.",
       };
     }
+    if (validated.pack.stage !== request.transaction.stage) {
+      return {
+        ok: false,
+        status: res.status,
+        error: "AI+ reply was for a different stage.",
+      };
+    }
+
     return { ok: true, pack: validated.pack, status: res.status };
   } catch (err) {
     const aborted = err instanceof Error && err.name === "AbortError";

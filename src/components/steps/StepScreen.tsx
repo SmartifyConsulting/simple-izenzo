@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { sealProofOfIntent, completeWad, runAiProposal, searchCounterparties, extractMaterialTerms } from "@/lib/izenzo.functions";
 import { type ScreeningCheck } from "@/lib/screening.functions";
 import { listIntentMessages, postIntentMessage } from "@/lib/intentChallenge.functions";
+import { emitAiPlusSpineEvent, type StageContext } from "@/lib/decisionPack.functions";
 import { advance, fingerprintOf, money, recordEvent, shortHash, when, type Transaction, type TxEvent } from "@/lib/tx";
 import { POI_COST, WAD_COST, type StageKey } from "@/lib/spine";
 import { cn } from "@/lib/utils";
@@ -32,6 +33,16 @@ import { Logo } from "@/components/Logo";
 import { CommoditySearch } from "@/components/CommoditySearch";
 import { COUNTRIES } from "@/lib/countries";
 import { UNITS } from "@/lib/units";
+
+/**
+ * Tells the protected AI+ service that a spine moment was recorded. Advisory only, and never
+ * blocking: the moment itself is already written before this runs, and a switched-off, slow or
+ * unreachable service simply produces nothing.
+ */
+function notifyAiPlus(transactionId: string, stageContext: StageContext) {
+  void emitAiPlusSpineEvent({ data: { transactionId, stageContext } }).catch(() => {});
+}
+
 
 /** Server-side token gates (POI, WaD) throw "Not enough tokens…" when the org's balance is too
  * low. Surface that specific failure with a direct link to the Buy Tokens screen instead of a
@@ -870,7 +881,10 @@ function AiStep({ tx, reload, kind }: Props & { kind: "ai" | "ai_plus" }) {
         .from("ai_proposals")
         .select("*")
         .eq("transaction_id", tx.id)
-        .eq("kind", kind)
+        // AI+ advice is stored under either name: `ai_plus` from the hosted model and
+        // `ai_plus_decision_pack` from the client's protected service.
+        .in("kind", kind === "ai_plus" ? ["ai_plus", "ai_plus_decision_pack"] : ["ai"])
+
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
@@ -1404,7 +1418,9 @@ function IntentStep({ tx, reload }: Props) {
         },
 
       });
+      notifyAiPlus(tx.id, "intent_confirmed");
       await fileIntentCertificate(now);
+
       await fileProposal();
       // The certificate must show up in the deal's document list straight away, not on the next
       // refresh.
@@ -1648,8 +1664,10 @@ function PoiStep({ tx, reload }: Props) {
     setBusy(true);
     try {
       await seal({ data: { transactionId: tx.id } });
+      notifyAiPlus(tx.id, "poi_sealed");
 
       // File the sealed certificate against the deal so it sits with the other attachments.
+
       const { data: sealedTx } = await supabase
         .from("transactions")
         .select("poi_sealed_at, poi_hash")
@@ -1975,8 +1993,10 @@ function WadStep({ tx, reload }: Props) {
           ),
         },
       });
+      notifyAiPlus(tx.id, "wad_updated");
       if (decision === "cleared") await fileCertificate();
       reload();
+
       toast.success(`WaD ${decision}`);
     } catch (err) {
       reportGateError(err, navigate, tx);
@@ -2625,7 +2645,9 @@ function FinalityStep({ tx, step, reload }: Props) {
           summary: "Finality record sealed",
           payload: { hash },
         });
+        notifyAiPlus(tx.id, "finality_recorded");
       } else {
+
         const cfg = FINALITY_FIELD[step]!;
         await supabase
           .from("finality_records")

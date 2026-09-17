@@ -216,6 +216,34 @@ async function tryProtectedAiPlus(args: {
   });
 
   const requestHash = await sha256Hex(canonicalBody(request));
+
+  // The retry key stands for one unit of work. If the same key has already been used for
+  // materially different contents, the two disagree and the call is refused rather than sent —
+  // their side would otherwise be asked to reconcile two different requests under one key.
+  const { data: priorUse } = await supabaseAdmin
+    .from("ai_plus_invocations")
+    .select("id, request_hash")
+    .eq("idempotency_key", idempotencyKey)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  const conflicting = (priorUse ?? [])[0];
+  if (conflicting && conflicting.request_hash && conflicting.request_hash !== requestHash) {
+    await supabaseAdmin.from("ai_plus_invocations").insert({
+      transaction_id: tx.id,
+      org_id: tx.org_id,
+      invocation_id: invocationId,
+      correlation_id: correlationId,
+      idempotency_key: idempotencyKey,
+      request_hash: requestHash,
+      stage: STAGE_FOR_CONTEXT[args.stageContext] as never,
+      step: tx.step,
+      event_type: args.stageContext,
+      status: "rejected",
+    });
+    console.error("AI+ idempotency key reused with different contents", correlationId);
+    return null;
+  }
+
   const { data: logRow } = await supabaseAdmin
     .from("ai_plus_invocations")
     .insert({
@@ -238,8 +266,9 @@ async function tryProtectedAiPlus(args: {
     actor_id: args.actorId,
     stage: tx.stage as never,
     step: tx.step,
-    action: "ai_invoked",
+    action: "ai_plus_invoked",
     summary: "AI+ service invoked for advisory input",
+
     payload: {
       invocationId,
       correlationId,
@@ -272,7 +301,7 @@ async function tryProtectedAiPlus(args: {
       actor_id: args.actorId,
       stage: tx.stage as never,
       step: tx.step,
-      action: "ai_failed",
+      action: "ai_plus_failed",
       summary: "AI+ service did not return usable advice",
       payload: {
         invocationId,
@@ -505,7 +534,10 @@ export const runDecisionPack = createServerFn({ method: "POST" })
         // through unknown until types are regenerated after that migration runs.
         clean.map((c) => ({
           transaction_id: tx.id,
-          kind: "ai_plus",
+          // Their contract names the protected service's packs `ai_plus_decision_pack`; advice
+          // from the hosted model keeps the existing `ai_plus` name so older records still read.
+          kind: external ? "ai_plus_decision_pack" : "ai_plus",
+
           model,
 
           decision_pack_id: packId,
@@ -692,4 +724,65 @@ export const getDecisionPack = createServerFn({ method: "POST" })
       .is("superseded_by", null)
       .order("probability", { ascending: false });
     return { proposals: proposals ?? [] };
+  });
+
+/**
+ * Sends one spine moment to the client's protected AI+ service.
+ *
+ * This is the interface's other four moments — Intent confirmed, POI sealed, WaD changed and
+ * Finality recorded — invoked from the same authenticated server path that records them, as
+ * their pack requires. It is advisory in every case and informational only after sealing and
+ * after Finality: it never writes Choice, Intent, POI, WaD, Execution or Finality state, and it
+ * returns quietly when the integration is switched off, unreachable or non-conformant.
+ */
+export const emitAiPlusSpineEvent = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(packInput)
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+
+    // RLS decides whether this person may see the transaction at all, so a caller in one
+    // organisation can never raise an invocation for another organisation's deal.
+    const { data: tx } = await supabase
+      .from("transactions")
+      .select("*")
+      .eq("id", data.transactionId)
+      .maybeSingle();
+    if (!tx) return { invoked: false as const };
+
+    const external = await tryProtectedAiPlus({
+      transaction: tx as unknown as AiPlusTransaction,
+      stageContext: data.stageContext,
+      actorId: userId,
+    });
+    if (!external) return { invoked: false as const };
+
+    const packId = crypto.randomUUID();
+    await supabase.from("ai_proposals").insert(
+      external.clean.map((c) => ({
+        transaction_id: tx.id,
+        kind: "ai_plus_decision_pack",
+        model: external.model,
+        decision_pack_id: packId,
+        stage_context: data.stageContext,
+        proposal_type: c.proposal_type,
+        probability: c.probability,
+        output: c.output,
+        rationale: c.rationale,
+        source_references: c.source_references,
+        related_counterparty: c.related_counterparty,
+      })) as unknown as never[],
+    );
+
+    await supabase.from("transaction_events").insert({
+      transaction_id: tx.id,
+      actor_id: userId,
+      stage: tx.stage,
+      step: tx.step,
+      action: "ai_plus_decision_pack",
+      summary: `AI+ recorded ${external.clean.length} advisory note${external.clean.length === 1 ? "" : "s"} at ${STAGE_LABEL[data.stageContext]}`,
+      payload: { packId, stageContext: data.stageContext, advisoryOnly: true },
+    });
+
+    return { invoked: true as const, packId };
   });
