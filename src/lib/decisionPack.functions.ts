@@ -30,6 +30,7 @@ export type ProposalType = (typeof PROPOSAL_TYPES)[number];
 export const STAGE_CONTEXTS = [
   "choice_made",
   "intent_confirmed",
+  "poi_sealed",
   "wad_updated",
   "finality_recorded",
 ] as const;
@@ -39,6 +40,7 @@ export type StageContext = (typeof STAGE_CONTEXTS)[number];
 const STAGE_LABEL: Record<StageContext, string> = {
   choice_made: "Choice",
   intent_confirmed: "Before Sealing Intent",
+  poi_sealed: "After Sealing Proof of Intent",
   wad_updated: "Compliance Case",
   finality_recorded: "Finality",
 };
@@ -48,11 +50,23 @@ const STAGE_BRIEF: Record<StageContext, string> = {
     "A counterparty has just been chosen by a person. Advise on that choice: is the counterparty sound, is the pricing sane, what risks and structuring points matter, is the timing right, is a substitution or a bundle worth considering.",
   intent_confirmed:
     "Intent has been confirmed and the Proof of Intent is about to be sealed and become immutable. This is the last advisory word before that seal: name anything that should be settled first.",
+  poi_sealed:
+    "The Proof of Intent has been sealed and is now immutable. This advice is informational only: it cannot change, reopen or unwind the sealed record. Note what the sealed position means for the compliance and execution work still ahead.",
   wad_updated:
     "The Without a Doubt compliance case has changed. Give advisory input only — you cannot approve, reject, alter or bypass the WaD gate; a compliance officer decides.",
   finality_recorded:
     "Finality has been recorded and the transaction is complete. Close the loop with observations for the record only — nothing here can change the transaction.",
 };
+
+/** Which spine stage each advisory moment belongs to, in the client's DecisionPack vocabulary. */
+const STAGE_FOR_CONTEXT: Record<StageContext, string> = {
+  choice_made: "trading",
+  intent_confirmed: "trading",
+  poi_sealed: "trading",
+  wad_updated: "compliance",
+  finality_recorded: "finality",
+};
+
 
 const packInput = (data: unknown) =>
   z
@@ -71,16 +85,19 @@ type RawProposal = {
   counterparty?: string | null;
 };
 
+type CleanProposal = {
+  proposal_type: ProposalType;
+  probability: number;
+  output: string;
+  rationale: string;
+  source_references: string[];
+  related_counterparty: string | null;
+};
+
 /** Nothing unvalidated is ever written: a bad type or an out-of-range probability is dropped. */
 function validate(raw: RawProposal[]) {
-  const clean: {
-    proposal_type: ProposalType;
-    probability: number;
-    output: string;
-    rationale: string;
-    source_references: string[];
-    related_counterparty: string | null;
-  }[] = [];
+  const clean: CleanProposal[] = [];
+
   const rejected: string[] = [];
 
   for (const r of raw) {
@@ -121,6 +138,182 @@ function validate(raw: RawProposal[]) {
   }
   return { clean, rejected };
 }
+
+type AiPlusTransaction = {
+  id: string;
+  org_id: string;
+  counterparty_org_id: string | null;
+  stage: string;
+  step: string;
+  title: string | null;
+  commodity: string | null;
+  quantity: number | null;
+  unit: string | null;
+  price: number | null;
+  currency: string | null;
+  incoterms: string | null;
+  jurisdiction: string | null;
+};
+
+/**
+ * Asks the client's protected AI+ service for a DecisionPack over their own contract
+ * (Appendix A out, Appendix B back), signed with the shared secret.
+ *
+ * Returns `null` whenever the integration is switched off or the call could not produce a valid
+ * pack — the caller then uses the hosted model instead. This function never throws: an AI+ failure
+ * is an advisory failure only, and must never interrupt a transaction or unwind a sealed record.
+ *
+ * Every attempt is recorded in `ai_plus_invocations` with its invocation, correlation and
+ * idempotency identifiers, so a repeated call is recognisable as a repeat on both sides.
+ */
+async function tryProtectedAiPlus(args: {
+  transaction: AiPlusTransaction;
+  stageContext: StageContext;
+  actorId: string;
+}): Promise<{ clean: CleanProposal[]; rejected: string[]; model: string } | null> {
+  const tx = args.transaction;
+  const {
+    loadAiPlusConfig,
+    buildDecisionRequest,
+    callAiPlus,
+    canonicalBody,
+    sha256Hex,
+    mapCandidateType,
+  } = await import("@/lib/aiPlus.server");
+
+  const config = await loadAiPlusConfig();
+  if (!config.enabled) return null;
+
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  const invocationId = crypto.randomUUID();
+  const correlationId = crypto.randomUUID();
+  const eventAt = new Date().toISOString();
+  // The same spine moment on the same transaction is always the same unit of work, so a retry
+  // carries the same idempotency key and their side can recognise it rather than treat it as new.
+  const idempotencyKey = `${tx.id}:${args.stageContext}`;
+
+  const request = buildDecisionRequest({
+    environment: config.environment,
+    invocationId,
+    transactionId: tx.id,
+    orgId: tx.org_id,
+    counterpartyOrgId: tx.counterparty_org_id ?? null,
+    stage: STAGE_FOR_CONTEXT[args.stageContext],
+    step: tx.step,
+    eventType: args.stageContext,
+    eventAt,
+    attributes: {
+      title: tx.title,
+      commodity: tx.commodity,
+      quantity: tx.quantity,
+      unit: tx.unit,
+      price: tx.price,
+      currency: tx.currency,
+      incoterms: tx.incoterms,
+      jurisdiction: tx.jurisdiction,
+    },
+  });
+
+  const requestHash = await sha256Hex(canonicalBody(request));
+  const { data: logRow } = await supabaseAdmin
+    .from("ai_plus_invocations")
+    .insert({
+      transaction_id: tx.id,
+      org_id: tx.org_id,
+      invocation_id: invocationId,
+      correlation_id: correlationId,
+      idempotency_key: idempotencyKey,
+      request_hash: requestHash,
+      stage: STAGE_FOR_CONTEXT[args.stageContext] as never,
+      step: tx.step,
+      event_type: args.stageContext,
+      status: "invoked",
+    })
+    .select("id")
+    .maybeSingle();
+
+  await supabaseAdmin.from("transaction_events").insert({
+    transaction_id: tx.id,
+    actor_id: args.actorId,
+    stage: tx.stage as never,
+    step: tx.step,
+    action: "ai_invoked",
+    summary: "AI+ service invoked for advisory input",
+    payload: {
+      invocationId,
+      correlationId,
+      idempotencyKey,
+      stageContext: args.stageContext,
+      advisoryOnly: true,
+    },
+  });
+
+  const started = Date.now();
+  const result = await callAiPlus(config, request, idempotencyKey, correlationId);
+
+  const finish = async (status: string, responseStatus: number | null) => {
+    if (logRow?.id) {
+      await supabaseAdmin
+        .from("ai_plus_invocations")
+        .update({
+          status,
+          response_status: responseStatus,
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", logRow.id);
+    }
+  };
+
+  if (!result.ok) {
+    await finish("failed", result.status);
+    await supabaseAdmin.from("transaction_events").insert({
+      transaction_id: tx.id,
+      actor_id: args.actorId,
+      stage: tx.stage as never,
+      step: tx.step,
+      action: "ai_failed",
+      summary: "AI+ service did not return usable advice",
+      payload: {
+        invocationId,
+        correlationId,
+        idempotencyKey,
+        stageContext: args.stageContext,
+        responseStatus: result.status,
+        error: result.error,
+        latencyMs: Date.now() - started,
+        advisoryOnly: true,
+        transactionUnaffected: true,
+      },
+    });
+    console.error("AI+ service call failed", correlationId, result.error);
+    return null;
+  }
+
+  // A validated pack still goes through the same proposal validation as any other advice, so a
+  // probability stays a number and an unexplained candidate is dropped rather than shown.
+  const { clean, rejected } = validate(
+    result.pack.candidates.map((c) => ({
+      proposal_type: mapCandidateType(c.type),
+      probability: c.probability,
+      summary: c.label,
+      rationale: c.rationale,
+      source_references: c.source_refs,
+      counterparty: c.type === "counterparty" ? c.label : null,
+    })),
+  );
+
+  if (clean.length === 0) {
+    await finish("rejected", result.status);
+    console.error("AI+ pack held no usable candidates", correlationId, rejected.join("; "));
+    return null;
+  }
+
+  await finish("completed", result.status);
+  return { clean, rejected, model: result.pack.model };
+}
+
+
 
 /**
  * Runs AI+ for one spine event and records the DecisionPack. Writes only to `ai_proposals`
@@ -220,50 +413,87 @@ export const runDecisionPack = createServerFn({ method: "POST" })
       "Take the document contents and those earlier decisions as settled context: do not repeat advice that was already rejected, and build on what was accepted.",
     ].join("\n");
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: AI_PLUS_MODEL,
-        reasoning_effort: "high",
-        max_completion_tokens: 4000,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: prompt },
-        ],
-      }),
+    // The client's own protected AI+ service is tried first, but only when an administrator has
+    // switched it on and saved its address and signing details. If it is off, unreachable, slow,
+    // or replies with anything that does not satisfy the DecisionPack contract, the failure is
+    // recorded and advice falls back to the hosted model. Either way the transaction is never
+    // blocked and nothing already sealed is touched.
+    const external = await tryProtectedAiPlus({
+      transaction: tx as unknown as {
+        id: string;
+        org_id: string;
+        counterparty_org_id: string | null;
+        stage: string;
+        step: string;
+        title: string | null;
+        commodity: string | null;
+        quantity: number | null;
+        unit: string | null;
+        price: number | null;
+        currency: string | null;
+        incoterms: string | null;
+        jurisdiction: string | null;
+      },
+      stageContext: data.stageContext,
+      actorId: userId,
     });
-    if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
-    if (res.status === 402) {
-      const { alertLowFunds } = await import("@/lib/opsAlerts.server");
-      void alertLowFunds("AI Gateway", 402);
-      throw new Error("AI credits are exhausted for this workspace — support has been notified.");
-    }
-    if (res.status === 403) {
-      const body = await res.text();
-      throw new Error(
-        body.includes("credit_limit_reached")
-          ? "The workspace AI spending limit has been reached, so AI+ cannot run. A workspace admin needs to raise the limit."
-          : `AI+ analysis was blocked: ${body.slice(0, 300)}`,
-      );
-    }
-    if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`AI+ analysis failed (${res.status}). ${body.slice(0, 300)}`);
+
+    let clean: CleanProposal[];
+    let rejected: string[];
+    let model: string = AI_PLUS_MODEL;
+
+    if (external) {
+      clean = external.clean;
+      rejected = external.rejected;
+      model = external.model;
+    } else {
+      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: AI_PLUS_MODEL,
+          reasoning_effort: "high",
+          max_completion_tokens: 4000,
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: prompt },
+          ],
+        }),
+      });
+      if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
+      if (res.status === 402) {
+        const { alertLowFunds } = await import("@/lib/opsAlerts.server");
+        void alertLowFunds("AI Gateway", 402);
+        throw new Error("AI credits are exhausted for this workspace — support has been notified.");
+      }
+      if (res.status === 403) {
+        const body = await res.text();
+        throw new Error(
+          body.includes("credit_limit_reached")
+            ? "The workspace AI spending limit has been reached, so AI+ cannot run. A workspace admin needs to raise the limit."
+            : `AI+ analysis was blocked: ${body.slice(0, 300)}`,
+        );
+      }
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error(`AI+ analysis failed (${res.status}). ${body.slice(0, 300)}`);
+      }
+
+      const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+      const content = json.choices?.[0]?.message?.content ?? "";
+      let raw: RawProposal[] = [];
+      try {
+        const parsed = JSON.parse(content) as { proposals?: RawProposal[] };
+        raw = Array.isArray(parsed.proposals) ? parsed.proposals : [];
+      } catch {
+        throw new Error("AI+ returned an analysis that could not be read. Please run it again.");
+      }
+      const validated = validate(raw);
+      clean = validated.clean;
+      rejected = validated.rejected;
     }
 
-    const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-    const content = json.choices?.[0]?.message?.content ?? "";
-    let raw: RawProposal[] = [];
-    try {
-      const parsed = JSON.parse(content) as { proposals?: RawProposal[] };
-      raw = Array.isArray(parsed.proposals) ? parsed.proposals : [];
-    } catch {
-      throw new Error("AI+ returned an analysis that could not be read. Please run it again.");
-    }
-
-    const { clean, rejected } = validate(raw);
     if (clean.length === 0)
       throw new Error("AI+ produced no valid proposals. Please run the analysis again.");
 
@@ -276,7 +506,8 @@ export const runDecisionPack = createServerFn({ method: "POST" })
         clean.map((c) => ({
           transaction_id: tx.id,
           kind: "ai_plus",
-          model: AI_PLUS_MODEL,
+          model,
+
           decision_pack_id: packId,
           stage_context: data.stageContext,
           proposal_type: c.proposal_type,
