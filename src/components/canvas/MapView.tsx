@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Building2,
   CheckCircle2,
-  ChevronDown,
   Database,
   FileText,
   FolderClosed,
@@ -40,17 +39,6 @@ function nodeState(stage: StageKey, step: string, tx: Transaction | null): NodeS
   if (idx < currentIdx) return "done";
   if (idx === currentIdx) return "active";
   return "open";
-}
-
-/** Which numbered step (1-4) the deal is actually in right now — same numbering the vertical
- * stepper uses. Drives which step's frame is expanded by default: only the current one, with
- * everything before and after it collapsed, so finishing a step is what opens the next. */
-function currentStepNumber(tx: Transaction | null): 1 | 2 | 3 | 4 {
-  if (!tx) return 1;
-  if (tx.stage === "execution") return 3;
-  if (tx.stage === "finality" || tx.stage === "memory") return 4;
-  if (tx.stage === "compliance") return 2;
-  return tx.step === "poi" ? 2 : 1;
 }
 
 // Fixed diagram coordinate system, proportioned for the workflow column beside the Live
@@ -288,8 +276,6 @@ function Frame({
   box,
   label,
   subLabel,
-  collapsed,
-  onToggle,
 }: {
   box: Box;
   label?: string | undefined;
@@ -297,8 +283,6 @@ function Frame({
    * floating on the border with the main label — used to split a long name like "Compliance &
    * Governance" across two rows instead of squeezing it onto the one that floats on the line. */
   subLabel?: string | undefined;
-  collapsed?: boolean | undefined;
-  onToggle?: (() => void) | undefined;
 }) {
   return (
     <div
@@ -306,31 +290,14 @@ function Frame({
       style={{ left: px(box.x), top: py(box.y), width: px(box.w), height: py(box.h) }}
     >
       {label && (
-        onToggle ? (
-          <button
-            type="button"
-            onClick={onToggle}
-            aria-expanded={!collapsed}
-            className="label-caps pointer-events-auto absolute -top-2 left-5 flex items-center gap-1 whitespace-nowrap rounded-full bg-[var(--step-pill-bg)] px-2.5 py-0.5 text-[var(--step-pill-fg)] transition-opacity hover:opacity-90"
-          >
-            {label}
-            <ChevronDown className={cn("h-3 w-3 shrink-0 transition-transform", !collapsed && "rotate-180")} />
-          </button>
-        ) : (
-          <span className="label-caps absolute -top-2 left-5 whitespace-nowrap rounded-full bg-[var(--step-pill-bg)] px-2.5 py-0.5 text-[var(--step-pill-fg)]">
-            {label}
-          </span>
-        )
+        <span className="label-caps absolute -top-2 left-5 whitespace-nowrap rounded-full bg-[var(--step-pill-bg)] px-2.5 py-0.5 text-[var(--step-pill-fg)]">
+          {label}
+        </span>
       )}
       {subLabel && (
         <span className="label-caps absolute left-5 top-3 whitespace-nowrap rounded-full bg-[var(--step-pill-bg)] px-2.5 py-0.5 text-[var(--step-pill-fg)]">
           {subLabel}
         </span>
-      )}
-      {collapsed && (
-        <p className="absolute inset-0 flex items-center justify-center px-6 text-center text-[11px] text-muted-foreground">
-          Collapsed — click the heading to expand
-        </p>
       )}
     </div>
   );
@@ -454,29 +421,6 @@ export function MapView({
 }) {
   const [panel, setPanel] = useState<{ stage: StageKey; step: string; viewOnly: boolean } | null>(null);
 
-  // Only the step currently being worked is expanded by default; the rest fold away. Resets
-  // itself whenever the deal actually advances to a new step (finishing Step 1 expands Step 2,
-  // and so on) — a click on any heading still overrides this for as long as the deal stays on the
-  // same step.
-  const activeStep = currentStepNumber(tx);
-  const [collapsed, setCollapsed] = useState<Record<1 | 2 | 3 | 4, boolean>>(() => ({
-    1: activeStep !== 1,
-    2: activeStep !== 2,
-    3: activeStep !== 3,
-    4: activeStep !== 4,
-  }));
-  useEffect(() => {
-    setCollapsed({
-      1: activeStep !== 1,
-      2: activeStep !== 2,
-      3: activeStep !== 3,
-      4: activeStep !== 4,
-    });
-    // Only meant to reset when the deal moves to a genuinely different step, not on every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeStep]);
-  const toggleStep = (n: 1 | 2 | 3 | 4) => setCollapsed((prev) => ({ ...prev, [n]: !prev[n] }));
-
   // A "done" tile is a past stage — clicking it does nothing for now. A real read-only view of
   // completed steps is planned for a later phase; showing the live editable upload/search/results
   // UI for a step that's already behind the current pulse was confusing, so it's disabled rather
@@ -538,34 +482,12 @@ export function MapView({
         <MemoryArcLabel />
 
 
-        <Frame
-          box={TRADE_ENGINE_FRAME}
-          label="Step 1 · Trading"
-          collapsed={collapsed[1]}
-          onToggle={() => toggleStep(1)}
-        />
-        <Frame
-          box={COMPLIANCE_FRAME}
-          label="Step 2 · GRC"
-          collapsed={collapsed[2]}
-          onToggle={() => toggleStep(2)}
-        />
-        <Frame
-          box={EXECUTION_FRAME}
-          label="Step 3 · Execution"
-          collapsed={collapsed[3]}
-          onToggle={() => toggleStep(3)}
-        />
+        <Frame box={TRADE_ENGINE_FRAME} label="Step 1 · Trading" />
+        <Frame box={COMPLIANCE_FRAME} label="Step 2 · GRC" />
+        <Frame box={EXECUTION_FRAME} label="Step 3 · Execution" />
         <Frame box={ENTRY_EXIT_FRAME} />
-        <Frame
-          box={FINALITY_FRAME}
-          label="Step 4 · Finality"
-          collapsed={collapsed[4]}
-          onToggle={() => toggleStep(4)}
-        />
+        <Frame box={FINALITY_FRAME} label="Step 4 · Finality" />
 
-        {!collapsed[1] && (
-          <>
         {/* Mirrors Search's own state (same overrideKey) — both pulse together while the search is
             running, and once it's done the pulse moves straight on to Choice. */}
         {node("steps", "Search Results", "trading", "search", ListChecks, { overrideKey: "search" })}
@@ -619,11 +541,7 @@ export function MapView({
         {node("expressIntent", "Confirm Intent", "trading", "intent", ShieldCheck, {
           overrideKey: "intent",
         })}
-          </>
-        )}
 
-        {!collapsed[2] && (
-          <>
         {/* Step 2 — compliance & governance */}
         {node("poi", "Seal Intent", "trading", "poi", Building2, { overrideKey: "poi" })}
 
@@ -636,11 +554,7 @@ export function MapView({
           sub: "POI, NDA, MOU, Contract",
           overrideKey: "businessDocs",
         })}
-          </>
-        )}
 
-        {!collapsed[3] && (
-          <>
         {/* Step 3 — execution. The frame heading stays "Step 3 · Execution"; each tile below it is
             one item from the vertical stepper's own Execution list, in the same order: Project
             Preparation's three sub-steps, then Bankability, then Implementation. */}
@@ -649,20 +563,13 @@ export function MapView({
         {node("feasibility", "Feasibility", "execution", "preparation")}
         {node("bankability", "Bankability", "execution", "bankability")}
         {node("implementation", "Implementation", "execution", "implementation")}
-          </>
-        )}
-        {/* Entry/Exit sits between the Step 3 and Step 4 frames, on its own — always shown, since
-            it has no frame/heading of its own to collapse with. */}
+        {/* Entry/Exit sits between the Step 3 and Step 4 frames, on its own. */}
         {node("entryExit", "Entry / Exit", "execution", "stakeholders", LogIn, { plain: true })}
-        {!collapsed[4] && (
-          <>
         {/* Step 4 — finality. "Finality" is the frame heading; each tile below it is one item from
             the vertical stepper's own Finality list, in the same order. */}
         {node("payment", "Payment", "finality", "type")}
         {node("signoff", "Signoff", "finality", "validation")}
         {node("handover", "Handover", "finality", "record")}
-          </>
-        )}
 
         {/* Step 5 — memory */}
         <button
