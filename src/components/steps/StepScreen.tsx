@@ -1418,7 +1418,9 @@ function IntentStep({ tx, reload }: Props) {
         },
 
       });
+      notifyAiPlus(tx.id, "intent_confirmed");
       await fileIntentCertificate(now);
+
       await fileProposal();
       // The certificate must show up in the deal's document list straight away, not on the next
       // refresh.
