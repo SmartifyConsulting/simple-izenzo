@@ -410,7 +410,10 @@ export const decideProposal = createServerFn({ method: "POST" })
         ...pack
           .map((p, i) => [
             `${i + 1}. [${p.proposal_type ?? "option"}] ${p.output}`,
-            p.rationale ? `   Rationale: ${p.rationale}` : null,
+            p.rationale ? `   Why AI+ recommended this: ${p.rationale}` : null,
+            Array.isArray(p.source_references) && p.source_references.length > 0
+              ? `   Based on: ${(p.source_references as unknown[]).map((s) => String(s)).join("; ")}`
+              : null,
             p.probability != null ? `   Probability: ${Math.round(Number(p.probability) * 100)}%` : null,
             p.related_counterparty ? `   Counterparty: ${p.related_counterparty}` : null,
             `   Decision: ${(p.id === proposal.id ? data.decision : p.decision) ?? "—"} by ${nameOf(p.id === proposal.id ? userId : p.decided_by)} at ${p.id === proposal.id ? decidedAt : p.decided_at}`,
