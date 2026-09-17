@@ -2202,6 +2202,7 @@ export type Database = {
           credits: number
           id: string
           industry: string | null
+          invite_code: string
           name: string
           offerings: string | null
           primary_contact_email: string | null
@@ -2224,6 +2225,7 @@ export type Database = {
           credits?: number
           id?: string
           industry?: string | null
+          invite_code?: string
           name: string
           offerings?: string | null
           primary_contact_email?: string | null
@@ -2246,6 +2248,7 @@ export type Database = {
           credits?: number
           id?: string
           industry?: string | null
+          invite_code?: string
           name?: string
           offerings?: string | null
           primary_contact_email?: string | null
