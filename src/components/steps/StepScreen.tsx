@@ -34,6 +34,16 @@ import { CommoditySearch } from "@/components/CommoditySearch";
 import { COUNTRIES } from "@/lib/countries";
 import { UNITS } from "@/lib/units";
 
+/**
+ * Tells the protected AI+ service that a spine moment was recorded. Advisory only, and never
+ * blocking: the moment itself is already written before this runs, and a switched-off, slow or
+ * unreachable service simply produces nothing.
+ */
+function notifyAiPlus(transactionId: string, stageContext: StageContext) {
+  void emitAiPlusSpineEvent({ data: { transactionId, stageContext } }).catch(() => {});
+}
+
+
 /** Server-side token gates (POI, WaD) throw "Not enough tokens…" when the org's balance is too
  * low. Surface that specific failure with a direct link to the Buy Tokens screen instead of a
  * plain error toast. */
