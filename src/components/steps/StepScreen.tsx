@@ -1664,8 +1664,10 @@ function PoiStep({ tx, reload }: Props) {
     setBusy(true);
     try {
       await seal({ data: { transactionId: tx.id } });
+      notifyAiPlus(tx.id, "poi_sealed");
 
       // File the sealed certificate against the deal so it sits with the other attachments.
+
       const { data: sealedTx } = await supabase
         .from("transactions")
         .select("poi_sealed_at, poi_hash")
