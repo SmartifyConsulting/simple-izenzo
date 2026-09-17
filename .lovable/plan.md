@@ -59,3 +59,40 @@ change in this work. Nothing is deleted.
 Still on your side: the stored exchange-rate setting with a key in its address
 field should be re-entered and that key rotated; the AI+ interface stays off
 until the client's service is live and the three values are entered.
+
+## Appendix C — checked, and not yet fully matched
+
+Appendix C in his pack is the exact calling code his service expects. Comparing
+it with what was built here, four things differ:
+
+| Item | His Appendix C | Built here |
+| --- | --- | --- |
+| Address ending | `/internal/v1/decision-packs` | `/v1/decision` |
+| Stamped time | `X-Izenzo-Timestamp` sent | not sent |
+| One-off number | `X-Izenzo-Nonce` sent | not sent |
+| What is signed | time, one-off number and body together | body only |
+
+Header spellings also differ slightly (`Key-ID` vs `Key-Id`, `X-Correlation-ID`
+vs `X-Izenzo-Correlation-Id`), and his example gives up after 8 seconds where
+this waits 45.
+
+As it stands his service would refuse our calls, so this must be aligned before
+any live test. It is a contained change to the one server-side calling file plus
+its automated checks — no change to governance, permissions, the workflow spine
+or anything a person sees.
+
+### Alignment step (add to the work above)
+
+1. Send the two extra stamps on every call and sign time, one-off number and
+   body together, exactly as his example does.
+2. Use his address ending and his header spellings.
+3. Keep the existing safe behaviour: bounded wait, strict reply checking, the
+   same retry key for a repeated moment, invocation and failure records, and
+   fallback to the current advice path when his service is unreachable.
+4. Update the 18 automated checks to the corrected shape and confirm they pass;
+   confirm the build and type check stay clean.
+5. Note the corrected call shape in the confirmation document, so his team can
+   see the two sides now agree.
+
+Whether to do this before or after payment is your call: it is needed only for a
+live connection, and the interface stays switched off either way.
