@@ -46,21 +46,22 @@ export function useRecentDeals() {
   const [list, setList] = useState<RecentDeal[]>(() => read());
 
   useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === null || e.key === KEY) setList(read());
-    };
-    window.addEventListener("storage", onStorage);
     // Same 1.5s freshness, but it skips the work while the tab is hidden and only pushes a new
     // array (re-rendering everything that shows the list) when the stored value actually changed.
     let last = JSON.stringify(read());
-    const tick = () => {
-      if (document.visibilityState !== "visible") return;
+    const sync = (force: boolean) => {
+      if (!force && document.visibilityState !== "visible") return;
       const next = read();
       const encoded = JSON.stringify(next);
       if (encoded === last) return;
       last = encoded;
       setList(next);
     };
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === null || e.key === KEY) sync(true);
+    };
+    const tick = () => sync(false);
+    window.addEventListener("storage", onStorage);
     const interval = setInterval(tick, 1500);
     document.addEventListener("visibilitychange", tick);
     return () => {
