@@ -33,15 +33,13 @@ const NAV = [
   // mean the person's own trades (with the All/My Trades/stage filters) — not the marketing page
   // they've already moved past.
   { to: "/alpha-bravo/trades", signedInTo: "/trades", label: "Trades" },
-  // Issuing an API key is an admin-only action (same bar as the Admin area), so this only shows
-  // up in the nav for a signed-in admin — nobody else can reach it from here anyway.
-  { to: "/api", label: "API", adminOnly: true },
+  // Self-service API key management — open to anyone, signed in or not; a signed-out visitor is
+  // sent to sign in/register before landing on the page.
+  { to: "/api", label: "API" },
 ] as const;
 
 export function MainHeader() {
-  const { user, org, roles } = useAuth();
-  const isAdmin = roles.includes("admin");
-  const navItems = NAV.filter((item) => !("adminOnly" in item) || isAdmin);
+  const { user, org } = useAuth();
   const [uatOpen, setUatOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isHome = pathname === "/alpha-bravo" || pathname === "/alpha-bravo/";
@@ -73,7 +71,7 @@ export function MainHeader() {
         </Link>
 
         <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-2 whitespace-nowrap text-sm text-muted-foreground lg:flex">
-          {navItems.map((item) => {
+          {NAV.map((item) => {
             const to = user && "signedInTo" in item ? item.signedInTo : item.to;
             return (
               <Link
@@ -101,7 +99,7 @@ export function MainHeader() {
             <Menu className="h-5 w-5" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {navItems.map((item) => {
+            {NAV.map((item) => {
               const to = user && "signedInTo" in item ? item.signedInTo : item.to;
               return (
                 <DropdownMenuItem key={item.to} asChild>

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
 
 export const API_SCOPES = [
   "api:status_read",
@@ -20,8 +21,8 @@ export const GATEWAY_URL = "https://<project-ref>.functions.supabase.co/api-gate
 
 export function ApiKeysTab() {
   const qc = useQueryClient();
+  const { org } = useAuth();
   const [form, setForm] = useState({
-    orgId: "",
     environment: "sandbox",
     name: "",
     scopes: [...API_SCOPES] as string[],
@@ -31,38 +32,31 @@ export function ApiKeysTab() {
   const [issuedKey, setIssuedKey] = useState<string | null>(null);
 
   const { data: keys = [] } = useQuery({
-    queryKey: ["admin-api-keys"],
+    queryKey: ["org-api-keys", org?.id],
+    enabled: Boolean(org?.id),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("api_keys")
-        .select("*, organisations(name)")
+        .select("*")
+        .eq("org_id", org!.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
     },
   });
 
-  const { data: orgOptions = [] } = useQuery({
-    queryKey: ["admin-org-options"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("organisations").select("id, name").order("name");
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
   async function refresh() {
-    await qc.invalidateQueries({ queryKey: ["admin-api-keys"] });
+    await qc.invalidateQueries({ queryKey: ["org-api-keys", org?.id] });
   }
 
   async function createKey(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.orgId || !form.name.trim()) {
-      toast.error("Org and key name are required.");
+    if (!org?.id || !form.name.trim()) {
+      toast.error("Key name is required.");
       return;
     }
     const { data, error } = await supabase.rpc("admin_api_create_key", {
-      p_org_id: form.orgId,
+      p_org_id: org.id,
       p_environment: form.environment as "sandbox" | "production",
       p_name: form.name,
       p_scopes: form.scopes,
@@ -76,7 +70,7 @@ export function ApiKeysTab() {
     const row = Array.isArray(data) ? data[0] : data;
     setIssuedKey(row?.raw_key ?? null);
     toast.success("Key created — copy it now, it will not be shown again");
-    setForm({ orgId: "", environment: "sandbox", name: "", scopes: [...API_SCOPES], commercialOwner: "", complianceOwner: "" });
+    setForm({ environment: "sandbox", name: "", scopes: [...API_SCOPES], commercialOwner: "", complianceOwner: "" });
     await refresh();
   }
 
@@ -127,9 +121,9 @@ export function ApiKeysTab() {
   return (
     <div className="space-y-8">
       <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm text-warning">
-        Only platform admins can create, suspend, revoke or rotate API keys. A production key
-        requires a named commercial owner and compliance owner. Sandbox keys expire in 90 days,
-        production in 12 months — there are no perpetual keys. Gateway base:{" "}
+        Keys are issued for your organisation, {org?.name ?? "—"}. A production key requires a
+        named commercial owner and compliance owner. Sandbox keys expire in 90 days, production in
+        12 months — there are no perpetual keys. Gateway base:{" "}
         <code className="rounded bg-black/10 px-1">{GATEWAY_URL}/&lt;sandbox|production&gt;/v1/...</code>
       </div>
 
@@ -147,21 +141,6 @@ export function ApiKeysTab() {
         <h2 className="text-sm font-semibold">Issue a new key</h2>
         <form onSubmit={createKey} className="mt-2 space-y-3 rounded-md border border-border p-4">
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label>Client org</Label>
-              <select
-                className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-                value={form.orgId}
-                onChange={(e) => setForm({ ...form, orgId: e.target.value })}
-              >
-                <option value="">— select —</option>
-                {orgOptions.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name}
-                  </option>
-                ))}
-              </select>
-            </div>
             <div className="space-y-1.5">
               <Label>Environment</Label>
               <select
@@ -234,11 +213,10 @@ export function ApiKeysTab() {
         ) : (
           <ul className="mt-2 space-y-2">
             {keys.map((k) => {
-              const orgName = (k as { organisations?: { name?: string } | null }).organisations?.name;
               return (
                 <li key={k.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border p-3 text-xs">
                   <span>
-                    <span className="font-medium">{k.name}</span> ({orgName}) ·{" "}
+                    <span className="font-medium">{k.name}</span> ·{" "}
                     <code className="rounded bg-muted px-1">{k.key_prefix}…</code> · {k.environment} · expires{" "}
                     {new Date(k.expires_at).toLocaleDateString()}
                   </span>
