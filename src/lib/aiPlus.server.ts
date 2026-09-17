@@ -90,8 +90,11 @@ const PACK_KEYS = [
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-/** How long we wait for their service before treating the call as unavailable. */
-export const AI_PLUS_TIMEOUT_MS = 45_000;
+/** How long we wait for their service before treating the call as unavailable (Appendix C). */
+export const AI_PLUS_TIMEOUT_MS = 8_000;
+
+/** The path their service exposes (Appendix C). */
+export const AI_PLUS_PATH = "/internal/v1/decision-packs";
 
 /**
  * Reads the AI+ configuration out of the encrypted integration store. Returns `enabled: false`
