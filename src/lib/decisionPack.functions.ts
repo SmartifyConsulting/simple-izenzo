@@ -216,6 +216,34 @@ async function tryProtectedAiPlus(args: {
   });
 
   const requestHash = await sha256Hex(canonicalBody(request));
+
+  // The retry key stands for one unit of work. If the same key has already been used for
+  // materially different contents, the two disagree and the call is refused rather than sent —
+  // their side would otherwise be asked to reconcile two different requests under one key.
+  const { data: priorUse } = await supabaseAdmin
+    .from("ai_plus_invocations")
+    .select("id, request_hash")
+    .eq("idempotency_key", idempotencyKey)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  const conflicting = (priorUse ?? [])[0];
+  if (conflicting && conflicting.request_hash && conflicting.request_hash !== requestHash) {
+    await supabaseAdmin.from("ai_plus_invocations").insert({
+      transaction_id: tx.id,
+      org_id: tx.org_id,
+      invocation_id: invocationId,
+      correlation_id: correlationId,
+      idempotency_key: idempotencyKey,
+      request_hash: requestHash,
+      stage: STAGE_FOR_CONTEXT[args.stageContext] as never,
+      step: tx.step,
+      event_type: args.stageContext,
+      status: "rejected",
+    });
+    console.error("AI+ idempotency key reused with different contents", correlationId);
+    return null;
+  }
+
   const { data: logRow } = await supabaseAdmin
     .from("ai_plus_invocations")
     .insert({
@@ -238,8 +266,9 @@ async function tryProtectedAiPlus(args: {
     actor_id: args.actorId,
     stage: tx.stage as never,
     step: tx.step,
-    action: "ai_invoked",
+    action: "ai_plus_invoked",
     summary: "AI+ service invoked for advisory input",
+
     payload: {
       invocationId,
       correlationId,
