@@ -17,6 +17,7 @@ import { when, type Transaction } from "@/lib/tx";
 import { issueEvidencePack, downloadEvidencePack } from "@/lib/evidencePack.functions";
 import { IntegrationsTab } from "@/components/admin/IntegrationsTab";
 import { AuditLogTab } from "@/components/admin/AuditLogTab";
+import { ApiKeysTab } from "@/components/admin/ApiKeysTab";
 
 type AdminSearch = { group?: string; tab?: string; activityUser?: string };
 
