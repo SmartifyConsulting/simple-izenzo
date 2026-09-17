@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { sealProofOfIntent, completeWad, runAiProposal, searchCounterparties, extractMaterialTerms } from "@/lib/izenzo.functions";
 import { type ScreeningCheck } from "@/lib/screening.functions";
 import { listIntentMessages, postIntentMessage } from "@/lib/intentChallenge.functions";
+import { emitAiPlusSpineEvent, type StageContext } from "@/lib/decisionPack.functions";
 import { advance, fingerprintOf, money, recordEvent, shortHash, when, type Transaction, type TxEvent } from "@/lib/tx";
 import { POI_COST, WAD_COST, type StageKey } from "@/lib/spine";
 import { cn } from "@/lib/utils";
