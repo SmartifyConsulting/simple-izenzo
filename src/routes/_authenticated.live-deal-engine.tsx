@@ -2619,12 +2619,14 @@ function LiveDealEngine() {
                     offers proposals, each with a numeric probability, and the person accepts or
                     rejects them before Intent is available. */}
                 {dealTx && dbHasChosenParty && !dealTx.poi_sealed_at && (
-                  <DecisionPackPanel
-                    transactionId={dealTx.id}
-                    stageContext="choice_made"
-                    gating={!dealTx.intent_confirmed_at}
-                    onAllDecided={setChoicePackDecided}
-                  />
+                  <Suspense fallback={null}>
+                    <DecisionPackPanel
+                      transactionId={dealTx.id}
+                      stageContext="choice_made"
+                      gating={!dealTx.intent_confirmed_at}
+                      onAllDecided={setChoicePackDecided}
+                    />
+                  </Suspense>
                 )}
 
                 {/* No further AI+ recommendations appear later in the deal: the person answers the
