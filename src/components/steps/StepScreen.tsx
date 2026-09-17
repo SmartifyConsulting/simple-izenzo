@@ -2645,7 +2645,9 @@ function FinalityStep({ tx, step, reload }: Props) {
           summary: "Finality record sealed",
           payload: { hash },
         });
+        notifyAiPlus(tx.id, "finality_recorded");
       } else {
+
         const cfg = FINALITY_FIELD[step]!;
         await supabase
           .from("finality_records")
