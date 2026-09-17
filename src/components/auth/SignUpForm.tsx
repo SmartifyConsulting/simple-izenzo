@@ -444,17 +444,7 @@ export function SignUpForm({
             </div>
           </form>
         ) : (
-          <div className={compact ? "space-y-2" : "space-y-4"}>
-            <AuthorityToActPanel onSaved={() => navigate({ to: safeNext(next), replace: true })} />
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={() => navigate({ to: safeNext(next), replace: true })}
-            >
-              Skip for now
-            </Button>
-          </div>
+          <AuthorityToActPanel onSaved={() => navigate({ to: safeNext(next), replace: true })} />
         )}
       </div>
 
