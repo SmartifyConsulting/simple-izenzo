@@ -234,50 +234,87 @@ export const runDecisionPack = createServerFn({ method: "POST" })
       "Take the document contents and those earlier decisions as settled context: do not repeat advice that was already rejected, and build on what was accepted.",
     ].join("\n");
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: AI_PLUS_MODEL,
-        reasoning_effort: "high",
-        max_completion_tokens: 4000,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: prompt },
-        ],
-      }),
+    // The client's own protected AI+ service is tried first, but only when an administrator has
+    // switched it on and saved its address and signing details. If it is off, unreachable, slow,
+    // or replies with anything that does not satisfy the DecisionPack contract, the failure is
+    // recorded and advice falls back to the hosted model. Either way the transaction is never
+    // blocked and nothing already sealed is touched.
+    const external = await tryProtectedAiPlus({
+      transaction: tx as unknown as {
+        id: string;
+        org_id: string;
+        counterparty_org_id: string | null;
+        stage: string;
+        step: string;
+        title: string | null;
+        commodity: string | null;
+        quantity: number | null;
+        unit: string | null;
+        price: number | null;
+        currency: string | null;
+        incoterms: string | null;
+        jurisdiction: string | null;
+      },
+      stageContext: data.stageContext,
+      actorId: userId,
     });
-    if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
-    if (res.status === 402) {
-      const { alertLowFunds } = await import("@/lib/opsAlerts.server");
-      void alertLowFunds("AI Gateway", 402);
-      throw new Error("AI credits are exhausted for this workspace — support has been notified.");
-    }
-    if (res.status === 403) {
-      const body = await res.text();
-      throw new Error(
-        body.includes("credit_limit_reached")
-          ? "The workspace AI spending limit has been reached, so AI+ cannot run. A workspace admin needs to raise the limit."
-          : `AI+ analysis was blocked: ${body.slice(0, 300)}`,
-      );
-    }
-    if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`AI+ analysis failed (${res.status}). ${body.slice(0, 300)}`);
+
+    let clean: CleanProposal[];
+    let rejected: string[];
+    let model: string = AI_PLUS_MODEL;
+
+    if (external) {
+      clean = external.clean;
+      rejected = external.rejected;
+      model = external.model;
+    } else {
+      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: AI_PLUS_MODEL,
+          reasoning_effort: "high",
+          max_completion_tokens: 4000,
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: prompt },
+          ],
+        }),
+      });
+      if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
+      if (res.status === 402) {
+        const { alertLowFunds } = await import("@/lib/opsAlerts.server");
+        void alertLowFunds("AI Gateway", 402);
+        throw new Error("AI credits are exhausted for this workspace — support has been notified.");
+      }
+      if (res.status === 403) {
+        const body = await res.text();
+        throw new Error(
+          body.includes("credit_limit_reached")
+            ? "The workspace AI spending limit has been reached, so AI+ cannot run. A workspace admin needs to raise the limit."
+            : `AI+ analysis was blocked: ${body.slice(0, 300)}`,
+        );
+      }
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error(`AI+ analysis failed (${res.status}). ${body.slice(0, 300)}`);
+      }
+
+      const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+      const content = json.choices?.[0]?.message?.content ?? "";
+      let raw: RawProposal[] = [];
+      try {
+        const parsed = JSON.parse(content) as { proposals?: RawProposal[] };
+        raw = Array.isArray(parsed.proposals) ? parsed.proposals : [];
+      } catch {
+        throw new Error("AI+ returned an analysis that could not be read. Please run it again.");
+      }
+      const validated = validate(raw);
+      clean = validated.clean;
+      rejected = validated.rejected;
     }
 
-    const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-    const content = json.choices?.[0]?.message?.content ?? "";
-    let raw: RawProposal[] = [];
-    try {
-      const parsed = JSON.parse(content) as { proposals?: RawProposal[] };
-      raw = Array.isArray(parsed.proposals) ? parsed.proposals : [];
-    } catch {
-      throw new Error("AI+ returned an analysis that could not be read. Please run it again.");
-    }
-
-    const { clean, rejected } = validate(raw);
     if (clean.length === 0)
       throw new Error("AI+ produced no valid proposals. Please run the analysis again.");
 
@@ -290,7 +327,8 @@ export const runDecisionPack = createServerFn({ method: "POST" })
         clean.map((c) => ({
           transaction_id: tx.id,
           kind: "ai_plus",
-          model: AI_PLUS_MODEL,
+          model,
+
           decision_pack_id: packId,
           stage_context: data.stageContext,
           proposal_type: c.proposal_type,
