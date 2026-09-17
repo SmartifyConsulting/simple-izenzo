@@ -359,6 +359,14 @@ export async function callAiPlus(
         error: "AI+ reply was for a different transaction.",
       };
     }
+    if (validated.pack.stage !== request.transaction.stage) {
+      return {
+        ok: false,
+        status: res.status,
+        error: "AI+ reply was for a different stage.",
+      };
+    }
+
     return { ok: true, pack: validated.pack, status: res.status };
   } catch (err) {
     const aborted = err instanceof Error && err.name === "AbortError";
