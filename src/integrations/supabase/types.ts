@@ -35,6 +35,72 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_plus_invocations: {
+        Row: {
+          completed_at: string | null
+          correlation_id: string
+          created_at: string
+          event_type: string
+          id: string
+          idempotency_key: string
+          invocation_id: string
+          org_id: string
+          request_hash: string
+          response_status: number | null
+          stage: Database["public"]["Enums"]["spine_stage"]
+          status: string
+          step: string
+          transaction_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          correlation_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          idempotency_key: string
+          invocation_id: string
+          org_id: string
+          request_hash: string
+          response_status?: number | null
+          stage: Database["public"]["Enums"]["spine_stage"]
+          status?: string
+          step: string
+          transaction_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          correlation_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          idempotency_key?: string
+          invocation_id?: string
+          org_id?: string
+          request_hash?: string
+          response_status?: number | null
+          stage?: Database["public"]["Enums"]["spine_stage"]
+          status?: string
+          step?: string
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_plus_invocations_org_fk"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_plus_invocations_transaction_fk"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_proposals: {
         Row: {
           adopted_at: string | null
