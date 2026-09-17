@@ -725,3 +725,64 @@ export const getDecisionPack = createServerFn({ method: "POST" })
       .order("probability", { ascending: false });
     return { proposals: proposals ?? [] };
   });
+
+/**
+ * Sends one spine moment to the client's protected AI+ service.
+ *
+ * This is the interface's other four moments — Intent confirmed, POI sealed, WaD changed and
+ * Finality recorded — invoked from the same authenticated server path that records them, as
+ * their pack requires. It is advisory in every case and informational only after sealing and
+ * after Finality: it never writes Choice, Intent, POI, WaD, Execution or Finality state, and it
+ * returns quietly when the integration is switched off, unreachable or non-conformant.
+ */
+export const emitAiPlusSpineEvent = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(packInput)
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+
+    // RLS decides whether this person may see the transaction at all, so a caller in one
+    // organisation can never raise an invocation for another organisation's deal.
+    const { data: tx } = await supabase
+      .from("transactions")
+      .select("*")
+      .eq("id", data.transactionId)
+      .maybeSingle();
+    if (!tx) return { invoked: false as const };
+
+    const external = await tryProtectedAiPlus({
+      transaction: tx as unknown as AiPlusTransaction,
+      stageContext: data.stageContext,
+      actorId: userId,
+    });
+    if (!external) return { invoked: false as const };
+
+    const packId = crypto.randomUUID();
+    await supabase.from("ai_proposals").insert(
+      external.clean.map((c) => ({
+        transaction_id: tx.id,
+        kind: "ai_plus_decision_pack",
+        model: external.model,
+        decision_pack_id: packId,
+        stage_context: data.stageContext,
+        proposal_type: c.proposal_type,
+        probability: c.probability,
+        output: c.output,
+        rationale: c.rationale,
+        source_references: c.source_references,
+        related_counterparty: c.related_counterparty,
+      })) as unknown as never[],
+    );
+
+    await supabase.from("transaction_events").insert({
+      transaction_id: tx.id,
+      actor_id: userId,
+      stage: tx.stage,
+      step: tx.step,
+      action: "ai_plus_decision_pack",
+      summary: `AI+ recorded ${external.clean.length} advisory note${external.clean.length === 1 ? "" : "s"} at ${STAGE_LABEL[data.stageContext]}`,
+      payload: { packId, stageContext: data.stageContext, advisoryOnly: true },
+    });
+
+    return { invoked: true as const, packId };
+  });
