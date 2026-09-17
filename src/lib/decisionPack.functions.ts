@@ -30,6 +30,7 @@ export type ProposalType = (typeof PROPOSAL_TYPES)[number];
 export const STAGE_CONTEXTS = [
   "choice_made",
   "intent_confirmed",
+  "poi_sealed",
   "wad_updated",
   "finality_recorded",
 ] as const;
@@ -39,6 +40,7 @@ export type StageContext = (typeof STAGE_CONTEXTS)[number];
 const STAGE_LABEL: Record<StageContext, string> = {
   choice_made: "Choice",
   intent_confirmed: "Before Sealing Intent",
+  poi_sealed: "After Sealing Proof of Intent",
   wad_updated: "Compliance Case",
   finality_recorded: "Finality",
 };
@@ -48,11 +50,23 @@ const STAGE_BRIEF: Record<StageContext, string> = {
     "A counterparty has just been chosen by a person. Advise on that choice: is the counterparty sound, is the pricing sane, what risks and structuring points matter, is the timing right, is a substitution or a bundle worth considering.",
   intent_confirmed:
     "Intent has been confirmed and the Proof of Intent is about to be sealed and become immutable. This is the last advisory word before that seal: name anything that should be settled first.",
+  poi_sealed:
+    "The Proof of Intent has been sealed and is now immutable. This advice is informational only: it cannot change, reopen or unwind the sealed record. Note what the sealed position means for the compliance and execution work still ahead.",
   wad_updated:
     "The Without a Doubt compliance case has changed. Give advisory input only — you cannot approve, reject, alter or bypass the WaD gate; a compliance officer decides.",
   finality_recorded:
     "Finality has been recorded and the transaction is complete. Close the loop with observations for the record only — nothing here can change the transaction.",
 };
+
+/** Which spine stage each advisory moment belongs to, in the client's DecisionPack vocabulary. */
+const STAGE_FOR_CONTEXT: Record<StageContext, string> = {
+  choice_made: "trading",
+  intent_confirmed: "trading",
+  poi_sealed: "trading",
+  wad_updated: "compliance",
+  finality_recorded: "finality",
+};
+
 
 const packInput = (data: unknown) =>
   z
