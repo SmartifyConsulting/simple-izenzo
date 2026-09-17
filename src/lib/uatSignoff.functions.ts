@@ -92,13 +92,17 @@ async function buildSignedPdf(opts: {
   page.drawText(`UAT Sign-Off — ${PROJECT_NAME}`, { x: 50, y, size: 18, font: bold, color: rgb(0.1, 0.1, 0.3) });
   y -= 36;
 
-  for (const line of DOCUMENT_BODY) {
-    if (line === "") {
+  for (const paragraph of DOCUMENT_BODY) {
+    if (paragraph === "") {
       y -= 10;
       continue;
     }
-    page.drawText(line, { x: 50, y, size: 11, font, color: rgb(0.15, 0.15, 0.15) });
-    y -= 18;
+    const indent = paragraph.startsWith("  ") ? 12 : 0;
+    for (const line of wrapToWidth(paragraph.trim(), 495 - indent, 11, font)) {
+      page.drawText(line, { x: 50 + indent, y, size: 11, font, color: rgb(0.15, 0.15, 0.15) });
+      y -= 16;
+    }
+    y -= 4;
   }
 
   // Signature block.
