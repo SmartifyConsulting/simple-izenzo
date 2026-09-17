@@ -301,7 +301,7 @@ async function tryProtectedAiPlus(args: {
       actor_id: args.actorId,
       stage: tx.stage as never,
       step: tx.step,
-      action: "ai_failed",
+      action: "ai_plus_failed",
       summary: "AI+ service did not return usable advice",
       payload: {
         invocationId,
