@@ -189,7 +189,13 @@ export function UatSignoffDialog({ open, onOpenChange }: { open: boolean; onOpen
                 </Button>
               </div>
             ) : (
-              <div className="space-y-3">
+              <form
+                className="space-y-3"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (matched && signaturePreview && !busy) void signAndConfirm();
+                }}
+              >
                 <p className="text-sm font-semibold">Sign Document</p>
                 <p className="text-xs text-muted-foreground">
                   Please enter your full name below to sign this document. By signing, you confirm
@@ -233,17 +239,13 @@ export function UatSignoffDialog({ open, onOpenChange }: { open: boolean; onOpen
                       </p>
                       <p className="text-sm text-foreground">{fmtDate(new Date().toISOString())}</p>
                     </div>
-                    <Button
-                      className="w-full gap-2"
-                      disabled={busy || !signaturePreview}
-                      onClick={() => void signAndConfirm()}
-                    >
+                    <Button type="submit" className="w-full gap-2" disabled={busy || !signaturePreview}>
                       {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                       Sign & Confirm
                     </Button>
                   </div>
                 )}
-              </div>
+              </form>
             )}
           </div>
         </div>
