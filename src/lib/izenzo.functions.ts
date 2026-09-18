@@ -500,9 +500,8 @@ export const searchCounterparties = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const { loadOpenAiApiKey } = await import("@/lib/openai.server");
-    const apiKey = await loadOpenAiApiKey();
-    if (!apiKey) throw new Error("AI is not configured");
+    const apiKey = process.env["LOVABLE_API_KEY"];
+    if (!apiKey) throw new Error("Lovable AI is not configured for this workspace.");
 
     const { data: tx } = await supabase
       .from("transactions")
@@ -730,9 +729,8 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data }) => {
-    const { loadOpenAiApiKey } = await import("@/lib/openai.server");
-    const apiKey = await loadOpenAiApiKey();
-    if (!apiKey) throw new Error("AI is not configured");
+    const apiKey = process.env["LOVABLE_API_KEY"];
+    if (!apiKey) throw new Error("Lovable AI is not configured for this workspace.");
 
     const counterpart = data.role === "buyer" ? "suppliers/sellers" : "buyers";
     const { sources, failures, context: grounding } = await groundOnWeb(
@@ -855,9 +853,8 @@ export const runAiProposal = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const { loadOpenAiApiKey } = await import("@/lib/openai.server");
-    const apiKey = await loadOpenAiApiKey();
-    if (!apiKey) throw new Error("AI is not configured");
+    const apiKey = process.env["LOVABLE_API_KEY"];
+    if (!apiKey) throw new Error("Lovable AI is not configured for this workspace.");
 
     const { data: tx } = await supabase
       .from("transactions")
