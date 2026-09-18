@@ -89,6 +89,22 @@ async function chatCompletion(apiKey: string, body: unknown): Promise<Response> 
   return Response.json({ choices: [{ message: { content: output } }] });
 }
 
+async function aiFailureMessage(res: Response): Promise<string> {
+  let message = "AI request failed. Please try again later.";
+  try {
+    const payload = (await res.clone().json()) as { message?: string; type?: string };
+    if (payload.message?.trim()) message = payload.message.trim();
+    if (payload.type === "credit_limit_reached") {
+      return "The workspace AI spending limit has been reached. A workspace administrator must raise the AI limit before searches can continue.";
+    }
+  } catch {
+    // Keep the safe fallback when the provider did not return JSON.
+  }
+  if (res.status === 429) return "AI is busy right now. Please try again shortly.";
+  if (res.status === 401) return "Lovable AI is not configured correctly for this workspace.";
+  return message;
+}
+
 /** How many open-web surfaces each tier reads through Firecrawl. */
 const SOURCE_LIMIT = { ai: 3, ai_plus: 6 } as const;
 
@@ -592,13 +608,12 @@ export const searchCounterparties = createServerFn({ method: "POST" })
         { role: "user", content: prompt },
       ],
     });
-    if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
     if (res.status === 402) {
       const { alertLowFunds } = await import("@/lib/opsAlerts.server");
-      void alertLowFunds("OpenAI", 402);
+      void alertLowFunds("Lovable AI", 402);
       throw new Error("AI credits are exhausted for this workspace — support has been notified.");
     }
-    if (!res.ok) throw new Error("AI request failed");
+    if (!res.ok) throw new Error(await aiFailureMessage(res));
     const json = (await res.json()) as { choices: { message: { content: string } }[] };
     const output = json.choices?.[0]?.message?.content ?? "";
     let candidates = parseCandidates(output);
@@ -754,13 +769,12 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
         { role: "user", content: prompt },
       ],
     });
-    if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
     if (res.status === 402) {
       const { alertLowFunds } = await import("@/lib/opsAlerts.server");
-      void alertLowFunds("OpenAI", 402);
+      void alertLowFunds("Lovable AI", 402);
       throw new Error("AI credits are exhausted for this workspace — support has been notified.");
     }
-    if (!res.ok) throw new Error("AI request failed");
+    if (!res.ok) throw new Error(await aiFailureMessage(res));
     const json = (await res.json()) as { choices: { message: { content: string } }[] };
     const output = json.choices?.[0]?.message?.content ?? "";
     let candidates = parseCandidates(output);
@@ -900,13 +914,12 @@ export const runAiProposal = createServerFn({ method: "POST" })
         { role: "user", content: prompt },
       ],
     });
-    if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
     if (res.status === 402) {
       const { alertLowFunds } = await import("@/lib/opsAlerts.server");
-      void alertLowFunds("OpenAI", 402);
+      void alertLowFunds("Lovable AI", 402);
       throw new Error("AI credits are exhausted for this workspace — support has been notified.");
     }
-    if (!res.ok) throw new Error("AI request failed");
+    if (!res.ok) throw new Error(await aiFailureMessage(res));
     const json = (await res.json()) as { choices: { message: { content: string } }[] };
     const output = json.choices?.[0]?.message?.content ?? "";
 
