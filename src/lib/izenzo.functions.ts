@@ -549,17 +549,13 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       .join("\n");
 
     const model = data.kind === "ai" ? AI_MODEL : AI_PLUS_MODEL;
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model,
-        ...aiPlusOptions(model, data.kind),
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: prompt },
-        ],
-      }),
+    const res = await chatCompletion(apiKey, {
+      model,
+      ...aiPlusOptions(model, data.kind),
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: prompt },
+      ],
     });
     if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
     if (res.status === 402) {
@@ -716,17 +712,13 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
     const prompt = `Search: "${data.query}"\nRole: ${data.role}\nPropose 4-6 candidates, all from the sources below.\n\n${grounding}`;
 
     const model = data.kind === "ai" ? AI_MODEL : AI_PLUS_MODEL;
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model,
-        ...aiPlusOptions(model, data.kind),
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: prompt },
-        ],
-      }),
+    const res = await chatCompletion(apiKey, {
+      model,
+      ...aiPlusOptions(model, data.kind),
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: prompt },
+      ],
     });
     if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
     if (res.status === 402) {
@@ -867,17 +859,13 @@ export const runAiProposal = createServerFn({ method: "POST" })
       .join("\n");
 
     const model = data.kind === "ai" ? AI_MODEL : AI_PLUS_MODEL;
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model,
-        ...aiPlusOptions(model, data.kind),
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: prompt },
-        ],
-      }),
+    const res = await chatCompletion(apiKey, {
+      model,
+      ...aiPlusOptions(model, data.kind),
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: prompt },
+      ],
     });
     if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
     if (res.status === 402) {
