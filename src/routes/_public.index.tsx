@@ -1,11 +1,22 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Banknote, Database, Hammer, ShieldCheck, Sparkles, Target } from "lucide-react";
 import { HeroMatchCard } from "@/components/marketing/HeroMatchCard";
 import { SubmitBidButton } from "@/components/marketing/SubmitBidButton";
 import { AuthTabs } from "@/components/auth/AuthTabs";
 import { useAuth } from "@/lib/auth";
 
+type Search = { next?: string | undefined };
+
+function safeNext(next: string | undefined) {
+  if (next && next.startsWith("/") && !next.startsWith("//")) return next;
+  return "/live-deal-engine";
+}
+
 export const Route = createFileRoute("/_public/")({
+  validateSearch: (search: Record<string, unknown>): Search => ({
+    next: typeof search["next"] === "string" ? (search["next"] as string) : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Izenzo | Matching Bidders with Counterparties" },
