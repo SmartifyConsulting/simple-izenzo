@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2, Eye, Lock, Loader2, Plug, XCircle } from "lucide-react";
+import { CheckCircle2, Copy, CreditCard, ExternalLink, Eye, Lock, Loader2, Plug, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,20 @@ import {
   testIntegration,
   type IntegrationRow,
 } from "@/lib/integrations.functions";
+
+/** Opens a provider page in a new tab without handing it our referrer. */
+function openExternal(url: string) {
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
+async function copyValue(label: string, value: string) {
+  try {
+    await navigator.clipboard.writeText(value);
+    toast.success(`${label} copied`);
+  } catch {
+    toast.error(`Could not copy the ${label.toLowerCase()} — copy it from the field instead.`);
+  }
+}
 
 /** Most useful first — the order the guided setup walks through. */
 const GUIDED_ORDER = ["resend", "payfast", "cipc"];
@@ -318,15 +332,27 @@ function ProviderCard({
     }
   }
 
+  /** One place for failure wording, so "no credits" always reads the same and always offers the
+   * provider's own top-up page. */
+  function showFailure(result: { message: string; detail?: string; reason?: string; topUpUrl?: string }) {
+    const url = result.topUpUrl ?? provider.topUpUrl ?? (config["dev_center_url"] ?? "").trim();
+    toast.error(result.message, {
+      description: result.detail,
+      ...(result.reason === "no_credits" && url
+        ? { action: { label: `Top up ${provider.name}`, onClick: () => openExternal(url) } }
+        : {}),
+    });
+  }
+
   async function onTest() {
     setBusy("test");
     try {
       const result = await test({ data: { provider: provider.id } });
       onChanged();
       if (result.ok) toast.success(result.message);
-      else toast.error(result.message);
+      else showFailure(result);
     } catch (err) {
-      toast.error((err as Error).message);
+      showFailure({ message: (err as Error).message });
     } finally {
       setBusy(null);
     }
@@ -392,6 +418,34 @@ function ProviderCard({
             <span className="font-semibold text-foreground">Cost:</span> {provider.costNote}
           </p>
         )}
+        {(() => {
+          const devUrl = (config["dev_center_url"] ?? "").trim();
+          const topUp = provider.topUpUrl ?? (devUrl || undefined);
+          const consoleUrl = provider.consoleUrl ?? (devUrl || undefined);
+          if (!topUp && !consoleUrl && !provider.docsUrl) return null;
+          return (
+            <div className="flex flex-wrap gap-2">
+              {topUp && (
+                <Button size="sm" variant="outline" onClick={() => openExternal(topUp)}>
+                  <CreditCard className="mr-1.5 h-3.5 w-3.5" />
+                  Top up credits
+                </Button>
+              )}
+              {consoleUrl && consoleUrl !== topUp && (
+                <Button size="sm" variant="outline" onClick={() => openExternal(consoleUrl)}>
+                  <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                  Open dashboard
+                </Button>
+              )}
+              {provider.docsUrl && (
+                <Button size="sm" variant="ghost" onClick={() => openExternal(provider.docsUrl!)}>
+                  Docs
+                </Button>
+              )}
+            </div>
+          );
+        })()}
+
         {provider.environments && provider.environments.length > 1 && (
           <div className="space-y-1.5">
             <Label htmlFor={`${provider.id}-env`}>Environment</Label>
@@ -436,15 +490,32 @@ function ProviderCard({
           <div key={field.key} className="space-y-1.5">
             <div className="flex items-center justify-between gap-2">
               <Label htmlFor={`${provider.id}-${field.key}`}>{field.label}</Label>
-              <span
-                className={
-                  saved || pending
-                    ? "text-[10px] font-medium text-emerald-600"
-                    : "text-[10px] text-muted-foreground"
-                }
-              >
-                {pending ? "Unsaved change" : saved ? "Saved" : "Not set"}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={
+                    saved || pending
+                      ? "text-[10px] font-medium text-emerald-600"
+                      : "text-[10px] text-muted-foreground"
+                  }
+                >
+                  {pending ? "Unsaved change" : saved ? "Saved" : "Not set"}
+                </span>
+                {(() => {
+                  // Secrets can only be copied once they have been revealed with the vault password.
+                  const value = field.secret ? (secrets[field.key] ?? "") : (config[field.key] ?? "");
+                  if (!value.trim()) return null;
+                  return (
+                    <button
+                      type="button"
+                      title={`Copy ${field.label}`}
+                      className="text-muted-foreground hover:text-foreground"
+                      onClick={() => void copyValue(field.label, value)}
+                    >
+                      <Copy className="h-3 w-3" />
+                    </button>
+                  );
+                })()}
+              </div>
             </div>
             {field.secret ? (
               <PasswordInput
