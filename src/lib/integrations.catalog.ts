@@ -26,6 +26,10 @@ export type IntegrationProvider = {
    * provider's own pricing page before enabling in production. */
   costNote?: string;
   docsUrl?: string;
+  /** The provider's own billing/credits page, so an administrator can top up without hunting. */
+  topUpUrl?: string;
+  /** The provider's console/dashboard, for services with no separate billing page. */
+  consoleUrl?: string;
   environments?: string[];
   fields: IntegrationField[];
   /** Whether a live "Test connection" call is available for this provider. */
