@@ -13,48 +13,42 @@ async function sha256(input: string) {
 
 const txInput = (data: unknown) => z.object({ transactionId: z.string().uuid() }).parse(data);
 
-/** Both tiers use the workspace AI model. They differ by reasoning depth and source count. */
-const AI_MODEL = "openai/gpt-6-astra";
-const AI_PLUS_MODEL = "openai/gpt-6-astra";
+/** Both tiers use the configured OpenAI account. They differ by reasoning depth and source count. */
+const AI_MODEL = "gpt-5";
+const AI_PLUS_MODEL = "gpt-5";
 
-function aiPlusOptions(_model: string, kind: "ai" | "ai_plus" = "ai_plus") {
+function aiPlusOptions(model: string, kind: "ai" | "ai_plus" = "ai_plus") {
+  if (model !== "gpt-5") return {};
   return {
     reasoning_effort: (kind === "ai" ? "low" : "high") as "low" | "high",
+    max_completion_tokens: kind === "ai" ? 2000 : 4000,
   };
 }
 
-type AiRequestBody = {
-  reasoning_effort?: "low" | "high";
-  messages?: Array<{ role: string; content: string }>;
-};
-
-/** Calls the workspace AI connection using its required streaming protocol. Only 429 and 5xx
- * responses are retried, with bounded backoff. The completed text is adapted to the legacy
- * response shape so the existing validated parsing and workflow remain unchanged. */
+/** Calls the configured OpenAI account. Only transient 429 and 5xx responses are retried with
+ * bounded backoff; an exhausted account is terminal and returned immediately. */
 async function chatCompletion(apiKey: string, body: unknown): Promise<Response> {
-  const request = body as AiRequestBody;
   const delays = [1000, 3000, 7000];
   const call = () =>
-    fetch("https://ai.gateway.lovable.dev/v1/responses", {
+    fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Lovable-API-Key": apiKey,
-        "X-Lovable-AIG-SDK": "fetch",
+        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model: AI_MODEL,
-        input: request.messages ?? [],
-        stream: true,
-        store: false,
-        reasoning: { effort: request.reasoning_effort ?? "low", summary: "auto" },
-        include: ["reasoning.encrypted_content"],
-      }),
+      body: JSON.stringify(body),
     });
 
   let res = await call();
   for (const base of delays) {
     if (res.status !== 429 && res.status < 500) break;
+    if (res.status === 429) {
+      const payload = (await res.clone().json().catch(() => null)) as
+        | { error?: { code?: string; type?: string } }
+        | null;
+      const code = payload?.error?.code ?? payload?.error?.type;
+      if (code === "insufficient_quota" || code === "billing_hard_limit_reached") break;
+    }
     const retryAfter = Number(res.headers.get("retry-after"));
     const wait = Number.isFinite(retryAfter) && retryAfter > 0
       ? Math.min(retryAfter * 1000, 10000)
@@ -62,46 +56,28 @@ async function chatCompletion(apiKey: string, body: unknown): Promise<Response> 
     await new Promise((r) => setTimeout(r, wait));
     res = await call();
   }
-  if (!res.ok || !res.body) return res;
-
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let pending = "";
-  let output = "";
-  while (true) {
-    const chunk = await reader.read();
-    if (chunk.done) break;
-    pending += decoder.decode(chunk.value, { stream: true });
-    const lines = pending.split("\n");
-    pending = lines.pop() ?? "";
-    for (const line of lines) {
-      if (!line.startsWith("data: ")) continue;
-      const data = line.slice(6).trim();
-      if (!data || data === "[DONE]") continue;
-      try {
-        const event = JSON.parse(data) as { type?: string; delta?: string };
-        if (event.type === "response.output_text.delta" && event.delta) output += event.delta;
-      } catch {
-        // Ignore incomplete/non-JSON SSE lines; terminal gateway status still governs failures.
-      }
-    }
-  }
-  return Response.json({ choices: [{ message: { content: output } }] });
+  return res;
 }
 
 async function aiFailureMessage(res: Response): Promise<string> {
   let message = "AI request failed. Please try again later.";
   try {
-    const payload = (await res.clone().json()) as { message?: string; type?: string };
-    if (payload.message?.trim()) message = payload.message.trim();
-    if (payload.type === "credit_limit_reached") {
-      return "The workspace AI spending limit has been reached. A workspace administrator must raise the AI limit before searches can continue.";
+    const payload = (await res.clone().json()) as {
+      message?: string;
+      type?: string;
+      error?: { message?: string; type?: string; code?: string };
+    };
+    if (payload.error?.message?.trim()) message = payload.error.message.trim();
+    else if (payload.message?.trim()) message = payload.message.trim();
+    const code = payload.error?.code ?? payload.error?.type ?? payload.type;
+    if (code === "insufficient_quota" || code === "billing_hard_limit_reached") {
+      return "The OpenAI account has no available credits or has reached its usage limit. Top up the OpenAI account, then try again.";
     }
   } catch {
     // Keep the safe fallback when the provider did not return JSON.
   }
   if (res.status === 429) return "AI is busy right now. Please try again shortly.";
-  if (res.status === 401) return "Lovable AI is not configured correctly for this workspace.";
+  if (res.status === 401) return "The saved OpenAI API key was rejected. Update it in Admin → Integrations, then try again.";
   return message;
 }
 
@@ -516,8 +492,9 @@ export const searchCounterparties = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const apiKey = process.env["LOVABLE_API_KEY"];
-    if (!apiKey) throw new Error("Lovable AI is not configured for this workspace.");
+    const { loadOpenAiApiKey } = await import("@/lib/openai.server");
+    const apiKey = await loadOpenAiApiKey();
+    if (!apiKey) throw new Error("OpenAI is not configured. Add and enable it in Admin → Integrations.");
 
     const { data: tx } = await supabase
       .from("transactions")
@@ -610,7 +587,7 @@ export const searchCounterparties = createServerFn({ method: "POST" })
     });
     if (res.status === 402) {
       const { alertLowFunds } = await import("@/lib/opsAlerts.server");
-      void alertLowFunds("Lovable AI", 402);
+      void alertLowFunds("OpenAI", 402);
       throw new Error("AI credits are exhausted for this workspace — support has been notified.");
     }
     if (!res.ok) throw new Error(await aiFailureMessage(res));
@@ -744,8 +721,9 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data }) => {
-    const apiKey = process.env["LOVABLE_API_KEY"];
-    if (!apiKey) throw new Error("Lovable AI is not configured for this workspace.");
+    const { loadOpenAiApiKey } = await import("@/lib/openai.server");
+    const apiKey = await loadOpenAiApiKey();
+    if (!apiKey) throw new Error("OpenAI is not configured. Add and enable it in Admin → Integrations.");
 
     const counterpart = data.role === "buyer" ? "suppliers/sellers" : "buyers";
     const { sources, failures, context: grounding } = await groundOnWeb(
@@ -771,7 +749,7 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
     });
     if (res.status === 402) {
       const { alertLowFunds } = await import("@/lib/opsAlerts.server");
-      void alertLowFunds("Lovable AI", 402);
+      void alertLowFunds("OpenAI", 402);
       throw new Error("AI credits are exhausted for this workspace — support has been notified.");
     }
     if (!res.ok) throw new Error(await aiFailureMessage(res));
@@ -867,8 +845,9 @@ export const runAiProposal = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const apiKey = process.env["LOVABLE_API_KEY"];
-    if (!apiKey) throw new Error("Lovable AI is not configured for this workspace.");
+    const { loadOpenAiApiKey } = await import("@/lib/openai.server");
+    const apiKey = await loadOpenAiApiKey();
+    if (!apiKey) throw new Error("OpenAI is not configured. Add and enable it in Admin → Integrations.");
 
     const { data: tx } = await supabase
       .from("transactions")
@@ -916,7 +895,7 @@ export const runAiProposal = createServerFn({ method: "POST" })
     });
     if (res.status === 402) {
       const { alertLowFunds } = await import("@/lib/opsAlerts.server");
-      void alertLowFunds("Lovable AI", 402);
+      void alertLowFunds("OpenAI", 402);
       throw new Error("AI credits are exhausted for this workspace — support has been notified.");
     }
     if (!res.ok) throw new Error(await aiFailureMessage(res));
