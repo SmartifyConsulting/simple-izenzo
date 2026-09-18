@@ -458,13 +458,16 @@ export const searchCounterparties = createServerFn({ method: "POST" })
 
     // Search the real web first — the model only ranks what was actually found.
     const wantedSide = (latestBid?.direction ?? "bid") === "bid" ? "suppliers" : "buyers";
-    // What is actually being traded: the typed commodity when there is one, otherwise whatever the
-    // uploaded documents said. The bid's own title ("New Bid") is never a search term — searching on
-    // it is what used to return nothing.
+    // What is actually being traded: whatever was typed into the Search field, plus whatever the
+    // uploaded documents said when there are any — never one replacing the other. With nothing
+    // typed and no documents read yet, fall back to the commodity field, then to the attached
+    // filenames. The bid's own title ("New Bid") is never a search term — searching on it is what
+    // used to return nothing.
     const docSummary = (tx.document_summary as string | null) ?? "";
     const typedPrompt = ((tx as { search_prompt?: string | null }).search_prompt ?? "").trim();
-    let subject =
-      tx.commodity?.trim() || typedPrompt.slice(0, 160) || keywordsFromSummary(docSummary);
+    const docKeywords = docSummary.trim() ? keywordsFromSummary(docSummary) : "";
+    let subject = [typedPrompt.slice(0, 160), docKeywords].filter(Boolean).join(" ").slice(0, 200).trim();
+    if (!subject) subject = tx.commodity?.trim() ?? "";
     if (!subject) {
       // Nothing typed and no summary saved yet (documents attached but still unread): fall back to
       // what the attached filenames say, so the search runs instead of dead-ending the workspace.
@@ -485,7 +488,7 @@ export const searchCounterparties = createServerFn({ method: "POST" })
     }
     if (!subject) {
       throw new Error(
-        "There is nothing to search on yet — add the commodity, or attach a document that says what is being traded.",
+        "There is nothing to search on yet — add the commodity, type what you're looking for, or attach a document that says what is being traded.",
       );
     }
 
