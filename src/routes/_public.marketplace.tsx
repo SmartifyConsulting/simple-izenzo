@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { SubmitBidButton } from "@/components/marketing/SubmitBidButton";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/alpha-bravo/trades")({
+export const Route = createFileRoute("/_public/marketplace")({
   head: () => ({
     meta: [{ title: "Trades — Izenzo" }],
   }),

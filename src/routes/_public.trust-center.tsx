@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Hash, ShieldCheck, Landmark, Radio } from "lucide-react";
 import { WAD_COST } from "@/lib/spine";
 
-export const Route = createFileRoute("/alpha-bravo/trust-center")({
+export const Route = createFileRoute("/_public/trust-center")({
   head: () => ({
     meta: [{ title: "Trust Center — Izenzo" }],
   }),

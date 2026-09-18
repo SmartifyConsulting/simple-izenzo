@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { SubmitBidButton } from "@/components/marketing/SubmitBidButton";
 import { INSIGHT_ARTICLES } from "@/lib/alphaBravoInsights";
 
-export const Route = createFileRoute("/alpha-bravo/about/")({
+export const Route = createFileRoute("/_public/about/")({
   head: () => ({
     meta: [{ title: "About — Izenzo" }],
   }),
@@ -52,7 +52,7 @@ function About() {
 
         <div className="space-y-6 lg:pl-8 lg:pt-[115px]">
           {INSIGHT_ARTICLES.map((a) => (
-            <Link key={a.slug} to="/alpha-bravo/about/$slug" params={{ slug: a.slug }} className="block group">
+            <Link key={a.slug} to="/about/$slug" params={{ slug: a.slug }} className="block group">
               <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                 {a.date}
               </p>

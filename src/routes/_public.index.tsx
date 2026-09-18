@@ -5,7 +5,7 @@ import { SubmitBidButton } from "@/components/marketing/SubmitBidButton";
 import { AuthTabs } from "@/components/auth/AuthTabs";
 import { useAuth } from "@/lib/auth";
 
-export const Route = createFileRoute("/alpha-bravo/")({
+export const Route = createFileRoute("/_public/")({
   head: () => ({
     meta: [
       { title: "Izenzo | Matching Bidders with Counterparties" },

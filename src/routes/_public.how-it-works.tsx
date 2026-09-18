@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { SubmitBidButton } from "@/components/marketing/SubmitBidButton";
 import { SPINE } from "@/lib/spine";
 
-export const Route = createFileRoute("/alpha-bravo/how-it-works")({
+export const Route = createFileRoute("/_public/how-it-works")({
   head: () => ({
     meta: [{ title: "How It Works — Izenzo" }],
   }),

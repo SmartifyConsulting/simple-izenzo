@@ -6,7 +6,7 @@ import {
   slugify,
 } from "@/components/marketing/ResponderDirectory";
 
-export const Route = createFileRoute("/alpha-bravo/responders/location/$jurisdiction")({
+export const Route = createFileRoute("/_public/responders/location/$jurisdiction")({
   head: () => ({
     meta: [{ title: "Counterparties by Location — Izenzo" }],
   }),
@@ -21,7 +21,7 @@ function RespondersByLocation() {
   return (
     <section className="mx-auto max-w-6xl px-5 py-20 sm:py-24">
       <Link
-        to="/alpha-bravo/responders"
+        to="/responders"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-3.5 w-3.5" /> All Counterparties

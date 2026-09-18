@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Compass, EyeOff, Wrench, ShieldCheck, UserCheck } from "lucide-react";
 import { SubmitBidButton } from "@/components/marketing/SubmitBidButton";
 
-export const Route = createFileRoute("/alpha-bravo/intelligence-fabric")({
+export const Route = createFileRoute("/_public/intelligence-fabric")({
   head: () => ({
     meta: [{ title: "The Intelligence Fabric — Izenzo" }],
   }),

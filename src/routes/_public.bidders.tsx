@@ -7,7 +7,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
-export const Route = createFileRoute("/alpha-bravo/bidders")({
+export const Route = createFileRoute("/_public/bidders")({
   head: () => ({
     meta: [{ title: "Bidders — Izenzo" }],
   }),

@@ -40,7 +40,7 @@ function AlphaBravoShellInner({ children }: { children: ReactNode }) {
           </p>
           <nav aria-label="Footer" className="flex items-center gap-6">
             <Link
-              to="/alpha-bravo/trust-center"
+              to="/trust-center"
               className="text-[11px] tracking-wide text-background/70 transition-colors hover:text-background sm:text-xs"
             >
               Trust Center
