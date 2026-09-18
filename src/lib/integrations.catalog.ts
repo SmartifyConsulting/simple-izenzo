@@ -56,8 +56,9 @@ export const INTEGRATION_GROUPS = [
 export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
   {
     id: "didit",
-    topUpUrl: "https://business.didit.me/billing",
-    consoleUrl: "https://business.didit.me",
+    topUpUrl:
+      "https://business.didit.me/console/4d6e020e-3c38-469d-9386-5f2c12e2f41a/42f423bc-dfac-4f12-8dea-1cb51d0fc7a6",
+
     name: "Didit",
     group: "KYC & Identity",
     summary:
