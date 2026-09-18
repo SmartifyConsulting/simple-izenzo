@@ -334,7 +334,12 @@ function ProviderCard({
 
   /** One place for failure wording, so "no credits" always reads the same and always offers the
    * provider's own top-up page. */
-  function showFailure(result: { message: string; detail?: string; reason?: string; topUpUrl?: string }) {
+  function showFailure(result: {
+    message: string;
+    detail?: string | undefined;
+    reason?: string | undefined;
+    topUpUrl?: string | undefined;
+  }) {
     const url = result.topUpUrl ?? provider.topUpUrl ?? (config["dev_center_url"] ?? "").trim();
     toast.error(result.message, {
       description: result.detail,
