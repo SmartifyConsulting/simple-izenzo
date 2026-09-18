@@ -340,7 +340,7 @@ function ProviderCard({
     reason?: string | undefined;
     topUpUrl?: string | undefined;
   }) {
-    const url = result.topUpUrl ?? provider.topUpUrl ?? (config["dev_center_url"] ?? "").trim();
+    const url = result.topUpUrl ?? provider.topUpUrl;
     toast.error(result.message, {
       description: result.detail,
       ...(result.reason === "no_credits" && url
