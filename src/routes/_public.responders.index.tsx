@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { ResponderDirectory, ResponderFacetLinks } from "@/components/marketing/ResponderDirectory";
 
-export const Route = createFileRoute("/alpha-bravo/responders/")({
+export const Route = createFileRoute("/_public/responders/")({
   head: () => ({
     meta: [{ title: "Counterparties — Izenzo" }],
   }),
@@ -145,7 +145,7 @@ function Responders() {
         </Link>
         <p className="mt-6 text-sm text-muted-foreground">
           Are you a Bidder?{" "}
-          <Link to="/alpha-bravo/bidders" className="font-medium text-primary hover:underline">
+          <Link to="/bidders" className="font-medium text-primary hover:underline">
             Post an opportunity instead →
           </Link>
         </p>

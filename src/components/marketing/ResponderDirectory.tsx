@@ -235,7 +235,7 @@ export function ResponderFacetLinks() {
           {data.sectors.map((s) => (
             <Link
               key={s}
-              to="/alpha-bravo/responders/sector/$sector"
+              to="/responders/sector/$sector"
               params={{ sector: slugify(s) }}
               className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground hover:text-foreground"
             >
@@ -250,7 +250,7 @@ export function ResponderFacetLinks() {
           {data.jurisdictions.map((j) => (
             <Link
               key={j}
-              to="/alpha-bravo/responders/location/$jurisdiction"
+              to="/responders/location/$jurisdiction"
               params={{ jurisdiction: slugify(j) }}
               className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground hover:text-foreground"
             >

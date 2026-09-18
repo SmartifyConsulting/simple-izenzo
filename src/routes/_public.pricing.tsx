@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { SubmitBidButton } from "@/components/marketing/SubmitBidButton";
 import { POI_COST, WAD_COST, TOKEN_PRICE_USD } from "@/lib/spine";
 
-export const Route = createFileRoute("/alpha-bravo/pricing")({
+export const Route = createFileRoute("/_public/pricing")({
   head: () => ({
     meta: [{ title: "Pricing — Izenzo" }],
   }),
