@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { Coins, CreditCard, History, Plug, Users, type LucideIcon } from "lucide-react";
+import { Coins, CreditCard, History, KeyRound, Plug, Users, type LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import { when, type Transaction } from "@/lib/tx";
 import { issueEvidencePack, downloadEvidencePack } from "@/lib/evidencePack.functions";
 import { IntegrationsTab } from "@/components/admin/IntegrationsTab";
 import { AuditLogTab } from "@/components/admin/AuditLogTab";
+import { ApiKeysTab } from "@/components/admin/ApiKeysTab";
 
 type AdminSearch = { group?: string; tab?: string; activityUser?: string };
 
@@ -63,6 +64,9 @@ const ADMIN_TABS: AdminTab[] = [
   { value: "integrations", label: "Integrations", Component: IntegrationsTab, Icon: Plug, superuserOnly: true },
   { value: "activity-log", label: "Activity Log", Component: AuditLogTab, Icon: History, superuserOnly: true },
   { value: "tokens", label: "Tokens", Component: TokensTab, Icon: Coins },
+  // Issuing/rotating/revoking keys is administrator-only in the database itself
+  // (admin_api_* routines), so this stays inside the admin-gated page.
+  { value: "api-keys", label: "API Keys", Component: ApiKeysTab, Icon: KeyRound },
 ];
 
 function AdminPage() {

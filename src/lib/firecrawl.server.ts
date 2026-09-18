@@ -75,12 +75,17 @@ async function firecrawlPost(
     });
     if (!res.ok) {
       const detail = (await res.text()).slice(0, 300);
-      if (res.status === 402 || res.status === 403) {
+      const { classifyFailure } = await import("@/lib/integrationFailures");
+      const failure = classifyFailure("Firecrawl", res.status, detail);
+      if (failure.reason === "no_credits" || res.status === 403) {
         const { alertLowFunds } = await import("@/lib/opsAlerts.server");
         void alertLowFunds("Firecrawl", res.status, detail);
-        throw new Error("Web search is out of credit right now — support has been notified.");
       }
-      throw new Error(`Firecrawl refused the request [${res.status}]: ${detail}`);
+      throw new Error(
+        failure.reason === "no_credits"
+          ? "Firecrawl has run out of credits, so web reading is paused — top up Firecrawl under Admin → Integrations. Support has been notified."
+          : failure.message,
+      );
     }
     return (await res.json()) as Record<string, any>;
   } catch (err) {

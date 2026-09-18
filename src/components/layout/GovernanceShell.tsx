@@ -41,7 +41,7 @@ export function GovernanceShell({
             <Logo className="h-6" />
           </Link>
           <a
-            href="/alpha-bravo"
+            href="/"
             className="label-caps mt-2 flex items-center gap-1.5 normal-case text-muted-foreground transition-colors hover:text-foreground"
           >
             <ArrowLeft className="h-3.5 w-3.5" /> Home

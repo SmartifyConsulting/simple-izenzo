@@ -106,10 +106,15 @@ export async function sendEmail(
     // Resend's own low-balance / suspended-account responses are worth flagging separately —
     // callers that send transactional email people are waiting on check this before surfacing a
     // generic failure.
-    if (res.status === 402 || /insufficient|low balance|credit/i.test(body)) {
+    const { classifyFailure } = await import("@/lib/integrationFailures");
+    const failure = classifyFailure("Resend", res.status, body);
+    if (failure.reason === "no_credits") {
       const { alertLowFunds } = await import("@/lib/opsAlerts.server");
       void alertLowFunds("Resend (email sending)", res.status, body);
+      throw new Error(
+        "The email could not be sent — Resend has run out of credits. Top up Resend under Admin → Integrations.",
+      );
     }
-    throw new Error(`Could not send the email — please try again shortly (${res.status}).`);
+    throw new Error(`The email could not be sent — ${failure.message}`);
   }
 }

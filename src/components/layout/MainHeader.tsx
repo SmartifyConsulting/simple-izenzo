@@ -24,25 +24,23 @@ import { cn } from "@/lib/utils";
 /** The one menu the whole app uses — public pages and signed-in screens alike, so no screen has
  * a different set of items to any other. */
 const NAV = [
-  { to: "/alpha-bravo", label: "Home" },
-  { to: "/alpha-bravo/about", label: "About Izenzo" },
-  { to: "/alpha-bravo/how-it-works", label: "How It Works" },
-  { to: "/alpha-bravo/intelligence-fabric", label: "The Intelligence Fabric" },
-  { to: "/alpha-bravo/pricing", label: "Pricing" },
+  { to: "/", label: "Home" },
+  { to: "/about", label: "About Izenzo" },
+  { to: "/how-it-works", label: "How It Works" },
+  { to: "/intelligence-fabric", label: "The Intelligence Fabric" },
+  { to: "/pricing", label: "Pricing" },
   // Signed out, this is the public showcase of illustrative matches; signed in, "Trades" should
   // mean the person's own trades (with the All/My Trades/stage filters) — not the marketing page
   // they've already moved past.
-  { to: "/alpha-bravo/trades", signedInTo: "/trades", label: "Trades" },
-  // Self-service API key management — open to anyone, signed in or not; a signed-out visitor is
-  // sent to sign in/register before landing on the page.
-  { to: "/api", label: "API" },
+  { to: "/marketplace", signedInTo: "/trades", label: "Trades" },
+  // API key management is administrator-only and lives in Admin → API Keys, not in this menu.
 ] as const;
 
 export function MainHeader() {
   const { user, org } = useAuth();
   const [uatOpen, setUatOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const isHome = pathname === "/alpha-bravo" || pathname === "/alpha-bravo/";
+  const isHome = pathname === "/";
   // Whatever was typed into the homepage search bar, so signing in carries it into the workspace.
   const { prompt } = useHeroSearchOptional();
   const next = isHome ? seedNext(prompt) : undefined;
@@ -61,12 +59,12 @@ export function MainHeader() {
   });
 
   const isActive = (to: string) =>
-    to === "/alpha-bravo" ? isHome : pathname.startsWith(to);
+    to === "/" ? isHome : pathname.startsWith(to);
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur">
       <div className="relative mx-auto flex h-16 w-full max-w-[1680px] items-center px-5">
-        <Link to={user ? "/live-deal-engine" : "/alpha-bravo"} className="flex shrink-0 items-center gap-1.5">
+        <Link to={user ? "/live-deal-engine" : "/"} className="flex shrink-0 items-center gap-1.5">
           <Logo />
         </Link>
 

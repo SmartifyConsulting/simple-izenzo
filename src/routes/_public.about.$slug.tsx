@@ -2,7 +2,7 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { findInsightArticle, INSIGHT_ARTICLES } from "@/lib/alphaBravoInsights";
 
-export const Route = createFileRoute("/alpha-bravo/about/$slug")({
+export const Route = createFileRoute("/_public/about/$slug")({
   loader: ({ params }) => {
     const article = findInsightArticle(params.slug);
     if (!article) throw notFound();
@@ -22,7 +22,7 @@ function InsightArticlePage() {
     <>
       <section className="mx-auto max-w-2xl px-5 py-20 sm:py-24">
         <Link
-          to="/alpha-bravo/about"
+          to="/about"
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> Articles
@@ -53,7 +53,7 @@ function InsightArticlePage() {
               {more.map((a) => (
                 <Link
                   key={a.slug}
-                  to="/alpha-bravo/about/$slug"
+                  to="/about/$slug"
                   params={{ slug: a.slug }}
                   className="block py-5"
                 >
