@@ -2,6 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { providerById } from "@/lib/integrations.catalog";
+import {
+  classifyFailure,
+  classifyThrown,
+  notConfigured,
+  type FailureReason,
+} from "@/lib/integrationFailures";
 
 /** Same gate as every other admin screen: any account holding the admin role. */
 async function assertAdmin(context: { supabase: any; userId: string; claims?: any }) {
@@ -174,18 +180,27 @@ export const deleteIntegration = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-type TestResult = { ok: boolean; message: string };
+type TestResult = {
+  ok: boolean;
+  message: string;
+  /** Why it failed, so the screen can offer the right next step (e.g. a top-up link). */
+  reason?: FailureReason;
+  /** The provider's own wording, shown as extra detail under the message. */
+  detail?: string;
+  /** The provider's billing page, filled in when the failure is a missing balance. */
+  topUpUrl?: string;
+};
 
 async function probe(
   providerId: string,
+  providerName: string,
   environment: string,
   config: Record<string, string>,
   secrets: Record<string, string>,
 ): Promise<TestResult> {
-  const say = async (res: Response, okMessage: string) => {
+  const say = async (res: Response, okMessage: string): Promise<TestResult> => {
     if (res.ok) return { ok: true, message: okMessage };
-    const body = (await res.text()).slice(0, 300);
-    return { ok: false, message: `Rejected [${res.status}]: ${body}` };
+    return classifyFailure(providerName, res.status, await res.text());
   };
 
   switch (providerId) {
@@ -214,28 +229,36 @@ async function probe(
           }),
         });
         if (res.status === 401 || res.status === 403)
-          return { ok: false, message: `Didit rejected the key [${res.status}].` };
+          return classifyFailure(providerName, res.status, await res.text());
         if (res.ok) {
           notes.push(`${label}: OK.`);
           continue;
         }
         allOk = false;
         const body = (await res.text()).slice(0, 200);
+        if (res.status === 402 || res.status === 429) return classifyFailure(providerName, res.status, body);
         if (/uuid/i.test(body)) notes.push(`${label}: that workflow ID is not a valid Didit workflow ID.`);
         else if (/portrait_image|stored face/i.test(body))
           notes.push(`${label}: that workflow is a face-match workflow needing an existing photo — use the ID document + liveness workflow instead.`);
-        else notes.push(`${label}: rejected [${res.status}] ${body}`);
+        else notes.push(`${label}: ${classifyFailure(providerName, res.status, body).message}`);
       }
-      return { ok: allOk, message: `Key accepted. ${notes.join(" ")}` };
+      return allOk
+        ? { ok: true, message: `Key accepted. ${notes.join(" ")}` }
+        : { ok: false, reason: "rejected", message: `Key accepted, but some checks are not ready. ${notes.join(" ")}` };
     }
 
     case "firecrawl": {
       const token = secrets["api_key"] ?? "";
-      if (!token) return { ok: false, message: "No API key saved yet." };
+      if (!token) return notConfigured(providerName);
       const gateway = token.startsWith("lovc_");
       const lovableKey = process.env["LOVABLE_API_KEY"] ?? "";
       if (gateway && !lovableKey) {
-        return { ok: false, message: "That is a Lovable connection key, but the workspace key is missing." };
+        return {
+          ok: false,
+          reason: "not_configured",
+          message:
+            "That is a Lovable connection key, but the workspace key is missing — save Firecrawl's own API key instead.",
+        };
       }
       const res = await fetch(
         gateway
@@ -252,13 +275,7 @@ async function probe(
         },
       );
       const body = (await res.text()).slice(0, 200);
-      if (res.status === 401 || res.status === 403) {
-        return { ok: false, message: `Firecrawl rejected the key [${res.status}]: ${body}` };
-      }
-      if (res.status === 402) {
-        return { ok: false, message: `Firecrawl has no credit left: ${body}` };
-      }
-      if (!res.ok) return { ok: false, message: `Rejected [${res.status}]: ${body}` };
+      if (!res.ok) return classifyFailure(providerName, res.status, body);
       return { ok: true, message: "Key accepted — a live test page was read successfully." };
     }
 
@@ -297,7 +314,7 @@ async function probe(
       );
       const body = (await res.json().catch(() => null)) as { success?: boolean; error?: { info?: string } } | null;
       if (res.ok && body?.success) return { ok: true, message: "Live rates returned." };
-      return { ok: false, message: body?.error?.info ?? `Rejected [${res.status}]` };
+      return classifyFailure(providerName, res.status, body?.error?.info ?? "");
     }
     case "open_exchange_rates": {
       const res = await fetch(
@@ -324,7 +341,7 @@ async function probe(
         headers: { ApiKey: secrets["api_key"] ?? "", Accept: "application/json" },
       });
       if (res.status === 401 || res.status === 403)
-        return { ok: false, message: `Ozow rejected the key [${res.status}].` };
+        return classifyFailure(providerName, res.status, await res.text());
       return { ok: true, message: "Ozow accepted the key." };
     }
     case "peach_payments": {
@@ -334,11 +351,15 @@ async function probe(
         { headers: { Authorization: `Bearer ${secrets["access_token"] ?? ""}` } },
       );
       if (res.status === 401 || res.status === 403)
-        return { ok: false, message: `Peach rejected the token [${res.status}].` };
+        return classifyFailure(providerName, res.status, await res.text());
       return { ok: true, message: "Peach accepted the token." };
     }
     default:
-      return { ok: false, message: "No automatic test is available for this provider." };
+      return {
+        ok: false,
+        reason: "not_configured",
+        message: "No automatic test is available for this service — it is confirmed on first live use.",
+      };
   }
 }
 
@@ -358,18 +379,24 @@ export const testIntegration = createServerFn({ method: "POST" })
       .eq("provider", data.provider)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    if (!row) return { ok: false, message: "Nothing saved for this service yet." };
+    if (!row) return notConfigured(spec.name);
 
     let result: TestResult;
     try {
       result = await probe(
         data.provider,
+        spec.name,
         row.environment as string,
         (row.config ?? {}) as Record<string, string>,
         await decryptSecrets(row.secrets_encrypted as string | null),
       );
     } catch (err) {
-      result = { ok: false, message: (err as Error).message };
+      result = classifyThrown(spec.name, err);
+    }
+
+    // A missing balance is actionable: hand the screen the provider's own billing page.
+    if (!result.ok && result.reason === "no_credits" && spec.topUpUrl) {
+      result = { ...result, topUpUrl: spec.topUpUrl };
     }
 
     await db
