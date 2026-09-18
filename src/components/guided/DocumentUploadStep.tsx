@@ -325,8 +325,10 @@ export function DocumentUploadStep({
 
       {!hideActions && (
       <div className="flex items-center gap-2">
-        {/* Always offered, including where the upload advances by itself — someone who only typed a
-            description (no files) still needs a way to start the search on demand. */}
+        {/* One button either way — with documents it reads them first, with none it searches on
+            the typed Search field alone. A separate "Skip" used to sit next to this and did the
+            exact same thing when there were no documents, which just meant two buttons for one
+            action. */}
         <Button
           className="flex-1"
           disabled={uploading || reading || (docs.length === 0 && prompt.trim().length === 0)}
@@ -339,23 +341,8 @@ export function DocumentUploadStep({
             })();
           }}
         >
-          {docs.length > 0 ? "Find Matching Interest" : autoAdvance ? "Submit" : "Next"}
+          {docs.length > 0 ? "Find Matching Interest" : "Search"}
         </Button>
-        {docs.length === 0 && (
-          <Button
-            type="button"
-            variant="outline"
-            disabled={uploading || reading}
-            title="Continue without attaching any documents"
-            onClick={() => {
-              setSubmitted(true);
-              onSubmitted?.();
-              void next();
-            }}
-          >
-            Skip
-          </Button>
-        )}
       </div>
       )}
 

@@ -847,8 +847,9 @@ function LiveDealEngine() {
     },
   });
 
-  // Counterparty search starts itself once documents are in — but only after the read has
-  // finished, so it searches on what the documents actually say rather than on their file names.
+  // Counterparty search starts itself once "go" is pressed — immediately when there are no
+  // documents (the typed Search field is enough to search on), or once the read has finished when
+  // there are, so it searches on what the documents actually say rather than on their file names.
   // A read that failed doesn't dead-end the deal: the search still runs (on the description and
   // file names) once `readError` is set.
   const autoSearchStarted = useRef<string | null>(null);
@@ -859,9 +860,8 @@ function LiveDealEngine() {
       !searchGoByTx.has(dealTx.id) ||
       workspaceDocsPending ||
       interestCountPending ||
-      workspaceDocs.length === 0 ||
       rereading ||
-      !(documentSummary || readError) ||
+      (workspaceDocs.length > 0 && !(documentSummary || readError)) ||
       interestCount > 0 ||
       screening ||
       mediaRunning ||
@@ -2230,6 +2230,16 @@ function LiveDealEngine() {
                   >
                     {rereading ? "Reading…" : "Try again"}
                   </Button>
+                </div>
+              ) : workspaceDocs.length === 0 ? (
+                /* Submitted with no documents at all — there is nothing to read, so the search on
+                   the typed Search field runs immediately instead of showing a "reading" state
+                   that would never resolve. */
+                <div className="space-y-1.5 pt-1">
+                  <p className="text-[11px] font-medium text-muted-foreground">Searching…</p>
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-progress-track">
+                    <div className="h-full w-1/3 animate-[slide-in-right_1.4s_ease-in-out_infinite] rounded-full bg-success" />
+                  </div>
                 </div>
               ) : (
                 /* Documents are in and the summary isn't saved yet — show the read running as a
