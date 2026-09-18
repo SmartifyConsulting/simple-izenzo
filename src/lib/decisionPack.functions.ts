@@ -12,7 +12,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
  * proposal, and that adoption is its own attributed, timestamped, append-only event.
  */
 
-const AI_PLUS_MODEL = "openai/gpt-6-astra";
+const AI_PLUS_MODEL = "gpt-5";
 
 export const PROPOSAL_TYPES = [
   "counterparty",
@@ -353,7 +353,7 @@ export const runDecisionPack = createServerFn({ method: "POST" })
   .inputValidator(packInput)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const apiKey = process.env["LOVABLE_API_KEY"];
+    const apiKey = process.env["OPENAI_API_KEY"];
     if (!apiKey) throw new Error("AI is not configured for this workspace.");
 
     const { data: tx } = await supabase
@@ -476,7 +476,7 @@ export const runDecisionPack = createServerFn({ method: "POST" })
       rejected = external.rejected;
       model = external.model;
     } else {
-      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -493,7 +493,7 @@ export const runDecisionPack = createServerFn({ method: "POST" })
       if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
       if (res.status === 402) {
         const { alertLowFunds } = await import("@/lib/opsAlerts.server");
-        void alertLowFunds("AI Gateway", 402);
+        void alertLowFunds("OpenAI", 402);
         throw new Error("AI credits are exhausted for this workspace — support has been notified.");
       }
       if (res.status === 403) {

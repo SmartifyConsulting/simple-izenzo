@@ -37,7 +37,7 @@ export const generateOrgBrief = createServerFn({ method: "POST" })
       }
     }
 
-    const apiKey = process.env["LOVABLE_API_KEY"];
+    const apiKey = process.env["OPENAI_API_KEY"];
     if (!apiKey) throw new Error("AI is not configured for this workspace.");
 
     const facts = [
@@ -53,11 +53,11 @@ export const generateOrgBrief = createServerFn({ method: "POST" })
       .filter(Boolean)
       .join("\n");
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-3.8-flash",
+        model: "gpt-5-mini",
         messages: [
           {
             role: "system",
@@ -71,7 +71,7 @@ export const generateOrgBrief = createServerFn({ method: "POST" })
     if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
     if (res.status === 402) {
       const { alertLowFunds } = await import("@/lib/opsAlerts.server");
-      void alertLowFunds("AI Gateway", 402);
+      void alertLowFunds("OpenAI", 402);
       throw new Error("AI credits are exhausted for this workspace — support has been notified.");
     }
     if (!res.ok) throw new Error("The company brief could not be written just now.");

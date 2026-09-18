@@ -29,14 +29,14 @@ export const findCounterpartyContact = createServerFn({ method: "POST" })
     const pageText = await fetchPageText(data.website);
     if (!pageText) throw new Error("Could not read that website.");
 
-    const apiKey = process.env["LOVABLE_API_KEY"];
+    const apiKey = process.env["OPENAI_API_KEY"];
     if (!apiKey) throw new Error("AI is not configured for this workspace.");
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-3.8-flash",
+        model: "gpt-5-mini",
         messages: [
           {
             role: "system",
@@ -111,7 +111,7 @@ export const enrichCounterparty = createServerFn({ method: "POST" })
     // configured. Silent no-op rather than a hard failure if either isn't (shortlisting itself
     // must never fail because enrichment couldn't run).
     const { firecrawlConfigured, fetchPageText } = await import("@/lib/firecrawl.server");
-    const apiKey = process.env["LOVABLE_API_KEY"];
+    const apiKey = process.env["OPENAI_API_KEY"];
     if (!(await firecrawlConfigured()) || !apiKey) return { source: "unavailable" as const };
 
     try {
@@ -120,11 +120,11 @@ export const enrichCounterparty = createServerFn({ method: "POST" })
       );
       if (!searchText) return { source: "unavailable" as const };
 
-      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "google/gemini-3.8-flash",
+          model: "gpt-5-mini",
           messages: [
             {
               role: "system",
@@ -149,11 +149,11 @@ export const enrichCounterparty = createServerFn({ method: "POST" })
         return { source: "web" as const, website: url, email: null, phone: null };
       }
 
-      const contactRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const contactRes = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "google/gemini-3.8-flash",
+          model: "gpt-5-mini",
           messages: [
             {
               role: "system",
@@ -255,7 +255,7 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
     }
 
     const { firecrawlConfigured, fetchPageText } = await import("@/lib/firecrawl.server");
-    const apiKey = process.env["LOVABLE_API_KEY"];
+    const apiKey = process.env["OPENAI_API_KEY"];
     const canSearch = (await firecrawlConfigured()) && Boolean(apiKey);
     let pageText: string | null = null;
 
@@ -267,11 +267,11 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
           `https://www.google.com/search?q=${encodeURIComponent(`${cp.name} official website contact`)}`,
         );
         if (searchText) {
-          const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          const res = await fetch("https://api.openai.com/v1/chat/completions", {
             method: "POST",
             headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
             body: JSON.stringify({
-              model: "google/gemini-3.8-flash",
+              model: "gpt-5-mini",
               messages: [
                 {
                   role: "system",
@@ -300,11 +300,11 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
       try {
         pageText = await fetchPageText(website);
         if (pageText) {
-          const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          const res = await fetch("https://api.openai.com/v1/chat/completions", {
             method: "POST",
             headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
             body: JSON.stringify({
-              model: "google/gemini-3.8-flash",
+              model: "gpt-5-mini",
               messages: [
                 {
                   role: "system",
@@ -342,11 +342,11 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
     if (!toEmail && website && apiKey) {
       try {
         const domain = new URL(website).hostname.replace(/^www\./, "");
-        const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        const res = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
           headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: "google/gemini-3.8-flash",
+            model: "gpt-5-mini",
             messages: [
               {
                 role: "system",
@@ -368,7 +368,7 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
         });
         if (res.status === 402) {
           const { alertLowFunds } = await import("@/lib/opsAlerts.server");
-          void alertLowFunds("AI Gateway", 402);
+          void alertLowFunds("OpenAI", 402);
         } else if (res.ok) {
           const json = (await res.json()) as { choices: { message: { content: string } }[] };
           const raw = json.choices?.[0]?.message?.content ?? "";

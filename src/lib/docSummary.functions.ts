@@ -45,7 +45,7 @@ async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
     if (docErr) throw new Error(docErr.message);
     if (!docs || docs.length === 0) throw new Error("No documents to read yet.");
 
-    const apiKey = process.env["LOVABLE_API_KEY"];
+    const apiKey = process.env["OPENAI_API_KEY"];
     if (!apiKey) throw new Error("AI is not configured for this workspace.");
 
 
@@ -173,11 +173,11 @@ async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
     // One retry with a stricter instruction, so a reply that came back in the wrong shape isn't
     // treated as an unreadable document.
     async function ask(extra: string) {
-      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "google/gemini-3.8-flash",
+          model: "gpt-5-mini",
           messages: [
             {
               role: "system",
@@ -193,7 +193,7 @@ async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
       if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
       if (res.status === 402) {
         const { alertLowFunds } = await import("@/lib/opsAlerts.server");
-        void alertLowFunds("AI Gateway", 402);
+        void alertLowFunds("OpenAI", 402);
         throw new Error("AI credits are exhausted for this workspace — support has been notified.");
       }
       if (!res.ok) {

@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 
-/** Turns a dictated report into text using the Lovable AI transcription endpoint. */
+/** Turns a dictated report into text using OpenAI's transcription endpoint. */
 export const transcribeBugReport = createServerFn({ method: "POST" })
   .inputValidator((input: { audioBase64: string; mimeType?: string }) => {
     if (!input?.audioBase64 || typeof input.audioBase64 !== "string") {
@@ -12,7 +12,7 @@ export const transcribeBugReport = createServerFn({ method: "POST" })
     return input;
   })
   .handler(async ({ data }) => {
-    const apiKey = process.env["LOVABLE_API_KEY"];
+    const apiKey = process.env["OPENAI_API_KEY"];
     if (!apiKey) throw new Error("Voice notes are not configured on this workspace.");
 
     const cleaned = data.audioBase64.replace(/^data:[^;]+;base64,/, "");
@@ -32,10 +32,10 @@ export const transcribeBugReport = createServerFn({ method: "POST" })
       } as Record<string, string>)[mime] ?? "webm";
 
     const form = new FormData();
-    form.append("model", "google/gemini-3.5-transcribe");
+    form.append("model", "whisper-1");
     form.append("file", new Blob([bytes], { type: mime }), `recording.${ext}`);
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/audio/transcriptions", {
+    const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}` },
       body: form,
@@ -47,7 +47,7 @@ export const transcribeBugReport = createServerFn({ method: "POST" })
       if (res.status === 429) throw new Error("Too many requests — try again in a moment.");
       if (res.status === 402 || res.status === 403) {
         const { alertLowFunds } = await import("@/lib/opsAlerts.server");
-        void alertLowFunds("Voice transcription (AI Gateway)", res.status, detail);
+        void alertLowFunds("Voice transcription (OpenAI)", res.status, detail);
         throw new Error("Voice notes are unavailable right now — please type the report instead.");
       }
       throw new Error("Could not transcribe that recording — please type the report instead.");

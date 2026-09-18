@@ -13,14 +13,14 @@ async function sha256(input: string) {
 
 const txInput = (data: unknown) => z.object({ transactionId: z.string().uuid() }).parse(data);
 
-/** All AI searching runs on GPT-6 Astra. The two tiers differ by how hard it thinks and how many
+/** All AI searching runs on GPT-5. The two tiers differ by how hard it thinks and how many
  * scraped sources it reads — never by model quality. */
-const AI_MODEL = "openai/gpt-6-astra";
-const AI_PLUS_MODEL = "openai/gpt-6-astra";
+const AI_MODEL = "gpt-5";
+const AI_PLUS_MODEL = "gpt-5";
 
-/** Astra requires an explicit reasoning effort and rejects temperature/top_p. */
+/** GPT-5 requires an explicit reasoning effort and rejects temperature/top_p. */
 function aiPlusOptions(model: string, kind: "ai" | "ai_plus" = "ai_plus") {
-  if (model !== "openai/gpt-6-astra") return {};
+  if (model !== "gpt-5") return {};
   return {
     reasoning_effort: (kind === "ai" ? "low" : "high") as "low" | "high",
     max_completion_tokens: kind === "ai" ? 2000 : 4000,
@@ -437,7 +437,7 @@ export const searchCounterparties = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const apiKey = process.env["LOVABLE_API_KEY"];
+    const apiKey = process.env["OPENAI_API_KEY"];
     if (!apiKey) throw new Error("AI is not configured");
 
     const { data: tx } = await supabase
@@ -518,7 +518,7 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       .join("\n");
 
     const model = data.kind === "ai" ? AI_MODEL : AI_PLUS_MODEL;
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -533,7 +533,7 @@ export const searchCounterparties = createServerFn({ method: "POST" })
     if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
     if (res.status === 402) {
       const { alertLowFunds } = await import("@/lib/opsAlerts.server");
-      void alertLowFunds("AI Gateway", 402);
+      void alertLowFunds("OpenAI", 402);
       throw new Error("AI credits are exhausted for this workspace — support has been notified.");
     }
     if (!res.ok) throw new Error("AI request failed");
@@ -667,7 +667,7 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data }) => {
-    const apiKey = process.env["LOVABLE_API_KEY"];
+    const apiKey = process.env["OPENAI_API_KEY"];
     if (!apiKey) throw new Error("AI is not configured");
 
     const counterpart = data.role === "buyer" ? "suppliers/sellers" : "buyers";
@@ -684,7 +684,7 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
     const prompt = `Search: "${data.query}"\nRole: ${data.role}\nPropose 4-6 candidates, all from the sources below.\n\n${grounding}`;
 
     const model = data.kind === "ai" ? AI_MODEL : AI_PLUS_MODEL;
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -699,7 +699,7 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
     if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
     if (res.status === 402) {
       const { alertLowFunds } = await import("@/lib/opsAlerts.server");
-      void alertLowFunds("AI Gateway", 402);
+      void alertLowFunds("OpenAI", 402);
       throw new Error("AI credits are exhausted for this workspace — support has been notified.");
     }
     if (!res.ok) throw new Error("AI request failed");
@@ -795,7 +795,7 @@ export const runAiProposal = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const apiKey = process.env["LOVABLE_API_KEY"];
+    const apiKey = process.env["OPENAI_API_KEY"];
     if (!apiKey) throw new Error("AI is not configured");
 
     const { data: tx } = await supabase
@@ -834,7 +834,7 @@ export const runAiProposal = createServerFn({ method: "POST" })
       .join("\n");
 
     const model = data.kind === "ai" ? AI_MODEL : AI_PLUS_MODEL;
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -849,7 +849,7 @@ export const runAiProposal = createServerFn({ method: "POST" })
     if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
     if (res.status === 402) {
       const { alertLowFunds } = await import("@/lib/opsAlerts.server");
-      void alertLowFunds("AI Gateway", 402);
+      void alertLowFunds("OpenAI", 402);
       throw new Error("AI credits are exhausted for this workspace — support has been notified.");
     }
     if (!res.ok) throw new Error("AI request failed");
@@ -881,7 +881,7 @@ export const extractMaterialTerms = createServerFn({ method: "POST" })
   .inputValidator(txInput)
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const apiKey = process.env["LOVABLE_API_KEY"];
+    const apiKey = process.env["OPENAI_API_KEY"];
 
     const { data: tx } = await supabase
       .from("transactions")
@@ -918,7 +918,7 @@ export const extractMaterialTerms = createServerFn({ method: "POST" })
     ].join("\n");
 
     try {
-      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -988,17 +988,17 @@ export const classifyDocument = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data) => z.object({ filename: z.string().min(1).max(300) }).parse(data))
   .handler(async ({ data }) => {
-    const apiKey = process.env["LOVABLE_API_KEY"];
+    const apiKey = process.env["OPENAI_API_KEY"];
     const fallbackType = classifyByFilename(data.filename);
     const fallbackDirection = directionByFilename(data.filename);
     if (!apiKey) return { docType: fallbackType, directionGuess: fallbackDirection, source: "heuristic" as const };
 
     try {
-      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "google/gemini-3.7-flash",
+          model: "gpt-5-mini",
           messages: [
             {
               role: "system",
