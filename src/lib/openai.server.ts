@@ -23,3 +23,16 @@ export async function loadOpenAiApiKey(): Promise<string | null> {
   }
   return process.env["OPENAI_API_KEY"] || null;
 }
+
+/** OpenAI returns HTTP 429 for both a genuine short-lived rate limit and a real "no credits left
+ * on this account" state — the only way to tell them apart is the JSON body's error code. Getting
+ * this wrong means every quota outage reads as "try again shortly" forever. */
+export function isOpenAiQuotaExceeded(bodyText: string): boolean {
+  try {
+    const body = JSON.parse(bodyText) as { error?: { code?: string; type?: string } };
+    const code = body.error?.code ?? body.error?.type;
+    return code === "insufficient_quota" || code === "billing_hard_limit_reached";
+  } catch {
+    return /insufficient_quota|billing_hard_limit_reached/i.test(bodyText);
+  }
+}

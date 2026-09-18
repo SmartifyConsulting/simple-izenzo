@@ -45,12 +45,13 @@ export const transcribeBugReport = createServerFn({ method: "POST" })
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
       console.error("Bug report transcription failed", res.status, detail);
-      if (res.status === 429) throw new Error("Too many requests — try again in a moment.");
-      if (res.status === 402 || res.status === 403) {
+      const { isOpenAiQuotaExceeded } = await import("@/lib/openai.server");
+      if ((res.status === 429 && isOpenAiQuotaExceeded(detail)) || res.status === 403) {
         const { alertLowFunds } = await import("@/lib/opsAlerts.server");
         void alertLowFunds("Voice transcription (OpenAI)", res.status, detail);
         throw new Error("Voice notes are unavailable right now — please type the report instead.");
       }
+      if (res.status === 429) throw new Error("Too many requests — try again in a moment.");
       throw new Error("Could not transcribe that recording — please type the report instead.");
     }
 

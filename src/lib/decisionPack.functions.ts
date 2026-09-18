@@ -491,11 +491,15 @@ export const runDecisionPack = createServerFn({ method: "POST" })
           ],
         }),
       });
-      if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
-      if (res.status === 402) {
-        const { alertLowFunds } = await import("@/lib/opsAlerts.server");
-        void alertLowFunds("OpenAI", 402);
-        throw new Error("AI credits are exhausted for this workspace — support has been notified.");
+      if (res.status === 429) {
+        const body = await res.text().catch(() => "");
+        const { isOpenAiQuotaExceeded } = await import("@/lib/openai.server");
+        if (isOpenAiQuotaExceeded(body)) {
+          const { alertLowFunds } = await import("@/lib/opsAlerts.server");
+          void alertLowFunds("OpenAI", 429, body);
+          throw new Error("AI credits are exhausted for this workspace — support has been notified.");
+        }
+        throw new Error("AI is busy right now. Please try again shortly.");
       }
       if (res.status === 403) {
         const body = await res.text();
