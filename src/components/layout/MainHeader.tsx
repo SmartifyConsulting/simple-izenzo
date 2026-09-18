@@ -40,7 +40,7 @@ export function MainHeader() {
   const { user, org } = useAuth();
   const [uatOpen, setUatOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const isHome = pathname === "/" || pathname === "/";
+  const isHome = pathname === "/";
   // Whatever was typed into the homepage search bar, so signing in carries it into the workspace.
   const { prompt } = useHeroSearchOptional();
   const next = isHome ? seedNext(prompt) : undefined;
