@@ -45,7 +45,8 @@ async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
     if (docErr) throw new Error(docErr.message);
     if (!docs || docs.length === 0) throw new Error("No documents to read yet.");
 
-    const apiKey = process.env["OPENAI_API_KEY"];
+    const { loadOpenAiApiKey } = await import("@/lib/openai.server");
+    const apiKey = await loadOpenAiApiKey();
     if (!apiKey) throw new Error("AI is not configured for this workspace.");
 
 

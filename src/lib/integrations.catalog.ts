@@ -47,6 +47,7 @@ export const INTEGRATION_GROUPS = [
   "Currency",
   "Web Scraping",
   "Archival Storage",
+  "AI",
   "Izenzo AI+",
 
 
@@ -251,6 +252,31 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
     ],
     testable: false,
     testNote: "Bucket access is confirmed on the first archival upload.",
+  },
+  {
+    id: "openai",
+    topUpUrl: "https://platform.openai.com/settings/organization/billing/overview",
+    consoleUrl: "https://platform.openai.com/api-keys",
+    name: "OpenAI",
+    group: "AI",
+    summary:
+      "Powers document reading, counterparty search, decision packs, org briefs and bug-report voice transcription.",
+    usedAt:
+      "Trading Gate → Bid/Offer document reading and Counterparties (AI / AI+ search), Decision Packs, org briefs, and Bug Report voice notes.",
+    costNote: "Billed per token/minute of usage on your OpenAI account — see OpenAI's pricing page for current rates.",
+    docsUrl: "https://platform.openai.com/docs",
+    fields: [
+      {
+        key: "api_key",
+        label: "API key",
+        secret: true,
+        placeholder: "sk-…",
+        help: "From platform.openai.com → API keys. Also read from the server secret OPENAI_API_KEY.",
+      },
+      { key: "portal_username", label: "Username", secret: false },
+      { key: "portal_credentials", label: "Credentials", secret: true, help: "Password or API secret used to sign in to the provider portal." },
+    ],
+    testable: true,
   },
   {
     id: "izenzo_ai_plus",

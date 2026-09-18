@@ -12,7 +12,8 @@ export const transcribeBugReport = createServerFn({ method: "POST" })
     return input;
   })
   .handler(async ({ data }) => {
-    const apiKey = process.env["OPENAI_API_KEY"];
+    const { loadOpenAiApiKey } = await import("@/lib/openai.server");
+    const apiKey = await loadOpenAiApiKey();
     if (!apiKey) throw new Error("Voice notes are not configured on this workspace.");
 
     const cleaned = data.audioBase64.replace(/^data:[^;]+;base64,/, "");

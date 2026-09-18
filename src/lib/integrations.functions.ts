@@ -344,6 +344,12 @@ async function probe(
         return classifyFailure(providerName, res.status, await res.text());
       return { ok: true, message: "Ozow accepted the key." };
     }
+    case "openai": {
+      const res = await fetch("https://api.openai.com/v1/models", {
+        headers: { Authorization: `Bearer ${secrets["api_key"] ?? ""}` },
+      });
+      return say(res, "OpenAI accepted the key.");
+    }
     case "peach_payments": {
       const base = environment === "production" ? "https://eu-prod.oppwa.com" : "https://eu-test.oppwa.com";
       const res = await fetch(

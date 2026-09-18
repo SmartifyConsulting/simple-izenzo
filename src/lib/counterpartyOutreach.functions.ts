@@ -29,7 +29,8 @@ export const findCounterpartyContact = createServerFn({ method: "POST" })
     const pageText = await fetchPageText(data.website);
     if (!pageText) throw new Error("Could not read that website.");
 
-    const apiKey = process.env["OPENAI_API_KEY"];
+    const { loadOpenAiApiKey } = await import("@/lib/openai.server");
+    const apiKey = await loadOpenAiApiKey();
     if (!apiKey) throw new Error("AI is not configured for this workspace.");
 
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -111,7 +112,8 @@ export const enrichCounterparty = createServerFn({ method: "POST" })
     // configured. Silent no-op rather than a hard failure if either isn't (shortlisting itself
     // must never fail because enrichment couldn't run).
     const { firecrawlConfigured, fetchPageText } = await import("@/lib/firecrawl.server");
-    const apiKey = process.env["OPENAI_API_KEY"];
+    const { loadOpenAiApiKey } = await import("@/lib/openai.server");
+    const apiKey = await loadOpenAiApiKey();
     if (!(await firecrawlConfigured()) || !apiKey) return { source: "unavailable" as const };
 
     try {
@@ -255,7 +257,8 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
     }
 
     const { firecrawlConfigured, fetchPageText } = await import("@/lib/firecrawl.server");
-    const apiKey = process.env["OPENAI_API_KEY"];
+    const { loadOpenAiApiKey } = await import("@/lib/openai.server");
+    const apiKey = await loadOpenAiApiKey();
     const canSearch = (await firecrawlConfigured()) && Boolean(apiKey);
     let pageText: string | null = null;
 

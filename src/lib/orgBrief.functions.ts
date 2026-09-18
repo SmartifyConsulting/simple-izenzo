@@ -37,7 +37,8 @@ export const generateOrgBrief = createServerFn({ method: "POST" })
       }
     }
 
-    const apiKey = process.env["OPENAI_API_KEY"];
+    const { loadOpenAiApiKey } = await import("@/lib/openai.server");
+    const apiKey = await loadOpenAiApiKey();
     if (!apiKey) throw new Error("AI is not configured for this workspace.");
 
     const facts = [

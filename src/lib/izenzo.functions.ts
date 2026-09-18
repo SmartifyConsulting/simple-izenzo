@@ -437,7 +437,8 @@ export const searchCounterparties = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const apiKey = process.env["OPENAI_API_KEY"];
+    const { loadOpenAiApiKey } = await import("@/lib/openai.server");
+    const apiKey = await loadOpenAiApiKey();
     if (!apiKey) throw new Error("AI is not configured");
 
     const { data: tx } = await supabase
@@ -667,7 +668,8 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data }) => {
-    const apiKey = process.env["OPENAI_API_KEY"];
+    const { loadOpenAiApiKey } = await import("@/lib/openai.server");
+    const apiKey = await loadOpenAiApiKey();
     if (!apiKey) throw new Error("AI is not configured");
 
     const counterpart = data.role === "buyer" ? "suppliers/sellers" : "buyers";
@@ -795,7 +797,8 @@ export const runAiProposal = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const apiKey = process.env["OPENAI_API_KEY"];
+    const { loadOpenAiApiKey } = await import("@/lib/openai.server");
+    const apiKey = await loadOpenAiApiKey();
     if (!apiKey) throw new Error("AI is not configured");
 
     const { data: tx } = await supabase
@@ -881,7 +884,8 @@ export const extractMaterialTerms = createServerFn({ method: "POST" })
   .inputValidator(txInput)
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const apiKey = process.env["OPENAI_API_KEY"];
+    const { loadOpenAiApiKey } = await import("@/lib/openai.server");
+    const apiKey = await loadOpenAiApiKey();
 
     const { data: tx } = await supabase
       .from("transactions")
@@ -988,7 +992,8 @@ export const classifyDocument = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data) => z.object({ filename: z.string().min(1).max(300) }).parse(data))
   .handler(async ({ data }) => {
-    const apiKey = process.env["OPENAI_API_KEY"];
+    const { loadOpenAiApiKey } = await import("@/lib/openai.server");
+    const apiKey = await loadOpenAiApiKey();
     const fallbackType = classifyByFilename(data.filename);
     const fallbackDirection = directionByFilename(data.filename);
     if (!apiKey) return { docType: fallbackType, directionGuess: fallbackDirection, source: "heuristic" as const };
