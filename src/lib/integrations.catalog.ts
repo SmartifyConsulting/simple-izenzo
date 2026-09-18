@@ -56,8 +56,9 @@ export const INTEGRATION_GROUPS = [
 export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
   {
     id: "didit",
-    topUpUrl: "https://business.didit.me/billing",
-    consoleUrl: "https://business.didit.me",
+    topUpUrl:
+      "https://business.didit.me/console/4d6e020e-3c38-469d-9386-5f2c12e2f41a/42f423bc-dfac-4f12-8dea-1cb51d0fc7a6",
+
     name: "Didit",
     group: "KYC & Identity",
     summary:
@@ -100,7 +101,6 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
   },
   {
     id: "cipc",
-    consoleUrl: "https://eservices.cipc.co.za",
     name: "CIPC",
     group: "Business Registry & Tax",
     summary: "Company registration and director verification.",
@@ -119,7 +119,6 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
   },
   {
     id: "sars_efiling",
-    consoleUrl: "https://secure.sarsefiling.co.za",
     name: "SARS eFiling",
     group: "Business Registry & Tax",
     summary: "Tax Compliance Status checks. Usually requires a registered practitioner profile.",
@@ -138,7 +137,6 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
   },
   {
     id: "payfast",
-    consoleUrl: "https://dashboard.payfast.io",
     name: "PayFast",
     group: "Payments",
     summary: "South African card and EFT processing with ITN webhooks.",
@@ -178,8 +176,7 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
   },
   {
     id: "resend",
-    topUpUrl: "https://resend.com/settings/billing",
-    consoleUrl: "https://resend.com/overview",
+    topUpUrl: "https://resend.com/settings/billing?product=transactional",
     name: "Resend",
     group: "Email & Notifications",
     summary: "Transactional email for verification, trade and support notices.",
@@ -197,8 +194,6 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
   },
   {
     id: "open_exchange_rates",
-    topUpUrl: "https://openexchangerates.org/account/billing",
-    consoleUrl: "https://openexchangerates.org/account",
     name: "Open Exchange Rates",
     group: "Currency",
     summary: "Alternative exchange-rate feed.",
@@ -214,8 +209,7 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
   },
   {
     id: "firecrawl",
-    topUpUrl: "https://www.firecrawl.dev/app/billing",
-    consoleUrl: "https://www.firecrawl.dev/app",
+    topUpUrl: "https://www.firecrawl.dev/pricing",
     name: "Firecrawl",
     group: "Web Scraping",
     summary:
@@ -240,8 +234,6 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
   },
   {
     id: "aws_s3_glacier",
-    topUpUrl: "https://console.aws.amazon.com/billing/home",
-    consoleUrl: "https://s3.console.aws.amazon.com/s3/home",
     name: "AWS S3 / Glacier",
 
     group: "Archival Storage",

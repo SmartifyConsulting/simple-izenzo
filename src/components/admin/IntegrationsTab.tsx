@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2, Copy, CreditCard, ExternalLink, Eye, Lock, Loader2, Plug, XCircle } from "lucide-react";
+import { CheckCircle2, Copy, CreditCard, Eye, Lock, Loader2, Plug, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -340,7 +340,7 @@ function ProviderCard({
     reason?: string | undefined;
     topUpUrl?: string | undefined;
   }) {
-    const url = result.topUpUrl ?? provider.topUpUrl ?? (config["dev_center_url"] ?? "").trim();
+    const url = result.topUpUrl ?? provider.topUpUrl;
     toast.error(result.message, {
       description: result.detail,
       ...(result.reason === "no_credits" && url
@@ -423,33 +423,19 @@ function ProviderCard({
             <span className="font-semibold text-foreground">Cost:</span> {provider.costNote}
           </p>
         )}
-        {(() => {
-          const devUrl = (config["dev_center_url"] ?? "").trim();
-          const topUp = provider.topUpUrl ?? (devUrl || undefined);
-          const consoleUrl = provider.consoleUrl ?? (devUrl || undefined);
-          if (!topUp && !consoleUrl && !provider.docsUrl) return null;
-          return (
-            <div className="flex flex-wrap gap-2">
-              {topUp && (
-                <Button size="sm" variant="outline" onClick={() => openExternal(topUp)}>
-                  <CreditCard className="mr-1.5 h-3.5 w-3.5" />
-                  Top up credits
-                </Button>
-              )}
-              {consoleUrl && consoleUrl !== topUp && (
-                <Button size="sm" variant="outline" onClick={() => openExternal(consoleUrl)}>
-                  <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-                  Open dashboard
-                </Button>
-              )}
-              {provider.docsUrl && (
-                <Button size="sm" variant="ghost" onClick={() => openExternal(provider.docsUrl!)}>
-                  Docs
-                </Button>
-              )}
-            </div>
-          );
-        })()}
+        {provider.topUpUrl && (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              className="bg-success text-success-foreground hover:bg-success/90"
+              onClick={() => openExternal(provider.topUpUrl!)}
+            >
+              <CreditCard className="mr-1.5 h-3.5 w-3.5" />
+              Top up credits
+            </Button>
+          </div>
+        )}
+
 
         {provider.environments && provider.environments.length > 1 && (
           <div className="space-y-1.5">
