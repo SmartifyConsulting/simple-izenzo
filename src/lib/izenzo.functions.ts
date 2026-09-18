@@ -27,8 +27,35 @@ function aiPlusOptions(model: string, kind: "ai" | "ai_plus" = "ai_plus") {
   };
 }
 
+/** The AI service sometimes says "too many requests at once" (429) or has a brief wobble (5xx).
+ * Those are transient, so wait and try again a couple of times before giving up. Every other
+ * status is returned untouched so the existing handling (credits, refusals) is unchanged. */
+async function chatCompletion(apiKey: string, body: unknown): Promise<Response> {
+  const delays = [1000, 3000, 7000];
+  let res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  for (const base of delays) {
+    if (res.status !== 429 && res.status < 500) return res;
+    const retryAfter = Number(res.headers.get("retry-after"));
+    const wait = Number.isFinite(retryAfter) && retryAfter > 0
+      ? Math.min(retryAfter * 1000, 10000)
+      : base + Math.floor(Math.random() * 400);
+    await new Promise((r) => setTimeout(r, wait));
+    res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  }
+  return res;
+}
+
 /** How many open-web surfaces each tier reads through Firecrawl. */
 const SOURCE_LIMIT = { ai: 3, ai_plus: 6 } as const;
+
 
 /** Seal the Proof of Intent. Hard server-side gate: 1 token. */
 export const sealProofOfIntent = createServerFn({ method: "POST" })
@@ -522,17 +549,13 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       .join("\n");
 
     const model = data.kind === "ai" ? AI_MODEL : AI_PLUS_MODEL;
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model,
-        ...aiPlusOptions(model, data.kind),
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: prompt },
-        ],
-      }),
+    const res = await chatCompletion(apiKey, {
+      model,
+      ...aiPlusOptions(model, data.kind),
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: prompt },
+      ],
     });
     if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
     if (res.status === 402) {
@@ -689,17 +712,13 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
     const prompt = `Search: "${data.query}"\nRole: ${data.role}\nPropose 4-6 candidates, all from the sources below.\n\n${grounding}`;
 
     const model = data.kind === "ai" ? AI_MODEL : AI_PLUS_MODEL;
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model,
-        ...aiPlusOptions(model, data.kind),
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: prompt },
-        ],
-      }),
+    const res = await chatCompletion(apiKey, {
+      model,
+      ...aiPlusOptions(model, data.kind),
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: prompt },
+      ],
     });
     if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
     if (res.status === 402) {
@@ -840,17 +859,13 @@ export const runAiProposal = createServerFn({ method: "POST" })
       .join("\n");
 
     const model = data.kind === "ai" ? AI_MODEL : AI_PLUS_MODEL;
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model,
-        ...aiPlusOptions(model, data.kind),
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: prompt },
-        ],
-      }),
+    const res = await chatCompletion(apiKey, {
+      model,
+      ...aiPlusOptions(model, data.kind),
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: prompt },
+      ],
     });
     if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
     if (res.status === 402) {
