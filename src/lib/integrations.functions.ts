@@ -186,9 +186,9 @@ type TestResult = {
   /** Why it failed, so the screen can offer the right next step (e.g. a top-up link). */
   reason?: FailureReason;
   /** The provider's own wording, shown as extra detail under the message. */
-  detail?: string;
+  detail?: string | undefined;
   /** The provider's billing page, filled in when the failure is a missing balance. */
-  topUpUrl?: string;
+  topUpUrl?: string | undefined;
 };
 
 async function probe(
