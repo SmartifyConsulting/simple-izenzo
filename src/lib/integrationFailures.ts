@@ -16,7 +16,7 @@ export type IntegrationFailure = {
   /** Plain sentence, safe to show to a person and to store as the last-test message. */
   message: string;
   /** The provider's own wording, trimmed — shown underneath as extra detail. */
-  detail?: string;
+  detail?: string | undefined;
 };
 
 const CREDIT_WORDS =
