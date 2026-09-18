@@ -492,8 +492,9 @@ export const searchCounterparties = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const apiKey = process.env["LOVABLE_API_KEY"];
-    if (!apiKey) throw new Error("Lovable AI is not configured for this workspace.");
+    const { loadOpenAiApiKey } = await import("@/lib/openai.server");
+    const apiKey = await loadOpenAiApiKey();
+    if (!apiKey) throw new Error("OpenAI is not configured. Add and enable it in Admin → Integrations.");
 
     const { data: tx } = await supabase
       .from("transactions")
@@ -586,7 +587,7 @@ export const searchCounterparties = createServerFn({ method: "POST" })
     });
     if (res.status === 402) {
       const { alertLowFunds } = await import("@/lib/opsAlerts.server");
-      void alertLowFunds("Lovable AI", 402);
+      void alertLowFunds("OpenAI", 402);
       throw new Error("AI credits are exhausted for this workspace — support has been notified.");
     }
     if (!res.ok) throw new Error(await aiFailureMessage(res));
@@ -720,8 +721,9 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data }) => {
-    const apiKey = process.env["LOVABLE_API_KEY"];
-    if (!apiKey) throw new Error("Lovable AI is not configured for this workspace.");
+    const { loadOpenAiApiKey } = await import("@/lib/openai.server");
+    const apiKey = await loadOpenAiApiKey();
+    if (!apiKey) throw new Error("OpenAI is not configured. Add and enable it in Admin → Integrations.");
 
     const counterpart = data.role === "buyer" ? "suppliers/sellers" : "buyers";
     const { sources, failures, context: grounding } = await groundOnWeb(
@@ -747,7 +749,7 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
     });
     if (res.status === 402) {
       const { alertLowFunds } = await import("@/lib/opsAlerts.server");
-      void alertLowFunds("Lovable AI", 402);
+      void alertLowFunds("OpenAI", 402);
       throw new Error("AI credits are exhausted for this workspace — support has been notified.");
     }
     if (!res.ok) throw new Error(await aiFailureMessage(res));
@@ -843,8 +845,9 @@ export const runAiProposal = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const apiKey = process.env["LOVABLE_API_KEY"];
-    if (!apiKey) throw new Error("Lovable AI is not configured for this workspace.");
+    const { loadOpenAiApiKey } = await import("@/lib/openai.server");
+    const apiKey = await loadOpenAiApiKey();
+    if (!apiKey) throw new Error("OpenAI is not configured. Add and enable it in Admin → Integrations.");
 
     const { data: tx } = await supabase
       .from("transactions")
@@ -892,7 +895,7 @@ export const runAiProposal = createServerFn({ method: "POST" })
     });
     if (res.status === 402) {
       const { alertLowFunds } = await import("@/lib/opsAlerts.server");
-      void alertLowFunds("Lovable AI", 402);
+      void alertLowFunds("OpenAI", 402);
       throw new Error("AI credits are exhausted for this workspace — support has been notified.");
     }
     if (!res.ok) throw new Error(await aiFailureMessage(res));
