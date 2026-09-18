@@ -69,7 +69,21 @@ const STAGES = [
 ];
 
 function AlphaBravoHome() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  const { next } = Route.useSearch();
+  const navigate = useNavigate();
+
+  // Signed-in visitors go straight to the workspace; a signed-out visitor carrying an intended
+  // destination is sent to sign in so they return to the page they were trying to open.
+  useEffect(() => {
+    if (loading) return;
+    if (user) {
+      navigate({ to: safeNext(next), replace: true });
+      return;
+    }
+    if (next) navigate({ to: "/auth", search: { next }, replace: true });
+  }, [user, loading, next, navigate]);
+
   return (
     <section className="mx-auto max-w-6xl px-5 py-6 sm:py-8">
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
