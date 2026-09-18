@@ -13,12 +13,10 @@ async function sha256(input: string) {
 
 const txInput = (data: unknown) => z.object({ transactionId: z.string().uuid() }).parse(data);
 
-/** All AI searching runs on GPT-5. The two tiers differ by how hard it thinks and how many
- * scraped sources it reads — never by model quality. */
+/** Both tiers use the configured OpenAI account. They differ by reasoning depth and source count. */
 const AI_MODEL = "gpt-5";
 const AI_PLUS_MODEL = "gpt-5";
 
-/** GPT-5 requires an explicit reasoning effort and rejects temperature/top_p. */
 function aiPlusOptions(model: string, kind: "ai" | "ai_plus" = "ai_plus") {
   if (model !== "gpt-5") return {};
   return {
@@ -27,8 +25,65 @@ function aiPlusOptions(model: string, kind: "ai" | "ai_plus" = "ai_plus") {
   };
 }
 
+/** Calls the configured OpenAI account. Only transient 429 and 5xx responses are retried with
+ * bounded backoff; an exhausted account is terminal and returned immediately. */
+async function chatCompletion(apiKey: string, body: unknown): Promise<Response> {
+  const delays = [1000, 3000, 7000];
+  const call = () =>
+    fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+  let res = await call();
+  for (const base of delays) {
+    if (res.status !== 429 && res.status < 500) break;
+    if (res.status === 429) {
+      const payload = (await res.clone().json().catch(() => null)) as
+        | { error?: { code?: string; type?: string } }
+        | null;
+      const code = payload?.error?.code ?? payload?.error?.type;
+      if (code === "insufficient_quota" || code === "billing_hard_limit_reached") break;
+    }
+    const retryAfter = Number(res.headers.get("retry-after"));
+    const wait = Number.isFinite(retryAfter) && retryAfter > 0
+      ? Math.min(retryAfter * 1000, 10000)
+      : base + Math.floor(Math.random() * 400);
+    await new Promise((r) => setTimeout(r, wait));
+    res = await call();
+  }
+  return res;
+}
+
+async function aiFailureMessage(res: Response): Promise<string> {
+  let message = "AI request failed. Please try again later.";
+  try {
+    const payload = (await res.clone().json()) as {
+      message?: string;
+      type?: string;
+      error?: { message?: string; type?: string; code?: string };
+    };
+    if (payload.error?.message?.trim()) message = payload.error.message.trim();
+    else if (payload.message?.trim()) message = payload.message.trim();
+    const code = payload.error?.code ?? payload.error?.type ?? payload.type;
+    if (code === "insufficient_quota" || code === "billing_hard_limit_reached") {
+      return "The OpenAI account has no available credits or has reached its usage limit. Top up the OpenAI account, then try again.";
+    }
+  } catch {
+    // Keep the safe fallback when the provider did not return JSON.
+  }
+  if (res.status === 429) return "AI is busy right now. Please try again shortly.";
+  if (res.status === 401) return "The saved OpenAI API key was rejected. Update it in Admin → Integrations, then try again.";
+  return message;
+}
+
 /** How many open-web surfaces each tier reads through Firecrawl. */
 const SOURCE_LIMIT = { ai: 3, ai_plus: 6 } as const;
+
 
 /** Seal the Proof of Intent. Hard server-side gate: 1 token. */
 export const sealProofOfIntent = createServerFn({ method: "POST" })
@@ -439,7 +494,7 @@ export const searchCounterparties = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { loadOpenAiApiKey } = await import("@/lib/openai.server");
     const apiKey = await loadOpenAiApiKey();
-    if (!apiKey) throw new Error("AI is not configured");
+    if (!apiKey) throw new Error("OpenAI is not configured. Add and enable it in Admin → Integrations.");
 
     const { data: tx } = await supabase
       .from("transactions")
@@ -522,25 +577,20 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       .join("\n");
 
     const model = data.kind === "ai" ? AI_MODEL : AI_PLUS_MODEL;
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model,
-        ...aiPlusOptions(model, data.kind),
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: prompt },
-        ],
-      }),
+    const res = await chatCompletion(apiKey, {
+      model,
+      ...aiPlusOptions(model, data.kind),
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: prompt },
+      ],
     });
-    if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
     if (res.status === 402) {
       const { alertLowFunds } = await import("@/lib/opsAlerts.server");
       void alertLowFunds("OpenAI", 402);
       throw new Error("AI credits are exhausted for this workspace — support has been notified.");
     }
-    if (!res.ok) throw new Error("AI request failed");
+    if (!res.ok) throw new Error(await aiFailureMessage(res));
     const json = (await res.json()) as { choices: { message: { content: string } }[] };
     const output = json.choices?.[0]?.message?.content ?? "";
     let candidates = parseCandidates(output);
@@ -673,7 +723,7 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { loadOpenAiApiKey } = await import("@/lib/openai.server");
     const apiKey = await loadOpenAiApiKey();
-    if (!apiKey) throw new Error("AI is not configured");
+    if (!apiKey) throw new Error("OpenAI is not configured. Add and enable it in Admin → Integrations.");
 
     const counterpart = data.role === "buyer" ? "suppliers/sellers" : "buyers";
     const { sources, failures, context: grounding } = await groundOnWeb(
@@ -689,25 +739,20 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
     const prompt = `Search: "${data.query}"\nRole: ${data.role}\nPropose 4-6 candidates, all from the sources below.\n\n${grounding}`;
 
     const model = data.kind === "ai" ? AI_MODEL : AI_PLUS_MODEL;
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model,
-        ...aiPlusOptions(model, data.kind),
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: prompt },
-        ],
-      }),
+    const res = await chatCompletion(apiKey, {
+      model,
+      ...aiPlusOptions(model, data.kind),
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: prompt },
+      ],
     });
-    if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
     if (res.status === 402) {
       const { alertLowFunds } = await import("@/lib/opsAlerts.server");
       void alertLowFunds("OpenAI", 402);
       throw new Error("AI credits are exhausted for this workspace — support has been notified.");
     }
-    if (!res.ok) throw new Error("AI request failed");
+    if (!res.ok) throw new Error(await aiFailureMessage(res));
     const json = (await res.json()) as { choices: { message: { content: string } }[] };
     const output = json.choices?.[0]?.message?.content ?? "";
     let candidates = parseCandidates(output);
@@ -802,7 +847,7 @@ export const runAiProposal = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { loadOpenAiApiKey } = await import("@/lib/openai.server");
     const apiKey = await loadOpenAiApiKey();
-    if (!apiKey) throw new Error("AI is not configured");
+    if (!apiKey) throw new Error("OpenAI is not configured. Add and enable it in Admin → Integrations.");
 
     const { data: tx } = await supabase
       .from("transactions")
@@ -840,25 +885,20 @@ export const runAiProposal = createServerFn({ method: "POST" })
       .join("\n");
 
     const model = data.kind === "ai" ? AI_MODEL : AI_PLUS_MODEL;
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model,
-        ...aiPlusOptions(model, data.kind),
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: prompt },
-        ],
-      }),
+    const res = await chatCompletion(apiKey, {
+      model,
+      ...aiPlusOptions(model, data.kind),
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: prompt },
+      ],
     });
-    if (res.status === 429) throw new Error("AI is busy right now. Please try again shortly.");
     if (res.status === 402) {
       const { alertLowFunds } = await import("@/lib/opsAlerts.server");
       void alertLowFunds("OpenAI", 402);
       throw new Error("AI credits are exhausted for this workspace — support has been notified.");
     }
-    if (!res.ok) throw new Error("AI request failed");
+    if (!res.ok) throw new Error(await aiFailureMessage(res));
     const json = (await res.json()) as { choices: { message: { content: string } }[] };
     const output = json.choices?.[0]?.message?.content ?? "";
 
