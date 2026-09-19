@@ -25,61 +25,18 @@ function aiPlusOptions(model: string, kind: "ai" | "ai_plus" = "ai_plus") {
   };
 }
 
-/** Calls the configured OpenAI account. Only transient 429 and 5xx responses are retried with
- * bounded backoff; an exhausted account is terminal and returned immediately. */
+/** Calls the configured OpenAI account through the shared helper, so transient request limits are
+ * retried and failures are worded the same way everywhere. */
 async function chatCompletion(apiKey: string, body: unknown): Promise<Response> {
-  const delays = [1000, 3000, 7000];
-  const call = () =>
-    fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-
-  let res = await call();
-  for (const base of delays) {
-    if (res.status !== 429 && res.status < 500) break;
-    if (res.status === 429) {
-      const payload = (await res.clone().json().catch(() => null)) as
-        | { error?: { code?: string; type?: string } }
-        | null;
-      const code = payload?.error?.code ?? payload?.error?.type;
-      if (code === "insufficient_quota" || code === "billing_hard_limit_reached") break;
-    }
-    const retryAfter = Number(res.headers.get("retry-after"));
-    const wait = Number.isFinite(retryAfter) && retryAfter > 0
-      ? Math.min(retryAfter * 1000, 10000)
-      : base + Math.floor(Math.random() * 400);
-    await new Promise((r) => setTimeout(r, wait));
-    res = await call();
-  }
-  return res;
+  const { callOpenAiChat } = await import("@/lib/openaiCall.server");
+  return callOpenAiChat(apiKey, body);
 }
 
 async function aiFailureMessage(res: Response): Promise<string> {
-  let message = "AI request failed. Please try again later.";
-  try {
-    const payload = (await res.clone().json()) as {
-      message?: string;
-      type?: string;
-      error?: { message?: string; type?: string; code?: string };
-    };
-    if (payload.error?.message?.trim()) message = payload.error.message.trim();
-    else if (payload.message?.trim()) message = payload.message.trim();
-    const code = payload.error?.code ?? payload.error?.type ?? payload.type;
-    if (code === "insufficient_quota" || code === "billing_hard_limit_reached") {
-      return "The OpenAI account has no available credits or has reached its usage limit. Top up the OpenAI account, then try again.";
-    }
-  } catch {
-    // Keep the safe fallback when the provider did not return JSON.
-  }
-  if (res.status === 429) return "AI is busy right now. Please try again shortly.";
-  if (res.status === 401) return "The saved OpenAI API key was rejected. Update it in Admin → Integrations, then try again.";
-  return message;
+  const { openAiFailureMessage } = await import("@/lib/openaiCall.server");
+  return openAiFailureMessage(res);
 }
+
 
 /** How many open-web surfaces each tier reads through Firecrawl. */
 const SOURCE_LIMIT = { ai: 3, ai_plus: 6 } as const;
