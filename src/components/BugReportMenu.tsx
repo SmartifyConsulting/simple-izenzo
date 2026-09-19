@@ -62,8 +62,34 @@ const TYPE_META: Record<ReportType, { icon: typeof Bug | null; border: string; l
 
 const IMAGE_NAME = /\.(png|jpe?g|webp|gif|heic|heif)$/i;
 
-function bucketUrl(path: string) {
-  return supabase.storage.from("bug-report-images").getPublicUrl(path).data.publicUrl;
+/** A short-lived signed link, so attachments open whether the bucket is public or private. */
+async function signedUrl(path: string): Promise<string> {
+  const { data, error } = await supabase.storage.from("bug-report-images").createSignedUrl(path, 3600);
+  if (error || !data) throw new Error(error?.message ?? "Could not open this attachment.");
+  return data.signedUrl;
+}
+
+function AttachmentThumb({ path, onOpen }: { path: string; onOpen: (path: string) => void }) {
+  const { data: url, isError } = useQuery({
+    queryKey: ["bug-attachment-url", path],
+    staleTime: 30 * 60 * 1000,
+    queryFn: () => signedUrl(path),
+  });
+  return (
+    <button type="button" onClick={() => onOpen(path)} className="shrink-0" title="View screenshot">
+      {url ? (
+        <img
+          src={url}
+          alt="Attached screenshot"
+          className="h-16 w-16 rounded-md border border-border object-cover transition-opacity hover:opacity-80"
+        />
+      ) : (
+        <span className="flex h-16 w-16 items-center justify-center rounded-md border border-border text-muted-foreground">
+          {isError ? <ImageIcon className="h-5 w-5" /> : <Loader2 className="h-4 w-4 animate-spin" />}
+        </span>
+      )}
+    </button>
+  );
 }
 
 /** Every attachment a report has on file — the legacy single image_path (pre-modal reports) plus
@@ -139,6 +165,16 @@ export function BugReportMenu() {
   // Full-size look at one attachment — the thumbnail grid is too small to actually read a
   // screenshot.
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  async function openAttachment(path: string) {
+    try {
+      const url = await signedUrl(path);
+      if (IMAGE_NAME.test(path)) setPreviewUrl(url);
+      else window.open(url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  }
 
   const submitMutation = useMutation({
     mutationFn: async ({ title, via, files }: { title: string; via: "typed" | "voice"; files: File[] }) => {
@@ -413,30 +449,17 @@ export function BugReportMenu() {
                     <div className="mt-1 flex flex-wrap gap-1.5">
                       {attachments.map((path, i) =>
                         IMAGE_NAME.test(path) ? (
+                          <AttachmentThumb key={i} path={path} onOpen={(p) => void openAttachment(p)} />
+                        ) : (
                           <button
                             key={i}
                             type="button"
-                            onClick={() => setPreviewUrl(bucketUrl(path))}
-                            className="shrink-0"
-                            title="View screenshot"
-                          >
-                            <img
-                              src={bucketUrl(path)}
-                              alt="Attached screenshot"
-                              className="h-16 w-16 rounded-md border border-border object-cover transition-opacity hover:opacity-80"
-                            />
-                          </button>
-                        ) : (
-                          <a
-                            key={i}
-                            href={bucketUrl(path)}
-                            target="_blank"
-                            rel="noreferrer"
+                            onClick={() => void openAttachment(path)}
                             className="flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] text-foreground hover:border-primary/50"
                           >
                             <FileText className="h-3 w-3 shrink-0" />
                             {path.split("/").slice(1).join("/")}
-                          </a>
+                          </button>
                         ),
                       )}
                     </div>
