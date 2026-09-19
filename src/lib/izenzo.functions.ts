@@ -1003,10 +1003,12 @@ export const classifyDocument = createServerFn({ method: "POST" })
     if (!apiKey) return { docType: fallbackType, directionGuess: fallbackDirection, source: "heuristic" as const };
 
     try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
+      // Filename heuristics below cover this completely, so it gives up at once on a busy
+      // account rather than using up the few requests a free OpenAI account allows per minute.
+      const { callOpenAiChat } = await import("@/lib/openaiCall.server");
+      const res = await callOpenAiChat(
+        apiKey,
+        {
           model: "gpt-5-mini",
           messages: [
             {
@@ -1017,8 +1019,10 @@ export const classifyDocument = createServerFn({ method: "POST" })
             },
             { role: "user", content: data.filename },
           ],
-        }),
-      });
+        },
+        { retries: 0 },
+      );
+
       if (!res.ok) return { docType: fallbackType, directionGuess: fallbackDirection, source: "heuristic" as const };
       const json = (await res.json()) as { choices: { message: { content: string } }[] };
       const raw = (json.choices?.[0]?.message?.content ?? "").trim().toLowerCase();
