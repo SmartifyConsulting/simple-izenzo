@@ -174,42 +174,35 @@ async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
     // One retry with a stricter instruction, so a reply that came back in the wrong shape isn't
     // treated as an unreadable document.
     async function ask(extra: string) {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "gpt-5-mini",
-          messages: [
-            {
-              role: "system",
-              content:
-                "You read trade documents (IDs, contracts, invoices, spec sheets, spreadsheets) and extract " +
-                "deal details precisely. Reply with raw JSON only — no markdown fences, no commentary." +
-                extra,
-            },
-            { role: "user", content: [{ type: "text", text: instruction + extra }, ...parts] },
-          ],
-        }),
+      const { callOpenAiChat, openAiFailureMessage } = await import("@/lib/openaiCall.server");
+      // Reading the documents is the request that matters, so it gets the full retry budget: a
+      // free OpenAI account's per-minute limit usually clears within a few seconds.
+      const res = await callOpenAiChat(apiKey!, {
+        model: "gpt-5-mini",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You read trade documents (IDs, contracts, invoices, spec sheets, spreadsheets) and extract " +
+              "deal details precisely. Reply with raw JSON only — no markdown fences, no commentary." +
+              extra,
+          },
+          { role: "user", content: [{ type: "text", text: instruction + extra }, ...parts] },
+        ],
       });
-      if (res.status === 429) {
-        const body = await res.text().catch(() => "");
+      if (!res.ok) {
+        const body = await res.clone().text().catch(() => "");
         const { isOpenAiQuotaExceeded } = await import("@/lib/openai.server");
         if (isOpenAiQuotaExceeded(body)) {
           const { alertLowFunds } = await import("@/lib/opsAlerts.server");
-          void alertLowFunds("OpenAI", 429, body);
-          throw new Error("AI credits are exhausted for this workspace — support has been notified.");
+          void alertLowFunds("OpenAI", res.status, body);
         }
-        throw new Error("AI is busy right now. Please try again shortly.");
-      }
-      if (!res.ok) {
-        const body = await res.text().catch(() => "");
-        throw new Error(
-          `The documents could not be read just now (${res.status}). ${body.slice(0, 300)}`.trim(),
-        );
+        throw new Error(await openAiFailureMessage(res));
       }
       const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
       return (json.choices?.[0]?.message?.content ?? "").trim();
     }
+
 
     let parsed = parseReply(await ask(""));
     if (parsed.bullets.length === 0) {
