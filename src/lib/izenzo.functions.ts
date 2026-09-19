@@ -922,10 +922,12 @@ export const extractMaterialTerms = createServerFn({ method: "POST" })
     ].join("\n");
 
     try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
+      // This has a safe fallback below, so it never spends the retry budget a free OpenAI
+      // account allows — the document read is what needs those retries.
+      const { callOpenAiChat } = await import("@/lib/openaiCall.server");
+      const res = await callOpenAiChat(
+        apiKey,
+        {
           model: AI_MODEL,
           ...aiPlusOptions(AI_MODEL, "ai"),
           messages: [
@@ -936,8 +938,10 @@ export const extractMaterialTerms = createServerFn({ method: "POST" })
             },
             { role: "user", content: prompt },
           ],
-        }),
-      });
+        },
+        { retries: 0 },
+      );
+
       if (!res.ok) return { terms: fallback, source: "fallback" as const };
       const json = (await res.json()) as { choices: { message: { content: string } }[] };
       const raw = (json.choices?.[0]?.message?.content ?? "").trim();
