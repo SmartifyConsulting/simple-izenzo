@@ -68,17 +68,25 @@ const STAGES = [
   },
 ];
 
+// A signed-in visitor who lands on the site's address is sent to the workspace once, on that first
+// load. After that, choosing Home from inside the app must actually show the home page.
+let sentToWorkspaceOnLoad = false;
+
 function AlphaBravoHome() {
   const { user, loading } = useAuth();
   const { next } = Route.useSearch();
   const navigate = useNavigate();
 
-  // Signed-in visitors go straight to the workspace; a signed-out visitor carrying an intended
-  // destination is sent to sign in so they return to the page they were trying to open.
+  // A signed-in visitor arriving here for the first time goes straight to the workspace (or the
+  // page they were heading to); one who clicked Home from inside the app stays. A signed-out
+  // visitor carrying an intended destination is sent to sign in so they return to it.
   useEffect(() => {
     if (loading) return;
     if (user) {
-      navigate({ to: safeNext(next), replace: true });
+      if (next || !sentToWorkspaceOnLoad) {
+        sentToWorkspaceOnLoad = true;
+        navigate({ to: safeNext(next), replace: true });
+      }
       return;
     }
     if (next) navigate({ to: "/auth", search: { next }, replace: true });

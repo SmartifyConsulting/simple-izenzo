@@ -477,50 +477,66 @@ export const runDecisionPack = createServerFn({ method: "POST" })
       rejected = external.rejected;
       model = external.model;
     } else {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: AI_PLUS_MODEL,
-          reasoning_effort: "high",
-          max_completion_tokens: 4000,
-          response_format: { type: "json_object" },
-          messages: [
-            { role: "system", content: system },
-            { role: "user", content: prompt },
-          ],
-        }),
-      });
-      if (res.status === 429) {
-        const body = await res.text().catch(() => "");
-        const { isOpenAiQuotaExceeded } = await import("@/lib/openai.server");
-        if (isOpenAiQuotaExceeded(body)) {
-          const { alertLowFunds } = await import("@/lib/opsAlerts.server");
-          void alertLowFunds("OpenAI", 429, body);
-          throw new Error("AI credits are exhausted for this workspace — support has been notified.");
+      // A reasoning model spends part of its token budget thinking; too small a budget leaves the
+      // visible answer empty, and it sometimes wraps its JSON in a code fence. So the budget is
+      // generous, the reply is read leniently, and one unreadable/empty reply is retried at a lower
+      // reasoning effort before giving up.
+      const askOnce = async (effort: "high" | "medium"): Promise<string> => {
+        const res = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: AI_PLUS_MODEL,
+            reasoning_effort: effort,
+            max_completion_tokens: 16000,
+            response_format: { type: "json_object" },
+            messages: [
+              { role: "system", content: system },
+              { role: "user", content: prompt },
+            ],
+          }),
+        });
+        if (res.status === 429) {
+          const body = await res.text().catch(() => "");
+          const { isOpenAiQuotaExceeded } = await import("@/lib/openai.server");
+          if (isOpenAiQuotaExceeded(body)) {
+            const { alertLowFunds } = await import("@/lib/opsAlerts.server");
+            void alertLowFunds("OpenAI", 429, body);
+            throw new Error("AI credits are exhausted for this workspace — support has been notified.");
+          }
+          throw new Error("AI is busy right now. Please try again shortly.");
         }
-        throw new Error("AI is busy right now. Please try again shortly.");
-      }
-      if (res.status === 403) {
-        const body = await res.text();
-        throw new Error(
-          body.includes("credit_limit_reached")
-            ? "The workspace AI spending limit has been reached, so AI+ cannot run. A workspace admin needs to raise the limit."
-            : `AI+ analysis was blocked: ${body.slice(0, 300)}`,
-        );
-      }
-      if (!res.ok) {
-        const body = await res.text();
-        throw new Error(`AI+ analysis failed (${res.status}). ${body.slice(0, 300)}`);
-      }
+        if (res.status === 403) {
+          const body = await res.text();
+          throw new Error(
+            body.includes("credit_limit_reached")
+              ? "The workspace AI spending limit has been reached, so AI+ cannot run. A workspace admin needs to raise the limit."
+              : `AI+ analysis was blocked: ${body.slice(0, 300)}`,
+          );
+        }
+        if (!res.ok) {
+          const body = await res.text();
+          throw new Error(`AI+ analysis failed (${res.status}). ${body.slice(0, 300)}`);
+        }
 
-      const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-      const content = json.choices?.[0]?.message?.content ?? "";
-      let raw: RawProposal[] = [];
-      try {
-        const parsed = JSON.parse(content) as { proposals?: RawProposal[] };
-        raw = Array.isArray(parsed.proposals) ? parsed.proposals : [];
-      } catch {
+        const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+        return json.choices?.[0]?.message?.content ?? "";
+      };
+      const readProposals = (content: string): RawProposal[] | null => {
+        const body = content.replace(/^\s*```(?:json)?/i, "").replace(/```\s*$/, "").trim();
+        const start = body.indexOf("{");
+        const end = body.lastIndexOf("}");
+        if (start < 0 || end <= start) return null;
+        try {
+          const parsed = JSON.parse(body.slice(start, end + 1)) as { proposals?: RawProposal[] };
+          return Array.isArray(parsed.proposals) ? parsed.proposals : null;
+        } catch {
+          return null;
+        }
+      };
+      let raw = readProposals(await askOnce("high"));
+      if (!raw || raw.length === 0) raw = readProposals(await askOnce("medium"));
+      if (!raw) {
         throw new Error("AI+ returned an analysis that could not be read. Please run it again.");
       }
       const validated = validate(raw);

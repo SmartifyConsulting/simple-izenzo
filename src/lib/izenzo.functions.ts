@@ -22,7 +22,7 @@ function aiPlusOptions(model: string, kind: "ai" | "ai_plus" = "ai_plus") {
   if (model !== "gpt-6-astra") return {};
   return {
     reasoning_effort: (kind === "ai" ? "low" : "high") as "low" | "high",
-    max_completion_tokens: kind === "ai" ? 2000 : 4000,
+    max_completion_tokens: kind === "ai" ? 8000 : 16000,
   };
 }
 
