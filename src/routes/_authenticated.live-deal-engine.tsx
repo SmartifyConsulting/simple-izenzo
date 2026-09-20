@@ -46,6 +46,7 @@ const ClassicView = lazy(() =>
 const MapView = lazy(() => import("@/components/canvas/MapView").then((m) => ({ default: m.MapView })));
 import { DocumentUploadStep } from "@/components/guided/DocumentUploadStep";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -302,6 +303,11 @@ function LiveDealEngine() {
   const [flowStep, setFlowStep] = useState<FlowStep>("documents");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
+  // Set when a search finished and found nothing relevant, so Bid Information can show what was
+  // searched for and let the person refine it instead of implying a search is still running.
+  const [noMatchesTx, setNoMatchesTx] = useState<string | null>(null);
+  const [refineText, setRefineText] = useState("");
+  const [refining, setRefining] = useState(false);
   const [screening, setScreening] = useState(false);
   const [screeningResults, setScreeningResults] = useState<ScreeningResult[] | null>(null);
   const [mediaRunning, setMediaRunning] = useState(false);
@@ -1656,6 +1662,23 @@ function LiveDealEngine() {
     );
   }
 
+  /** Saves the edited search string onto the bid and runs the search again on it. */
+  async function refineSearch(txId: string) {
+    const text = refineText.trim();
+    if (!text) return;
+    setRefining(true);
+    try {
+      const { error } = await supabase.from("transactions").update({ search_prompt: text }).eq("id", txId);
+      if (error) {
+        toast.error(`Your search could not be saved: ${error.message}`);
+        return;
+      }
+      await runSearch(txId);
+    } finally {
+      setRefining(false);
+    }
+  }
+
   /** "Find Counterparties" — runs the AI/AI+ search. Online media screening comes later, only once
    * a person has made their choice and continued. */
   async function fetchInterest(txId: string) {
@@ -1669,6 +1692,8 @@ function LiveDealEngine() {
     setFlowStep("searching");
 
     setSearchError(null);
+    setNoMatchesTx(null);
+    let failure: string | null = null;
     // Marks Upload Documents done and moves the active step onto Search the moment the search
     // actually starts — previously this only advanced once AI/AI+ succeeded, so a failed search
     // (e.g. the counterparty provider being unreachable) left Documents stuck showing as still in
@@ -1694,7 +1719,8 @@ function LiveDealEngine() {
       setDealTx((prev) => (prev ? { ...prev, stage: "trading", step: "choice" } : prev));
     } catch (err) {
       await minDuration;
-      setSearchError((err as Error).message);
+      failure = (err as Error).message;
+      setSearchError(failure);
     } finally {
       setFlowStep("results");
       // The candidates are written server-side, so the Record panel's cached (empty) list has to
@@ -1707,6 +1733,17 @@ function LiveDealEngine() {
       await queryClient.invalidateQueries({ queryKey: ["counterparties-count", txId] });
       // Counterparties found: fold Bid Information away so the results list gets the room.
       if ((count ?? 0) > 0) setBidInfoCollapsed(txId, true);
+      // Nothing relevant came back: keep Bid Information open, showing the search string to refine.
+      else if (!failure || failure.startsWith("No organisations relevant")) {
+        const { data: fresh } = await supabase
+          .from("transactions")
+          .select("search_prompt")
+          .eq("id", txId)
+          .maybeSingle();
+        setRefineText(((fresh as { search_prompt?: string | null } | null)?.search_prompt ?? "").trim());
+        setNoMatchesTx(txId);
+        setBidInfoCollapsed(txId, false);
+      }
       // Online media screening deliberately does NOT start here — Choice comes first. It runs from
       // the Record panel's tick-and-continue, once a person has picked their counterparties.
     }
@@ -2178,6 +2215,36 @@ function LiveDealEngine() {
                     : ""}
                 </p>
               )}
+              {noMatchesTx === dealTx.id && flowStep !== "searching" && (
+                <div className="space-y-1.5 rounded-lg border border-border bg-muted/30 p-2.5">
+                  <p className="text-xs font-semibold text-foreground">No matches found</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Nothing relevant came back for this search. Add more words — a product, place, size
+                    or quantity — and search again.
+                  </p>
+                  <Textarea
+                    rows={2}
+                    value={refineText}
+                    onChange={(e) => setRefineText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        if (!refining && refineText.trim()) void refineSearch(dealTx.id);
+                      }
+                    }}
+                    disabled={refining}
+                    className="min-h-0 resize-none text-sm"
+                  />
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    disabled={refining || refineText.trim().length === 0}
+                    onClick={() => void refineSearch(dealTx.id)}
+                  >
+                    Search again
+                  </Button>
+                </div>
+              )}
               {documentSummary ? (
                 <ul className="mt-1 space-y-1 text-xs leading-relaxed text-foreground">
                   {documentSummary
@@ -2231,7 +2298,7 @@ function LiveDealEngine() {
                     {rereading ? "Reading…" : "Try again"}
                   </Button>
                 </div>
-              ) : workspaceDocs.length === 0 ? (
+              ) : workspaceDocs.length === 0 && noMatchesTx === dealTx.id ? null : workspaceDocs.length === 0 ? (
                 /* Submitted with no documents at all — there is nothing to read, so the search on
                    the typed Search field runs immediately instead of showing a "reading" state
                    that would never resolve. */
@@ -2465,7 +2532,7 @@ function LiveDealEngine() {
                     </button>
                     {searchResultsOpen && (
                     <div className="space-y-2 px-3.5 pb-3">
-                    {searchError && (
+                    {searchError && noMatchesTx !== dealTx.id && (
                       <p className="text-xs text-destructive">Search failed: {searchError}</p>
                     )}
                     <CounterpartyRecord
