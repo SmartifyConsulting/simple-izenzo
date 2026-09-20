@@ -20,6 +20,7 @@ import {
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { sealProofOfIntent, completeWad, runAiProposal, searchCounterparties, extractMaterialTerms } from "@/lib/izenzo.functions";
+import { sourceLabel, userFacingText } from "@/lib/userFacingText";
 import { type ScreeningCheck } from "@/lib/screening.functions";
 import { listIntentMessages, postIntentMessage } from "@/lib/intentChallenge.functions";
 import { emitAiPlusSpineEvent, type StageContext } from "@/lib/decisionPack.functions";
@@ -823,14 +824,14 @@ function SearchStep({ tx, reload }: Props) {
                       </Badge>
                     )}
                     <Badge variant="secondary" className="font-normal">
-                      {c.source ?? "manual"}
+                      {sourceLabel(c.source)}
                     </Badge>
                   </div>
                 </div>
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   {[c.jurisdiction, c.sector].filter(Boolean).join(" · ")}
                 </p>
-                {c.rationale && <p className="mt-1 text-xs text-muted-foreground">{c.rationale}</p>}
+                {userFacingText(c.rationale) && <p className="mt-1 text-xs text-muted-foreground">{userFacingText(c.rationale)}</p>}
                 <EvidenceLink flags={c.media_flags} />
               </li>
             ))}
@@ -1079,8 +1080,8 @@ function RatingDrawer({
       </summary>
       <div className="mt-1.5 space-y-1 rounded-md bg-muted/40 p-2.5 text-xs text-muted-foreground">
         <p>Score: {c.score ?? "—"}</p>
-        <p>Source: {c.source ?? "—"}</p>
-        {c.rationale && <p>Rationale: {c.rationale}</p>}
+        <p>Found: {sourceLabel(c.source)}</p>
+        {userFacingText(c.rationale) && <p>Why it fits: {userFacingText(c.rationale)}</p>}
         <p>Methodology: {c.rating_version}</p>
         {c.rating_override && (
           <p className="text-warning">
@@ -1128,7 +1129,7 @@ function CounterpartyList({ tx, reload }: Props) {
               <div className="min-w-0">
                 <p className="text-sm font-medium">{c.name}</p>
                 <p className="text-xs text-muted-foreground">
-                  {c.jurisdiction ?? "—"} · surfaced by {c.source ?? "search"}
+                  {c.jurisdiction ?? "—"} · {sourceLabel(c.source)}
                 </p>
                 <RatingDrawer c={c} />
               </div>

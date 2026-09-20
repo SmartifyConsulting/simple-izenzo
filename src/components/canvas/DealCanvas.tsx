@@ -62,6 +62,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, type Profile } from "@/lib/auth";
+import { sourceLabel } from "@/lib/userFacingText";
 import { ensureOrg } from "@/lib/org";
 import { FLAT_STEPS, lockReason, stepDef, stepIndex, type StageKey } from "@/lib/spine";
 import { advance, money, recordEvent, when, type Transaction, type TxEvent } from "@/lib/tx";
@@ -1561,7 +1562,7 @@ export function CounterpartyRecord({
                   )}
                 </span>
                 <span className="block text-[11px] text-slate-500">
-                  {[c.jurisdiction, c.sector].filter(Boolean).join(" · ") || (c.source ?? "manual")}
+                  {[c.jurisdiction, c.sector].filter(Boolean).join(" · ") || sourceLabel(c.source)}
                 </span>
                 {(c.website || c.contact_email || c.phone) && (
                   <span className="mt-0.5 block truncate text-[11px] text-slate-400">

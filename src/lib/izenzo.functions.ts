@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { POI_COST, WAD_COST } from "@/lib/spine";
+import { userFacingText } from "@/lib/userFacingText";
 
 async function sha256(input: string) {
   const bytes = new TextEncoder().encode(input);
@@ -331,7 +332,7 @@ async function groundOnWeb(query: string, kind: "ai" | "ai_plus") {
 
 
 const GROUNDING_RULES =
-  "You are given the visible text of real web and marketplace search pages. Only return organisations that actually appear in that text. Never invent a company. For each one, set sourceUrl to the URL of the SOURCE block it came from.";
+  "Write every rationale and sector only about the organisation and how its products or services fit what the person asked for — never mention AI, AI+, Izenzo, models, searching, scoring, sources or how this list was produced. You are given the visible text of real web and marketplace search pages. Only return organisations that actually appear in that text. Never invent a company. For each one, set sourceUrl to the URL of the SOURCE block it came from.";
 
 function parseCandidates(raw: string): CandidateResult[] {
   const match = raw.match(/\[[\s\S]*\]/);
@@ -344,9 +345,9 @@ function parseCandidates(raw: string): CandidateResult[] {
       .map((c) => ({
         name: String(c["name"] ?? "").slice(0, 200),
         jurisdiction: c["jurisdiction"] ? String(c["jurisdiction"]).slice(0, 200) : undefined,
-        sector: c["sector"] ? String(c["sector"]).slice(0, 200) : undefined,
+        sector: userFacingText(c["sector"] ? String(c["sector"]).slice(0, 200) : null) ?? undefined,
         score: typeof c["score"] === "number" ? c["score"] : undefined,
-        rationale: c["rationale"] ? String(c["rationale"]).slice(0, 500) : undefined,
+        rationale: userFacingText(c["rationale"] ? String(c["rationale"]).slice(0, 500) : null) ?? undefined,
         sourceUrl:
           typeof c["sourceUrl"] === "string" && /^https?:\/\//.test(c["sourceUrl"])
             ? c["sourceUrl"].slice(0, 500)
@@ -411,7 +412,7 @@ function scoreCandidate(
       max: 15,
       note: ctx.verified ? "Identity confirmed through the app" : "Not verified through the app yet",
     },
-    { label: "Izenzo AI read", points: read, max: 15, note: c.rationale ?? "No note" },
+    { label: "Fit with your request", points: read, max: 15, note: c.rationale ?? "No note" },
   ];
 
   return { total: components.reduce((sum, k) => sum + k.points, 0), components };

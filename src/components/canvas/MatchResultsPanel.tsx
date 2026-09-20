@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { dedupeOrgs } from "@/lib/dedupeOrgs";
+import { userFacingText } from "@/lib/userFacingText";
 
 const BAND_LABEL = {
   verified: "Verified",
@@ -75,8 +76,11 @@ export function MatchResultsPanel({
             scoring?: Scoring;
             evidence?: { url?: string }[];
           };
-          const reason =
-            flags.scoring?.components?.find((k) => k.label === "Izenzo AI read")?.note ?? null;
+          const reason = userFacingText(
+            flags.scoring?.components?.find(
+              (k) => k.label === "Fit with your request" || k.label === "Izenzo AI read",
+            )?.note ?? null,
+          );
           return {
             id: c.id as string,
             name: c.name as string,
