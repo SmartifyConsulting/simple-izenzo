@@ -30,3 +30,27 @@ export const readDocument = createServerFn({ method: "POST" })
       contentType: file.type || "application/octet-stream",
     };
   });
+
+/** Same idea as readDocument, for the bug-report attachments bucket: the browser only ever talks to
+ * this app, never the storage host that some browsers/extensions block. */
+export const readBugAttachment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ path: z.string().min(1) }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { data: file, error } = await context.supabase.storage
+      .from("bug-report-images")
+      .download(data.path);
+    if (error || !file) throw new Error(error?.message ?? "This attachment could not be read.");
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    if (bytes.byteLength > MAX_BYTES) {
+      throw new Error("This file is too large to open here.");
+    }
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += 8192) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+    }
+    return {
+      base64: btoa(binary),
+      contentType: file.type || "application/octet-stream",
+    };
+  });

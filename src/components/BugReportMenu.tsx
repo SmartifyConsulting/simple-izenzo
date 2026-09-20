@@ -1,5 +1,6 @@
 import { useRef, useState, type ClipboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import {
   Bug,
   CheckCircle2,
@@ -37,6 +38,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { transcribeBugReport } from "@/lib/bugReport.functions";
+import { readBugAttachment } from "@/lib/documents.functions";
 
 type ReportType = "bug" | "fix" | "nice_to_have";
 
@@ -62,18 +64,30 @@ const TYPE_META: Record<ReportType, { icon: typeof Bug | null; border: string; l
 
 const IMAGE_NAME = /\.(png|jpe?g|webp|gif|heic|heif)$/i;
 
-/** A short-lived signed link, so attachments open whether the bucket is public or private. */
-async function signedUrl(path: string): Promise<string> {
-  const { data, error } = await supabase.storage.from("bug-report-images").createSignedUrl(path, 3600);
-  if (error || !data) throw new Error(error?.message ?? "Could not open this attachment.");
-  return data.signedUrl;
+type ReadAttachment = (args: { data: { path: string } }) => Promise<{ base64: string; contentType: string }>;
+
+const attachmentUrlCache = new Map<string, string>();
+
+/** Reads the file through this app's own server (never the storage host, which some browsers and
+ * extensions block outright) and hands back a local address the page can show or download. */
+async function attachmentUrl(read: ReadAttachment, path: string): Promise<string> {
+  const cached = attachmentUrlCache.get(path);
+  if (cached) return cached;
+  const { base64, contentType } = await read({ data: { path } });
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  const url = URL.createObjectURL(new Blob([bytes], { type: contentType }));
+  attachmentUrlCache.set(path, url);
+  return url;
 }
 
 function AttachmentThumb({ path, onOpen }: { path: string; onOpen: (path: string) => void }) {
+  const read = useServerFn(readBugAttachment);
   const { data: url, isError } = useQuery({
     queryKey: ["bug-attachment-url", path],
     staleTime: 30 * 60 * 1000,
-    queryFn: () => signedUrl(path),
+    queryFn: () => attachmentUrl(read, path),
   });
   return (
     <button type="button" onClick={() => onOpen(path)} className="shrink-0" title="View screenshot">
@@ -166,11 +180,18 @@ export function BugReportMenu() {
   // screenshot.
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
+  const readAttachment = useServerFn(readBugAttachment);
   async function openAttachment(path: string) {
     try {
-      const url = await signedUrl(path);
-      if (IMAGE_NAME.test(path)) setPreviewUrl(url);
-      else window.open(url, "_blank", "noopener,noreferrer");
+      const url = await attachmentUrl(readAttachment, path);
+      if (IMAGE_NAME.test(path)) {
+        setPreviewUrl(url);
+      } else {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = path.split("/").slice(1).join("/") || "attachment";
+        a.click();
+      }
     } catch (err) {
       toast.error((err as Error).message);
     }
