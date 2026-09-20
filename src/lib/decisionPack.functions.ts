@@ -12,7 +12,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
  * proposal, and that adoption is its own attributed, timestamped, append-only event.
  */
 
-const AI_PLUS_MODEL = "gpt-5";
+const AI_PLUS_MODEL = "gpt-6-astra";
 
 export const PROPOSAL_TYPES = [
   "counterparty",

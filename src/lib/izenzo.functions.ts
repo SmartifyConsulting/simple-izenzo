@@ -14,12 +14,12 @@ async function sha256(input: string) {
 
 const txInput = (data: unknown) => z.object({ transactionId: z.string().uuid() }).parse(data);
 
-/** Both tiers use the configured OpenAI account. They differ by reasoning depth and source count. */
-const AI_MODEL = "gpt-5";
-const AI_PLUS_MODEL = "gpt-5";
+/** Both tiers run on GPT-6 Astra on the configured OpenAI account. They differ by reasoning depth and source count. */
+const AI_MODEL = "gpt-6-astra";
+const AI_PLUS_MODEL = "gpt-6-astra";
 
 function aiPlusOptions(model: string, kind: "ai" | "ai_plus" = "ai_plus") {
-  if (model !== "gpt-5") return {};
+  if (model !== "gpt-6-astra") return {};
   return {
     reasoning_effort: (kind === "ai" ? "low" : "high") as "low" | "high",
     max_completion_tokens: kind === "ai" ? 2000 : 4000,

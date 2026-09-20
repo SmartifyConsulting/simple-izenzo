@@ -223,7 +223,15 @@ export function DocumentUploadStep({
       // handleFiles saves the prompt itself before uploading, so both land together.
       void handleFiles(initialFiles);
     } else if (initialPrompt && initialPrompt.trim()) {
-      void savePrompt();
+      // The description was already submitted on the starting card (Enter or the go button), so
+      // this frame must not ask again — save it and go straight to the search, exactly as if a
+      // document had been attached.
+      setSubmitted(true);
+      onSubmitted?.();
+      void (async () => {
+        await savePrompt();
+        await next();
+      })();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
