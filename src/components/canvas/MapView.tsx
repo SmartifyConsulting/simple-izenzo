@@ -471,6 +471,14 @@ export function MapView({
   );
 
   const memoryState = st("memory", "ledger");
+  // Memory is fed continuously from the moment the counterparty choice has been made until Step 4
+  // (Finality) is complete — a clockwise sweep round its rim shows that it is constantly updating
+  // while the process is underway.
+  const memoryUpdating =
+    Boolean(tx) &&
+    tx!.stage !== "memory" &&
+    !tx!.finality_sealed_at &&
+    stepIndex(tx!.stage, tx!.step) > stepIndex("trading", "choice");
 
   return (
     <div className="relative h-full w-full">
@@ -600,6 +608,36 @@ export function MapView({
           {/* Aligned with the Finality → Memory arrow, which enters this circle at its exact
               vertical centre — not just centred within whatever space is left under the Step 5
               pill. */}
+          {memoryUpdating && (
+            <svg
+              aria-hidden
+              viewBox="0 0 100 100"
+              className="pointer-events-none absolute -inset-[7px] h-[calc(100%+14px)] w-[calc(100%+14px)] animate-spin [animation-duration:3s]"
+            >
+              <circle
+                cx="50"
+                cy="50"
+                r="48.5"
+                fill="none"
+                stroke="rgb(245 158 11)"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                pathLength="100"
+                strokeDasharray="28 72"
+              />
+              <circle
+                cx="50"
+                cy="50"
+                r="48.5"
+                fill="none"
+                stroke="rgb(245 158 11)"
+                strokeOpacity="0.35"
+                strokeWidth="1"
+                pathLength="100"
+                strokeDasharray="2 6"
+              />
+            </svg>
+          )}
           <span className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 whitespace-nowrap">
             <Database className={cn("h-3.5 w-3.5 shrink-0", memoryState === "open" && "text-primary")} />
             <span className="text-[11px] font-medium leading-tight">Compounding CDA</span>
