@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useCanGoBack, useNavigate } from "@tanstack/react-router";
 import { Banknote, Database, Hammer, ShieldCheck, Sparkles, Target } from "lucide-react";
 import { HeroMatchCard } from "@/components/marketing/HeroMatchCard";
 import { SubmitBidButton } from "@/components/marketing/SubmitBidButton";
@@ -68,14 +68,12 @@ const STAGES = [
   },
 ];
 
-// A signed-in visitor who lands on the site's address is sent to the workspace once, on that first
-// load. After that, choosing Home from inside the app must actually show the home page.
-let sentToWorkspaceOnLoad = false;
-
 function AlphaBravoHome() {
   const { user, loading } = useAuth();
   const { next } = Route.useSearch();
   const navigate = useNavigate();
+  // True once the person has moved around inside the app, i.e. they chose to come here.
+  const cameFromInsideApp = useCanGoBack();
 
   // A signed-in visitor arriving here for the first time goes straight to the workspace (or the
   // page they were heading to); one who clicked Home from inside the app stays. A signed-out
@@ -83,13 +81,13 @@ function AlphaBravoHome() {
   useEffect(() => {
     if (loading) return;
     if (user) {
-      if (next || !sentToWorkspaceOnLoad) {
-        sentToWorkspaceOnLoad = true;
+      if (next || !cameFromInsideApp) {
         navigate({ to: safeNext(next), replace: true });
       }
       return;
     }
     if (next) navigate({ to: "/auth", search: { next }, replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, loading, next, navigate]);
 
   return (
