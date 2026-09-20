@@ -61,7 +61,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth, type Profile } from "@/lib/auth";
+import { useAuth } from "@/lib/auth";
 import { sourceLabel } from "@/lib/userFacingText";
 import { ensureOrg } from "@/lib/org";
 import { FLAT_STEPS, lockReason, stepDef, stepIndex, type StageKey } from "@/lib/spine";
@@ -1959,36 +1959,6 @@ export async function claimReference(direction: "bid" | "offer") {
   return nextReference(direction);
 }
 
-/** Copies the signed-in person's own Authority to Act document (captured once, at sign-up) onto
- * every bid/offer they register — it's already on file, so there's no reason to make them attach
- * it by hand each time. A copy, not a reference: the private `authority-to-act` bucket is scoped
- * to the profile's own folder, but a deal's documents need to be readable by whoever the deal
- * itself is shared with, so the file is re-hosted under the deal's own storage instead. */
-async function fileAuthorityToAct(transactionId: string, profile: Profile | null) {
-  if (!profile?.authority_to_act_path) return;
-  try {
-    const { data: blob, error: dlErr } = await supabase.storage
-      .from("authority-to-act")
-      .download(profile.authority_to_act_path);
-    if (dlErr || !blob) return;
-    const ext = profile.authority_to_act_path.split(".").pop() ?? "pdf";
-    const path = `deals/${transactionId}/${Date.now()}-authority-to-act.${ext}`;
-    const { error: upErr } = await supabase.storage
-      .from("documents")
-      .upload(path, blob, { contentType: blob.type || "application/octet-stream" });
-    if (upErr) return;
-    await supabase.from("documents").insert({
-      transaction_id: transactionId,
-      name: profile.authority_to_act_name ?? "Authority to Act",
-      doc_type: "authority-to-act",
-      notes: "Authority to Act",
-      storage_path: path,
-    } as never);
-  } catch {
-    // Best-effort only — a bid/offer must still be recorded even if this copy fails.
-  }
-}
-
 export function CanvasStart({
   onCreated,
   onPickingChange,
@@ -2128,10 +2098,6 @@ export function CanvasStart({
       };
       const { error: boError } = await supabase.from("bid_offers").insert(bidOfferRow as never);
       if (boError) throw boError;
-      // Filed against every bid/offer automatically — it's already on file from sign-up, so
-      // there's no reason to make someone attach it by hand each time. Best-effort: a copy
-      // failure here must never stop the bid/offer itself from being recorded.
-      void fileAuthorityToAct(newTx.id, profile);
       await recordEvent({
         transactionId: newTx.id,
         stage: "trading",
