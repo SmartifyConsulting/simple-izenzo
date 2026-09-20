@@ -262,9 +262,32 @@ async function listingSources() {
   }
 }
 
+/** Words that describe the act of searching rather than what is being searched for. */
+const GENERIC_TERMS = new Set([
+  "looking", "need", "want", "find", "seeking", "search", "supplier", "suppliers", "buyer",
+  "buyers", "seller", "sellers", "company", "companies", "trade", "trading", "project", "projects",
+]);
+
+/** The distinguishing terms of a query, reduced to a stem so a plural or a typo'd ending still
+ * matches ("prospcets" → "pros"). */
+function relevanceTerms(text: string): string[] {
+  return [...new Set([...keywords(text)].filter((w) => !GENERIC_TERMS.has(w)).map((w) => (w.length >= 5 ? w.slice(0, 4) : w.replace(/s$/, ""))))];
+}
+
+/** A result only belongs on screen if it has something to do with what was asked for: at least one
+ * of the query's terms (two, when the query has three or more) must appear in what is known about
+ * the organisation. Anything else is noise and is dropped rather than ranked low. */
+function isRelevant(c: CandidateResult, query: string): boolean {
+  const terms = relevanceTerms(query);
+  if (terms.length === 0) return true;
+  const haystack = [...keywords([c.name, c.sector ?? "", c.jurisdiction ?? "", c.rationale ?? ""].join(" "))];
+  const hits = terms.filter((t) => haystack.some((h) => h.startsWith(t))).length;
+  return hits >= (terms.length >= 3 ? 2 : 1);
+}
+
 /** Published directory listings turned straight into candidates. Used when the model returns
  * nothing from the fallback sources, so a search still yields real named organisations. */
-async function listingCandidates(limit = 6): Promise<CandidateResult[]> {
+async function listingCandidates(query: string, limit = 6): Promise<CandidateResult[]> {
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data } = await supabaseAdmin
@@ -273,16 +296,16 @@ async function listingCandidates(limit = 6): Promise<CandidateResult[]> {
       .eq("published", true)
       .eq("is_example", false)
       .order("verified_at", { ascending: false, nullsFirst: false })
-      .limit(limit);
+      .limit(200);
     return (data ?? []).map((r) => ({
       name: r.name,
       jurisdiction: r.jurisdiction ?? undefined,
       sector: r.sector ?? undefined,
-      rationale: r.summary
-        ? `From the Izenzo directory: ${String(r.summary).slice(0, 160)}`
-        : "From the Izenzo directory — the live web could not be read for this search.",
+      rationale: r.summary ? String(r.summary).slice(0, 160) : undefined,
       sourceUrl: r.source_url ?? undefined,
-    }));
+    }))
+      .filter((c) => isRelevant(c, query))
+      .slice(0, limit);
   } catch {
     return [];
   }
@@ -332,7 +355,7 @@ async function groundOnWeb(query: string, kind: "ai" | "ai_plus") {
 
 
 const GROUNDING_RULES =
-  "Write every rationale and sector only about the organisation and how its products or services fit what the person asked for — never mention AI, AI+, Izenzo, models, searching, scoring, sources or how this list was produced. You are given the visible text of real web and marketplace search pages. Only return organisations that actually appear in that text. Never invent a company. For each one, set sourceUrl to the URL of the SOURCE block it came from.";
+  "Write every rationale and sector only about the organisation and how its products or services fit what the person asked for — never mention AI, AI+, Izenzo, models, searching, scoring, sources or how this list was produced. You are given the visible text of real web and marketplace search pages. Only return organisations that actually appear in that text. Never invent a company. Only include an organisation that clearly trades in, or is directly connected to, what the person asked for (and the place, if they named one) — leave out anything unrelated, and return an empty array [] if nothing qualifies. For each one, set sourceUrl to the URL of the SOURCE block it came from.";
 
 function parseCandidates(raw: string): CandidateResult[] {
   const match = raw.match(/\[[\s\S]*\]/);
@@ -551,11 +574,11 @@ export const searchCounterparties = createServerFn({ method: "POST" })
     if (!res.ok) throw new Error(await aiFailureMessage(res));
     const json = (await res.json()) as { choices: { message: { content: string } }[] };
     const output = json.choices?.[0]?.message?.content ?? "";
-    let candidates = parseCandidates(output);
-    if (candidates.length === 0) candidates = await listingCandidates(6);
+    let candidates = parseCandidates(output).filter((c) => isRelevant(c, subject));
+    if (candidates.length === 0) candidates = await listingCandidates(subject, 6);
     if (candidates.length === 0)
       throw new Error(
-        "No matching organisations were found in the sources that were read, and the directory has no published listings to fall back on.",
+        "No organisations relevant to this search were found. Try rewording it or adding more detail.",
       );
 
     const source = data.kind === "ai" ? "ai_search" : "ai_plus_search";
@@ -713,8 +736,8 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
     if (!res.ok) throw new Error(await aiFailureMessage(res));
     const json = (await res.json()) as { choices: { message: { content: string } }[] };
     const output = json.choices?.[0]?.message?.content ?? "";
-    let candidates = parseCandidates(output);
-    if (candidates.length === 0) candidates = await listingCandidates(6);
+    let candidates = parseCandidates(output).filter((c) => isRelevant(c, data.query));
+    if (candidates.length === 0) candidates = await listingCandidates(data.query, 6);
 
     return {
       candidates,
