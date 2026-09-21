@@ -272,7 +272,7 @@ function ProviderCard({
   const [config, setConfig] = useState<Record<string, string>>(row?.config ?? {});
   const [secrets, setSecrets] = useState<Record<string, string>>({});
   const [environment, setEnvironment] = useState(row?.environment ?? provider.environments?.[0] ?? "production");
-  const [enabled, setEnabled] = useState(row?.enabled ?? false);
+  const [enabled, setEnabled] = useState(row?.enabled ?? (provider.id === "tavily" || provider.id === "openai"));
   const [busy, setBusy] = useState<null | "save" | "test" | "reveal">(null);
   const [expanded, setExpanded] = useState(false);
   const [vaultPrompt, setVaultPrompt] = useState(false);

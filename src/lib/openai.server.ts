@@ -1,6 +1,6 @@
 /** Server-only. Reads the OpenAI API key out of the encrypted integration store (Admin →
  * Integrations → OpenAI), falling back to the server secret OPENAI_API_KEY when that
- * integration is absent or switched off — so a fresh deployment with only the env var set
+ * integration has no key saved — so a fresh deployment with only the env var set
  * keeps working exactly as before. */
 export async function loadOpenAiApiKey(): Promise<string | null> {
   try {
@@ -12,7 +12,7 @@ export async function loadOpenAiApiKey(): Promise<string | null> {
       .select("*")
       .eq("provider", "openai")
       .maybeSingle();
-    if (row?.enabled) {
+    if (row) {
       const secrets = await decryptSecrets(row.secrets_encrypted as string | null);
       const apiKey = (secrets["api_key"] ?? "").trim();
       if (apiKey) return apiKey;

@@ -13,7 +13,7 @@ export async function loadTavilyApiKey(): Promise<string | null> {
       .select("*")
       .eq("provider", "tavily")
       .maybeSingle();
-    if (row?.enabled) {
+    if (row) {
       const secrets = await decryptSecrets(row.secrets_encrypted as string | null);
       const apiKey = (secrets["api_key"] ?? "").trim();
       if (apiKey) return apiKey;
