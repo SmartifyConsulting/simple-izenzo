@@ -927,22 +927,19 @@ function mediaLabel(status: MediaFinding["status"]) {
   }
 }
 
-/** The read-only terms being put to one shortlisted counterparty — shown before a counter offer
- * can be sent, so a counter offer always starts from having actually seen what's on the table. */
+/** The read-only terms being put to one shortlisted counterparty, and their company profile. */
 function ProposalDialog({
   open,
   onOpenChange,
   txId,
   counterpartyId,
   counterpartyName,
-  onCounterOffer,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   txId: string;
   counterpartyId: string;
   counterpartyName: string;
-  onCounterOffer: () => void;
 }) {
   const loadProfile = useServerFn(getCounterpartyProfile);
   const { data: profile, isPending: profilePending } = useQuery({
@@ -1124,18 +1121,9 @@ function ProposalDialog({
             </dl>
           </div>
         )}
-        <DialogFooter className="gap-2 sm:justify-between">
+        <DialogFooter className="gap-2 sm:justify-end">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Close
-          </Button>
-          <Button
-            type="button"
-            onClick={() => {
-              onOpenChange(false);
-              onCounterOffer();
-            }}
-          >
-            Counter offer
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1759,7 +1747,6 @@ export function CounterpartyRecord({
           txId={txId}
           counterpartyId={proposalFor.id}
           counterpartyName={proposalFor.name}
-          onCounterOffer={() => setCounterOfferFor(proposalFor)}
         />
       )}
     </div>
