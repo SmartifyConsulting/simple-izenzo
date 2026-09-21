@@ -65,6 +65,7 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { loadRelevantCounterparties } from "@/lib/bidRelevance";
+import { nameKey } from "@/lib/dedupeOrgs";
 import { advance, fallbackReference, recordEvent, swapReferencePrefix, type Transaction } from "@/lib/tx";
 import type { StageKey } from "@/lib/spine";
 import { useAuth } from "@/lib/auth";
@@ -435,10 +436,22 @@ function LiveDealEngine() {
         name: string;
         media_flags: { findings?: MediaFinding[] } | null;
       }[];
-      if (rows.length > 0) {
+      // Only counterparties that were actually scanned belong here (search results carry
+      // media_flags too, for their evidence), and the same organisation found by both AI and AI+ is
+      // listed once.
+      const scanned = new Map<string, (typeof rows)[number]>();
+      for (const r of rows) {
+        if (!r.media_flags?.findings?.length) continue;
+        const key = nameKey(r.name) || r.id;
+        const kept = scanned.get(key);
+        if (!kept || (r.media_flags.findings?.length ?? 0) >= (kept.media_flags?.findings?.length ?? 0)) {
+          scanned.set(key, r);
+        }
+      }
+      if (scanned.size > 0) {
         setMediaResults((prev) =>
           prev ??
-          rows.map((r) => ({
+          [...scanned.values()].map((r) => ({
             counterpartyId: r.id,
             name: r.name,
             findings: r.media_flags?.findings ?? [],

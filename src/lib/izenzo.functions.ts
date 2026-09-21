@@ -4,6 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { POI_COST, WAD_COST } from "@/lib/spine";
 import { userFacingText } from "@/lib/userFacingText";
 import { isRelevant } from "@/lib/relevance";
+import { nameKey } from "@/lib/dedupeOrgs";
 
 async function sha256(input: string) {
   const bytes = new TextEncoder().encode(input);
@@ -605,7 +606,19 @@ export const searchCounterparties = createServerFn({ method: "POST" })
         },
       };
     });
-    const { data: inserted, error } = await supabase.from("counterparties").insert(rows).select();
+    // AI and AI+ both run for every bid and often find the same organisations — one that is already
+    // on this bid (or repeated within this batch) is not added a second time.
+    const { data: already } = await supabase.from("counterparties").select("name").eq("transaction_id", tx.id);
+    const seenKeys = new Set((already ?? []).map((r) => nameKey(r.name as string)));
+    const freshRows = rows.filter((r) => {
+      const key = nameKey(r.name) || r.name.toLowerCase();
+      if (seenKeys.has(key)) return false;
+      seenKeys.add(key);
+      return true;
+    });
+    const { data: inserted, error } = freshRows.length
+      ? await supabase.from("counterparties").insert(freshRows).select()
+      : { data: [], error: null };
     if (error) throw error;
 
     // Publish each web-found name to the public Responder directory as an unclaimed listing,
