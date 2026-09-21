@@ -738,8 +738,8 @@ function LiveDealEngine() {
   const workspaceKind: TradeKind = tradeKindOf(
     (dealTx as unknown as { reference?: string | null } | null)?.reference ?? activity?.reference ?? draftReference,
   );
-  const kindWord = workspaceKind === "offer" ? "Offer" : workspaceKind === "bid" ? "Bid" : "Workspace";
-  const registrationLabel = workspaceKind === "workspace" ? "Workspace" : `${kindWord} Registration`;
+  const kindWord = workspaceKind === "offer" ? "Offer" : workspaceKind === "bid" ? "Bid" : "Bid/Offer";
+  const registrationLabel = `${kindWord} Registration`;
   const informationLabel = `${kindWord} Information`;
   const registrationPill =
     workspaceKind === "offer"

@@ -94,7 +94,7 @@ export function fallbackReference(id: string, direction: "bid" | "offer") {
   }
   const base = direction === "bid" ? 9088778 : 8979667;
   const suffix = base + (hash % 1000);
-  return `${direction === "bid" ? "BID" : "OFF"}${suffix}`;
+  return `${direction === "bid" ? "BID" : "OFFER"}${suffix}`;
 }
 
 /** Swaps a reference's BID/OFF prefix while keeping its numeric suffix, so correcting a deal's
@@ -102,12 +102,12 @@ export function fallbackReference(id: string, direction: "bid" | "offer") {
  * completely different-looking ID than the one they've already seen on screen. */
 export function swapReferencePrefix(reference: string, kind: TradeKind) {
   const digits = reference.replace(/^[A-Za-z]+/, "");
-  return `${kind === "bid" ? "BID" : kind === "offer" ? "OFF" : "WS"}${digits}`;
+  return `${kind === "bid" ? "BID" : kind === "offer" ? "OFFER" : "ID"}${digits}`;
 }
 
 /** What a workspace currently is: a plain Workspace until the search has been categorised, then a
  * Bid (looking for a seller) or an Offer (looking for a buyer). The number's prefix carries it —
- * WS…, BID… or OFF…. */
+ * ID…, BID… or OFFER…. */
 export type TradeKind = "workspace" | "bid" | "offer";
 
 export function tradeKindOf(reference: string | null | undefined): TradeKind {

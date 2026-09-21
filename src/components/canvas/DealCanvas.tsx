@@ -1957,12 +1957,12 @@ const REFERENCE_SPAN = 900000;
 
 export function nextReference(direction: "bid" | "offer" | "workspace") {
   if (direction === "workspace") {
-    // A new workspace is numbered WS… until its search is categorised as a Bid or an Offer.
-    return `WS${WORKSPACE_REFERENCE_BASE + Math.floor(Math.random() * REFERENCE_SPAN)}`;
+    // A new workspace is numbered ID… until its search is categorised as a Bid or an Offer.
+    return `ID${WORKSPACE_REFERENCE_BASE + Math.floor(Math.random() * REFERENCE_SPAN)}`;
   }
   const base = direction === "bid" ? BID_REFERENCE_BASE : OFFER_REFERENCE_BASE;
   const unique = base + Math.floor(Math.random() * REFERENCE_SPAN);
-  return `${direction === "bid" ? "BID" : "OFF"}${unique}`;
+  return `${direction === "bid" ? "BID" : "OFFER"}${unique}`;
 }
 
 /** Draws a bid/offer number that isn't already in use — checked against the numbers on file before
