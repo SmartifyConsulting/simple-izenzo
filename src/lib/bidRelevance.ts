@@ -1,14 +1,15 @@
 import { supabase } from "@/integrations/supabase/client";
 import { isRelevant, type Relatable } from "@/lib/relevance";
+import { bidTermTokens } from "@/lib/bidTerms";
 
-export type BidRelevance = { ownName: string; searchedFor: string };
+export type BidRelevance = { ownName: string; searchedFor: string; bidTokens: string[] };
 
 /** What a bid was searched for, and who is bidding — so a list of counterparties can leave out
  * anything unrelated to the bid and the bidder's own organisation. */
 export async function loadBidRelevance(txId: string): Promise<BidRelevance> {
   const { data: bid } = await supabase
     .from("transactions")
-    .select("org_id, commodity, title, search_prompt")
+    .select("org_id, commodity, title, search_prompt, quantity, price, incoterms, document_summary")
     .eq("id", txId)
     .maybeSingle();
   const { data: ownOrg } = bid?.org_id
@@ -21,7 +22,16 @@ export async function loadBidRelevance(txId: string): Promise<BidRelevance> {
     title ||
     ""
   ).trim();
-  return { ownName: (ownOrg?.name ?? "").trim().toLowerCase(), searchedFor };
+  const b = bid as {
+    quantity?: number | null;
+    price?: number | null;
+    incoterms?: string | null;
+    document_summary?: string | null;
+    search_prompt?: string | null;
+  } | null;
+  // The requester's own terms — never to be shown as facts about a counterparty.
+  const bidTokens = bidTermTokens([b?.quantity, b?.price, b?.incoterms, b?.search_prompt, b?.document_summary]);
+  return { ownName: (ownOrg?.name ?? "").trim().toLowerCase(), searchedFor, bidTokens };
 }
 
 /** With nothing to compare against, nothing is hidden. */

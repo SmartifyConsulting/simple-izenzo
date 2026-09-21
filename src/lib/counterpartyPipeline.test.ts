@@ -127,3 +127,59 @@ describe("findCounterparties through Tavily", () => {
     expect(r.sources.map((x) => x.url)).toEqual(["https://accenture.example/cloud"]);
   });
 });
+
+describe("direction and provenance (the Mukuba copper offer)", () => {
+  const offerInput = (): PipelineInput => ({
+    ...input(),
+    direction: "offer",
+    commodity: "Copper cathode",
+    quantity: "80 MT",
+    price: "9720 USD",
+    incoterms: "Delivered Durban",
+    typedPrompt: "Offer to sell copper cathode, 80 MT at $9,720/MT delivered Durban",
+    docSummary: "",
+    ownOrgName: "Mukuba",
+  });
+  const offerBrief = { ...brief, role: "buyer of copper cathode", capabilities: ["buys copper cathode"], sectors: ["metals"], searchQueries: ["copper cathode buyers"] };
+
+  it("rejects another copper SELLER when the transaction is an offer to sell", async () => {
+    tavilyPages = [{ title: "SokoDolla copper", url: "https://sokodolla.example/copper", content: "SokoDolla mines and sells copper cathode." }];
+    chatAnswers.push(
+      offerBrief,
+      { organisations: [{ name: "SokoDolla", jurisdiction: "DRC", sector: "Copper", evidence: "Mines and sells copper cathode.", sourceUrl: "https://sokodolla.example/copper" }] },
+      { results: [{ name: "SokoDolla", relevant: true, operatesAs: "seller", showsRequiredRole: false, score: 80, rationale: "Copper company." }] },
+    );
+    const r = await findCounterparties({ ...offerInput(), tavilyKey: "tvly-test" });
+    expect(r.candidates).toEqual([]);
+    expect(r.brief.requiredSide).toBe("buyer");
+    expect(r.brief.personSide).toBe("seller");
+    expect(r.rejected[0]?.reason).toMatch(/same side/i);
+  });
+
+  it("keeps a genuine buyer and never attributes the offer's own terms to it", async () => {
+    tavilyPages = [{ title: "Durban Metals refinery", url: "https://durbanmetals.example/about", content: "Durban Metals refines copper and buys copper cathode from producers." }];
+    chatAnswers.push(
+      offerBrief,
+      { organisations: [{ name: "Durban Metals", jurisdiction: "South Africa", sector: "Refining", evidence: "Buys copper cathode from producers. Wants 80 MT at $9,720/MT delivered Durban.", sourceUrl: "https://durbanmetals.example/about" }] },
+      { results: [{ name: "Durban Metals", relevant: true, operatesAs: "buyer", showsRequiredRole: true, score: 90, rationale: "Refines copper and buys cathode. It would take 80 MT at $9,720/MT delivered Durban." }] },
+    );
+    const r = await findCounterparties({ ...offerInput(), tavilyKey: "tvly-test" });
+    expect(r.candidates.map((c) => c.name)).toEqual(["Durban Metals"]);
+    const c = r.candidates[0]!;
+    expect(c.evidence).toBe("Buys copper cathode from producers.");
+    expect(c.rationale).toBe("Refines copper and buys cathode.");
+    expect(`${c.evidence} ${c.rationale}`).not.toMatch(/9,?720|80 MT|delivered durban/i);
+  });
+
+  it("drops a candidate whose only evidence is the requester's own terms", async () => {
+    tavilyPages = [{ title: "Acme", url: "https://acme.example/x", content: "Acme Metals." }];
+    chatAnswers.push(
+      offerBrief,
+      { organisations: [{ name: "Acme Metals", jurisdiction: "South Africa", sector: "Metals", evidence: "Wants 80 MT delivered Durban.", sourceUrl: "https://acme.example/x" }] },
+      { results: [{ name: "Acme Metals", relevant: true, operatesAs: "buyer", showsRequiredRole: true, score: 70, rationale: "Buys 80 MT." }] },
+    );
+    const r = await findCounterparties({ ...offerInput(), tavilyKey: "tvly-test" });
+    expect(r.candidates).toEqual([]);
+    expect(r.rejected[0]?.reason).toMatch(/requester's own terms/i);
+  });
+});

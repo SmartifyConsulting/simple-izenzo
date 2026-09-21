@@ -20,3 +20,12 @@ describe("guessSideFromWording for RFP-style documents", () => {
     expect(guessSideFromWording("Request for proposals to migrate workloads. Deliverables. Evaluation criteria.")).toBe("bid");
   });
 });
+
+describe("guessSideFromWording for a sales offer", () => {
+  it("reads an offer to sell with price and delivery terms as an offer", () => {
+    expect(guessSideFromWording("Offer to sell copper cathode, 80 MT at $9,720/MT delivered Durban. Price list attached.")).toBe("offer");
+  });
+  it("still reads a request for quotation as a bid", () => {
+    expect(guessSideFromWording("Request for quotation: supply of copper cathode")).toBe("bid");
+  });
+});

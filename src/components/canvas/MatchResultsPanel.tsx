@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { dedupeOrgs } from "@/lib/dedupeOrgs";
 import { userFacingText } from "@/lib/userFacingText";
 import { keepForBid, loadBidRelevance } from "@/lib/bidRelevance";
+import { stripBidTerms } from "@/lib/bidTerms";
 
 const BAND_LABEL = {
   verified: "Verified",
@@ -78,11 +79,14 @@ export function MatchResultsPanel({
             scoring?: Scoring;
             evidence?: { url?: string }[];
           };
-          const reason = userFacingText(
-            flags.scoring?.components?.find(
-              (k) => k.label === "Fit with your request" || k.label === "Izenzo AI read",
-            )?.note ?? null,
-          );
+          const reason = stripBidTerms(
+            userFacingText(
+              flags.scoring?.components?.find(
+                (k) => k.label === "Fit with your request" || k.label === "Izenzo AI read",
+              )?.note ?? null,
+            ),
+            relevance.bidTokens,
+          ) ?? null;
           return {
             id: c.id as string,
             name: c.name as string,
