@@ -9,8 +9,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { classifyDocument } from "@/lib/izenzo.functions";
 import { summarizeBidDocuments } from "@/lib/docSummary.functions";
-import { fileAuthorityToAct } from "@/lib/authorityToAct";
-import { useAuth } from "@/lib/auth";
 import { advance, fingerprintOf, recordEvent, shortHash } from "@/lib/tx";
 import { cn } from "@/lib/utils";
 
@@ -65,7 +63,6 @@ export function DocumentUploadStep({
   hideActions?: boolean;
 }) {
 
-  const { profile } = useAuth();
   const qc = useQueryClient();
   const classify = useServerFn(classifyDocument);
   const summarize = useServerFn(summarizeBidDocuments);
@@ -160,9 +157,6 @@ export function DocumentUploadStep({
             payload: { name: file.name, doc_type: docType, sha256: sha },
           });
         }
-        // Their Authority to Act rides along with the first document they attach themselves — never on
-        // its own, so a bid started from a typed description alone stays empty of files.
-        await fileAuthorityToAct(transactionId, profile);
         await qc.invalidateQueries({ queryKey: ["documents", transactionId] });
         toast.success(list.length === 1 ? "Document uploaded" : `${list.length} documents uploaded`);
 
@@ -211,7 +205,7 @@ export function DocumentUploadStep({
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [classify, summarize, transactionId, qc, autoAdvance, docs, savePrompt, profile],
+    [classify, summarize, transactionId, qc, autoAdvance, docs, savePrompt],
   );
 
   async function next() {
