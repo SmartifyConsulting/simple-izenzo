@@ -141,6 +141,15 @@ export function DecisionPackPanel({
 
   // Nothing is left to decide: no control, just the quiet record that it happened. The filed
   // document lives in the Documents panel.
+  /** Closing is always allowed. While gating, the set still has to be answered before the next step
+   * opens, and the button above brings this window back. */
+  function closeModal() {
+    setOpen(false);
+    if (gating && pending > 0) {
+      toast.info("You still need to accept or reject each recommendation before the next step opens.");
+    }
+  }
+
   if (allDecided && !open) {
     return (
       <p className="px-1 text-[11px] text-muted-foreground">
@@ -177,14 +186,7 @@ export function DecisionPackPanel({
 
       <Dialog
         open={open}
-        onOpenChange={(v) => {
-          setOpen(v);
-          // Closing is always allowed; while gating, the set still has to be answered before the
-          // next step opens, and the button above brings this window back.
-          if (!v && gating && pending > 0) {
-            toast.info("You still need to accept or reject each recommendation before the next step opens.");
-          }
-        }}
+        onOpenChange={(v) => (v ? setOpen(true) : closeModal())}
       >
         <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
           <DialogHeader>
@@ -363,6 +365,12 @@ export function DecisionPackPanel({
                 </div>
               );
             })}
+          </div>
+
+          <div className="flex justify-end pt-1">
+            <Button type="button" variant="outline" size="sm" onClick={closeModal}>
+              Close
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
