@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { runDecisionPack, decideProposal, type StageContext } from "@/lib/decisionPack.functions";
+import { confidenceOf, EVIDENCE_LABEL, parseEvidenceRefs } from "@/lib/confidence";
 
 type Proposal = {
   id: string;
@@ -230,10 +231,10 @@ export function DecisionPackPanel({
             )}
 
             {(proposals ?? []).map((p) => {
-              const pct = p.probability == null ? null : Math.round(Number(p.probability) * 100);
-              const refs = Array.isArray(p.source_references)
-                ? (p.source_references as string[])
-                : [];
+              const refs = parseEvidenceRefs(p.source_references);
+              const confidence = confidenceOf(refs, p.probability == null ? null : Number(p.probability));
+              const structured = refs.length > 0 && refs.every((r) => !r.unspecified);
+              const confirmed = refs.filter((r) => r.verified).length;
               return (
                 <div key={p.id} className="rounded-xl border border-border/70 p-3">
                   <div className="flex items-start justify-between gap-3">
@@ -242,11 +243,23 @@ export function DecisionPackPanel({
                         <span className="label-caps text-[10px] text-muted-foreground">
                           {p.proposal_type}
                         </span>
-                        {pct !== null && (
-                          <span className="rounded-full bg-[var(--lw-pill-bg)] px-2 py-0.5 text-[10px] font-semibold text-[var(--lw-pill-fg)]">
-                            {pct}%
-                          </span>
-                        )}
+                        <span
+                          title={
+                            structured
+                              ? `${confirmed} of ${refs.length} supporting facts are confirmed in the record`
+                              : "Confidence as reported for this recommendation"
+                          }
+                          className={cn(
+                            "rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                            confidence === "High"
+                              ? "bg-emerald-100 text-emerald-800"
+                              : confidence === "Medium"
+                                ? "bg-amber-100 text-amber-800"
+                                : "bg-muted text-muted-foreground",
+                          )}
+                        >
+                          Confidence: {confidence}
+                        </span>
                         {p.related_counterparty && (
                           <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
                             {p.related_counterparty}
@@ -254,9 +267,10 @@ export function DecisionPackPanel({
                         )}
                       </div>
                       <p className="mt-1 text-xs font-semibold">{p.output}</p>
-                      {pct !== null && (
+                      {structured && (
                         <p className="mt-1 text-[11px] text-muted-foreground">
-                          AI+ puts this at {pct}% likely to be the right course.
+                          Confidence reflects how much of this rests on confirmed facts: {confirmed} of {refs.length}{" "}
+                          supporting facts are confirmed in the record.
                         </p>
                       )}
                       {/* The reasoning is the point of the recommendation: it is labelled and given
@@ -274,10 +288,31 @@ export function DecisionPackPanel({
                               <p className="label-caps mt-2 text-[10px] text-muted-foreground">
                                 Based on
                               </p>
-                              <ul className="mt-0.5 space-y-0.5">
+                              <ul className="mt-0.5 space-y-1">
                                 {refs.map((r, i) => (
                                   <li key={i} className="text-[10px] text-muted-foreground">
-                                    {r}
+                                    {!r.unspecified && (
+                                      <span
+                                        className={cn(
+                                          "mr-1 rounded px-1 py-px text-[9px] font-semibold",
+                                          r.kind === "general_knowledge"
+                                            ? "bg-amber-100 text-amber-800"
+                                            : "bg-muted text-foreground/80",
+                                        )}
+                                      >
+                                        {EVIDENCE_LABEL[r.kind]}
+                                      </span>
+                                    )}
+                                    {r.chain}
+                                    {r.url && (
+                                      <>
+                                        {" "}
+                                        <a href={r.url} target="_blank" rel="noreferrer noopener" className="text-primary hover:underline">
+                                          Source
+                                        </a>
+                                      </>
+                                    )}
+                                    {!r.unspecified && !r.verified && <span className="ml-1 italic">— not verified</span>}
                                   </li>
                                 ))}
                               </ul>

@@ -232,9 +232,11 @@ async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
     const facts = parsed.facts;
     const filled: Record<string, unknown> = {};
     if (!tx.commodity && facts.commodity) filled["commodity"] = facts.commodity;
-    if (tx.quantity == null && facts.quantity != null) filled["quantity"] = facts.quantity;
+    // A quantity or price of 0 is the "nothing entered yet" a new bid starts with, not a real value.
+    const empty = (v: unknown) => v == null || Number(v) === 0;
+    if (empty(tx.quantity) && facts.quantity != null) filled["quantity"] = facts.quantity;
     if (!tx.unit && facts.unit) filled["unit"] = facts.unit;
-    if (tx.price == null && facts.price != null) filled["price"] = facts.price;
+    if (empty(tx.price) && facts.price != null) filled["price"] = facts.price;
     if (facts.currency && (!tx.currency || tx.currency === "USD")) filled["currency"] = facts.currency;
     if (!tx.incoterms && facts.incoterms) filled["incoterms"] = facts.incoterms;
     if (!tx.jurisdiction && facts.jurisdiction) filled["jurisdiction"] = facts.jurisdiction;
@@ -253,6 +255,33 @@ async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
       } as never)
       .eq("id", tx.id);
     if (upErr) throw new Error(upErr.message);
+
+    // The bid/offer record itself starts out at price 0 and quantity 0 — carry what the documents
+    // state into it too, or everything that reads that record (the AI+ advice included) sees an
+    // offer with no commercial terms even though the uploaded document has them.
+    try {
+      const { data: bos } = await supabase
+        .from("bid_offers")
+        .select("id, price, quantity, unit, currency")
+        .eq("transaction_id", tx.id)
+        .order("created_at", { ascending: true })
+        .limit(1);
+      const bo = (bos ?? [])[0] as
+        | { id: string; price: number | null; quantity: number | null; unit: string | null; currency: string | null }
+        | undefined;
+      if (bo) {
+        const patch: Record<string, unknown> = {};
+        if (empty(bo.price) && facts.price != null) patch["price"] = facts.price;
+        if (empty(bo.quantity) && facts.quantity != null) patch["quantity"] = facts.quantity;
+        if (!bo.unit && facts.unit) patch["unit"] = facts.unit;
+        if (facts.currency && (!bo.currency || bo.currency === "USD")) patch["currency"] = facts.currency;
+        if (Object.keys(patch).length > 0) {
+          await supabase.from("bid_offers").update(patch).eq("id", bo.id);
+        }
+      }
+    } catch {
+      // The summary is saved either way; a failure here only leaves the record's terms as they were.
+    }
 
     return { summary, title: generatedTitle, facts, unreadable };
   }

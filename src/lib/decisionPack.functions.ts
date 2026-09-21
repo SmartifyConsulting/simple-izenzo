@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { evidenceCompleteness, parseEvidenceRefs, type EvidenceRef } from "@/lib/confidence";
 
 /**
  * AI+ is advisory, never the decision-maker.
@@ -82,6 +83,10 @@ type RawProposal = {
   summary?: string;
   rationale?: string;
   source_references?: unknown;
+  /** What the advice rests on — each item says whether it is a document, a fact taken from one, the
+   * bid record, a cited web page or general knowledge, and whether it is confirmed. */
+  evidence?: unknown;
+  addressed_to?: string;
   counterparty?: string | null;
 };
 
@@ -90,12 +95,12 @@ type CleanProposal = {
   probability: number;
   output: string;
   rationale: string;
-  source_references: string[];
+  source_references: unknown[];
   related_counterparty: string | null;
 };
 
 /** Nothing unvalidated is ever written: a bad type or an out-of-range probability is dropped. */
-function validate(raw: RawProposal[]) {
+function validate(raw: RawProposal[], citedUrls: Set<string> = new Set()) {
   const clean: CleanProposal[] = [];
 
   const rejected: string[] = [];
@@ -106,10 +111,29 @@ function validate(raw: RawProposal[]) {
       rejected.push(`unknown proposal type "${r.proposal_type}"`);
       continue;
     }
-    const p = typeof r.probability === "number" ? r.probability : Number(r.probability);
-    if (!Number.isFinite(p) || p < 0 || p > 1) {
-      rejected.push(`probability out of range for ${type}`);
+    // Advice is for the user. Anything addressed to the counterparty — how a buyer should protect
+    // itself when the user is the seller, say — is not what was asked for.
+    if (String(r.addressed_to ?? "user").toLowerCase() === "counterparty") {
+      rejected.push(`${type} advice was written for the counterparty, not the user`);
       continue;
+    }
+    // With structured evidence the score is worked out from it — how much of what the advice rests
+    // on is confirmed — rather than trusting a number the model made up. Advice that arrives with a
+    // plain number and plain-text references (the protected AI+ service) keeps that number.
+    let evidenceRefs: EvidenceRef[] = [];
+    let p: number;
+    if (Array.isArray(r.evidence)) {
+      evidenceRefs = parseEvidenceRefs(r.evidence).map((e) =>
+        // A cited web page has to be one the market-data lookup actually returned.
+        e.kind === "public_web" && (!e.url || !citedUrls.has(e.url)) ? { ...e, kind: "general_knowledge" as const, verified: false } : e,
+      );
+      p = Math.round(evidenceCompleteness(evidenceRefs) * 100) / 100;
+    } else {
+      p = typeof r.probability === "number" ? r.probability : Number(r.probability);
+      if (!Number.isFinite(p) || p < 0 || p > 1) {
+        rejected.push(`probability out of range for ${type}`);
+        continue;
+      }
     }
     const summary = String(r.summary ?? "").trim();
     if (!summary) {
@@ -123,9 +147,12 @@ function validate(raw: RawProposal[]) {
       rejected.push(`no explanation given for ${type}`);
       continue;
     }
-    const refs = Array.isArray(r.source_references)
-      ? r.source_references.map((s) => String(s)).filter(Boolean).slice(0, 8)
-      : [];
+    const refs: unknown[] =
+      evidenceRefs.length > 0
+        ? evidenceRefs
+        : Array.isArray(r.source_references)
+          ? r.source_references.map((s) => String(s)).filter(Boolean).slice(0, 8)
+          : [];
     const counterparty = String(r.counterparty ?? "").trim();
     clean.push({
       proposal_type: type,
@@ -416,13 +443,35 @@ export const runDecisionPack = createServerFn({ method: "POST" })
       .order("decided_at", { ascending: true });
 
 
+    // Whose side the advice is on: the person using the app. Their own offer to SELL needs advice
+    // that makes it more executable and attractive to a buyer; their bid to BUY needs advice that
+    // secures a supplier on good terms. The counterparty is never the one being advised.
+    const reference = String((tx as { reference?: string | null }).reference ?? "").toUpperCase();
+    const isSeller = reference.startsWith("OFF")
+      ? true
+      : reference.startsWith("BID")
+        ? false
+        : (bids ?? []).some((b) => b.direction === "offer");
+    const userSide = isSeller ? "SELLER" : "BUYER";
+
+    const { loadMarketContext } = await import("@/lib/marketData.server");
+    const market = await loadMarketContext({ apiKey, commodity: tx.commodity ?? null, jurisdiction: tx.jurisdiction ?? null });
+    const citedUrls = new Set((market?.sources ?? []).map((x) => x.url));
+
     const system = [
       "You are Izenzo AI+. You are advisory only: you never decide, never select, never adopt, and never change the transaction.",
-      "Return STRICT JSON: {\"proposals\":[{\"proposal_type\":\"counterparty|pricing|risk|structure|timing|substitution|bundle\",\"probability\":0.0,\"summary\":\"one sentence\",\"rationale\":\"why you are recommending this\",\"source_references\":[\"…\"],\"counterparty\":\"the exact counterparty name this proposal is about, from the Counterparties list below, or null if it isn't about a specific one\"}]}",
-      "\"rationale\" is mandatory and is the explanation the person reads before accepting or rejecting. Write two to four sentences in plain professional language that (1) state the specific evidence you are relying on — name the document, the screening finding, the search result, the price, the quantity, the term or the counterparty record, (2) explain the reasoning that leads from that evidence to the recommendation, and (3) say what it would improve or what risk it would avoid. Never write a bare restatement of the summary, a single vague line, or an explanation that cites nothing on file.",
-      "\"source_references\" must name the actual things you relied on, exactly as they appear in the information below (document titles, counterparty names, screening or search findings, specific fields). Do not invent sources, and do not return an empty list when your rationale cites something.",
-      "probability is a number between 0 and 1 expressing how likely the proposal is to be the right course. Never use words like low, medium or high for it.",
-      "Always set \"counterparty\" to the specific party's name whenever a proposal concerns one — never leave it null just because the type isn't \"counterparty\" (a pricing or risk proposal can still be about a specific party).",
+      `YOUR USER IS THE ${userSide}${isSeller ? " — this is their OFFER TO SELL" : " — this is their BID TO BUY"}. Every recommendation is advice to the user, from the user's position: ${
+        isSeller
+          ? "how to make their offer more executable and more attractive to a buyer and to raise the chance it reaches Execution — for example obtaining independent verification of quality, securing any missing quantity, correcting delivery dates, clarifying Incoterms, and structuring payment security a buyer will accept. Do NOT write advice that protects a hypothetical buyer (what a buyer should insist on, avoid paying, or appoint); use a buyer's likely concerns only to tell the seller what to fix or offer."
+          : "how to secure a reliable supplier on sound terms and protect the user as buyer — for example verifying quality and quantity, price against a benchmark, delivery and payment protections. Do NOT write advice to the supplier."
+      }`,
+      "Return STRICT JSON: {\"proposals\":[{\"proposal_type\":\"counterparty|pricing|risk|structure|timing|substitution|bundle\",\"addressed_to\":\"user\",\"summary\":\"one sentence: what the user should do\",\"rationale\":\"why\",\"evidence\":[{\"kind\":\"document|extracted_fact|bid_record|public_web|general_knowledge\",\"chain\":\"source → detail → fact\",\"verified\":true,\"url\":\"only for public_web\"}],\"counterparty\":\"the exact counterparty name this proposal is about, from the Counterparties list below, or null if it isn't about a specific one\"}]}",
+      "\"rationale\" is mandatory and is the explanation the person reads before accepting or rejecting. Write two to four sentences in plain professional language that (1) state the specific evidence you are relying on, (2) explain the reasoning that leads from that evidence to the recommendation, and (3) say what it would improve or what risk it would avoid. Never write a bare restatement of the summary or an explanation that cites nothing on file.",
+      "\"evidence\" lists every fact the advice rests on and says exactly where each comes from. kind: \"document\" = a named document on file; \"extracted_fact\" = a specific fact read out of a document; \"bid_record\" = a field of the bid/offer record; \"public_web\" = a page in the PUBLIC MARKET DATA section (give its url); \"general_knowledge\" = anything from your own knowledge. \"chain\" traces it from source to fact, for example \"Assay Certificate → sample ID CCA-260918-73 → Cu 99.94%\". \"verified\" is true only if that exact fact appears in the information below; anything from general knowledge is verified:false. Never invent a source, a sample ID or a figure.",
+      "Do not give any probability or percentage of your own — confidence is worked out from how much of the evidence is verified.",
+      "The user's own submitted terms (price, quantity, delivery terms) are the user's claims, not independently verified facts about the counterparty or the market. Use market prices only from the PUBLIC MARKET DATA section; if it is empty or holds no usable benchmark, say a contemporaneous benchmark could not be obtained instead of supplying a figure.",
+      "A price or quantity shown as \"not recorded\" is a gap in the record, not a value of zero.",
+      "Always set \"counterparty\" to the specific party's name whenever a proposal concerns one — never leave it null just because the type isn't \"counterparty\".",
       "Return between 2 and 6 proposals. No prose outside the JSON.",
     ].join("\n");
 
@@ -436,9 +485,18 @@ export const runDecisionPack = createServerFn({ method: "POST" })
       `Incoterms: ${tx.incoterms ?? "n/a"}`,
       `Jurisdiction: ${tx.jurisdiction ?? "n/a"}`,
       `Counterparties: ${JSON.stringify(parties ?? [])}`,
-      `Bids/offers: ${JSON.stringify(bids ?? [])}`,
+      `Bids/offers: ${JSON.stringify(
+        (bids ?? []).map((b) => ({
+          ...b,
+          price: Number(b.price) > 0 ? b.price : "not recorded",
+          quantity: Number(b.quantity) > 0 ? b.quantity : "not recorded",
+        })),
+      )}`,
       `Documents on file: ${JSON.stringify(docs ?? [])}`,
       `What the documents say (read by Izenzo): ${tx.document_summary ?? "not read yet"}`,
+      market
+        ? `PUBLIC MARKET DATA (retrieved ${market.retrievedAt} from the public internet — the only source for market prices):\n${market.text}`
+        : `PUBLIC MARKET DATA: none could be retrieved just now.`,
       `Decisions this person has already made on earlier AI+ advice for this bid: ${JSON.stringify(priorDecisions ?? [])}`,
       "Take the document contents and those earlier decisions as settled context: do not repeat advice that was already rejected, and build on what was accepted.",
     ].join("\n");
@@ -539,7 +597,7 @@ export const runDecisionPack = createServerFn({ method: "POST" })
       if (!raw) {
         throw new Error("AI+ returned an analysis that could not be read. Please run it again.");
       }
-      const validated = validate(raw);
+      const validated = validate(raw, citedUrls);
       clean = validated.clean;
       rejected = validated.rejected;
     }
@@ -707,9 +765,9 @@ export const decideProposal = createServerFn({ method: "POST" })
             `${i + 1}. [${p.proposal_type ?? "option"}] ${p.output}`,
             p.rationale ? `   Why AI+ recommended this: ${p.rationale}` : null,
             Array.isArray(p.source_references) && p.source_references.length > 0
-              ? `   Based on: ${(p.source_references as unknown[]).map((s) => String(s)).join("; ")}`
+              ? `   Based on: ${parseEvidenceRefs(p.source_references).map((e) => `${e.chain}${e.verified ? "" : " (not verified)"}`).join("; ")}`
               : null,
-            p.probability != null ? `   Probability: ${Math.round(Number(p.probability) * 100)}%` : null,
+            p.probability != null ? `   Evidence confirmed: ${Math.round(Number(p.probability) * 100)}%` : null,
             p.related_counterparty ? `   Counterparty: ${p.related_counterparty}` : null,
             `   Decision: ${(p.id === proposal.id ? data.decision : p.decision) ?? "—"} by ${nameOf(p.id === proposal.id ? userId : p.decided_by)} at ${p.id === proposal.id ? decidedAt : p.decided_at}`,
           ].filter((line): line is string => Boolean(line)).join("\n")),
