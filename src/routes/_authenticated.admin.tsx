@@ -235,33 +235,39 @@ function UsersTab() {
       {filteredUsers.length === 0 ? (
         <p className="p-6 text-sm text-muted-foreground">{visibleUsers.length === 0 ? "No users yet." : "No users match your search."}</p>
       ) : (
+        <div>
+          <div
+            className="hidden border-b border-border bg-muted/40 px-4 py-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground sm:grid sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_7rem_7rem_13rem] sm:items-center sm:gap-x-4"
+          >
+            <span>User</span>
+            <span>Organisation</span>
+            <span>Created</span>
+            <span>Last accessed</span>
+            <span className="text-right">Access</span>
+          </div>
         <ul className="divide-y divide-border">
           {filteredUsers.map((u) => {
             const isUserAdmin = adminIds.has(u.id);
+            const orgNames = orgNamesByUser.get(u.id) ?? [];
             return (
-              <li key={u.id} className="flex items-center gap-3 p-4 text-sm">
-                <div className="min-w-0 flex-1">
+              <li key={u.id} className="space-y-2 p-4 text-sm sm:space-y-0 sm:grid sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_7rem_7rem_13rem] sm:items-center sm:gap-x-4">
+                <div className="min-w-0">
                   <p className="truncate font-medium">{u.full_name ?? u.email}</p>
                   <p className="truncate text-xs text-muted-foreground">{u.email}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {(orgNamesByUser.get(u.id) ?? []).length > 0
-                      ? (orgNamesByUser.get(u.id) ?? []).join(", ")
-                      : "No organisation"}
-                  </p>
                 </div>
-                <div className="hidden shrink-0 text-xs text-muted-foreground sm:grid sm:grid-cols-[7rem_7rem] sm:gap-x-[2cm]">
-                  <span title={new Date(u.created_at).toLocaleString()}>
-                    <span className="block text-[10px] uppercase tracking-wide">Created</span>
-                    {when(u.created_at)}
-                  </span>
-                  <span
-                    title={u.last_accessed_at ? new Date(u.last_accessed_at).toLocaleString() : "Never signed in"}
-                  >
-                    <span className="block text-[10px] uppercase tracking-wide">Last accessed</span>
-                    {u.last_accessed_at ? when(u.last_accessed_at) : "—"}
-                  </span>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
+                <p className="truncate text-xs text-foreground" title={orgNames.join(", ")}>
+                  {orgNames.length > 0 ? orgNames.join(", ") : <span className="text-muted-foreground">No organisation</span>}
+                </p>
+                <span className="text-xs text-muted-foreground" title={new Date(u.created_at).toLocaleString()}>
+                  {when(u.created_at)}
+                </span>
+                <span
+                  className="text-xs text-muted-foreground"
+                  title={u.last_accessed_at ? new Date(u.last_accessed_at).toLocaleString() : "Never signed in"}
+                >
+                  {u.last_accessed_at ? when(u.last_accessed_at) : "—"}
+                </span>
+                <div className="flex items-center justify-end gap-2">
                   {isUserAdmin && (
                     <Badge variant="secondary" className="font-normal">
                       System Admin
@@ -275,6 +281,7 @@ function UsersTab() {
             );
           })}
         </ul>
+        </div>
       )}
       </div>
     </div>

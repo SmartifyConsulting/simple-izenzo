@@ -162,6 +162,8 @@ export function TradesListView() {
     });
   }
   const [view, setView] = useState<"list" | "card">("list");
+  // Age ascending = youngest trade first. The Age header flips it.
+  const [ageAscending, setAgeAscending] = useState(true);
 
   const { data: txs = [], isLoading } = useQuery({
     queryKey: ["my-trades", org?.id],
@@ -240,8 +242,12 @@ export function TradesListView() {
           (t.reference ?? fallbackReference(t.id, t.direction)).toLowerCase().includes(q),
       );
     }
-    return rows;
-  }, [txs, scope, stages, query, org?.id]);
+    return [...rows].sort((a, b) =>
+      ageAscending
+        ? +new Date(b.created_at) - +new Date(a.created_at)
+        : +new Date(a.created_at) - +new Date(b.created_at),
+    );
+  }, [txs, scope, stages, query, org?.id, ageAscending]);
 
   function exportCsv() {
     const blob = new Blob([toCsv(filtered)], { type: "text/csv;charset=utf-8" });
@@ -365,7 +371,16 @@ export function TradesListView() {
                 <th className="px-4 py-2 font-medium">POI</th>
                 <th className="px-4 py-2 font-medium">WaD</th>
                 <th className="px-4 py-2 font-medium">Execution</th>
-                <th className="px-4 py-2 text-right font-medium">Age</th>
+                <th className="px-4 py-2 text-right font-medium">
+                  <button
+                    type="button"
+                    onClick={() => setAgeAscending((v) => !v)}
+                    className="inline-flex items-center gap-1 hover:text-foreground"
+                    title={ageAscending ? "Youngest first — click for oldest first" : "Oldest first — click for youngest first"}
+                  >
+                    Age {ageAscending ? "▲" : "▼"}
+                  </button>
+                </th>
                 <th className="w-8" />
               </tr>
             </thead>
