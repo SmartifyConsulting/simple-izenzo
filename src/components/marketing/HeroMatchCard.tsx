@@ -193,7 +193,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
               onKeyDown={(e) => {
                 if (e.key === "Enter" && canSearch) onFindMatches();
               }}
-              placeholder="Describe what you're looking for — product, quantity, location, terms…"
+              placeholder="Describe what you're looking to buy or sell — product, quantity, location, terms…"
               className="min-w-0 flex-1 basis-1/2 bg-transparent px-2 text-sm text-foreground outline-none placeholder:text-muted-foreground"
             />
 

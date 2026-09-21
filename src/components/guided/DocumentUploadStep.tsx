@@ -254,7 +254,7 @@ export function DocumentUploadStep({
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             onBlur={savePrompt}
-            placeholder="Describe what you're looking for — product, quantity, location, terms"
+            placeholder="Describe what you're looking to buy or sell — product, quantity, location, terms"
             className="min-w-0 flex-1 basis-1/2 resize-none border-0 bg-transparent text-sm shadow-none focus-visible:ring-0"
           />
           <button
