@@ -143,6 +143,29 @@ export const SEARCH_SURFACES: { label: string; query: (q: string) => string }[] 
   { label: "News", query: (q) => `${q} news` },
 ];
 
+/** One search result as the search engine lists it — no page is opened, so this is fast and works
+ * for sites (social networks in particular) that refuse to be scraped. */
+export type SearchSnippet = { title: string; url: string; description: string };
+
+/** Runs one Firecrawl search and returns just the result listings (title, address, blurb). */
+export async function searchSnippets(query: string, limit = 5, timeoutMs = 25_000): Promise<SearchSnippet[]> {
+  const payload = await firecrawlPost("/search", { query, limit }, timeoutMs);
+  const raw = payload?.["data"];
+  const items: Record<string, any>[] = Array.isArray(raw)
+    ? raw
+    : [...(Array.isArray(raw?.["web"]) ? raw["web"] : []), ...(Array.isArray(raw?.["news"]) ? raw["news"] : [])];
+  return items
+    .map((r) => ({
+      title: String(r?.["title"] ?? "").replace(/\s+/g, " ").trim().slice(0, 200),
+      url: String(r?.["url"] ?? ""),
+      description: String(r?.["description"] ?? r?.["snippet"] ?? r?.["markdown"] ?? "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 500),
+    }))
+    .filter((s) => s.url && (s.title || s.description));
+}
+
 /** Runs one Firecrawl search and returns the result pages with their text. */
 export async function searchWeb(
   query: string,

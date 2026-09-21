@@ -2642,7 +2642,7 @@ function LiveDealEngine() {
 
                             <ul className="mt-1.5 space-y-1">
                               {m.findings.map((f) => (
-                                <li key={f.source} className="flex items-center justify-between gap-2 text-[11px]">
+                                <li key={f.source} className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-[11px]">
                                   <span className="text-muted-foreground">{f.label}</span>
                                   <span
                                     className={cn(
@@ -2664,6 +2664,24 @@ function LiveDealEngine() {
                                             ? "Not connected"
                                             : "Could not scan"}
                                   </span>
+                                  {f.detail && (
+                                    <p className="basis-full text-[10.5px] leading-snug text-muted-foreground/80">
+                                      {f.detail}
+                                      {f.url && f.status !== "failed" && f.status !== "unavailable" && (
+                                        <>
+                                          {" "}
+                                          <a
+                                            href={f.url}
+                                            target="_blank"
+                                            rel="noreferrer noopener"
+                                            className="text-primary hover:underline"
+                                          >
+                                            Source
+                                          </a>
+                                        </>
+                                      )}
+                                    </p>
+                                  )}
                                 </li>
                               ))}
                             </ul>
