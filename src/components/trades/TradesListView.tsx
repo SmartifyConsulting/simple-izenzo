@@ -11,7 +11,13 @@ import { SPINE, type StageKey } from "@/lib/spine";
 import { cn } from "@/lib/utils";
 
 type Direction = "bid" | "offer";
-type TxRow = Transaction & { direction: Direction; counterpartyName: string | null };
+type TxRow = Transaction & {
+  direction: Direction;
+  counterpartyName: string | null;
+  /** The person who registered the bid/offer, and the company they registered it for. */
+  bidderName: string | null;
+  bidderCompany: string | null;
+};
 
 /** Coarse relative age ("5 days ago", "2 months ago") — the report reads at a glance, not to the
  * exact minute. */
@@ -110,12 +116,14 @@ function MatchIcon() {
 }
 
 function toCsv(rows: TxRow[]) {
-  const header = ["Reference", "Title", "Commodity", "Counterparty", "Stage", "Step", "Created"];
+  const header = ["Reference", "Title", "Commodity", "Bidder", "Company", "Counterparty", "Stage", "Step", "Created"];
   const lines = rows.map((t) =>
     [
       t.reference ?? fallbackReference(t.id, t.direction),
       t.title,
       t.commodity ?? "",
+      t.bidderName ?? "",
+      t.bidderCompany ?? "",
       t.counterpartyName ?? "",
       t.stage,
       t.step,
@@ -179,12 +187,37 @@ export function TradesListView() {
         : { data: [] as { transaction_id: string; name: string }[] };
       const counterpartyByTx = new Map((chosen ?? []).map((c) => [c.transaction_id, c.name]));
 
+      // Who registered each deal and for which company — the bidder, not just the counterparty.
+      const orgIds = [...new Set(rows.map((t) => t.org_id).filter(Boolean))];
+      const userIds = [
+        ...new Set(rows.map((t) => (t as unknown as { created_by?: string | null }).created_by).filter(Boolean)),
+      ] as string[];
+      const [{ data: orgRows }, { data: peopleRows }] = await Promise.all([
+        orgIds.length
+          ? supabase.from("organisations").select("id, name").in("id", orgIds)
+          : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+        userIds.length
+          ? supabase.from("profiles").select("id, full_name, last_name").in("id", userIds)
+          : Promise.resolve({ data: [] as { id: string; full_name: string | null; last_name: string | null }[] }),
+      ]);
+      const companyById = new Map((orgRows ?? []).map((o) => [o.id, o.name]));
+      const personById = new Map(
+        (peopleRows ?? []).map((p) => [p.id, [p.full_name, p.last_name].filter(Boolean).join(" ").trim() || null]),
+      );
+
       return rows.map((t): TxRow => {
         // A transaction can pick up more than one bid_offers row over its life (e.g. a
         // counter-offer) — the earliest one is the side that actually opened this deal.
         const earliest = [...t.bid_offers].sort((a, b) => +new Date(a.created_at) - +new Date(b.created_at))[0];
         const direction: Direction = earliest?.direction === "offer" ? "offer" : "bid";
-        return { ...t, direction, counterpartyName: counterpartyByTx.get(t.id) ?? null };
+        const createdBy = (t as unknown as { created_by?: string | null }).created_by ?? null;
+        return {
+          ...t,
+          direction,
+          counterpartyName: counterpartyByTx.get(t.id) ?? null,
+          bidderName: (createdBy ? personById.get(createdBy) : null) ?? null,
+          bidderCompany: companyById.get(t.org_id) ?? (t.org_id === org?.id ? (org?.name ?? null) : null),
+        };
       });
     },
   });
@@ -202,6 +235,8 @@ export function TradesListView() {
           (t.commodity ?? "").toLowerCase().includes(q) ||
           t.title.toLowerCase().includes(q) ||
           (t.counterpartyName ?? "").toLowerCase().includes(q) ||
+          (t.bidderName ?? "").toLowerCase().includes(q) ||
+          (t.bidderCompany ?? "").toLowerCase().includes(q) ||
           (t.reference ?? fallbackReference(t.id, t.direction)).toLowerCase().includes(q),
       );
     }
@@ -270,7 +305,7 @@ export function TradesListView() {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by commodity, title, counterparty, or Bid/Offer ID…"
+              placeholder="Search by commodity, title, bidder, counterparty, or Bid/Offer ID…"
               className="h-8 pl-8 text-xs"
             />
           </div>
@@ -324,7 +359,7 @@ export function TradesListView() {
             <thead className="border-b border-border bg-muted/50 text-left">
               <tr>
                 <th className="px-4 py-2 font-medium">Match</th>
-                <th className="px-4 py-2 font-medium">Counterparties</th>
+                <th className="px-4 py-2 font-medium">Bidder / Counterparty</th>
                 <th className="px-4 py-2 font-medium">Search</th>
                 <th className="px-4 py-2 font-medium">Match</th>
                 <th className="px-4 py-2 font-medium">POI</th>
@@ -349,7 +384,8 @@ export function TradesListView() {
                     </p>
                   </td>
                   <td className="px-4 py-3 text-xs">
-                    <p className="font-medium text-foreground">{org?.name ?? "—"}</p>
+                    <p className="font-medium text-foreground">{t.bidderCompany ?? "—"}</p>
+                    {t.bidderName && <p className="text-muted-foreground">{t.bidderName}</p>}
                     <p className="text-muted-foreground">↔ {t.counterpartyName ?? "Not yet chosen"}</p>
                   </td>
                   <GateColumns t={t} />
@@ -382,7 +418,8 @@ export function TradesListView() {
               </div>
               <p className="truncate text-sm font-medium">{t.commodity || t.title}</p>
               <p className="text-xs text-muted-foreground">
-                {org?.name ?? "—"} ↔ {t.counterpartyName ?? "Not yet chosen"}
+                {[t.bidderCompany, t.bidderName].filter(Boolean).join(" · ") || "—"} ↔{" "}
+                {t.counterpartyName ?? "Not yet chosen"}
               </p>
               <div className="mt-1 flex flex-wrap items-center gap-1.5">
                 <GateStack t={t} />
