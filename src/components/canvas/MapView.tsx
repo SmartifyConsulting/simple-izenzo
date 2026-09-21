@@ -645,6 +645,26 @@ export function MapView({
           <span className="absolute left-1/2 top-[calc(50%+15px)] w-[75%] -translate-x-1/2 text-center text-[9px] leading-snug text-muted-foreground">
             Capital Deployment Assessment
           </span>
+          {/* Explains the sweeping ring above: memory is being fed for as long as the deal is between
+              the counterparty choice and Finality. */}
+          {memoryUpdating && (
+            <span
+              role="status"
+              className="absolute left-1/2 top-[calc(50%+42px)] flex -translate-x-1/2 items-baseline whitespace-nowrap text-[9px] italic leading-snug text-amber-700"
+            >
+              Updating memory
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <span
+                  key={i}
+                  aria-hidden
+                  className="animate-ellipsis-dot"
+                  style={{ animationDelay: `${i * 0.18}s` }}
+                >
+                  .
+                </span>
+              ))}
+            </span>
+          )}
         </button>
       </div>
 
