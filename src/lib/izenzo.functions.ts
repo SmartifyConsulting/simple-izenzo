@@ -237,6 +237,8 @@ type CandidateResult = {
   score?: number | undefined;
   rationale?: string | undefined;
   sourceUrl?: string | undefined;
+  /** The facts from the page that show why this organisation fits. */
+  evidence?: string | undefined;
 };
 
 /** Published directory listings turned straight into candidates. Used when the model returns
@@ -484,39 +486,53 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       );
     }
 
-    const searchQuery = [subject, wantedSide, data.region ?? tx.jurisdiction ?? ""]
-      .filter(Boolean)
-      .join(" ");
-    const system =
-      data.kind === "ai"
-        ? `You are the Izenzo counterparty search assistant. ${GROUNDING_RULES} Given a bid or offer, pick the organisations in the sources that could transact on these terms. You never decide and never contact anyone — you only propose candidates for a person to review. Respond with ONLY a JSON array, each item: {"name":string,"jurisdiction":string,"sector":string,"score":number 0-100,"rationale":string under 40 words,"sourceUrl":string}. No prose outside the array.`
-        : `You are Izenzo AI+, a deeper counterparty search. ${GROUNDING_RULES} Pick the best-matched organisations you find, weighing jurisdiction fit, sector fit and deal size. You never decide and never contact anyone. Respond with ONLY a JSON array, each item: {"name":string,"jurisdiction":string,"sector":string,"score":number 0-100,"rationale":string under 40 words covering fit and any risk notes,"sourceUrl":string}. No prose outside the array.`;
-
-    const prompt = [
-      `Commodity: ${tx.commodity ?? "n/a"}`,
-      `Quantity: ${tx.quantity ?? "n/a"} ${tx.unit ?? ""}`,
-      `Price: ${tx.price ?? "n/a"} ${tx.currency}`,
-      `Incoterms: ${tx.incoterms ?? "n/a"}`,
-      `Jurisdiction: ${tx.jurisdiction ?? "n/a"}`,
-      data.region ? `Preferred counterparty region: ${data.region}` : "",
-      typedPrompt ? `What the submitter is looking for (their own words):\n${typedPrompt.slice(0, 2000)}` : "",
-      docSummary ? `What the attached documents say:\n${docSummary.slice(0, 4000)}` : "",
-      latestBid
-        ? `Latest ${latestBid.direction}: ${latestBid.price ?? "n/a"} ${latestBid.currency} for ${latestBid.quantity ?? "n/a"} ${latestBid.unit ?? ""}. Terms: ${latestBid.terms ?? "n/a"}`
-        : "",
-      `Search the web for: ${searchQuery}`,
-      "Propose 4-6 real candidates found on the web.",
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    const web = await findOnWeb(apiKey, data.kind, system, prompt);
-    const { output, model, sources, failures } = web;
     // The bidder's own organisation is never a counterparty for its own bid.
     const { data: ownOrg } = await supabase.from("organisations").select("name").eq("id", tx.org_id).maybeSingle();
     const ownName = (ownOrg?.name ?? "").trim().toLowerCase();
     const notOwn = (c: { name: string }) => !ownName || c.name.trim().toLowerCase() !== ownName;
-    let candidates = parseCandidates(output).filter((c) => isRelevant(c, relevanceQuery) && notOwn(c));
+
+    // Bid + documents → understand the transaction → determine the required counterparty → search
+    // the public internet → identify real organisations → test relevance → reason over the
+    // evidence → return the counterparties.
+    const { findCounterparties } = await import("@/lib/counterpartyPipeline.server");
+    const pipeline = await findCounterparties({
+      apiKey,
+      kind: data.kind,
+      chatModel: data.kind === "ai" ? AI_MODEL : AI_PLUS_MODEL,
+      webModels: WEB_MODELS,
+      txKey: tx.id,
+      direction: (latestBid?.direction ?? "bid") === "offer" ? "offer" : "bid",
+      commodity: tx.commodity ?? null,
+      quantity: `${tx.quantity ?? "n/a"} ${tx.unit ?? ""}`.trim(),
+      price: `${tx.price ?? "n/a"} ${tx.currency}`,
+      incoterms: tx.incoterms ?? null,
+      jurisdiction: tx.jurisdiction ?? null,
+      region: data.region ?? null,
+      terms: latestBid?.terms ?? null,
+      typedPrompt,
+      docSummary,
+      fallbackSubject: subject,
+      ownOrgName: ownOrg?.name ?? "",
+    });
+    const { model, sources, failures } = pipeline;
+    const web = { webError: pipeline.webError };
+    // A last, loose sanity check against the brief's own wording, on top of the evidence test.
+    const briefQuery = [
+      relevanceQuery,
+      pipeline.brief.role,
+      ...pipeline.brief.organisationTypes,
+      ...pipeline.brief.capabilities,
+      ...pipeline.brief.sectors,
+    ].join(" ");
+    let candidates: CandidateResult[] = pipeline.candidates.filter(
+      (c) =>
+        notOwn(c) &&
+        isRelevant(
+          { name: c.name, sector: c.sector, jurisdiction: c.jurisdiction, rationale: `${c.rationale ?? ""} ${c.evidence ?? ""}` },
+          briefQuery,
+          { loose: true },
+        ),
+    );
     if (candidates.length === 0) candidates = (await listingCandidates(relevanceQuery, 6)).filter(notOwn);
     if (candidates.length === 0) {
       // A web search that itself failed is reported as that, not as "nothing relevant exists".
@@ -563,7 +579,9 @@ export const searchCounterparties = createServerFn({ method: "POST" })
         // Evidence lives in media_flags so the source page can be opened next to the name, along
         // with the breakdown behind the percentage.
         media_flags: {
-          ...(c.sourceUrl ? { evidence: [{ url: c.sourceUrl, source: "web_search" }] } : {}),
+          ...(c.sourceUrl
+            ? { evidence: [{ url: c.sourceUrl, source: "web_search", ...(c.evidence ? { note: c.evidence } : {}) }] }
+            : {}),
           scoring: { total: scored.total, components: scored.components },
         },
       };

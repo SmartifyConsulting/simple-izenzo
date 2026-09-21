@@ -44,10 +44,11 @@ export type Relatable = {
 /** A result only belongs on screen if it has something to do with what was asked for: at least one
  * of the query's terms (two, when the query has three or more) must appear in what is known about
  * the organisation. Anything else is noise and is dropped rather than ranked low. */
-export function isRelevant(c: Relatable, query: string): boolean {
+export function isRelevant(c: Relatable, query: string, opts: { loose?: boolean } = {}): boolean {
   const terms = relevanceTerms(query);
   if (terms.length === 0) return true;
   const haystack = words([c.name, c.sector ?? "", c.jurisdiction ?? "", c.rationale ?? ""].join(" "));
   const hits = terms.filter((t) => haystack.some((h) => h.startsWith(t))).length;
-  return hits >= (terms.length >= 3 ? 2 : 1);
+  // Loose is a last sanity check for results a fuller test has already judged: one shared term.
+  return hits >= (!opts.loose && terms.length >= 3 ? 2 : 1);
 }
