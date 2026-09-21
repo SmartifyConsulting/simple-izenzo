@@ -115,6 +115,34 @@ export async function sendEmail(
         "The email could not be sent — Resend has run out of credits. Top up Resend under Admin → Integrations.",
       );
     }
-    throw new Error(`The email could not be sent — ${failure.message}`);
+    throw new Error(`The email could not be sent — ${explainResendRefusal(res.status, body, creds.fromAddress, failure.message)}`);
   }
+}
+
+/** Resend answers 401 and 403 for very different reasons, and the generic "refused the key" wording
+ * sent people re-entering a key that was fine. Its own reply says which it was. */
+function explainResendRefusal(status: number, body: string, fromAddress: string, fallback: string): string {
+  let name = "";
+  let message = "";
+  try {
+    const parsed = JSON.parse(body) as { name?: string; message?: string };
+    name = String(parsed.name ?? "");
+    message = String(parsed.message ?? "");
+  } catch {
+    message = body.slice(0, 200);
+  }
+  const domain = fromAddress.split("@")[1] ?? fromAddress;
+  if (/not verified|verify/i.test(message)) {
+    return `Resend will not send from ${fromAddress} because the domain ${domain} is not verified there. Verify it under Resend → Domains, or change the From address in Admin → Integrations → Resend.`;
+  }
+  if (/only send testing emails to your own/i.test(message)) {
+    return `This Resend account can only send test emails to its owner until a domain is verified. Verify ${domain} under Resend → Domains, then set the From address to that domain.`;
+  }
+  if (name === "restricted_api_key" || /restricted/i.test(message)) {
+    return "The Resend key saved is restricted and is not allowed to send email. Create a key with sending access and save it in Admin → Integrations → Resend.";
+  }
+  if (name === "invalid_api_key" || status === 401) {
+    return "Resend does not recognise the saved API key. Copy a current key from Resend → API Keys and save it in Admin → Integrations → Resend.";
+  }
+  return message ? `${fallback} Resend said: "${message.slice(0, 160)}"` : fallback;
 }
