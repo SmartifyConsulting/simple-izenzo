@@ -11,6 +11,8 @@ const STOPWORDS = new Set([
 const GENERIC_TERMS = new Set([
   "looking", "need", "want", "find", "seeking", "search", "supplier", "suppliers", "buyer",
   "buyers", "seller", "sellers", "company", "companies", "trade", "trading", "project", "projects",
+  "proposal", "rfp", "rfq", "request", "tender", "service", "services", "solution", "solutions",
+  "provider", "providers", "supply", "contract", "document",
 ]);
 
 function words(text: string): string[] {

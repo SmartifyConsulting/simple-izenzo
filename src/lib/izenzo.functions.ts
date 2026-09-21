@@ -426,8 +426,13 @@ function scoreCandidate(
 function keywordsFromSummary(summary: string): string {
   const line = summary
     .split(/\n+/)
-    .map((l) => l.replace(/^[-•*]\s*/, "").trim())
-    .find((l) => l.length > 8 && !/^not stated/i.test(l));
+    .map((l) => l.replace(/^[-•*]\s*/, "").replace(/^(proposal|scope|deliverables)\s*:\s*/i, "").trim())
+    .find(
+      (l) =>
+        l.length > 8 &&
+        !/^not stated/i.test(l) &&
+        !/^(scope|deliverables|evaluation criteria|due date)\b/i.test(l),
+    );
   if (!line) return "";
   return line
     .replace(/[.,;:]/g, " ")
@@ -483,6 +488,11 @@ export const searchCounterparties = createServerFn({ method: "POST" })
     const docKeywords = docSummary.trim() ? keywordsFromSummary(docSummary) : "";
     let subject = [typedPrompt.slice(0, 160), docKeywords].filter(Boolean).join(" ").slice(0, 200).trim();
     if (!subject) subject = tx.commodity?.trim() ?? "";
+    // What a result is checked against is the short, deliberate description of the bid — what was
+    // typed, the commodity, or the bid's title — not the long sentence pulled from a document, whose
+    // many incidental words no real organisation's description would share.
+    const bidTitle = tx.title && tx.title !== "New Bid" && tx.title !== "New Offer" ? tx.title : "";
+    const relevanceQuery = typedPrompt.slice(0, 160) || tx.commodity?.trim() || bidTitle || subject;
     if (!subject) {
       // Nothing typed and no summary saved yet (documents attached but still unread): fall back to
       // what the attached filenames say, so the search runs instead of dead-ending the workspace.
@@ -557,8 +567,8 @@ export const searchCounterparties = createServerFn({ method: "POST" })
     const { data: ownOrg } = await supabase.from("organisations").select("name").eq("id", tx.org_id).maybeSingle();
     const ownName = (ownOrg?.name ?? "").trim().toLowerCase();
     const notOwn = (c: { name: string }) => !ownName || c.name.trim().toLowerCase() !== ownName;
-    let candidates = parseCandidates(output).filter((c) => isRelevant(c, subject) && notOwn(c));
-    if (candidates.length === 0) candidates = (await listingCandidates(subject, 6)).filter(notOwn);
+    let candidates = parseCandidates(output).filter((c) => isRelevant(c, relevanceQuery) && notOwn(c));
+    if (candidates.length === 0) candidates = (await listingCandidates(relevanceQuery, 6)).filter(notOwn);
     if (candidates.length === 0)
       throw new Error(
         "No organisations relevant to this search were found. Try rewording it or adding more detail.",

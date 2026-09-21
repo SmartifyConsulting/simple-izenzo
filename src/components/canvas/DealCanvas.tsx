@@ -555,7 +555,9 @@ export function DealCanvas({
                       <p className="text-[11px] text-muted-foreground">
                         {matchProgress.searching
                           ? "Searching for counterparties…"
-                          : `Search could not finish: ${matchProgress.error}`}
+                          : matchProgress.error?.startsWith("No organisations relevant")
+                    ? "No relevant organisations were found. Edit the search under Bid Information and search again."
+                    : `Search could not finish: ${matchProgress.error}`}
                       </p>
                     </div>
                   )}
@@ -1531,7 +1533,9 @@ export function CounterpartyRecord({
         ) : (
           <p className="mt-2 text-xs text-slate-500">
             {error
-              ? `Search could not finish: ${error}`
+              ? error.startsWith("No organisations relevant")
+                ? "No relevant organisations were found. Edit the search under Bid Information and search again."
+                : `Search could not finish: ${error}`
               : "No matches found yet — run the search again."}
           </p>
         )

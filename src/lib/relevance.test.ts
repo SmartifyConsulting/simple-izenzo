@@ -34,3 +34,13 @@ describe("isRelevant", () => {
     expect(isRelevant({ name: "Global Trading Company Ltd", sector: "Various" }, "suppliers looking for copper")).toBe(false);
   });
 });
+
+describe("isRelevant for a bid titled from a document", () => {
+  const title = "Enterprise Cloud Migration RFP";
+  it("keeps a real cloud-migration provider", () => {
+    expect(isRelevant({ name: "Accenture", sector: "IT services", rationale: "Enterprise cloud migration and managed cloud services." }, title)).toBe(true);
+  });
+  it("drops an unrelated business", () => {
+    expect(isRelevant({ name: "Cape Wine Exporters", sector: "Agriculture" }, title)).toBe(false);
+  });
+});
