@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { POI_COST, WAD_COST } from "@/lib/spine";
 import { userFacingText } from "@/lib/userFacingText";
+import { isRelevant } from "@/lib/relevance";
 
 async function sha256(input: string) {
   const bytes = new TextEncoder().encode(input);
@@ -260,29 +261,6 @@ async function listingSources() {
   } catch {
     return [];
   }
-}
-
-/** Words that describe the act of searching rather than what is being searched for. */
-const GENERIC_TERMS = new Set([
-  "looking", "need", "want", "find", "seeking", "search", "supplier", "suppliers", "buyer",
-  "buyers", "seller", "sellers", "company", "companies", "trade", "trading", "project", "projects",
-]);
-
-/** The distinguishing terms of a query, reduced to a stem so a plural or a typo'd ending still
- * matches ("prospcets" → "pros"). */
-function relevanceTerms(text: string): string[] {
-  return [...new Set([...keywords(text)].filter((w) => !GENERIC_TERMS.has(w)).map((w) => (w.length >= 5 ? w.slice(0, 4) : w.replace(/s$/, ""))))];
-}
-
-/** A result only belongs on screen if it has something to do with what was asked for: at least one
- * of the query's terms (two, when the query has three or more) must appear in what is known about
- * the organisation. Anything else is noise and is dropped rather than ranked low. */
-function isRelevant(c: CandidateResult, query: string): boolean {
-  const terms = relevanceTerms(query);
-  if (terms.length === 0) return true;
-  const haystack = [...keywords([c.name, c.sector ?? "", c.jurisdiction ?? "", c.rationale ?? ""].join(" "))];
-  const hits = terms.filter((t) => haystack.some((h) => h.startsWith(t))).length;
-  return hits >= (terms.length >= 3 ? 2 : 1);
 }
 
 /** Published directory listings turned straight into candidates. Used when the model returns

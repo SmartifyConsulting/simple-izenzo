@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { isRelevant } from "@/lib/relevance";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Search, Users, Package, Plus, Check, X, Sparkles, Globe, FileText, Clock } from "lucide-react";
@@ -181,7 +182,12 @@ export function SearchButton() {
       if (ai.status === "fulfilled") push("ai", ai.value.candidates);
       if (aiPlus.status === "fulfilled") push("ai_plus", aiPlus.value.candidates);
       if (web.status === "fulfilled" && !web.value.error) {
-        push("web", (web.value.data?.results ?? []) as { name: string; url?: string; detail?: string }[]);
+        // The open-web branch returns whatever pages matched loosely — keep only what actually
+        // relates to what was searched for.
+        const webResults = ((web.value.data?.results ?? []) as { name: string; url?: string; detail?: string }[]).filter(
+          (r) => isRelevant({ name: r.name ?? "", rationale: r.detail ?? "" }, trimmed),
+        );
+        push("web", webResults);
       }
 
       if (ai.status === "rejected" && aiPlus.status === "rejected") {
