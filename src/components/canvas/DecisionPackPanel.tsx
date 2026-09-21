@@ -125,13 +125,13 @@ export function DecisionPackPanel({
     }
   }
 
-  async function acceptAll() {
+  async function decideAll(decision: "accepted" | "rejected") {
     const ids = (proposals ?? []).filter((p) => !p.decided_at).map((p) => p.id);
     if (ids.length === 0) return;
     setSelectingAll(true);
     try {
       for (const id of ids) {
-        await act(id, "accepted");
+        await act(id, decision);
       }
     } finally {
       setSelectingAll(false);
@@ -177,9 +177,12 @@ export function DecisionPackPanel({
       <Dialog
         open={open}
         onOpenChange={(v) => {
-          // While gating, the set must be answered — it cannot be dismissed unanswered.
-          if (!v && gating && pending > 0) return;
           setOpen(v);
+          // Closing is always allowed; while gating, the set still has to be answered before the
+          // next step opens, and the button above brings this window back.
+          if (!v && gating && pending > 0) {
+            toast.info("You still need to accept or reject each recommendation before the next step opens.");
+          }
         }}
       >
         <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
@@ -198,13 +201,23 @@ export function DecisionPackPanel({
 
           <div className="space-y-2">
             {pending > 1 && (
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-1.5">
                 <Button
                   size="sm"
                   variant="outline"
                   className="h-7 gap-1 rounded-full px-2.5 text-[11px]"
                   disabled={selectingAll || deciding !== null}
-                  onClick={() => void acceptAll()}
+                  onClick={() => void decideAll("rejected")}
+                >
+                  <X className="h-3 w-3" />
+                  Reject all
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 gap-1 rounded-full px-2.5 text-[11px]"
+                  disabled={selectingAll || deciding !== null}
+                  onClick={() => void decideAll("accepted")}
                 >
                   {selectingAll ? (
                     <Loader2 className="h-3 w-3 animate-spin" />
