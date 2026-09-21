@@ -1760,15 +1760,33 @@ function LiveDealEngine() {
   }
 
   async function openAttachment(a: Attachment) {
+    // The tab has to be opened straight away, while the click still counts — a tab opened only
+    // after the file has finished loading is treated by the browser as an unrequested pop-up.
+    // (And `noopener` would make window.open return null even on success, so it is cut loose
+    // afterwards instead.)
+    const tab = window.open("", "_blank");
+    if (tab) {
+      tab.document.title = a.name;
+      tab.document.body.innerText = "Opening document…";
+    }
     const blob = await loadAttachmentBlob(a);
-    if (!blob) return;
-    const url = URL.createObjectURL(blob);
-    const tab = window.open(url, "_blank", "noopener,noreferrer");
-    if (!tab) {
-      URL.revokeObjectURL(url);
-      toast.error("Allow pop-ups to preview this document, or download it instead");
+    if (!blob) {
+      tab?.close();
       return;
     }
+    const url = URL.createObjectURL(blob);
+    if (!tab) {
+      // Pop-ups really are blocked here — save the file instead of failing.
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = a.name;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      toast.info("Pop-ups are blocked, so the document was downloaded instead");
+      return;
+    }
+    tab.opener = null;
+    tab.location.href = url;
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
   }
 
