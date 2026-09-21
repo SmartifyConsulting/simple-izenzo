@@ -29,3 +29,24 @@ export function keepForBid(ctx: BidRelevance, c: Relatable): boolean {
   if (ctx.ownName && c.name.trim().toLowerCase() === ctx.ownName) return false;
   return !ctx.searchedFor || isRelevant(c, ctx.searchedFor);
 }
+
+type StoredCounterparty = {
+  name: string;
+  sector: string | null;
+  jurisdiction: string | null;
+  rationale: string | null;
+  shortlisted?: boolean | null;
+  score?: number | null;
+};
+
+/** The counterparties saved on a bid that actually belong on it — the same rule the lists apply, so
+ * a count, a shortlist and the list itself can never disagree. */
+export async function loadRelevantCounterparties(txId: string): Promise<StoredCounterparty[]> {
+  const { data, error } = await supabase
+    .from("counterparties")
+    .select("name, sector, jurisdiction, rationale, shortlisted, score")
+    .eq("transaction_id", txId);
+  if (error) throw error;
+  const relevance = await loadBidRelevance(txId);
+  return ((data ?? []) as unknown as StoredCounterparty[]).filter((c) => keepForBid(relevance, c));
+}

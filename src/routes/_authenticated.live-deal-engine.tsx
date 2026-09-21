@@ -64,6 +64,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
+import { loadRelevantCounterparties } from "@/lib/bidRelevance";
 import { advance, fallbackReference, recordEvent, swapReferencePrefix, type Transaction } from "@/lib/tx";
 import type { StageKey } from "@/lib/spine";
 import { useAuth } from "@/lib/auth";
@@ -351,14 +352,11 @@ function LiveDealEngine() {
     // counterparty is actually recorded — after that the list is settled and the poll stops.
     refetchInterval: dbHasChosenParty ? false : 4000,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("counterparties")
-        .select("name, score")
-        .eq("transaction_id", dealTx!.id)
-        .eq("shortlisted", true)
-        .order("score", { ascending: false, nullsFirst: false });
-      if (error) throw error;
-      return (data ?? []).map((c) => c.name as string);
+      const rows = await loadRelevantCounterparties(dealTx!.id);
+      return rows
+        .filter((c) => c.shortlisted)
+        .sort((a, b) => (b.score ?? -1) - (a.score ?? -1))
+        .map((c) => c.name);
     },
   });
 
@@ -844,12 +842,9 @@ function LiveDealEngine() {
     queryKey: ["counterparties-count", dealTx?.id],
     enabled: Boolean(dealTx?.id),
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from("counterparties")
-        .select("id", { count: "exact", head: true })
-        .eq("transaction_id", dealTx!.id);
-      if (error) throw error;
-      return count ?? 0;
+      // Counted by the same relevance rule the list uses, so unrelated leftovers never make a
+      // search look like it found something.
+      return (await loadRelevantCounterparties(dealTx!.id)).length;
     },
   });
 
@@ -1726,10 +1721,7 @@ function LiveDealEngine() {
       // The candidates are written server-side, so the Record panel's cached (empty) list has to
       // be refreshed or it stays stuck on "Searching for counterparties…".
       await queryClient.invalidateQueries({ queryKey: ["counterparties", txId] });
-      const { count } = await supabase
-        .from("counterparties")
-        .select("id", { count: "exact", head: true })
-        .eq("transaction_id", txId);
+      const count = (await loadRelevantCounterparties(txId)).length;
       await queryClient.invalidateQueries({ queryKey: ["counterparties-count", txId] });
       // Counterparties found: fold Bid Information away so the results list gets the room.
       if ((count ?? 0) > 0) setBidInfoCollapsed(txId, true);
