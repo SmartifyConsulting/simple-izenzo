@@ -92,7 +92,7 @@ async function scanWithTavily(
         const res = await callOpenAiChat(
           openAiKey,
           {
-            model: "gpt-6-astra",
+            model: "gpt-5-mini",
             reasoning_effort: "low",
             max_completion_tokens: 8000,
             response_format: { type: "json_object" },
@@ -164,7 +164,7 @@ async function scanWithOpenAi(apiKey: string, name: string, jurisdiction: string
   const sourceLines = SOURCES.map((s) => `- ${s.source}: ${s.label}`).join("\n");
   const result = await webSearch({
     apiKey,
-    models: ["gpt-6-astra", "gpt-5"],
+    models: ["gpt-5-mini", "gpt-5"],
     effort: "low",
     instructions:
       "You run an online presence and adverse-media check on one company for a trade counterparty review, using web search. " +

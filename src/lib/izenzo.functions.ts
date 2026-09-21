@@ -17,12 +17,13 @@ async function sha256(input: string) {
 
 const txInput = (data: unknown) => z.object({ transactionId: z.string().uuid() }).parse(data);
 
-/** Both tiers run on GPT-6 Astra on the configured OpenAI account. They differ by reasoning depth and source count. */
-const AI_MODEL = "gpt-6-astra";
+/** GPT-6 Astra is reserved for AI+. Every other search and check runs on the standard model, through
+ * Tavily (public internet search) and OpenAI. */
+const AI_MODEL = "gpt-5-mini";
 const AI_PLUS_MODEL = "gpt-6-astra";
 
 function aiPlusOptions(model: string, kind: "ai" | "ai_plus" = "ai_plus") {
-  if (model !== "gpt-6-astra") return {};
+  if (model !== AI_MODEL && model !== AI_PLUS_MODEL) return {};
   return {
     reasoning_effort: (kind === "ai" ? "low" : "high") as "low" | "high",
     max_completion_tokens: kind === "ai" ? 8000 : 16000,
@@ -271,18 +272,71 @@ async function listingCandidates(query: string, limit = 6): Promise<CandidateRes
 /** Scrapes the open web for one query and turns the pages into grounding context for the model.
  * When the live web cannot be read, it falls back to the published Izenzo directory rather than
  * failing the whole search — but it never lets the model answer without real sources. */
-const WEB_MODELS = [AI_MODEL, "gpt-5"];
+const webModelsFor = (kind: "ai" | "ai_plus") => [kind === "ai" ? AI_MODEL : AI_PLUS_MODEL, "gpt-5"];
 
 /** Finds real organisations on the live web with OpenAI's web search. A failure is returned, not
  * thrown, so the caller can still fall back to the published directory. */
-async function findOnWeb(apiKey: string, kind: "ai" | "ai_plus", instructions: string, input: string) {
+async function findOnWeb(
+  apiKey: string,
+  kind: "ai" | "ai_plus",
+  instructions: string,
+  input: string,
+  query?: string,
+) {
   const { webSearch } = await import("@/lib/openaiWebSearch.server");
+  const { loadTavilyApiKey, tavilySearch } = await import("@/lib/tavily.server");
+  // Tavily (public internet search) plus OpenAI when Tavily is connected; OpenAI's own web search
+  // otherwise.
+  const tavilyKey = query ? await loadTavilyApiKey() : null;
+  if (tavilyKey && query) {
+    try {
+      const pages = await tavilySearch(tavilyKey, query, { depth: kind === "ai" ? "basic" : "advanced", max: 8 });
+      if (pages.length > 0) {
+        const model = kind === "ai" ? AI_MODEL : AI_PLUS_MODEL;
+        const res = await chatCompletion(apiKey, {
+          model,
+          ...aiPlusOptions(model, kind),
+          messages: [
+            {
+              role: "system",
+              content:
+                instructions +
+                " The public internet search results are given in the message: use only those pages, and set sourceUrl to one of their addresses.",
+            },
+            {
+              role: "user",
+              content: `${input}\n\nSearch results:\n${pages
+                .map((pg, i) => `${i + 1}. ${pg.title} — ${pg.url}\n${pg.content}`)
+                .join("\n\n")}`,
+            },
+          ],
+        });
+        if (!res.ok) throw new Error(await aiFailureMessage(res));
+        const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+        return {
+          output: json.choices?.[0]?.message?.content ?? "",
+          model,
+          sources: pages.map((pg) => ({ label: pg.title || pg.url, url: pg.url })),
+          failures: [] as { label: string; reason: string }[],
+          webError: null as Error | null,
+        };
+      }
+    } catch (err) {
+      return {
+        output: "",
+        model: AI_MODEL,
+        sources: [] as { label: string; url: string }[],
+        failures: [{ label: "Internet search", reason: (err as Error).message }],
+        webError: err as Error,
+      };
+    }
+  }
   try {
     const r = await webSearch({
       apiKey,
       instructions,
       input,
-      models: WEB_MODELS,
+      models: webModelsFor(kind),
       effort: kind === "ai" ? "low" : "medium",
     });
     return {
@@ -550,7 +604,7 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       apiKey,
       kind: data.kind,
       chatModel: data.kind === "ai" ? AI_MODEL : AI_PLUS_MODEL,
-      webModels: WEB_MODELS,
+      webModels: webModelsFor(data.kind),
       tavilyKey: await (await import("@/lib/tavily.server")).loadTavilyApiKey(),
       txKey: tx.id,
       direction: (latestBid?.direction ?? "bid") === "offer" ? "offer" : "bid",
@@ -741,7 +795,7 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
 
     const prompt = `Search the web for: "${data.query}" ${counterpart}\nRole: ${data.role}\nPropose 4-6 real candidates found on the web.`;
 
-    const web = await findOnWeb(apiKey, data.kind, system, prompt);
+    const web = await findOnWeb(apiKey, data.kind, system, prompt, `${data.query} ${counterpart}`);
     const { output, model, sources, failures } = web;
     let candidates = parseCandidates(output).filter((c) => isRelevant(c, data.query));
     if (candidates.length === 0) candidates = await listingCandidates(data.query, 6);
