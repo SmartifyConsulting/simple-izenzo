@@ -1691,9 +1691,17 @@ function LiveDealEngine() {
       const { data: row } = await supabase.from("transactions").select("reference").eq("id", txId).maybeSingle();
       if (tradeKindOf((row as { reference?: string | null } | null)?.reference) !== "workspace") return;
       const { direction } = await classifySide({ data: { transactionId: txId } });
-      if (direction) await applyClassification(txId, direction);
+      // A search is under way, so the workspace has to become one or the other: when nothing points
+      // either way, a search for counterparties is treated as a bid (the deal's default side).
+      await applyClassification(txId, direction ?? "bid");
     } catch {
-      // Never blocks the search — it simply stays a Workspace.
+      // Could not be categorised (e.g. offline) — treated as a bid, the default side, rather than
+      // leaving a search running against a workspace that is neither.
+      try {
+        await applyClassification(txId, "bid");
+      } catch {
+        // Never blocks the search.
+      }
     }
   }
 

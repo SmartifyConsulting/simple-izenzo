@@ -14,3 +14,9 @@ describe("guessSideFromWording", () => {
     expect(guessSideFromWording("yellow maize 500 MT")).toBeNull();
   });
 });
+
+describe("guessSideFromWording for RFP-style documents", () => {
+  it("reads a request for proposals as a bid", () => {
+    expect(guessSideFromWording("Request for proposals to migrate workloads. Deliverables. Evaluation criteria.")).toBe("bid");
+  });
+});

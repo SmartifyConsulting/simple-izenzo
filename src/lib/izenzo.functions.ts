@@ -443,7 +443,7 @@ export const classifyTradeSide = createServerFn({ method: "POST" })
               role: "system",
               content:
                 "Decide from what a person typed and attached whether they are searching for a SELLER (a supplier, provider or vendor — they want to buy or procure) or searching for a BUYER (a customer, buyer or off-taker — they want to sell or supply). " +
-                'Reply with JSON only: {"lookingFor":"seller"|"buyer"|"unclear","reason":string}. Use "unclear" only when nothing in the text points either way.',
+                'Reply with JSON only: {"lookingFor":"seller"|"buyer"|"unclear","reason":string}. Always choose the more likely of the two from the wording and context (a request for proposals, a tender, or a need for goods or a service means seller; goods or services being offered for sale means buyer). Use "unclear" only if the text has no such hint at all.',
             },
             { role: "user", content: text.slice(0, 6000) },
           ],
