@@ -2216,7 +2216,7 @@ export function CanvasStart({
               void beginPicking();
             }
           }}
-          placeholder="Enter bid description"
+          placeholder="Enter bid/offer description"
           className="min-w-0 flex-1 basis-1/2 bg-transparent px-2 text-sm text-foreground outline-none placeholder:text-muted-foreground"
         />
 
