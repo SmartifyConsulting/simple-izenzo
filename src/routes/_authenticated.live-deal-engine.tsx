@@ -2713,7 +2713,7 @@ function LiveDealEngine() {
                                             : "Could not scan"}
                                   </span>
                                   {f.detail && (
-                                    <p className="basis-full text-[10.5px] leading-snug text-muted-foreground/80">
+                                    <p className="basis-full text-[11px] leading-snug text-foreground/75">
                                       {f.detail}
                                       {f.url && f.status !== "failed" && f.status !== "unavailable" && (
                                         <>

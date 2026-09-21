@@ -104,7 +104,8 @@ async function scanWithTavily(
                   '"found" (the company has a public presence there and nothing adverse), "not_found" (no clear presence of THIS company) or ' +
                   '"adverse" (the results tie THIS company to fraud, scams, lawsuits, sanctions, convictions, investigations, money laundering, bribery, corruption, liquidation, insolvency or blacklisting). ' +
                   "Only judge results that are clearly about the named company (name and place fit) — ignore namesakes and unrelated pages. " +
-                  '"detail" is one plain sentence saying what was found; never mention AI, searching or tools. "url" is the single most relevant result address, or null. ' +
+                  '"detail" is a short explanation of this specific check, in one or two plain sentences (under 40 words): for "found", say what was found and where — the page or profile, and what it shows about the company; for "not_found", say what was looked for on this source and that no page for this company came up (or that the only matches were other organisations); for "adverse", say exactly what is alleged, by whom or in which report, and when if known. Name the actual page, post or article rather than speaking in general terms. Never mention AI, searching or tools. ' +
+                  '"url" is the single most relevant result address, or null. ' +
                   'Reply with JSON only: {"findings":[{"source":string,"status":"found"|"not_found"|"adverse","detail":string,"url":string|null}]} with one entry per source given.',
               },
               { role: "user", content: `Company: ${name}${jurisdiction ? ` (${jurisdiction})` : ""}\n\n${blocks}` },
@@ -148,12 +149,12 @@ async function scanWithTavily(
     const hits = ADVERSE.filter((w) => text.includes(w));
     const base2 = { source: src.source, label: src.label, ...(firstUrl ? { url: firstUrl } : {}) };
     if (hits.length > 0) {
-      return { ...base2, status: "adverse", detail: `Possible adverse mentions: ${hits.slice(0, 4).join(", ")}. Read the source before continuing.` };
+      return { ...base2, status: "adverse", detail: `${pages[0]?.title ? `"${pages[0].title.slice(0, 90)}" — ` : ""}mentions ${hits.slice(0, 4).join(", ")} alongside the company name. Read the source before continuing.` };
     }
     if (text.includes(name.toLowerCase().slice(0, 24))) {
-      return { ...base2, status: "found", detail: "Public presence found, nothing adverse in the visible results." };
+      return { ...base2, status: "found", detail: `${pages[0]?.title ? `Found "${pages[0].title.slice(0, 90)}". ` : ""}Nothing adverse shows in the visible results.` };
     }
-    return { ...base2, status: "not_found", detail: "No clear public presence on this source." };
+    return { ...base2, status: "not_found", detail: `Searched ${src.label} for ${name}${jurisdiction ? ` (${jurisdiction})` : ""} — no page for this company came up.` };
   });
 }
 
@@ -172,7 +173,8 @@ async function scanWithOpenAi(apiKey: string, name: string, jurisdiction: string
       '"found" (the company has a public presence there and nothing adverse), "not_found" (no clear presence of THIS company) or ' +
       '"adverse" (results tie THIS company to fraud, scams, lawsuits, sanctions, convictions, investigations, money laundering, bribery, corruption, liquidation, insolvency or blacklisting). ' +
       "Only judge results that are clearly about the named company (name and place fit) — ignore namesakes and unrelated pages. " +
-      '"detail" is one plain sentence saying what was found; never mention AI, searching or tools. "url" is the single most relevant page address you found for that source, or null. ' +
+      '"detail" is a short explanation of this specific check, in one or two plain sentences (under 40 words): for "found", say what was found and where — the page or profile, and what it shows about the company; for "not_found", say what was looked for on this source and that no page for this company came up (or that the only matches were other organisations); for "adverse", say exactly what is alleged, by whom or in which report, and when if known. Name the actual page, post or article rather than speaking in general terms. Never mention AI, searching or tools. ' +
+      '"url" is the single most relevant page address you found for that source, or null. ' +
       'Reply with JSON only: {"findings":[{"source":string,"status":"found"|"not_found"|"adverse","detail":string,"url":string|null}]} with exactly one entry per source listed.',
     input: `Company: ${name}${jurisdiction ? ` (${jurisdiction})` : ""}\n\nSources:\n${sourceLines}`,
   });
@@ -256,7 +258,7 @@ export const runOnlineMediaChecks = createServerFn({ method: "POST" })
           findings = SOURCES.map((src): MediaFinding => {
             const j = judged.get(src.source);
             if (!j) {
-              return { source: src.source, label: src.label, status: "not_found", detail: "No clear public presence on this source." };
+              return { source: src.source, label: src.label, status: "not_found", detail: `Searched ${src.label} for ${cp.name} — no page for this company came up.` };
             }
             return {
               source: src.source,
