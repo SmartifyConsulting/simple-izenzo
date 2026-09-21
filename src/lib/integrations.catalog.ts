@@ -260,9 +260,9 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
     name: "OpenAI",
     group: "AI",
     summary:
-      "Powers document reading, counterparty search, decision packs, org briefs and bug-report voice transcription.",
+      "Powers document reading, counterparty search on the live web, online scanning of counterparties, decision packs, org briefs and bug-report voice transcription.",
     usedAt:
-      "Trading Gate → Bid/Offer document reading and Counterparties (AI / AI+ search), Decision Packs, org briefs, and Bug Report voice notes.",
+      "Trading Gate → Bid/Offer document reading, Counterparties (AI / AI+ web search), Online Media Screening, Decision Packs, org briefs, and Bug Report voice notes.",
     costNote: "Billed per token/minute of usage on your OpenAI account — see OpenAI's pricing page for current rates.",
     docsUrl: "https://platform.openai.com/docs",
     fields: [

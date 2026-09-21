@@ -41,9 +41,6 @@ async function aiFailureMessage(res: Response): Promise<string> {
 }
 
 
-/** How many open-web surfaces each tier reads through Firecrawl. */
-const SOURCE_LIMIT = { ai: 3, ai_plus: 6 } as const;
-
 
 /** Seal the Proof of Intent. Hard server-side gate: 1 token. */
 export const sealProofOfIntent = createServerFn({ method: "POST" })
@@ -242,28 +239,6 @@ type CandidateResult = {
   sourceUrl?: string | undefined;
 };
 
-/** Real listings already published in the Izenzo directory, used as grounding when the live web
- * cannot be read. Still real, named organisations — never invented. */
-async function listingSources() {
-  try {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data } = await supabaseAdmin
-      .from("responder_listings")
-      .select("name, sector, jurisdiction, summary, source_url")
-      .eq("published", true)
-      .eq("is_example", false)
-      .order("verified_at", { ascending: false, nullsFirst: false })
-      .limit(40);
-    return (data ?? []).map((r) => ({
-      label: `Izenzo directory — ${r.name}`,
-      url: r.source_url ?? "",
-      text: [r.name, r.sector, r.jurisdiction, r.summary].filter(Boolean).join(" — "),
-    }));
-  } catch {
-    return [];
-  }
-}
-
 /** Published directory listings turned straight into candidates. Used when the model returns
  * nothing from the fallback sources, so a search still yields real named organisations. */
 async function listingCandidates(query: string, limit = 6): Promise<CandidateResult[]> {
@@ -293,48 +268,40 @@ async function listingCandidates(query: string, limit = 6): Promise<CandidateRes
 /** Scrapes the open web for one query and turns the pages into grounding context for the model.
  * When the live web cannot be read, it falls back to the published Izenzo directory rather than
  * failing the whole search — but it never lets the model answer without real sources. */
-async function groundOnWeb(query: string, kind: "ai" | "ai_plus") {
-  const { firecrawlConfigured, fetchSearchResults } = await import("@/lib/firecrawl.server");
-  let sources: { label: string; url: string; text: string }[] = [];
-  let failures: { label: string; reason: string }[] = [];
-  let webError: string | null = null;
+const WEB_MODELS = [AI_MODEL, "gpt-5"];
 
-  if (!(await firecrawlConfigured())) {
-    webError = "Live web search is not connected (add it in Admin → Integrations).";
-  } else {
-    try {
-      const read = await fetchSearchResults(query, SOURCE_LIMIT[kind]);
-      sources = read.sources;
-      failures = read.failures;
-      if (sources.length === 0) {
-        const reason = failures[0]?.reason ? ` (${failures[0].reason})` : "";
-        webError = `The live web could not be read for this search${reason}.`;
-      }
-    } catch (err) {
-      webError = `The live web could not be read (${(err as Error).message}).`;
-    }
+/** Finds real organisations on the live web with OpenAI's web search. A failure is returned, not
+ * thrown, so the caller can still fall back to the published directory. */
+async function findOnWeb(apiKey: string, kind: "ai" | "ai_plus", instructions: string, input: string) {
+  const { webSearch } = await import("@/lib/openaiWebSearch.server");
+  try {
+    const r = await webSearch({
+      apiKey,
+      instructions,
+      input,
+      models: WEB_MODELS,
+      effort: kind === "ai" ? "low" : "medium",
+    });
+    return {
+      output: r.text,
+      model: r.model,
+      sources: r.sources.map((x) => ({ label: x.title || x.url, url: x.url })),
+      failures: [] as { label: string; reason: string }[],
+      webError: null as Error | null,
+    };
+  } catch (err) {
+    return {
+      output: "",
+      model: AI_MODEL,
+      sources: [] as { label: string; url: string }[],
+      failures: [{ label: "Web search", reason: (err as Error).message }],
+      webError: err as Error,
+    };
   }
-
-  if (sources.length === 0) {
-    sources = await listingSources();
-    if (sources.length === 0) {
-      throw new Error(
-        `${webError ?? "No sources could be read for this search."} There are no published directory listings to match against either.`,
-      );
-    }
-    failures = [...failures, { label: "Live web search", reason: webError ?? "unavailable" }];
-  }
-
-  const context = sources
-    .map((s, i) => `SOURCE ${i + 1} — ${s.label} — ${s.url}\n${s.text}`)
-    .join("\n\n");
-
-  return { sources, failures, context };
 }
 
-
 const GROUNDING_RULES =
-  "Write every rationale and sector only about the organisation and how its products or services fit what the person asked for — never mention AI, AI+, Izenzo, models, searching, scoring, sources or how this list was produced. You are given the visible text of real web and marketplace search pages. Only return organisations that actually appear in that text. Never invent a company. Only include an organisation that clearly trades in, or is directly connected to, what the person asked for (and the place, if they named one) — leave out anything unrelated, and return an empty array [] if nothing qualifies. For each one, set sourceUrl to the URL of the SOURCE block it came from.";
+  "Write every rationale and sector only about the organisation and how its products or services fit what the person asked for — never mention AI, AI+, Izenzo, models, searching, scoring, sources or how this list was produced. Use web search to find real organisations. Only return organisations that actually appear in what you found. Never invent a company. Only include an organisation that clearly trades in, or is directly connected to, what the person asked for (and the place, if they named one) — leave out anything unrelated, and return an empty array [] if nothing qualifies. For each one, set sourceUrl to the address of the page you found it on.";
 
 function parseCandidates(raw: string): CandidateResult[] {
   const match = raw.match(/\[[\s\S]*\]/);
@@ -520,12 +487,10 @@ export const searchCounterparties = createServerFn({ method: "POST" })
     const searchQuery = [subject, wantedSide, data.region ?? tx.jurisdiction ?? ""]
       .filter(Boolean)
       .join(" ");
-    const { sources, failures, context: grounding } = await groundOnWeb(searchQuery, data.kind);
-
     const system =
       data.kind === "ai"
         ? `You are the Izenzo counterparty search assistant. ${GROUNDING_RULES} Given a bid or offer, pick the organisations in the sources that could transact on these terms. You never decide and never contact anyone — you only propose candidates for a person to review. Respond with ONLY a JSON array, each item: {"name":string,"jurisdiction":string,"sector":string,"score":number 0-100,"rationale":string under 40 words,"sourceUrl":string}. No prose outside the array.`
-        : `You are Izenzo AI+, a deeper counterparty search. ${GROUNDING_RULES} Pick the best-matched organisations in the sources, weighing jurisdiction fit, sector fit and deal size. You never decide and never contact anyone. Respond with ONLY a JSON array, each item: {"name":string,"jurisdiction":string,"sector":string,"score":number 0-100,"rationale":string under 40 words covering fit and any risk notes,"sourceUrl":string}. No prose outside the array.`;
+        : `You are Izenzo AI+, a deeper counterparty search. ${GROUNDING_RULES} Pick the best-matched organisations you find, weighing jurisdiction fit, sector fit and deal size. You never decide and never contact anyone. Respond with ONLY a JSON array, each item: {"name":string,"jurisdiction":string,"sector":string,"score":number 0-100,"rationale":string under 40 words covering fit and any risk notes,"sourceUrl":string}. No prose outside the array.`;
 
     const prompt = [
       `Commodity: ${tx.commodity ?? "n/a"}`,
@@ -539,40 +504,27 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       latestBid
         ? `Latest ${latestBid.direction}: ${latestBid.price ?? "n/a"} ${latestBid.currency} for ${latestBid.quantity ?? "n/a"} ${latestBid.unit ?? ""}. Terms: ${latestBid.terms ?? "n/a"}`
         : "",
-      "Propose 4-6 candidates, all from the sources below.",
-      "",
-      grounding,
+      `Search the web for: ${searchQuery}`,
+      "Propose 4-6 real candidates found on the web.",
     ]
       .filter(Boolean)
       .join("\n");
 
-    const model = data.kind === "ai" ? AI_MODEL : AI_PLUS_MODEL;
-    const res = await chatCompletion(apiKey, {
-      model,
-      ...aiPlusOptions(model, data.kind),
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: prompt },
-      ],
-    });
-    if (res.status === 402) {
-      const { alertLowFunds } = await import("@/lib/opsAlerts.server");
-      void alertLowFunds("OpenAI", 402);
-      throw new Error("AI credits are exhausted for this workspace — support has been notified.");
-    }
-    if (!res.ok) throw new Error(await aiFailureMessage(res));
-    const json = (await res.json()) as { choices: { message: { content: string } }[] };
-    const output = json.choices?.[0]?.message?.content ?? "";
+    const web = await findOnWeb(apiKey, data.kind, system, prompt);
+    const { output, model, sources, failures } = web;
     // The bidder's own organisation is never a counterparty for its own bid.
     const { data: ownOrg } = await supabase.from("organisations").select("name").eq("id", tx.org_id).maybeSingle();
     const ownName = (ownOrg?.name ?? "").trim().toLowerCase();
     const notOwn = (c: { name: string }) => !ownName || c.name.trim().toLowerCase() !== ownName;
     let candidates = parseCandidates(output).filter((c) => isRelevant(c, relevanceQuery) && notOwn(c));
     if (candidates.length === 0) candidates = (await listingCandidates(relevanceQuery, 6)).filter(notOwn);
-    if (candidates.length === 0)
+    if (candidates.length === 0) {
+      // A web search that itself failed is reported as that, not as "nothing relevant exists".
+      if (web.webError) throw web.webError;
       throw new Error(
         "No organisations relevant to this search were found. Try rewording it or adding more detail.",
       );
+    }
 
     const source = data.kind === "ai" ? "ai_search" : "ai_plus_search";
 
@@ -712,37 +664,18 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
     if (!apiKey) throw new Error("OpenAI is not configured. Add and enable it in Admin → Integrations.");
 
     const counterpart = data.role === "buyer" ? "suppliers/sellers" : "buyers";
-    const { sources, failures, context: grounding } = await groundOnWeb(
-      `${data.query} ${counterpart}`,
-      data.kind,
-    );
-
     const system =
       data.kind === "ai"
-        ? `You are the Izenzo counterparty search assistant. ${GROUNDING_RULES} The user is a ${data.role} searching for ${counterpart}. Pick the organisations in the sources that match their search. You never decide and never contact anyone — you only propose candidates for a person to review. Respond with ONLY a JSON array, each item: {"name":string,"jurisdiction":string,"sector":string,"score":number 0-100,"rationale":string under 40 words,"sourceUrl":string}. No prose outside the array.`
+        ? `You are the Izenzo counterparty search assistant. ${GROUNDING_RULES} The user is a ${data.role} searching for ${counterpart}. Pick the organisations you find that match their search. You never decide and never contact anyone — you only propose candidates for a person to review. Respond with ONLY a JSON array, each item: {"name":string,"jurisdiction":string,"sector":string,"score":number 0-100,"rationale":string under 40 words,"sourceUrl":string}. No prose outside the array.`
         : `You are Izenzo AI+, a deeper counterparty search. ${GROUNDING_RULES} The user is a ${data.role} searching for ${counterpart}. Pick the best-matched organisations in the sources, weighing jurisdiction fit, sector fit and plausibility. You never decide and never contact anyone. Respond with ONLY a JSON array, each item: {"name":string,"jurisdiction":string,"sector":string,"score":number 0-100,"rationale":string under 40 words covering fit and any risk notes,"sourceUrl":string}. No prose outside the array.`;
 
-    const prompt = `Search: "${data.query}"\nRole: ${data.role}\nPropose 4-6 candidates, all from the sources below.\n\n${grounding}`;
+    const prompt = `Search the web for: "${data.query}" ${counterpart}\nRole: ${data.role}\nPropose 4-6 real candidates found on the web.`;
 
-    const model = data.kind === "ai" ? AI_MODEL : AI_PLUS_MODEL;
-    const res = await chatCompletion(apiKey, {
-      model,
-      ...aiPlusOptions(model, data.kind),
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: prompt },
-      ],
-    });
-    if (res.status === 402) {
-      const { alertLowFunds } = await import("@/lib/opsAlerts.server");
-      void alertLowFunds("OpenAI", 402);
-      throw new Error("AI credits are exhausted for this workspace — support has been notified.");
-    }
-    if (!res.ok) throw new Error(await aiFailureMessage(res));
-    const json = (await res.json()) as { choices: { message: { content: string } }[] };
-    const output = json.choices?.[0]?.message?.content ?? "";
+    const web = await findOnWeb(apiKey, data.kind, system, prompt);
+    const { output, model, sources, failures } = web;
     let candidates = parseCandidates(output).filter((c) => isRelevant(c, data.query));
     if (candidates.length === 0) candidates = await listingCandidates(data.query, 6);
+    if (candidates.length === 0 && web.webError) throw web.webError;
 
     return {
       candidates,
