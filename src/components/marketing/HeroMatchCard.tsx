@@ -1,11 +1,12 @@
 import { useRef, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowUp, ShieldCheck, FileCheck2, Loader2, RotateCcw, Sparkles, UploadCloud, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { seedNext, stashHeroFiles, useHeroSearch } from "@/lib/heroSearchContext";
+import { useAuth } from "@/lib/auth";
 
 function extractTerms(prompt: string) {
   return prompt
@@ -91,12 +92,23 @@ export function HeroMatchCard({ className }: { className?: string }) {
   // Shares what was typed with the header, so clicking Sign In/Sign Up there carries it into the
   // Live Workspace instead of leaving the visitor to repeat themselves after they've authenticated.
   const { setPrompt: setHeroPrompt } = useHeroSearch();
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => () => {
     if (searchTimer.current) window.clearTimeout(searchTimer.current);
   }, []);
 
   function onFindMatches() {
+    // Already signed in: there is nothing to preview or sign up for — the search goes straight into
+    // the Live Workspace, which records the bid from what was typed (and any files dropped) and
+    // runs the search there.
+    if (user) {
+      stashHeroFiles(files);
+      const seed = prompt.trim();
+      void navigate({ to: "/live-deal-engine", search: { fresh: true, ...(seed ? { seed } : {}) } });
+      return;
+    }
     setSearching(true);
     setSearched(false);
     setHeroPrompt(prompt);
@@ -316,11 +328,13 @@ export function HeroMatchCard({ className }: { className?: string }) {
           </div>
 
 
-          <Link to="/auth" search={{ mode: "signup", next: seedNext(prompt) }} className="mt-5 block">
-            <Button className="w-full rounded-full gap-1.5">
-              <Sparkles className="h-4 w-4" /> Sign up to unlock matches
-            </Button>
-          </Link>
+          {!user && (
+            <Link to="/auth" search={{ mode: "signup", next: seedNext(prompt) }} className="mt-5 block">
+              <Button className="w-full rounded-full gap-1.5">
+                <Sparkles className="h-4 w-4" /> Sign up to unlock matches
+              </Button>
+            </Link>
+          )}
         </>
       )}
     </div>
