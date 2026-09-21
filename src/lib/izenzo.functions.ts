@@ -4,6 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { POI_COST, WAD_COST } from "@/lib/spine";
 import { userFacingText } from "@/lib/userFacingText";
 import { isRelevant } from "@/lib/relevance";
+import { guessSideFromWording } from "@/lib/tradeSide";
 import { nameKey } from "@/lib/dedupeOrgs";
 
 async function sha256(input: string) {
@@ -411,6 +412,56 @@ function keywordsFromSummary(summary: string): string {
     .slice(0, 160)
     .trim();
 }
+
+/** Decides from what the person typed and attached whether this is a search for a SELLER (they are
+ * buying — a Bid) or a search for a BUYER (they are selling — an Offer). Returns null when it
+ * genuinely cannot tell, and the workspace stays a plain Workspace. */
+export const classifyTradeSide = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(txInput)
+  .handler(async ({ data, context }): Promise<{ direction: "bid" | "offer" | null }> => {
+    const { supabase } = context;
+    const { data: tx } = await supabase.from("transactions").select("*").eq("id", data.transactionId).maybeSingle();
+    if (!tx) return { direction: null };
+    const typed = ((tx as { search_prompt?: string | null }).search_prompt ?? "").trim();
+    const summary = ((tx.document_summary as string | null) ?? "").trim();
+    const commodity = (tx.commodity ?? "").trim();
+    const text = [typed, commodity, summary].filter(Boolean).join("\n");
+    if (!text) return { direction: null };
+
+    const { loadOpenAiApiKey } = await import("@/lib/openai.server");
+    const apiKey = await loadOpenAiApiKey();
+    if (apiKey) {
+      try {
+        const model = AI_MODEL;
+        const res = await chatCompletion(apiKey, {
+          model,
+          ...aiPlusOptions(model, "ai"),
+          response_format: { type: "json_object" },
+          messages: [
+            {
+              role: "system",
+              content:
+                "Decide from what a person typed and attached whether they are searching for a SELLER (a supplier, provider or vendor — they want to buy or procure) or searching for a BUYER (a customer, buyer or off-taker — they want to sell or supply). " +
+                'Reply with JSON only: {"lookingFor":"seller"|"buyer"|"unclear","reason":string}. Use "unclear" only when nothing in the text points either way.',
+            },
+            { role: "user", content: text.slice(0, 6000) },
+          ],
+        });
+        if (res.ok) {
+          const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+          const content = json.choices?.[0]?.message?.content ?? "";
+          const parsed = JSON.parse(content.slice(content.indexOf("{"), content.lastIndexOf("}") + 1)) as { lookingFor?: string };
+          if (parsed.lookingFor === "seller") return { direction: "bid" };
+          if (parsed.lookingFor === "buyer") return { direction: "offer" };
+          return { direction: null };
+        }
+      } catch {
+        // Fall through to the plain wording check below.
+      }
+    }
+    return { direction: guessSideFromWording(text) };
+  });
 
 /** AI-driven counterparty search. AI/AI+ propose candidates from the bid's terms; a person still chooses. */
 export const searchCounterparties = createServerFn({ method: "POST" })

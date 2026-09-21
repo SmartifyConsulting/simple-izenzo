@@ -256,7 +256,7 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
   },
   {
     id: "tavily",
-    topUpUrl: "https://app.tavily.com/",
+    topUpUrl: "https://app.tavily.com/billing",
     consoleUrl: "https://app.tavily.com/home",
     name: "Tavily",
     group: "Web Search",

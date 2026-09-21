@@ -66,10 +66,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { supabase } from "@/integrations/supabase/client";
 import { loadRelevantCounterparties } from "@/lib/bidRelevance";
 import { nameKey } from "@/lib/dedupeOrgs";
-import { advance, fallbackReference, recordEvent, swapReferencePrefix, type Transaction } from "@/lib/tx";
+import { advance, fallbackReference, recordEvent, swapReferencePrefix, tradeKindOf, type TradeKind, type Transaction } from "@/lib/tx";
 import type { StageKey } from "@/lib/spine";
 import { useAuth } from "@/lib/auth";
-import { searchCounterparties } from "@/lib/izenzo.functions";
+import { classifyTradeSide, searchCounterparties } from "@/lib/izenzo.functions";
 import { listCounterOffers } from "@/lib/counterOffer.functions";
 
 import { runBackgroundScreening, type ScreeningResult } from "@/lib/screening.functions";
@@ -577,6 +577,7 @@ function LiveDealEngine() {
   const summarizeDocs = useServerFn(summarizeBidDocuments);
   const cancelBidFn = useServerFn(cancelBid);
   const fetchDocument = useServerFn(readDocument);
+  const classifySide = useServerFn(classifyTradeSide);
   const notifyChosen = useServerFn(notifyChosenCounterparty);
   const [rereading, setRereading] = useState(false);
   // Once interest is being fetched the submitted detail collapses out of the way, so the results
@@ -734,6 +735,18 @@ function LiveDealEngine() {
 
   // Same query key DocumentUploadStep uses, so once a file is attached there (or here) both
   // stay in sync off one cache entry rather than each polling storage independently.
+  const workspaceKind: TradeKind = tradeKindOf(
+    (dealTx as unknown as { reference?: string | null } | null)?.reference ?? activity?.reference ?? draftReference,
+  );
+  const kindWord = workspaceKind === "offer" ? "Offer" : workspaceKind === "bid" ? "Bid" : "Workspace";
+  const registrationLabel = workspaceKind === "workspace" ? "Workspace" : `${kindWord} Registration`;
+  const informationLabel = `${kindWord} Information`;
+  const registrationPill =
+    workspaceKind === "offer"
+      ? "bg-[#4169e1] text-white"
+      : workspaceKind === "bid"
+        ? "bg-teal-600 text-white"
+        : "bg-[var(--lw-pill-bg)] text-[var(--lw-pill-fg)]";
   const { data: workspaceDocs = [], isPending: workspaceDocsPending } = useQuery({
     queryKey: ["documents", dealTx?.id],
     enabled: Boolean(dealTx?.id),
@@ -1616,12 +1629,12 @@ function LiveDealEngine() {
     }
   }, [fresh, freshNonce]);
 
-  // An empty workspace still gets its BID number up front, so the map's Bid tile can show the
-  // number the bid will be recorded under rather than waiting for the first upload.
+  // An empty workspace still gets its number up front (WS…, until its search is categorised as a
+  // Bid or an Offer), so the map can show it rather than waiting for the first upload.
   useEffect(() => {
     if (dealTx || draftReference) return;
     let cancelled = false;
-    void claimReference("bid").then((ref) => {
+    void claimReference("workspace").then((ref) => {
       if (!cancelled) setDraftReference(ref);
     });
     return () => {
@@ -1645,29 +1658,43 @@ function LiveDealEngine() {
   /** The direction picked before any document existed was just a starting guess ("bid") — once
    * the first uploaded document is classified, correct the deal's actual direction and BID/OFF
    * reference to match what was really uploaded, rather than leaving it on the default. */
-  async function applyDirectionGuess(directionGuess: "bid" | "offer" | null) {
-    if (!dealTx || !directionGuess) return;
-    const currentDirection = activity?.direction ?? "bid";
-    if (directionGuess === currentDirection) return;
-    const currentReference =
-      dealTx.reference || activity?.reference || fallbackReference(dealTx.id, currentDirection);
-    const newReference = swapReferencePrefix(currentReference, directionGuess);
-    const newTitle = directionGuess === "bid" ? "New Bid" : "New Offer";
+  /** Once the AI has categorised the search — for a seller (a Bid) or for a buyer (an Offer) — the
+   * workspace becomes that: the number's WS prefix turns into BID or OFF and every label follows. */
+  async function applyClassification(txId: string, direction: "bid" | "offer") {
+    const { data: row } = await supabase.from("transactions").select("reference").eq("id", txId).maybeSingle();
+    const currentReference = (row as { reference?: string | null } | null)?.reference ?? dealTx?.reference ?? "";
+    if (tradeKindOf(currentReference) === direction) return;
+    const newReference = swapReferencePrefix(currentReference || fallbackReference(txId, direction), direction);
+    const newTitle = direction === "bid" ? "New Bid" : "New Offer";
     const [{ error: boError }, { error: txError }] = await Promise.all([
-      supabase.from("bid_offers").update({ direction: directionGuess }).eq("transaction_id", dealTx.id),
-      supabase.from("transactions").update({ reference: newReference, title: newTitle }).eq("id", dealTx.id),
+      supabase.from("bid_offers").update({ direction }).eq("transaction_id", txId),
+      supabase.from("transactions").update({ reference: newReference, title: newTitle }).eq("id", txId),
     ]);
     if (boError || txError) {
-      toast.error("Could not update the deal's direction from the upload.");
+      toast.error("Could not record whether this is a bid or an offer.");
       return;
     }
-    setDealTx((prev) => (prev ? { ...prev, reference: newReference, title: newTitle } : prev));
-    setActivity((prev) =>
-      prev ? { ...prev, direction: directionGuess, reference: newReference, title: newTitle } : prev,
-    );
+    setDealTx((prev) => (prev && prev.id === txId ? { ...prev, reference: newReference, title: newTitle } : prev));
+    setActivity((prev) => (prev ? { ...prev, direction, reference: newReference, title: newTitle } : prev));
     toast.success(
-      `This reads like ${directionGuess === "bid" ? "a bid proposal" : "a response to a bid"} — updated to ${newReference}.`,
+      direction === "bid"
+        ? `Searching for a seller — recorded as bid ${newReference}.`
+        : `Searching for a buyer — recorded as offer ${newReference}.`,
     );
+  }
+
+  /** Asks the AI whether the person is searching for a seller or for a buyer, before the search
+   * runs (the search itself depends on it). Only ever happens while the workspace is still a plain
+   * Workspace. */
+  async function categoriseSearch(txId: string) {
+    try {
+      const { data: row } = await supabase.from("transactions").select("reference").eq("id", txId).maybeSingle();
+      if (tradeKindOf((row as { reference?: string | null } | null)?.reference) !== "workspace") return;
+      const { direction } = await classifySide({ data: { transactionId: txId } });
+      if (direction) await applyClassification(txId, direction);
+    } catch {
+      // Never blocks the search — it simply stays a Workspace.
+    }
   }
 
   /** Saves the edited search string onto the bid and runs the search again on it. */
@@ -1694,6 +1721,7 @@ function LiveDealEngine() {
   }
 
   async function runSearch(txId: string) {
+    await categoriseSearch(txId);
     // Bid Information folds away the moment the stage moves to Search — not just once results
     // land — so the search/results view always has the room, not the bid's own details.
     setBidInfoCollapsed(txId, true);
@@ -2111,7 +2139,7 @@ function LiveDealEngine() {
             // through this pinned frame.
             <div className="glass-node space-y-1 bg-card p-3 [backdrop-filter:none] [background-image:none]">
               <div className="flex items-center justify-between gap-2">
-                <p className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">Bid Registration</p>
+                <p className={cn("label-caps rounded-full px-2.5 py-1", registrationPill)}>{registrationLabel}</p>
                 {(((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference) && (
                   <span className="flex shrink-0 items-center gap-2 font-mono text-base font-bold tracking-wide text-foreground">
                     {workspaceDocs.length > 0 && (
@@ -2147,7 +2175,7 @@ function LiveDealEngine() {
                   <SubmitterIdentity orgId={dealTx.org_id} createdBy={null} currentCheckStatus={idCheck?.status ?? null} />
                   {(org as unknown as { created_at?: string } | null)?.created_at && (
                     <p className="text-[11px] text-muted-foreground">
-                      Bidder Active Since:{" "}
+                      Active Since:{" "}
                       {new Date((org as unknown as { created_at: string }).created_at).toLocaleDateString(
                         undefined,
                         { year: "numeric", month: "short", day: "numeric" },
@@ -2193,7 +2221,6 @@ function LiveDealEngine() {
                     reference={(dealTx as unknown as { reference?: string | null }).reference ?? draftReference}
                     onNext={() => goToSearch(dealTx.id)}
                     onSubmitted={() => markSubmitted(dealTx.id)}
-                    onFirstClassified={({ directionGuess }) => void applyDirectionGuess(directionGuess)}
                     initialPrompt={seedPrompt}
                     initialFiles={seedFiles}
                   />
@@ -2208,7 +2235,7 @@ function LiveDealEngine() {
             <div className="glass-node mt-1.5 space-y-1.5 p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
-                  BID INFORMATION
+                  {informationLabel}
                 </span>
                 {/* The ID check status already shows once, next to the submitter's name on the
                     Bid Registration card above — showing it again here (from the same
@@ -2218,7 +2245,7 @@ function LiveDealEngine() {
                   type="button"
                   onClick={() => setBidInfoCollapsed(dealTx.id, bidInfoOpen)}
                   aria-expanded={bidInfoOpen}
-                  aria-label={bidInfoOpen ? "Collapse Bid Information" : "Expand Bid Information"}
+                  aria-label={bidInfoOpen ? `Collapse ${informationLabel}` : `Expand ${informationLabel}`}
                   className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                 >
                   <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", bidInfoOpen && "rotate-180")} />
@@ -2420,7 +2447,7 @@ function LiveDealEngine() {
               {/* A brand-new workspace already reads as a bid: the same Bid Registration frame,
                   with the BID number on the heading row, around the description/upload bar. */}
               <div className="flex items-center justify-between gap-2">
-                <p className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">Bid Registration</p>
+                <p className={cn("label-caps rounded-full px-2.5 py-1", registrationPill)}>{registrationLabel}</p>
                 {draftReference && (
                   <span className="shrink-0 font-mono text-base font-bold tracking-wide text-foreground">
                     {draftReference}
@@ -2432,7 +2459,7 @@ function LiveDealEngine() {
                   {org?.id && <SubmitterIdentity orgId={org.id} createdBy={null} />}
                   {(org as unknown as { created_at?: string } | null)?.created_at && (
                     <p className="text-[11px] text-muted-foreground">
-                      Bidder Active Since:{" "}
+                      Active Since:{" "}
                       {new Date((org as unknown as { created_at: string }).created_at).toLocaleDateString(
                         undefined,
                         { year: "numeric", month: "short", day: "numeric" },

@@ -556,7 +556,7 @@ export function DealCanvas({
                         {matchProgress.searching
                           ? "Searching for counterparties…"
                           : matchProgress.error?.startsWith("No organisations relevant")
-                    ? "No relevant organisations were found. Edit the search under Bid Information and search again."
+                    ? "No relevant organisations were found. Edit the search in the information panel above and search again."
                     : `Search could not finish: ${matchProgress.error}`}
                       </p>
                     </div>
@@ -1534,7 +1534,7 @@ export function CounterpartyRecord({
           <p className="mt-2 text-xs text-slate-500">
             {error
               ? error.startsWith("No organisations relevant")
-                ? "No relevant organisations were found. Edit the search under Bid Information and search again."
+                ? "No relevant organisations were found. Edit the search in the information panel above and search again."
                 : `Search could not finish: ${error}`
               : "No matches found yet — run the search again."}
           </p>
@@ -1950,11 +1950,16 @@ export type RecordedActivity = {
 
 const BID_REFERENCE_BASE = 9088778;
 const OFFER_REFERENCE_BASE = 8979667;
+const WORKSPACE_REFERENCE_BASE = 1000000;
 // Wide enough that two bids drawing at random practically never land on the same number — the old
 // span of 1000 was small enough that repeats did happen, leaving two bids sharing one BID id.
 const REFERENCE_SPAN = 900000;
 
-export function nextReference(direction: "bid" | "offer") {
+export function nextReference(direction: "bid" | "offer" | "workspace") {
+  if (direction === "workspace") {
+    // A new workspace is numbered WS… until its search is categorised as a Bid or an Offer.
+    return `WS${WORKSPACE_REFERENCE_BASE + Math.floor(Math.random() * REFERENCE_SPAN)}`;
+  }
   const base = direction === "bid" ? BID_REFERENCE_BASE : OFFER_REFERENCE_BASE;
   const unique = base + Math.floor(Math.random() * REFERENCE_SPAN);
   return `${direction === "bid" ? "BID" : "OFF"}${unique}`;
@@ -1962,7 +1967,7 @@ export function nextReference(direction: "bid" | "offer") {
 
 /** Draws a bid/offer number that isn't already in use — checked against the numbers on file before
  * it's handed out, so two deals can never end up sharing one. */
-export async function claimReference(direction: "bid" | "offer") {
+export async function claimReference(direction: "bid" | "offer" | "workspace") {
   for (let attempt = 0; attempt < 8; attempt++) {
     const candidate = nextReference(direction);
     const { data, error } = await supabase
@@ -2095,7 +2100,7 @@ export function CanvasStart({
       if (error?.code === "23505") {
         ({ data: newTx, error } = await supabase
           .from("transactions")
-          .insert({ ...baseRow, reference: await claimReference(direction) } as never)
+          .insert({ ...baseRow, reference: await claimReference("workspace") } as never)
           .select()
           .single());
       }
@@ -2155,7 +2160,7 @@ export function CanvasStart({
   // in between would just be a click for its own sake. Whatever was already typed/dropped rides
   // along via onCreated's `seed` so the real upload step can pick up exactly where this left off.
   async function beginPicking(filesOverride?: File[]) {
-    const ref = draftReference ?? (await claimReference("bid"));
+    const ref = draftReference ?? (await claimReference("workspace"));
     if (!draftReference) {
       setDraftReference(ref);
       onDraftReference?.(ref);
