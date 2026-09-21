@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { Coins, CreditCard, History, KeyRound, Plug, Users, type LucideIcon } from "lucide-react";
+import { Building2, Coins, CreditCard, History, KeyRound, Plug, Users, type LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { issueEvidencePack, downloadEvidencePack } from "@/lib/evidencePack.func
 import { IntegrationsTab } from "@/components/admin/IntegrationsTab";
 import { AuditLogTab } from "@/components/admin/AuditLogTab";
 import { ApiKeysTab } from "@/components/admin/ApiKeysTab";
+import { OrganisationsTab, useOrgDirectory } from "@/components/admin/OrganisationsTab";
 
 type AdminSearch = { group?: string; tab?: string; activityUser?: string };
 
@@ -60,6 +61,7 @@ type AdminTab = {
 // One flat list — no categories. Cards read as icon + name, green-edged like every other frame.
 const ADMIN_TABS: AdminTab[] = [
   { value: "users", label: "Users", Component: UsersTab, Icon: Users },
+  { value: "organisations", label: "Organisations", Component: OrganisationsTab, Icon: Building2 },
   { value: "payments", label: "Payments", Component: PaymentsTab, Icon: CreditCard },
   { value: "integrations", label: "Integrations", Component: IntegrationsTab, Icon: Plug, superuserOnly: true },
   { value: "activity-log", label: "Activity Log", Component: AuditLogTab, Icon: History, superuserOnly: true },
@@ -143,6 +145,7 @@ function UsersTab() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"created" | "accessed">("created");
+  const { orgNamesByUser } = useOrgDirectory();
 
   const { data: users = [] } = useQuery({
     queryKey: ["admin-users"],
@@ -196,7 +199,9 @@ function UsersTab() {
     q
       ? visibleUsers.filter(
           (u) =>
-            (u.full_name ?? "").toLowerCase().includes(q) || (u.email ?? "").toLowerCase().includes(q),
+            (u.full_name ?? "").toLowerCase().includes(q) ||
+            (u.email ?? "").toLowerCase().includes(q) ||
+            (orgNamesByUser.get(u.id) ?? []).some((n) => n.toLowerCase().includes(q)),
         )
       : visibleUsers
   )
@@ -211,7 +216,7 @@ function UsersTab() {
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <Input
-          placeholder="Search by name or email…"
+          placeholder="Search by name, email or organisation…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-sm"
@@ -238,6 +243,11 @@ function UsersTab() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{u.full_name ?? u.email}</p>
                   <p className="truncate text-xs text-muted-foreground">{u.email}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {(orgNamesByUser.get(u.id) ?? []).length > 0
+                      ? (orgNamesByUser.get(u.id) ?? []).join(", ")
+                      : "No organisation"}
+                  </p>
                 </div>
                 <div className="hidden shrink-0 text-xs text-muted-foreground sm:grid sm:grid-cols-[7rem_7rem] sm:gap-x-[2cm]">
                   <span title={new Date(u.created_at).toLocaleString()}>
