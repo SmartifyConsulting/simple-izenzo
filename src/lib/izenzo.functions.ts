@@ -500,6 +500,7 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       kind: data.kind,
       chatModel: data.kind === "ai" ? AI_MODEL : AI_PLUS_MODEL,
       webModels: WEB_MODELS,
+      tavilyKey: await (await import("@/lib/tavily.server")).loadTavilyApiKey(),
       txKey: tx.id,
       direction: (latestBid?.direction ?? "bid") === "offer" ? "offer" : "bid",
       commodity: tx.commodity ?? null,

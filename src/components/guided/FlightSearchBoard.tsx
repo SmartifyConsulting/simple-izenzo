@@ -201,7 +201,7 @@ export function FlightSearchBoard() {
       await advance(tx.id, "trading", "search");
 
       // 3. Run AI + AI+ and registry search.
-      setStatusMessage("Searching with AI and AI+ for suitable matches…");
+      setStatusMessage("Searching using AI for suitable matches…");
       const like = `%${commodity.trim()}%`;
       const [{ data: cps }, { data: rcs }, ai, aiPlus] = await Promise.all([
         supabase.from("counterparties").select("*").or(`name.ilike.${like},sector.ilike.${like}`).limit(15),

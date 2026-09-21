@@ -46,6 +46,7 @@ export const INTEGRATION_GROUPS = [
   "Sanctions & Fraud",
   "Currency",
   "Web Scraping",
+  "Web Search",
   "Archival Storage",
   "AI",
   "Izenzo AI+",
@@ -252,6 +253,31 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
     ],
     testable: false,
     testNote: "Bucket access is confirmed on the first archival upload.",
+  },
+  {
+    id: "tavily",
+    topUpUrl: "https://app.tavily.com/",
+    consoleUrl: "https://app.tavily.com/home",
+    name: "Tavily",
+    group: "Web Search",
+    summary:
+      "Public internet search. Finds the real organisations a bid needs and checks counterparties' online presence, before OpenAI weighs what was found.",
+    usedAt:
+      "Trading Gate → Counterparties (AI / AI+ search of the public internet) and Online Media Screening. Without it, OpenAI's own web search is used instead.",
+    costNote: "Metered in search credits per month (advanced searches use more) — see Tavily's pricing page for current plan rates.",
+    docsUrl: "https://docs.tavily.com",
+    fields: [
+      {
+        key: "api_key",
+        label: "API key",
+        secret: true,
+        placeholder: "tvly-…",
+        help: "From app.tavily.com → API Keys. Also read from the server secret TAVILY_API_KEY.",
+      },
+      { key: "portal_username", label: "Username", secret: false },
+      { key: "portal_credentials", label: "Credentials", secret: true, help: "Password or API secret used to sign in to the provider portal." },
+    ],
+    testable: true,
   },
   {
     id: "openai",

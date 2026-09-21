@@ -31,6 +31,132 @@ type Judged = Map<
   { status: "found" | "not_found" | "adverse"; detail: string; url: string | null }
 >;
 
+
+/** Where each source is searched on the public internet. */
+const SOURCE_SEARCH: Record<MediaFinding["source"], { domains?: string[]; topic?: "news"; suffix?: string }> = {
+  linkedin: { domains: ["linkedin.com"] },
+  facebook: { domains: ["facebook.com"] },
+  tiktok: { domains: ["tiktok.com"] },
+  instagram: { domains: ["instagram.com", "x.com", "twitter.com"] },
+  marketplaces: { suffix: "supplier directory marketplace reviews" },
+  news: { topic: "news", suffix: "news" },
+};
+
+/** Words that turn an ordinary mention into something a compliance officer should read. */
+const ADVERSE = [
+  "fraud", "scam", "lawsuit", "sued", "sanction", "sanctions", "convicted", "investigation",
+  "money laundering", "bribery", "corruption", "liquidation", "insolvent", "blacklist",
+];
+
+type Page = { title: string; url: string; content: string };
+
+/** Online scanning through Tavily: each source is searched on the public internet, then OpenAI
+ * judges what was found about this particular company (a plain word check if OpenAI is absent). */
+async function scanWithTavily(
+  tavilyKey: string,
+  openAiKey: string | null,
+  name: string,
+  jurisdiction: string | null,
+): Promise<MediaFinding[]> {
+  const { tavilySearch } = await import("@/lib/tavily.server");
+  const base = `"${name}"${jurisdiction ? ` ${jurisdiction}` : ""}`;
+  const searched = await Promise.all(
+    SOURCES.map(async (src) => {
+      const cfg = SOURCE_SEARCH[src.source];
+      try {
+        const pages: Page[] = await tavilySearch(tavilyKey, `${base}${cfg.suffix ? ` ${cfg.suffix}` : ""}`, {
+          max: 5,
+          ...(cfg.domains ? { includeDomains: cfg.domains } : {}),
+          ...(cfg.topic ? { topic: cfg.topic } : {}),
+        });
+        return { src, pages, error: null as string | null };
+      } catch (err) {
+        return { src, pages: [] as Page[], error: (err as Error).message };
+      }
+    }),
+  );
+
+  let judged: Judged | null = null;
+  if (openAiKey) {
+    try {
+      const blocks = searched
+        .filter((x) => !x.error)
+        .map(
+          (x) =>
+            `SOURCE ${x.src.source} (${x.src.label})\n` +
+            (x.pages.length === 0 ? "- no results" : x.pages.map((pg) => `- ${pg.title} — ${pg.url} — ${pg.content}`).join("\n")),
+        )
+        .join("\n\n");
+      if (blocks) {
+        const { callOpenAiChat } = await import("@/lib/openaiCall.server");
+        const res = await callOpenAiChat(
+          openAiKey,
+          {
+            model: "gpt-6-astra",
+            reasoning_effort: "low",
+            max_completion_tokens: 8000,
+            response_format: { type: "json_object" },
+            messages: [
+              {
+                role: "system",
+                content:
+                  "You check public internet search results about one company for a trade counterparty review. For each source decide: " +
+                  '"found" (the company has a public presence there and nothing adverse), "not_found" (no clear presence of THIS company) or ' +
+                  '"adverse" (the results tie THIS company to fraud, scams, lawsuits, sanctions, convictions, investigations, money laundering, bribery, corruption, liquidation, insolvency or blacklisting). ' +
+                  "Only judge results that are clearly about the named company (name and place fit) — ignore namesakes and unrelated pages. " +
+                  '"detail" is one plain sentence saying what was found; never mention AI, searching or tools. "url" is the single most relevant result address, or null. ' +
+                  'Reply with JSON only: {"findings":[{"source":string,"status":"found"|"not_found"|"adverse","detail":string,"url":string|null}]} with one entry per source given.',
+              },
+              { role: "user", content: `Company: ${name}${jurisdiction ? ` (${jurisdiction})` : ""}\n\n${blocks}` },
+            ],
+          },
+          { retries: 1 },
+        );
+        if (res.ok) {
+          const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+          const content = json.choices?.[0]?.message?.content ?? "";
+          const parsed = JSON.parse(content.slice(content.indexOf("{"), content.lastIndexOf("}") + 1)) as {
+            findings?: { source?: string; status?: string; detail?: string; url?: string | null }[];
+          };
+          const out: Judged = new Map();
+          for (const f of parsed.findings ?? []) {
+            const source = SOURCES.find((x) => x.source === f.source)?.source;
+            if (!source || !f.detail) continue;
+            out.set(source, {
+              status: f.status === "adverse" || f.status === "found" ? f.status : "not_found",
+              detail: String(f.detail).slice(0, 300),
+              url: typeof f.url === "string" && /^https?:\/\//.test(f.url) ? f.url : null,
+            });
+          }
+          if (out.size > 0) judged = out;
+        }
+      }
+    } catch {
+      judged = null;
+    }
+  }
+
+  return searched.map(({ src, pages, error }): MediaFinding => {
+    if (error) return { source: src.source, label: src.label, status: "failed", detail: error };
+    const j = judged?.get(src.source);
+    const firstUrl = pages[0]?.url;
+    if (j) {
+      const url = j.url ?? firstUrl;
+      return { source: src.source, label: src.label, status: j.status, detail: j.detail, ...(url ? { url } : {}) };
+    }
+    const text = pages.map((pg) => `${pg.title} ${pg.content}`).join(" ").toLowerCase();
+    const hits = ADVERSE.filter((w) => text.includes(w));
+    const base2 = { source: src.source, label: src.label, ...(firstUrl ? { url: firstUrl } : {}) };
+    if (hits.length > 0) {
+      return { ...base2, status: "adverse", detail: `Possible adverse mentions: ${hits.slice(0, 4).join(", ")}. Read the source before continuing.` };
+    }
+    if (text.includes(name.toLowerCase().slice(0, 24))) {
+      return { ...base2, status: "found", detail: "Public presence found, nothing adverse in the visible results." };
+    }
+    return { ...base2, status: "not_found", detail: "No clear public presence on this source." };
+  });
+}
+
 /** One OpenAI web search covering all six sources for one company. Throws with the reason when the
  * search itself fails, so the screen can say why instead of only "could not scan". */
 async function scanWithOpenAi(apiKey: string, name: string, jurisdiction: string | null): Promise<Judged> {
@@ -100,23 +226,33 @@ export const runOnlineMediaChecks = createServerFn({ method: "POST" })
 
     const { loadOpenAiApiKey } = await import("@/lib/openai.server");
     const apiKey = await loadOpenAiApiKey();
+    const { loadTavilyApiKey } = await import("@/lib/tavily.server");
+    const tavilyKey = await loadTavilyApiKey();
 
     const results: MediaCheckResult[] = [];
 
     for (const cp of counterparties) {
       let findings: MediaFinding[];
 
-      if (!apiKey) {
+      if (!apiKey && !tavilyKey) {
         findings = SOURCES.map((src) => ({
           source: src.source,
           label: src.label,
           status: "unavailable" as const,
-          detail: "Online scanning is not connected yet — ask an administrator to add OpenAI under Admin → Integrations.",
+          detail: "Online scanning is not connected yet — ask an administrator to add Tavily (or OpenAI) under Admin → Integrations.",
         }));
+      } else if (tavilyKey) {
+        // Public internet search through Tavily, judged by OpenAI.
+        try {
+          findings = await scanWithTavily(tavilyKey, apiKey, cp.name, cp.jurisdiction);
+        } catch (err) {
+          const reason = (err as Error).message;
+          findings = SOURCES.map((src) => ({ source: src.source, label: src.label, status: "failed" as const, detail: reason }));
+        }
       } else {
         // One OpenAI web search covers all six sources for this company.
         try {
-          const judged = await scanWithOpenAi(apiKey, cp.name, cp.jurisdiction);
+          const judged = await scanWithOpenAi(apiKey as string, cp.name, cp.jurisdiction);
           findings = SOURCES.map((src): MediaFinding => {
             const j = judged.get(src.source);
             if (!j) {

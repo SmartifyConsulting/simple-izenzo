@@ -775,7 +775,7 @@ function SearchStep({ tx, reload }: Props) {
     <div className="space-y-6">
       <Panel
         title="Search for counterparties"
-        description="AI and AI+ scan for organisations matching this bid's commodity, price, incoterms and jurisdiction, as soon as this step opens. What was searched is part of the record."
+        description="AI scans for organisations matching this bid's commodity, price, incoterms and jurisdiction, as soon as this step opens. What was searched is part of the record."
         footer={
           running ? (
             <div className="flex items-center justify-end gap-2 text-sm text-muted-foreground">

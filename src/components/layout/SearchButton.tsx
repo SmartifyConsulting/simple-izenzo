@@ -377,7 +377,7 @@ export function SearchButton() {
               </p>
               {deepLoading && (
                 <p className="text-sm text-muted-foreground">
-                  Asking AI and AI+, and checking the open web…
+                  Searching using AI…
                 </p>
               )}
               {!deepLoading && deepMatches.length === 0 && !deepNote && (

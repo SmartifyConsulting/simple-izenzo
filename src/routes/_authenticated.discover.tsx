@@ -242,7 +242,7 @@ function Discover() {
 
           <div className="mt-4 divide-y divide-border overflow-hidden rounded-xl border border-border">
             {(isFetching || aiLoading) && (
-              <p className="p-6 text-sm text-muted-foreground">Searching — asking AI and AI+…</p>
+              <p className="p-6 text-sm text-muted-foreground">Searching using AI…</p>
             )}
             {!isFetching && !aiLoading && results.length === 0 && (
               <p className="p-6 text-sm text-muted-foreground">No matches yet — try a different search.</p>

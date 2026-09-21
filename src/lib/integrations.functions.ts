@@ -344,6 +344,14 @@ async function probe(
         return classifyFailure(providerName, res.status, await res.text());
       return { ok: true, message: "Ozow accepted the key." };
     }
+    case "tavily": {
+      const res = await fetch("https://api.tavily.com/search", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${secrets["api_key"] ?? ""}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ query: "connection test", max_results: 1, search_depth: "basic" }),
+      });
+      return say(res, "Tavily accepted the key — a live search worked.");
+    }
     case "openai": {
       const res = await fetch("https://api.openai.com/v1/models", {
         headers: { Authorization: `Bearer ${secrets["api_key"] ?? ""}` },

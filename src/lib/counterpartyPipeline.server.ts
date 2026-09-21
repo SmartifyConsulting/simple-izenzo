@@ -34,6 +34,8 @@ export type PipelineInput = {
   kind: "ai" | "ai_plus";
   chatModel: string;
   webModels: string[];
+  /** When present, the public internet is searched through Tavily; otherwise OpenAI's own web search. */
+  tavilyKey: string | null;
   txKey: string;
   direction: "bid" | "offer";
   commodity: string | null;
@@ -205,6 +207,75 @@ function parseArray(raw: string): Record<string, unknown>[] {
   }
 }
 
+/** Step 3 through OpenAI's own web search, which also names the organisations it found. */
+async function searchWithOpenAi(input: PipelineInput, briefText: string, maxOrgs: number) {
+  const { webSearch } = await import("@/lib/openaiWebSearch.server");
+  return webSearch({
+    apiKey: input.apiKey,
+    models: input.webModels,
+    effort: input.kind === "ai" ? "low" : "medium",
+    instructions:
+      "You find real organisations that could be the counterparty described in the brief, using web search. " +
+      "Run several searches, starting from the query ideas given and adding your own. " +
+      "Only report organisations you actually found on pages you searched — never from memory, never invented. " +
+      "Report operating organisations that offer or need what the brief describes, not directories, news articles, job boards or lists. " +
+      "For each one give: name, jurisdiction, sector, evidence (one or two concrete facts from the page showing they offer or need what the brief requires) and sourceUrl (the page address). " +
+      `Return up to ${maxOrgs} organisations as a JSON array only, or [] if none qualify. ` +
+      'Each item: {"name":string,"jurisdiction":string,"sector":string,"evidence":string,"sourceUrl":string}.',
+    input: `Required counterparty brief:\n${briefText}`,
+  });
+}
+
+/** Step 3 through Tavily: the brief's queries are searched on the public internet, then the chat
+ * model names the real organisations those pages are about. */
+async function searchWithTavily(input: PipelineInput, brief: Brief, briefText: string, maxOrgs: number) {
+  const { tavilySearch } = await import("@/lib/tavily.server");
+  const queries = (brief.searchQueries.length > 0
+    ? brief.searchQueries
+    : [`${brief.capabilities.join(" ")} ${brief.role}`.trim()]
+  ).slice(0, input.kind === "ai" ? 3 : 5);
+
+  const settled = await Promise.allSettled(
+    queries.map((q) =>
+      tavilySearch(input.tavilyKey as string, q, {
+        depth: input.kind === "ai" ? "basic" : "advanced",
+        max: 6,
+      }),
+    ),
+  );
+  const pages = new Map<string, { title: string; url: string; content: string }>();
+  for (const r of settled) {
+    if (r.status !== "fulfilled") continue;
+    for (const page of r.value) if (!pages.has(page.url)) pages.set(page.url, page);
+  }
+  if (pages.size === 0) {
+    const failed = settled.find((r) => r.status === "rejected") as PromiseRejectedResult | undefined;
+    if (failed) throw failed.reason instanceof Error ? failed.reason : new Error("The internet search failed.");
+    return { text: "[]", sources: [], model: input.chatModel };
+  }
+  const list = [...pages.values()].slice(0, 30);
+
+  const r = await chatJson(
+    input.apiKey,
+    input.chatModel,
+    input.kind === "ai" ? "low" : "medium",
+    "You identify real organisations from public internet search results. Given a brief of the counterparty needed and the pages found, name the operating organisations that offer or need what the brief describes. " +
+      "Only name organisations the pages are actually about or clearly mention as offering it — never from memory, never invented. " +
+      "Skip directories, news articles, job boards, lists and aggregators themselves. " +
+      "For each: name, jurisdiction, sector, evidence (one or two concrete facts taken from that page showing it fits) and sourceUrl (the address of the page you took the evidence from — it must be one of the pages given). " +
+      `Return up to ${maxOrgs}. ` +
+      'Reply with JSON only: {"organisations":[{"name":string,"jurisdiction":string,"sector":string,"evidence":string,"sourceUrl":string}]}, with an empty array if none qualify.',
+    `Brief:\n${briefText}\n\nPages:\n${list
+      .map((pg, i) => `${i + 1}. ${pg.title} — ${pg.url}\n${pg.content}`)
+      .join("\n\n")}`,
+  );
+  return {
+    text: JSON.stringify(Array.isArray(r["organisations"]) ? r["organisations"] : []),
+    sources: list.map((pg) => ({ url: pg.url, title: pg.title })),
+    model: input.chatModel,
+  };
+}
+
 export async function findCounterparties(input: PipelineInput): Promise<PipelineResult> {
   // Steps 1–2 — understand the transaction, determine the required counterparty.
   const key = cacheKey(input);
@@ -228,27 +299,16 @@ export async function findCounterparties(input: PipelineInput): Promise<Pipeline
   });
 
   // Steps 3–4 — search the public internet and identify real organisations.
-  const { webSearch } = await import("@/lib/openaiWebSearch.server");
   const briefText = JSON.stringify(brief, null, 2);
-  let web: Awaited<ReturnType<typeof webSearch>>;
+  const maxOrgs = input.kind === "ai" ? 5 : 8;
+  let web: { text: string; sources: { url: string; title: string }[]; model: string };
   try {
-    web = await webSearch({
-      apiKey: input.apiKey,
-      models: input.webModels,
-      effort: input.kind === "ai" ? "low" : "medium",
-      instructions:
-        "You find real organisations that could be the counterparty described in the brief, using web search. " +
-        "Run several searches, starting from the query ideas given and adding your own. " +
-        "Only report organisations you actually found on pages you searched — never from memory, never invented. " +
-        "Report operating organisations that offer or need what the brief describes, not directories, news articles, job boards or lists. " +
-        "For each one give: name, jurisdiction, sector, evidence (one or two concrete facts from the page showing they offer or need what the brief requires) and sourceUrl (the page address). " +
-        `Return up to ${input.kind === "ai" ? 5 : 8} organisations as a JSON array only, or [] if none qualify. ` +
-        'Each item: {"name":string,"jurisdiction":string,"sector":string,"evidence":string,"sourceUrl":string}.',
-      input: `Required counterparty brief:\n${briefText}`,
-    });
+    web = input.tavilyKey
+      ? await searchWithTavily(input, brief, briefText, maxOrgs)
+      : await searchWithOpenAi(input, briefText, maxOrgs);
   } catch (err) {
     return empty({
-      failures: [{ label: "Web search", reason: (err as Error).message }],
+      failures: [{ label: "Internet search", reason: (err as Error).message }],
       webError: err as Error,
     });
   }

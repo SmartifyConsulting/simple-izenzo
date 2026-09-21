@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const chatAnswers: Record<string, unknown>[] = [];
 let webText = "[]";
 let webSources: { url: string; title: string }[] = [];
+let tavilyPages: { title: string; url: string; content: string }[] = [];
 
 vi.mock("@/lib/openaiCall.server", () => ({
   callOpenAiChat: async () =>
@@ -10,6 +11,9 @@ vi.mock("@/lib/openaiCall.server", () => ({
       status: 200,
     }),
   openAiFailureMessage: async () => "failed",
+}));
+vi.mock("@/lib/tavily.server", () => ({
+  tavilySearch: async () => tavilyPages,
 }));
 vi.mock("@/lib/openaiWebSearch.server", () => ({
   webSearch: async () => ({ text: webText, sources: webSources, model: "test-model" }),
@@ -23,6 +27,7 @@ const input = (): PipelineInput => ({
   kind: "ai_plus",
   chatModel: "m",
   webModels: ["m"],
+  tavilyKey: null,
   txKey: `tx-${(counter += 1)}`,
   direction: "bid",
   commodity: null,
@@ -98,5 +103,27 @@ describe("findCounterparties", () => {
     const r = await findCounterparties(input());
     expect(r.brief.role).toBe("supplier");
     expect(r.brief.capabilities).toContain("enterprise cloud migration");
+  });
+});
+
+describe("findCounterparties through Tavily", () => {
+  it("names organisations from the Tavily pages and keeps only grounded, relevant ones", async () => {
+    tavilyPages = [
+      { title: "Accenture cloud migration", url: "https://accenture.example/cloud", content: "Accenture runs enterprise cloud migrations in South Africa." },
+    ];
+    chatAnswers.push(
+      brief,
+      {
+        organisations: [
+          { name: "Accenture", jurisdiction: "South Africa", sector: "IT services", evidence: "Runs enterprise cloud migrations.", sourceUrl: "https://accenture.example/cloud" },
+          { name: "Made Up Co", jurisdiction: "South Africa", sector: "IT", evidence: "Cloud.", sourceUrl: "https://elsewhere.example/x" },
+        ],
+      },
+      { results: [{ name: "Accenture", relevant: true, score: 90, rationale: "Delivers enterprise cloud migrations." }] },
+    );
+    const r = await findCounterparties({ ...input(), tavilyKey: "tvly-test" });
+    expect(r.candidates.map((c) => c.name)).toEqual(["Accenture"]);
+    expect(r.rejected.find((x) => x.name === "Made Up Co")?.reason).toMatch(/not among/i);
+    expect(r.sources.map((x) => x.url)).toEqual(["https://accenture.example/cloud"]);
   });
 });
