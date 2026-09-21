@@ -69,6 +69,7 @@ import { advance, money, recordEvent, when, type Transaction, type TxEvent } fro
 import { setCounterpartyShortlist } from "@/lib/izenzo.functions";
 import { enrichCounterparty } from "@/lib/counterpartyOutreach.functions";
 import { dedupeOrgs } from "@/lib/dedupeOrgs";
+import { keepForBid, loadBidRelevance } from "@/lib/bidRelevance";
 import type { ScreeningCheck, ScreeningResult } from "@/lib/screening.functions";
 import type { MediaCheckResult, MediaFinding } from "@/lib/onlineMedia.functions";
 import {
@@ -1265,7 +1266,20 @@ export function CounterpartyRecord({
         .order("score", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false });
       if (qErr) throw qErr;
-      const rows = (data ?? []) as unknown as CounterpartyCandidate[];
+      const allRows = (data ?? []) as unknown as (CounterpartyCandidate & { rationale?: string | null })[];
+
+      // Only what relates to this bid is ever shown: anything unrelated to what was searched for
+      // (including results saved before that rule existed) and the bidder's own organisation are
+      // left out.
+      const relevance = await loadBidRelevance(txId as string);
+      const rows = allRows.filter((r) =>
+        keepForBid(relevance, {
+          name: r.name,
+          sector: r.sector,
+          jurisdiction: r.jurisdiction,
+          rationale: r.rationale ?? null,
+        }),
+      ) as CounterpartyCandidate[];
       // The same organisation can be found on several pages (and by several sources) — it should
       // read as one result, keeping the highest match percentage.
       return dedupeOrgs(rows, (r) => {

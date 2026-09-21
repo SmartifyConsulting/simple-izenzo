@@ -365,7 +365,8 @@ export function TradesListView() {
             <thead className="border-b border-border bg-muted/50 text-left">
               <tr>
                 <th className="px-4 py-2 font-medium">Match</th>
-                <th className="px-4 py-2 font-medium">Bidder / Counterparty</th>
+                <th className="px-4 py-2 font-medium">Bidder</th>
+                <th className="px-4 py-2 font-medium">Counterparty</th>
                 <th className="px-4 py-2 font-medium">Search</th>
                 <th className="px-4 py-2 font-medium">Match</th>
                 <th className="px-4 py-2 font-medium">POI</th>
@@ -401,7 +402,13 @@ export function TradesListView() {
                   <td className="px-4 py-3 text-xs">
                     <p className="font-medium text-foreground">{t.bidderCompany ?? "—"}</p>
                     {t.bidderName && <p className="text-muted-foreground">{t.bidderName}</p>}
-                    <p className="text-muted-foreground">↔ {t.counterpartyName ?? "Not yet chosen"}</p>
+                  </td>
+                  <td className="px-4 py-3 text-xs">
+                    {t.counterpartyName ? (
+                      <p className="font-medium text-foreground">{t.counterpartyName}</p>
+                    ) : (
+                      <p className="text-muted-foreground">Not yet chosen</p>
+                    )}
                   </td>
                   <GateColumns t={t} />
                   <td className="px-4 py-3 text-right text-xs text-muted-foreground">{ageLabel(t.created_at)}</td>
@@ -432,10 +439,16 @@ export function TradesListView() {
                 <span className="shrink-0 text-[11px] text-muted-foreground">{ageLabel(t.created_at)}</span>
               </div>
               <p className="truncate text-sm font-medium">{t.commodity || t.title}</p>
-              <p className="text-xs text-muted-foreground">
-                {[t.bidderCompany, t.bidderName].filter(Boolean).join(" · ") || "—"} ↔{" "}
-                {t.counterpartyName ?? "Not yet chosen"}
-              </p>
+              <div className="space-y-0.5 text-xs">
+                <p>
+                  <span className="text-muted-foreground">Bidder: </span>
+                  {[t.bidderCompany, t.bidderName].filter(Boolean).join(" · ") || "—"}
+                </p>
+                <p>
+                  <span className="text-muted-foreground">Counterparty: </span>
+                  {t.counterpartyName ?? "Not yet chosen"}
+                </p>
+              </div>
               <div className="mt-1 flex flex-wrap items-center gap-1.5">
                 <GateStack t={t} />
               </div>

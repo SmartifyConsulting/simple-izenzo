@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { dedupeOrgs } from "@/lib/dedupeOrgs";
 import { userFacingText } from "@/lib/userFacingText";
+import { keepForBid, loadBidRelevance } from "@/lib/bidRelevance";
 
 const BAND_LABEL = {
   verified: "Verified",
@@ -70,6 +71,7 @@ export function MatchResultsPanel({
         .select("id, name, sector, jurisdiction, media_flags")
         .eq("transaction_id", transactionId!);
       if (error) throw error;
+      const relevance = await loadBidRelevance(transactionId!);
       const rows = (data ?? [])
         .map((c) => {
           const flags = (c.media_flags ?? {}) as {
@@ -94,7 +96,11 @@ export function MatchResultsPanel({
             score: flags.scoring?.total ?? null,
           } satisfies Row;
         });
-      return dedupe(rows);
+      return dedupe(
+        rows.filter((r) =>
+          keepForBid(relevance, { name: r.name, sector: r.sector, jurisdiction: r.jurisdiction, rationale: r.summary }),
+        ),
+      );
     },
   });
 

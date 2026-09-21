@@ -552,8 +552,12 @@ export const searchCounterparties = createServerFn({ method: "POST" })
     if (!res.ok) throw new Error(await aiFailureMessage(res));
     const json = (await res.json()) as { choices: { message: { content: string } }[] };
     const output = json.choices?.[0]?.message?.content ?? "";
-    let candidates = parseCandidates(output).filter((c) => isRelevant(c, subject));
-    if (candidates.length === 0) candidates = await listingCandidates(subject, 6);
+    // The bidder's own organisation is never a counterparty for its own bid.
+    const { data: ownOrg } = await supabase.from("organisations").select("name").eq("id", tx.org_id).maybeSingle();
+    const ownName = (ownOrg?.name ?? "").trim().toLowerCase();
+    const notOwn = (c: { name: string }) => !ownName || c.name.trim().toLowerCase() !== ownName;
+    let candidates = parseCandidates(output).filter((c) => isRelevant(c, subject) && notOwn(c));
+    if (candidates.length === 0) candidates = (await listingCandidates(subject, 6)).filter(notOwn);
     if (candidates.length === 0)
       throw new Error(
         "No organisations relevant to this search were found. Try rewording it or adding more detail.",
