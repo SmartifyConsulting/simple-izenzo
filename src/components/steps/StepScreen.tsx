@@ -1352,7 +1352,6 @@ function IntentStep({ tx, reload }: Props) {
         { label: "Signed by", value: signer },
       ]}
       sealId={tx.intent_confirmed_at || confirmedLocally ? shortHash(tx.id) : null}
-      draft={!tx.intent_confirmed_at && !confirmedLocally}
     />
   );
 
