@@ -1047,6 +1047,16 @@ function ProposalDialog({
                           >
                             {d.value}
                           </a>
+                        ) : d.label === "Contact" ? (
+                          // A named individual is shown so a person can see one exists, but never
+                          // legibly — direct contact must go through Izenzo, not around it. The
+                          // company's own website and email stay fully readable above and below.
+                          <span
+                            title="The named contact is not shown — reach this company through Izenzo, not directly."
+                            className="select-none blur-[3px]"
+                          >
+                            {d.value}
+                          </span>
                         ) : (
                           d.value
                         )}
