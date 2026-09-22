@@ -797,7 +797,13 @@ function LiveDealEngine() {
       setSubmittedBids((s) => (s.has(dealTx.id) ? s : new Set(s).add(dealTx.id)));
     }
   }, [dealTx?.id, workspaceDocs.length]);
-  const submittedForThisBid = dealTx ? submittedBids.has(dealTx.id) : false;
+  // submittedBids/sessionStorage are both ephemeral — cleared or simply absent whenever a deal is
+  // resumed fresh (a different tab, a later visit, sessionStorage unavailable). The transaction's
+  // own persisted step is the one signal that always survives a resume: once it has moved off
+  // "documents" the ask was genuinely made, however that happened, and the upload/search-prompt
+  // frame must never come back to ask again. This was the actual cause of a keyword-only bid
+  // reopening to the upload screen after being left and resumed.
+  const submittedForThisBid = dealTx ? submittedBids.has(dealTx.id) || dealTx.step !== "documents" : false;
   // A bid whose detail was collapsed when interest was fetched stays collapsed when it's opened
   // again, rather than springing back open on every load. Read once per bid only, so it can never
   // overwrite a collapse the user (or a search) just made.
@@ -2665,6 +2671,7 @@ function LiveDealEngine() {
                       onFinalize={finalizeChoice}
                       finalizing={finalizing}
                       locked={Boolean(dealTx.intent_confirmed_at)}
+                      onRetrySearch={() => void runSearch(dealTx.id)}
                     />
                     </div>
                     )}

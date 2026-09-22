@@ -1150,6 +1150,7 @@ export function CounterpartyRecord({
   onFinalize,
   finalizing = false,
   locked = false,
+  onRetrySearch,
 }: {
   txId?: string | null;
   /** True while the AI/AI+ search is still running, so the panel polls for freshly saved rows. */
@@ -1157,6 +1158,11 @@ export function CounterpartyRecord({
   error?: string | null;
   /** Fires the background screening for the ticked counterparties. */
   onContinue?: (counterpartyIds: string[]) => void;
+  /** Runs the search again — surfaced whenever the record says "run the search again" but nothing
+   * on screen actually did that. A search left running when the workspace was closed never gets
+   * auto-resumed on return (the effect that would restart it depends on this-session-only local
+   * state), so without this the deal was stuck reading "no matches" with no way forward. */
+  onRetrySearch?: () => void;
   /** True once intent is confirmed — the shortlist/pick is settled by then, so the checkboxes and
    * radio buttons here stop taking input rather than silently accepting a click that changes
    * nothing (or that the server would reject anyway). */
@@ -1541,13 +1547,20 @@ export function CounterpartyRecord({
             </div>
           </div>
         ) : (
-          <p className="mt-2 text-xs text-slate-500">
-            {error
-              ? error.startsWith("No organisations relevant")
-                ? "No relevant organisations were found. Edit the search in the information panel above and search again."
-                : `Search could not finish: ${error}`
-              : "No matches found yet — run the search again."}
-          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <p className="text-xs text-slate-500">
+              {error
+                ? error.startsWith("No organisations relevant")
+                  ? "No relevant organisations were found. Edit the search in the information panel above and search again."
+                  : `Search could not finish: ${error}`
+                : "No matches found yet — run the search again."}
+            </p>
+            {onRetrySearch && (
+              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onRetrySearch}>
+                Search again
+              </Button>
+            )}
+          </div>
         )
       ) : mediaResults ? null : (
         // Once media results are in, the Online Media Screening accordion below carries the

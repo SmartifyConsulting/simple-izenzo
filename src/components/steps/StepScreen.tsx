@@ -1235,9 +1235,7 @@ function IntentStep({ tx, reload }: Props) {
   });
   const materialTerms = termsData?.terms ?? [];
 
-  // The party chosen after background screening — the intent is signed against them, and the id
-  // is what actually gets them emailed once intent is confirmed (see confirm() below).
-  const notifyChosen = useServerFn(notifyChosenCounterparty);
+  // The party chosen after background screening — the intent is signed against them.
   const { data: chosenParty } = useQuery({
     queryKey: ["chosen-counterparty", tx.id],
     queryFn: async () => {
@@ -1335,28 +1333,9 @@ function IntentStep({ tx, reload }: Props) {
       setConfirmedLocally(true);
       toast.success("Intent confirmed");
 
-      // The counterparty is only actually reached out to once the bidder has confirmed intent —
-      // this used to fire the moment the party was chosen, well before intent (or the terms
-      // themselves) were ever confirmed. Best-effort and never blocks the confirmation itself.
-      if (chosenParty?.id) {
-        notifyChosen({ data: { counterpartyId: chosenParty.id } })
-          .then((res) => {
-            if (res.method === "platform" || res.method === "web") {
-              toast.success("The counterparty has been emailed about this deal.");
-            } else if (res.method === "guessed") {
-              toast.message(
-                `No confirmed email for this counterparty — sent a best-effort outreach to ${res.guessed.length} likely address${res.guessed.length === 1 ? "" : "es"} instead. You've been emailed a copy.`,
-              );
-            } else if (res.method === "bidder-only") {
-              toast.message("No contact details found for this counterparty — check your email, we've sent you what to do next.");
-            } else if (res.reason === "email-not-connected") {
-              toast.message("Intent confirmed, but email isn't connected yet — reach out to the counterparty yourself for now.");
-            }
-          })
-          .catch((err) => {
-            toast.error(`Couldn't email the counterparty: ${(err as Error).message || "please try again shortly."}`);
-          });
-      }
+      // The counterparty is emailed once intent is sealed (PoiStep's doSeal(), further down the
+      // pipeline), not here — confirming intent is not yet the sealed, immutable commitment worth
+      // reaching out to them on.
 
       await new Promise((resolve) => setTimeout(resolve, 1600));
       await advance(tx.id, "trading", "poi");
@@ -1544,6 +1523,7 @@ function CertificateOfIntentDialog({
 
 function PoiStep({ tx, reload }: Props) {
   const seal = useServerFn(sealProofOfIntent);
+  const notifyChosen = useServerFn(notifyChosenCounterparty);
   const navigate = useNavigate();
   const { org } = useAuth();
   const [busy, setBusy] = useState(false);
@@ -1552,20 +1532,22 @@ function PoiStep({ tx, reload }: Props) {
   const [certClosing, setCertClosing] = useState(false);
   const [sealedSnapshot, setSealedSnapshot] = useState<{ poi_sealed_at: string | null; poi_hash: string | null } | null>(null);
 
-  const { data: chosen } = useQuery({
+  // The id is what actually gets the counterparty emailed once intent is sealed (see doSeal()).
+  const { data: chosenParty } = useQuery({
     queryKey: ["chosen-counterparty", tx.id],
     queryFn: async () => {
       const { data } = await supabase
         .from("counterparties")
-        .select("name")
+        .select("id, name")
         .eq("transaction_id", tx.id)
         .eq("status", "chosen")
         .order("chosen_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      return data?.name ?? null;
+      return data ? { id: data.id as string, name: data.name as string } : null;
     },
   });
+  const chosen = chosenParty?.name ?? null;
 
   // Screening is no longer gated here: Online Media Screening and Background Screening both run in
   // Step 1, before intent can be confirmed.
@@ -1626,6 +1608,31 @@ function PoiStep({ tx, reload }: Props) {
       }
 
       toast.success("Intent sealed");
+
+      // The counterparty is only actually reached out to once intent is sealed — a confirmed
+      // intent can still be walked back (a different party chosen, the seal never paid for), so
+      // sealing is the point this is a real enough commitment to email them about. Best-effort
+      // and never blocks the seal itself.
+      if (chosenParty?.id) {
+        notifyChosen({ data: { counterpartyId: chosenParty.id } })
+          .then((res) => {
+            if (res.method === "platform" || res.method === "web") {
+              toast.success("The counterparty has been emailed about this deal.");
+            } else if (res.method === "guessed") {
+              toast.message(
+                `No confirmed email for this counterparty — sent a best-effort outreach to ${res.guessed.length} likely address${res.guessed.length === 1 ? "" : "es"} instead. You've been emailed a copy.`,
+              );
+            } else if (res.method === "bidder-only") {
+              toast.message("No contact details found for this counterparty — check your email, we've sent you what to do next.");
+            } else if (res.reason === "email-not-connected") {
+              toast.message("Sealed, but email isn't connected yet — reach out to the counterparty yourself for now.");
+            }
+          })
+          .catch((err) => {
+            toast.error(`Couldn't email the counterparty: ${(err as Error).message || "please try again shortly."}`);
+          });
+      }
+
       reload();
     } catch (err) {
       reportGateError(err, navigate, tx);
