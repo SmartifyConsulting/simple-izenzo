@@ -1794,10 +1794,21 @@ function LiveDealEngine() {
       await queryClient.invalidateQueries({ queryKey: ["counterparties", txId] });
       const count = (await loadRelevantCounterparties(txId)).length;
       await queryClient.invalidateQueries({ queryKey: ["counterparties-count", txId] });
+      // A search never used to say anything when it actually finished — the step just quietly
+      // changed underneath, so there was no clear moment to point to as "done". One toast per
+      // outcome now marks that moment explicitly.
+      const noMatches = !failure || failure.startsWith("No organisations relevant");
+      if ((count ?? 0) > 0) {
+        toast.success(`Search complete — ${count} counterpart${count === 1 ? "y" : "ies"} found.`);
+      } else if (noMatches) {
+        toast.message("Search complete — no matches found. Refine your search and try again.");
+      } else {
+        toast.error(`Search failed: ${failure}`);
+      }
       // Counterparties found: fold Bid Information away so the results list gets the room.
       if ((count ?? 0) > 0) setBidInfoCollapsed(txId, true);
       // Nothing relevant came back: keep Bid Information open, showing the search string to refine.
-      else if (!failure || failure.startsWith("No organisations relevant")) {
+      else if (noMatches) {
         const { data: fresh } = await supabase
           .from("transactions")
           .select("search_prompt")

@@ -11,6 +11,7 @@ import {
 import { Logo } from "@/components/Logo";
 
 import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
+import { SearchButton } from "@/components/layout/SearchButton";
 import { ThemeToggle } from "@/components/guided/ThemeToggle";
 import { SignInModal } from "@/components/auth/SignInModal";
 import { supabase } from "@/integrations/supabase/client";
@@ -107,6 +108,7 @@ export function MainHeader() {
         <div className="ml-auto flex shrink-0 items-center gap-3">
           {user ? (
             <>
+              <SearchButton />
               <Link
                 to="/inbox"
                 title="Inbox"
