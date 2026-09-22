@@ -1133,6 +1133,9 @@ function LiveDealEngine() {
     setMediaProgress({ done: 0, total: counterpartyIds.length * SOURCES_PER_COUNTERPARTY });
     await advance(dealTx.id, "trading", "online-media");
     setDealTx((prev) => (prev ? { ...prev, stage: "trading", step: "online-media" } : prev));
+    // This frame is the current step now — it opens itself rather than waiting to be clicked
+    // open; finalizeChoice already folds it away again the moment the workspace moves on.
+    setMediaResultsOpen(dealTx.id, true);
     const collected: MediaCheckResult[] = [];
     let scanned = 0;
     try {
