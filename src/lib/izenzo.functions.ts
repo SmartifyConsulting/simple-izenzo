@@ -243,6 +243,55 @@ type CandidateResult = {
   evidence?: string | undefined;
 };
 
+export type LocalOrgRow = {
+  name: string;
+  sector: string | null;
+  industry: string | null;
+  offerings: string | null;
+  ai_brief: string | null;
+  country: string | null;
+  website: string | null;
+  primary_contact_email: string | null;
+};
+
+/** Turns registered-organisation rows into search candidates: keeps only the ones relevant to
+ * this search, excludes the bidder's own organisation, and skips anything without a recorded
+ * contact email (an org with no email on file gives this step nothing over the ordinary AI/web
+ * search). Exported for direct testing — the DB query stays inline in searchCounterparties, since
+ * that's the one part that needs a live Supabase connection. */
+export function localOrgCandidates(
+  orgs: LocalOrgRow[],
+  relevanceQuery: string,
+  ownName: string,
+): { candidates: CandidateResult[]; emails: Map<string, string> } {
+  const candidates: CandidateResult[] = [];
+  const emails = new Map<string, string>();
+  const ownKey = nameKey(ownName);
+  for (const org of orgs) {
+    if (!org.primary_contact_email) continue;
+    if (ownKey && (nameKey(org.name) || org.name.trim().toLowerCase()) === ownKey) continue;
+    const candidate: CandidateResult = {
+      name: org.name,
+      jurisdiction: org.country ?? undefined,
+      sector: org.sector ?? org.industry ?? undefined,
+      rationale: org.offerings ?? org.ai_brief ?? undefined,
+      sourceUrl: org.website ?? undefined,
+    };
+    const matchText = [org.sector, org.industry, org.offerings, org.ai_brief].filter(Boolean).join(" ");
+    if (
+      isRelevant(
+        { name: candidate.name, sector: candidate.sector, jurisdiction: candidate.jurisdiction, rationale: matchText },
+        relevanceQuery,
+        { loose: true },
+      )
+    ) {
+      candidates.push(candidate);
+      emails.set(nameKey(candidate.name) || candidate.name.toLowerCase(), org.primary_contact_email);
+    }
+  }
+  return { candidates, emails };
+}
+
 /** Published directory listings turned straight into candidates. Used when the model returns
  * nothing from the fallback sources, so a search still yields real named organisations. */
 async function listingCandidates(query: string, limit = 6): Promise<CandidateResult[]> {
@@ -596,6 +645,28 @@ export const searchCounterparties = createServerFn({ method: "POST" })
     const ownName = (ownOrg?.name ?? "").trim().toLowerCase();
     const notOwn = (c: { name: string }) => !ownName || c.name.trim().toLowerCase() !== ownName;
 
+    // Registered organisations on Izenzo are searched locally, before any AI or web search runs —
+    // a company that already has a verified account here is offered with its own recorded email
+    // straight away, rather than being sent out to the AI/web pipeline to reconstruct one. This is
+    // additive, never a replacement: AI/web search still runs afterwards for everyone else, and a
+    // local lookup failure here must never block the search the person is waiting on.
+    let localMatches: CandidateResult[] = [];
+    let localEmails = new Map<string, string>();
+    try {
+      const { data: orgs } = await supabase
+        .from("organisations")
+        .select("name, sector, industry, offerings, ai_brief, country, website, primary_contact_email")
+        .neq("id", tx.org_id)
+        .not("primary_contact_email", "is", null)
+        .limit(300);
+      const local = localOrgCandidates((orgs ?? []) as LocalOrgRow[], relevanceQuery, ownOrg?.name ?? "");
+      localMatches = local.candidates;
+      localEmails = local.emails;
+    } catch {
+      // The local registry is an enhancement, never a blocker.
+    }
+    const localKeys = new Set(localMatches.map((c) => nameKey(c.name) || c.name.toLowerCase()));
+
     // Bid + documents → understand the transaction → determine the required counterparty → search
     // the public internet → identify real organisations → test relevance → reason over the
     // evidence → return the counterparties.
@@ -640,6 +711,10 @@ export const searchCounterparties = createServerFn({ method: "POST" })
         ),
     );
     if (candidates.length === 0) candidates = (await listingCandidates(relevanceQuery, 6)).filter(notOwn);
+    // Registered platform organisations found locally go first, ahead of anything AI or the
+    // directory fallback found for the same company — deduped by the same normalised-name rule
+    // used everywhere else, so a company already matched locally is never listed a second time.
+    candidates = [...localMatches, ...candidates.filter((c) => !localKeys.has(nameKey(c.name) || c.name.toLowerCase()))];
     if (candidates.length === 0) {
       // A web search that itself failed is reported as that, not as "nothing relevant exists".
       if (web.webError) throw web.webError;
@@ -668,10 +743,15 @@ export const searchCounterparties = createServerFn({ method: "POST" })
 
     const scoreRegion = data.region ?? tx.jurisdiction ?? null;
     const rows = candidates.map((c) => {
+      const key = nameKey(c.name) || c.name.toLowerCase();
+      const isLocal = localKeys.has(key);
+      const localEmail = localEmails.get(key) ?? null;
       const scored = scoreCandidate(c, {
         subject,
         region: scoreRegion,
-        verified: verifiedNames.has(c.name.toLowerCase()),
+        // A registered platform organisation is verified by definition — it doesn't need the
+        // separate responder-directory check that stands in for verification elsewhere.
+        verified: isLocal || verifiedNames.has(c.name.toLowerCase()),
       });
       return {
         transaction_id: tx.id,
@@ -679,15 +759,20 @@ export const searchCounterparties = createServerFn({ method: "POST" })
         jurisdiction: c.jurisdiction ?? null,
         sector: c.sector ?? null,
         score: scored.total,
-        source,
+        source: isLocal ? "platform_registry" : source,
         rationale: c.rationale ?? null,
         status: "surfaced",
+        // A local match already has its own recorded email/website — no need to wait for the
+        // shortlist-time enrichment lookup that web-found candidates still rely on.
+        ...(localEmail ? { contact_email: localEmail, website: c.sourceUrl ?? null } : {}),
         // Evidence lives in media_flags so the source page can be opened next to the name, along
         // with the breakdown behind the percentage.
         media_flags: {
-          ...(c.sourceUrl
-            ? { evidence: [{ url: c.sourceUrl, source: "web_search", ...(c.evidence ? { note: c.evidence } : {}) }] }
-            : {}),
+          ...(isLocal
+            ? { evidence: [{ source: "platform_registry", note: "Registered organisation on the Izenzo platform" }] }
+            : c.sourceUrl
+              ? { evidence: [{ url: c.sourceUrl, source: "web_search", ...(c.evidence ? { note: c.evidence } : {}) }] }
+              : {}),
           scoring: { total: scored.total, components: scored.components },
         },
       };
@@ -710,14 +795,17 @@ export const searchCounterparties = createServerFn({ method: "POST" })
     // Publish each web-found name to the public Responder directory as an unclaimed listing,
     // keeping the page it was found on as evidence. Private per-bid rows above stay untouched.
     // Names already listed are skipped, so an existing (or claimed) listing is never overwritten.
+    // A registered platform organisation is already a claimed account, not an unclaimed lead, so
+    // local matches are never published here.
     try {
+      const webCandidates = candidates.filter((c) => !localKeys.has(nameKey(c.name) || c.name.toLowerCase()));
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { data: already } = await supabaseAdmin
         .from("responder_listings")
         .select("name")
-        .in("name", candidates.map((c) => c.name));
+        .in("name", webCandidates.map((c) => c.name));
       const taken = new Set((already ?? []).map((r) => r.name.toLowerCase()));
-      const fresh = candidates.filter((c) => !taken.has(c.name.toLowerCase()));
+      const fresh = webCandidates.filter((c) => !taken.has(c.name.toLowerCase()));
       if (fresh.length > 0) {
         await supabaseAdmin.from("responder_listings").insert(
           fresh.map((c) => ({
