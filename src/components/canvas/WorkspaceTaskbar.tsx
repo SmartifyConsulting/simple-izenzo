@@ -27,7 +27,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useDealWindows } from "@/lib/dealWindows";
-import { fallbackReference } from "@/lib/tx";
+import { fallbackReference, tradeKindOf } from "@/lib/tx";
 import { cancelBid } from "@/lib/cancelBid.functions";
 import { cn } from "@/lib/utils";
 
@@ -277,6 +277,22 @@ export function WorkspaceTaskbar() {
       <div className="flex items-end gap-1 overflow-x-auto">
       {deals.map((w) => {
         const active = w.mode !== "minimized";
+        // Same rule as the Bid/Offer Registration pill inside the workspace: a Bid tab is green,
+        // an Offer tab is blue — the tab strip previously used one generic "active" colour for
+        // every tab regardless of direction, so an Offer tab read exactly the same as a Bid one.
+        const kind = tradeKindOf(w.label);
+        const tabColorClasses =
+          kind === "bid"
+            ? active
+              ? "border-emerald-600 bg-emerald-600 text-white"
+              : "border-border bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
+            : kind === "offer"
+              ? active
+                ? "border-[#4169e1] bg-[#4169e1] text-white"
+                : "border-border bg-blue-50 text-blue-900 hover:bg-blue-100"
+              : active
+                ? "border-[var(--taskbar-active-border)] bg-[var(--taskbar-active-bg)] text-[var(--taskbar-active-fg)]"
+                : "border-border bg-white text-black hover:bg-white/90";
         return (
           <div
             key={w.id}
@@ -302,10 +318,8 @@ export function WorkspaceTaskbar() {
               setOverId(null);
             }}
             className={cn(
-              "group flex w-36 shrink-0 cursor-grab items-center gap-2 rounded-t-md border px-3 py-1.5 text-xs font-medium transition-colors active:cursor-grabbing",
-              active
-                ? "border-[var(--taskbar-active-border)] border-b-transparent bg-[var(--taskbar-active-bg)] text-[var(--taskbar-active-fg)]"
-                : "border-border border-b-transparent bg-white text-black hover:bg-white/90",
+              "group flex w-36 shrink-0 cursor-grab items-center gap-2 rounded-t-md border px-3 py-1.5 text-xs font-medium transition-colors active:cursor-grabbing border-b-transparent",
+              tabColorClasses,
               draggedId === w.id && "opacity-40",
               overId === w.id && draggedId !== w.id && "border-l-2 border-l-primary",
             )}
