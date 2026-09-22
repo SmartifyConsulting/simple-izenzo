@@ -189,6 +189,24 @@ export function DecisionPackPanel({
             Accept or reject each AI+ proposal above, then Intent opens.
           </span>
         )}
+        {/* Testing shortcut, explicitly requested: does exactly what "Accept all" inside the modal
+            already does (records a real accepted decision against every pending proposal — same
+            decideProposal call, same audit trail), just reachable without opening the modal first
+            and even when there's only one proposal (Accept all only shows once there are 2+). Not
+            a bypass of anything the product doesn't already let a participant do themselves. */}
+        {!busy && !error && gating && pending > 0 && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={selectingAll || deciding !== null}
+            onClick={() => void decideAll("accepted")}
+            className="h-7 gap-1 rounded-full border border-dashed border-muted-foreground/40 px-2.5 text-[10px] font-semibold text-muted-foreground hover:text-foreground"
+          >
+            {selectingAll ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+            Skip (testing) — accept all
+          </Button>
+        )}
       </div>
 
       <Dialog
