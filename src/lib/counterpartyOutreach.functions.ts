@@ -1,8 +1,36 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { nameKey } from "@/lib/dedupeOrgs";
 
 const CONTACT_MODELS = ["gpt-5-mini", "gpt-5"];
+
+type AuthedClient = { from: (t: string) => any };
+
+/** Finds a registered platform organisation by name, ignoring case, punctuation and the company
+ * suffix (Ltd, Pty, Inc, Group…) that make two spellings of the same company look different —
+ * the same normalisation the org-dedupe logic already uses. A raw exact match here meant a real
+ * registered organisation like "SeedAxis (Pty) Ltd" was never found for a counterparty AI had
+ * named just "SeedAxis": the platform lookup was skipped entirely and it fell through to a web
+ * search for a company that didn't need one. Narrows the query with a wildcard on the name's
+ * first significant word (cheap, indexable) then confirms the match with the exact normalised
+ * key so an unrelated company sharing that first word is never picked up. */
+async function findRegisteredOrg(
+  supabase: AuthedClient,
+  name: string,
+): Promise<{ website: string | null; primary_contact_email: string | null } | null> {
+  const key = nameKey(name);
+  const firstWord = key.split(" ")[0];
+  if (!firstWord) return null;
+  const { data } = await supabase
+    .from("organisations")
+    .select("name, website, primary_contact_email")
+    .ilike("name", `%${firstWord}%`)
+    .limit(25);
+  const rows = (data ?? []) as { name: string; website: string | null; primary_contact_email: string | null }[];
+  const match = rows.find((o) => nameKey(o.name) === key);
+  return match ? { website: match.website, primary_contact_email: match.primary_contact_email } : null;
+}
 
 /** Finds a company's own official website through the same public-search stack the rest of the
  * app uses for counterparty search — Tavily when an admin has configured it, OpenAI's own web
@@ -195,11 +223,7 @@ export const enrichCounterparty = createServerFn({ method: "POST" })
     if (row.website || row.contact_email || row.phone) return { source: "already-on-file" as const };
 
     // 1) Already on the platform — use what's recorded on their own organisation profile.
-    const { data: org } = await supabase
-      .from("organisations")
-      .select("website, primary_contact_email")
-      .ilike("name", row.name)
-      .maybeSingle();
+    const org = await findRegisteredOrg(supabase, row.name);
     if (org?.website || org?.primary_contact_email) {
       const { error: upErr } = await supabase
         .from("counterparties")
@@ -283,11 +307,7 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
 
     // Tier 1a: a registered platform organisation by this name — a real address, not a guess.
     if (!toEmail) {
-      const { data: org } = await supabase
-        .from("organisations")
-        .select("website, primary_contact_email")
-        .ilike("name", cp.name)
-        .maybeSingle();
+      const org = await findRegisteredOrg(supabase, cp.name);
       if (org?.primary_contact_email) {
         toEmail = org.primary_contact_email;
         onPlatform = true;
