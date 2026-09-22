@@ -633,6 +633,8 @@ export const runDecisionPack = createServerFn({ method: "POST" })
             void alertLowFunds("OpenAI", 429, body);
             throw new Error("AI credits are exhausted for this workspace — support has been notified.");
           }
+          const { logAiRateLimit } = await import("@/lib/opsAlerts.server");
+          void logAiRateLimit("OpenAI", AI_PLUS_MODEL);
           throw new Error("AI is busy right now. Please try again shortly.");
         }
         if (res.status === 403) {

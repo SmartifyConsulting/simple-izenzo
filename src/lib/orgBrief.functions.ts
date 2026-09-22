@@ -77,6 +77,8 @@ export const generateOrgBrief = createServerFn({ method: "POST" })
         void alertLowFunds("OpenAI", 429, body);
         throw new Error("AI credits are exhausted for this workspace — support has been notified.");
       }
+      const { logAiRateLimit } = await import("@/lib/opsAlerts.server");
+      void logAiRateLimit("OpenAI", "gpt-5-mini");
       throw new Error("AI is busy right now. Please try again shortly.");
     }
     if (!res.ok) throw new Error("The company brief could not be written just now.");

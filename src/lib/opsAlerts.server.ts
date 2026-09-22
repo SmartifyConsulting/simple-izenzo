@@ -37,3 +37,32 @@ export async function alertLowFunds(service: string, statusCode: number, detail?
     // An alerting failure must never take down the request that triggered it.
   }
 }
+
+/** Records a plain OpenAI rate limit (429 that isn't the exhausted-quota case above) so its
+ * frequency is actually visible — before this existed, "AI is busy right now. Please try again
+ * shortly." left no trace anywhere it happened. Query ai_rate_limit_log directly to see how often
+ * a given model is getting throttled; never throws. */
+export async function logAiRateLimit(service: string, model: string): Promise<void> {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const table = supabaseAdmin.from("ai_rate_limit_log" as never) as any;
+    const { data: existing } = await table
+      .select("hit_count")
+      .eq("service", service)
+      .eq("model", model)
+      .maybeSingle();
+    if (existing) {
+      await table
+        .update({
+          hit_count: (existing as { hit_count: number }).hit_count + 1,
+          last_seen_at: new Date().toISOString(),
+        })
+        .eq("service", service)
+        .eq("model", model);
+    } else {
+      await table.insert({ service, model });
+    }
+  } catch {
+    // Logging must never take down the request that triggered it.
+  }
+}
