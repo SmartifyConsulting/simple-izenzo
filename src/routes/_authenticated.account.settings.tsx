@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { AvatarUpload } from "@/components/AvatarUpload";
+import { AuthorityDocumentCard } from "@/components/verification/AuthorityDocumentCard";
 import { OrganisationsPanel } from "@/components/account/OrganisationsPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -125,6 +126,11 @@ function SettingsPage() {
                   Save changes
                 </Button>
               </form>
+
+              {/* The Authority to Act document captured at sign-up, saved to this person's
+                  profile — viewable and replaceable here rather than only ever shown once
+                  during registration. */}
+              <AuthorityDocumentCard />
 
               <div className="space-y-3 rounded-md border border-border p-5">
                 <h2 className="text-sm font-semibold">Reset password</h2>
