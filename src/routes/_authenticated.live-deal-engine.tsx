@@ -950,7 +950,12 @@ function LiveDealEngine() {
     const o: Record<string, "locked" | "open" | "active" | "done"> = {};
     if (!dealTx) return o;
     o["bidRegistration"] = "done";
-    if (workspaceDocs.length === 0) {
+    // Pulses only while genuinely still on Upload Files with nothing attached. Once a search has
+    // actually been run (flowStep moved past "documents"), no documents means none are coming —
+    // Upload Files reads as done rather than pulsing forever for something that isn't arriving,
+    // and the rest of the map (Search, Search Results, Choice…) can pulse normally instead of
+    // this function returning early every time and leaving the whole map stuck on this tile.
+    if (workspaceDocs.length === 0 && flowStep === "documents") {
       o["docSubmission"] = "active";
       return o;
     }
