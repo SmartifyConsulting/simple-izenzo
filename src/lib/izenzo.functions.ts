@@ -692,6 +692,11 @@ export const searchCounterparties = createServerFn({ method: "POST" })
           .from("organisations")
           .select("name, sector, industry, offerings, ai_brief, country, website, primary_contact_email")
           .neq("id", tx.org_id)
+          // Without an explicit order, which 300 rows a table past that size returns is whatever
+          // order Postgres happens to hand back — not guaranteed to be the same rows twice, and
+          // not guaranteed to include any particular organisation at all. Most-recently-updated
+          // first is at least deterministic and biases toward the freshest, most complete profiles.
+          .order("updated_at", { ascending: false })
           .limit(300);
         const local = localOrgCandidates((orgs ?? []) as LocalOrgRow[], relevanceQuery, ownOrg?.name ?? "");
         localMatches = local.candidates;
