@@ -237,7 +237,7 @@ function UsersTab() {
       ) : (
         <div>
           <div
-            className="hidden border-b border-border bg-muted/40 px-4 py-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground sm:grid sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_7rem_7rem_13rem] sm:items-center sm:gap-x-4"
+            className="hidden border-b border-border bg-muted/40 px-4 py-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground sm:grid sm:grid-cols-5 sm:items-center sm:gap-x-4"
           >
             <span>User</span>
             <span>Organisation</span>
@@ -250,7 +250,7 @@ function UsersTab() {
             const isUserAdmin = adminIds.has(u.id);
             const orgNames = orgNamesByUser.get(u.id) ?? [];
             return (
-              <li key={u.id} className="space-y-2 p-4 text-sm sm:space-y-0 sm:grid sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_7rem_7rem_13rem] sm:items-center sm:gap-x-4">
+              <li key={u.id} className="space-y-2 p-4 text-sm sm:space-y-0 sm:grid sm:grid-cols-5 sm:items-center sm:gap-x-4">
                 <div className="min-w-0">
                   <p className="truncate font-medium">{u.full_name ?? u.email}</p>
                   <p className="truncate text-xs text-muted-foreground">{u.email}</p>
