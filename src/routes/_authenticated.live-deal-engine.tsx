@@ -2277,6 +2277,11 @@ function LiveDealEngine() {
                     reference={(dealTx as unknown as { reference?: string | null }).reference ?? draftReference}
                     onNext={() => goToSearch(dealTx.id)}
                     onSubmitted={() => markSubmitted(dealTx.id)}
+                    onPromptSaved={(value) =>
+                      setDealTx((prev) =>
+                        prev ? ({ ...prev, search_prompt: value.length > 0 ? value : null } as Transaction) : prev,
+                      )
+                    }
                     initialPrompt={seedPrompt}
                     initialFiles={seedFiles}
                   />

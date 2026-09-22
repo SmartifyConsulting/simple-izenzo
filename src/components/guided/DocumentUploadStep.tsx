@@ -35,6 +35,7 @@ export function DocumentUploadStep({
   initialPrompt,
   initialFiles,
   onSubmitted,
+  onPromptSaved,
   hideActions = false,
 
 }: {
@@ -43,6 +44,11 @@ export function DocumentUploadStep({
   /** Fires the moment the ask has been made — files started uploading, or Submit was pressed — so
    * the caller can put this frame away for good and show its own progress instead. */
   onSubmitted?: () => void;
+  /** Fires every time the typed description is saved to the transaction — the caller's own copy
+   * of the deal (dealTx) is plain state, not a query subscription, so it never sees this write on
+   * its own; without this, Bid/Offer Information shows no search string for a keyword-only ask
+   * until the page is reloaded. */
+  onPromptSaved?: (value: string) => void;
   /** Fires once, with the very first document ever attached to this transaction — lets the
    * caller correct a bid/offer's direction from what the document actually looks like, rather
    * than a side picked before any document existed. */
@@ -82,8 +88,11 @@ export function DocumentUploadStep({
       .update({ search_prompt: value.length > 0 ? value : null })
       .eq("id", transactionId);
     if (error) toast.error(`Your description could not be saved: ${error.message}`);
-    else await qc.invalidateQueries({ queryKey: ["transaction", transactionId] });
-  }, [prompt, transactionId, qc]);
+    else {
+      await qc.invalidateQueries({ queryKey: ["transaction", transactionId] });
+      onPromptSaved?.(value);
+    }
+  }, [prompt, transactionId, qc, onPromptSaved]);
 
   const { data: docs = [] } = useQuery({
     queryKey: ["documents", transactionId],
