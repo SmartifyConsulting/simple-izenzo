@@ -46,7 +46,7 @@ describe("findRegisteredOrg", () => {
     expect(result?.primary_contact_email).toBe("info@seedaxis.example");
   });
 
-  it("does not match an unrelated company that merely shares the first word", async () => {
+  it("keeps two distinct companies apart even when they share their first word", async () => {
     const { client } = fakeSupabase([
       { name: "SeedAxis Renewables", website: null, primary_contact_email: "wrong@example.com" },
     ]);
