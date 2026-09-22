@@ -107,6 +107,18 @@ export function DocumentUploadStep({
     },
   });
 
+  // Autosave: previously this field only saved on blur or on Search/Submit — typing a description
+  // and then closing the tab or navigating away without doing either lost it outright, since
+  // nothing had written it to the transaction yet. Saves ~1.2s after typing stops, the same
+  // debounce the workspace already uses elsewhere for re-summarising documents. Skipped once
+  // there's nothing left to autosave (a file has landed, or the ask has already been submitted).
+  useEffect(() => {
+    if (docs.length > 0 || submitted) return;
+    const id = setTimeout(() => void savePrompt(), 1200);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prompt]);
+
   const handleFiles = useCallback(
     async (files: FileList | File[]) => {
       let list = Array.from(files);
