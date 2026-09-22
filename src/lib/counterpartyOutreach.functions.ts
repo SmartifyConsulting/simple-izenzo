@@ -32,6 +32,53 @@ export async function findRegisteredOrg(
   return match ? { website: match.website, primary_contact_email: match.primary_contact_email } : null;
 }
 
+type DealFields = {
+  commodity: string | null;
+  quantity: number | null;
+  unit: string | null;
+  price: number | null;
+  currency: string | null;
+  incoterms: string | null;
+  jurisdiction: string | null;
+} | null;
+
+/** A short, honest snapshot of the deal — commodity, quantity, price, Incoterms, jurisdiction —
+ * so the first email a counterparty ever gets from Izenzo actually says what's on offer, not just
+ * that "someone is interested". A field the bidder hasn't recorded yet is left out rather than
+ * shown as a blank or a zero. */
+function dealSnapshotHtml(tx: DealFields): string {
+  if (!tx) return "";
+  const rows: [string, string][] = [];
+  if (tx.commodity) rows.push(["Commodity", tx.commodity]);
+  if (Number(tx.quantity) > 0) rows.push(["Quantity", `${tx.quantity} ${tx.unit ?? ""}`.trim()]);
+  if (Number(tx.price) > 0) rows.push(["Price", `${tx.currency ?? ""} ${tx.price}`.trim()]);
+  if (tx.incoterms) rows.push(["Incoterms", tx.incoterms]);
+  if (tx.jurisdiction) rows.push(["Jurisdiction", tx.jurisdiction]);
+  if (rows.length === 0) return "";
+  return (
+    `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:16px 0;border-collapse:collapse;">` +
+    rows
+      .map(
+        ([label, value]) =>
+          `<tr><td style="padding:4px 0;color:#6b7280;font-size:12px;width:110px;vertical-align:top;">${label}</td>` +
+          `<td style="padding:4px 0;color:#111827;font-size:13px;font-weight:600;">${value}</td></tr>`,
+      )
+      .join("") +
+    `</table>`
+  );
+}
+
+/** A single, brand-styled call-to-action link, so the first email a counterparty gets from
+ * Izenzo reads like an invitation to a real platform rather than a plain text link. */
+function ctaButtonHtml(url: string, label: string): string {
+  return (
+    `<p style="margin:20px 0;">` +
+    `<a href="${url}" style="display:inline-block;background:#14b8a6;color:#0d0f14;font-weight:700;` +
+    `font-size:14px;padding:11px 22px;border-radius:9999px;text-decoration:none;">${label}</a>` +
+    `</p>`
+  );
+}
+
 /** Finds a company's own official website through the same public-search stack the rest of the
  * app uses for counterparty search — Tavily when an admin has configured it, OpenAI's own web
  * search otherwise. Never invents a domain; NONE (from either source) means none was confirmed. */
@@ -289,10 +336,11 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
 
     const { data: tx } = await supabase
       .from("transactions")
-      .select("title")
+      .select("title, commodity, quantity, unit, price, currency, incoterms, jurisdiction")
       .eq("id", cp.transaction_id)
       .maybeSingle();
     const dealName = tx?.title ?? "a trade";
+    const dealDetailsHtml = dealSnapshotHtml(tx);
 
     const { data: bidderProfile } = await supabase
       .from("profiles")
@@ -392,19 +440,25 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
 
     if (toEmail) {
       // Tier 1: a real, confirmed address — send it there directly, cc the bidder.
+      const ctaHtml = ctaButtonHtml(
+        onPlatform ? "https://api.trade.izenzo.co.za/" : "https://api.trade.izenzo.co.za/",
+        onPlatform ? "Sign in to respond" : "Create your free account",
+      );
       await sendEmail(creds, {
         to: toEmail,
         ...(bidderEmail ? { cc: [bidderEmail] } : {}),
-        subject: `${cp.name}, there's an interested party on Izenzo`,
+        subject: `${cp.name}, you've been matched to a live opportunity on Izenzo`,
         html: renderBrandedEmail(
           `<p>Hello,</p>` +
-            `<p>A bidder on the Izenzo Trading Gateway has chosen <strong>${cp.name}</strong> as the ` +
-            `counterparty for ${dealName}.</p>` +
+            `<p>Good news — a verified party on the Izenzo Trading Gateway has selected <strong>${cp.name}</strong> ` +
+            `as a potential counterparty for the opportunity below.</p>` +
+            dealDetailsHtml +
             (onPlatform
-              ? `<p>Sign in to your Izenzo account to see the details and respond.</p>`
-              : `<p>Izenzo is a trading platform with hash-sealed Proof of Intent and independent ` +
-                `verification at every step. You don't have an account yet — create one to see the ` +
-                `details and respond.</p><p><a href="https://api.trade.izenzo.co.za/">Create your account</a></p>`) +
+              ? `<p>Sign in to your Izenzo account to see the full details and respond.</p>`
+              : `<p>Izenzo is a governed trading platform: every match carries a hash-sealed Proof of Intent ` +
+                `and independent verification at every step, so both sides can move with confidence. ` +
+                `You don't have an account yet — creating one is free and takes a couple of minutes.</p>`) +
+            ctaHtml +
             `<p>Regards,<br>Izenzo</p>`,
         ),
       });
@@ -475,23 +529,25 @@ export const inviteCounterparty = createServerFn({ method: "POST" })
 
     const { data: tx } = await supabase
       .from("transactions")
-      .select("title, reference")
+      .select("title, reference, commodity, quantity, unit, price, currency, incoterms, jurisdiction")
       .eq("id", cp.transaction_id)
       .maybeSingle();
 
     const { loadResendCreds, sendEmail, renderBrandedEmail } = await import("@/lib/resend.server");
     const creds = await loadResendCreds();
 
-    const dealName = tx?.title ?? "a trade";
     await sendEmail(creds, {
       to: cp.contact_email,
-      subject: `${cp.name}, there's an interested party on Izenzo`,
+      subject: `${cp.name}, you're shortlisted for a live opportunity on Izenzo`,
       html: renderBrandedEmail(
         `<p>Hello,</p>` +
-        `<p>A bidder on the Izenzo Trading Gateway has shortlisted <strong>${cp.name}</strong> as a potential counterparty for ${dealName}.</p>` +
-        `<p>Izenzo is a trading platform with hash-sealed Proof of Intent and independent verification at every step. ` +
-        `You don't have an account yet — create one to see the details and respond.</p>` +
-        `<p><a href="https://api.trade.izenzo.co.za/">Create your account</a></p>` +
+        `<p>Good news — a verified party on the Izenzo Trading Gateway has shortlisted <strong>${cp.name}</strong> ` +
+        `as a potential counterparty for the opportunity below.</p>` +
+        dealSnapshotHtml(tx) +
+        `<p>Izenzo is a governed trading platform: every match carries a hash-sealed Proof of Intent and ` +
+        `independent verification at every step, so both sides can move with confidence. You don't have an ` +
+        `account yet — creating one is free and takes a couple of minutes.</p>` +
+        ctaButtonHtml("https://api.trade.izenzo.co.za/", "Create your free account") +
         `<p>Regards,<br>Izenzo</p>`,
       ),
     });
