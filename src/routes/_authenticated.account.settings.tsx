@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { AvatarUpload } from "@/components/AvatarUpload";
-import { AuthorityDocumentCard } from "@/components/verification/AuthorityDocumentCard";
+import { DocumentsTab } from "@/components/account/DocumentsTab";
 import { NotificationPreferences } from "@/components/account/NotificationPreferences";
 import { OrganisationsPanel } from "@/components/account/OrganisationsPanel";
 import { Button } from "@/components/ui/button";
@@ -71,6 +71,7 @@ function SettingsPage() {
         <TabsList className="flex-wrap">
           <TabsTrigger value="profile">My Profile</TabsTrigger>
           <TabsTrigger value="kyb">Organisations</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="data">My Data</TabsTrigger>
         </TabsList>
 
@@ -127,11 +128,6 @@ function SettingsPage() {
                 </Button>
               </form>
 
-              {/* The Authority to Act document captured at sign-up, saved to this person's
-                  profile — viewable and replaceable here rather than only ever shown once
-                  during registration. */}
-              <AuthorityDocumentCard />
-
               <div className="space-y-3 rounded-md border border-border p-5">
                 <h2 className="text-sm font-semibold">Reset password</h2>
                 <p className="text-sm text-muted-foreground">
@@ -156,6 +152,10 @@ function SettingsPage() {
 
         <TabsContent value="kyb" className="mt-6">
           <OrganisationsPanel />
+        </TabsContent>
+
+        <TabsContent value="documents" className="mt-6">
+          <DocumentsTab />
         </TabsContent>
 
         <TabsContent value="data" className="mt-6 max-w-lg space-y-6 rounded-md border border-border p-5">
