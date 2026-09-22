@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -128,6 +129,57 @@ export function AuditLogTab({ initialUserId }: { initialUserId?: string | undefi
 
   const filteredUser = userFilter !== "all" ? byUser.get(userFilter) : undefined;
 
+  // Every activity on every bid, grouped by the month it happened and the bid it happened on —
+  // the individual events sit one drill-down click away rather than in one long flat table.
+  const monthGroups = (() => {
+    const byMonth = new Map<string, Map<string, LogRow[]>>();
+    for (const r of filtered) {
+      const month = r.created_at.slice(0, 7); // "YYYY-MM"
+      const bidKey = r.transaction_id ?? "no-bid";
+      if (!byMonth.has(month)) byMonth.set(month, new Map());
+      const bids = byMonth.get(month)!;
+      if (!bids.has(bidKey)) bids.set(bidKey, []);
+      bids.get(bidKey)!.push(r);
+    }
+    const monthFormatter = new Intl.DateTimeFormat("en", { month: "long", year: "numeric" });
+    return [...byMonth.entries()]
+      .sort(([a], [b]) => (a < b ? 1 : -1))
+      .map(([month, bids]) => {
+        const bidGroups = [...bids.entries()]
+          .map(([bidKey, groupRows]) => ({
+            bidKey,
+            deal: bidKey !== "no-bid" ? byDeal.get(bidKey) : undefined,
+            rows: [...groupRows].sort((a, b) => b.created_at.localeCompare(a.created_at)),
+          }))
+          .sort((a, b) => b.rows[0]!.created_at.localeCompare(a.rows[0]!.created_at));
+        return {
+          month,
+          label: monthFormatter.format(new Date(`${month}-01T00:00:00Z`)),
+          eventCount: bidGroups.reduce((n, g) => n + g.rows.length, 0),
+          bids: bidGroups,
+        };
+      });
+  })();
+  const currentMonthKey = new Date().toISOString().slice(0, 7);
+  const [openMonths, setOpenMonths] = useState<Set<string>>(new Set([currentMonthKey]));
+  const [openBids, setOpenBids] = useState<Set<string>>(new Set());
+  function toggleMonth(month: string) {
+    setOpenMonths((prev) => {
+      const next = new Set(prev);
+      if (next.has(month)) next.delete(month);
+      else next.add(month);
+      return next;
+    });
+  }
+  function toggleBid(key: string) {
+    setOpenBids((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -171,62 +223,120 @@ export function AuditLogTab({ initialUserId }: { initialUserId?: string | undefi
         )}
       </div>
 
-      <div className="overflow-hidden rounded-md border border-border">
+      <div className="space-y-2">
         {isLoading ? (
-          <p className="p-6 text-sm text-muted-foreground">Loading…</p>
-        ) : filtered.length === 0 ? (
-          <p className="p-6 text-sm text-muted-foreground">No activity recorded yet.</p>
+          <p className="rounded-md border border-border p-6 text-sm text-muted-foreground">Loading…</p>
+        ) : monthGroups.length === 0 ? (
+          <p className="rounded-md border border-border p-6 text-sm text-muted-foreground">
+            No activity recorded yet.
+          </p>
         ) : (
-          <div className="max-h-[32rem] overflow-y-auto">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 border-b border-border bg-muted/50 text-left">
-                <tr>
-                  <th className="px-4 py-2 font-medium">User</th>
-                  <th className="px-4 py-2 font-medium">BID</th>
-                  <th className="px-4 py-2 font-medium">Event</th>
-                  <th className="px-4 py-2 font-medium">Detail</th>
-                  <th className="px-4 py-2 font-medium">Page</th>
-                  <th className="px-4 py-2 font-medium">When</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {filtered.map((r) => {
-                  const who = byUser.get(r.user_id);
-                  const deal = r.transaction_id ? byDeal.get(r.transaction_id) : undefined;
-                  return (
-                    <tr key={r.id}>
-                      <td className="whitespace-nowrap px-4 py-2">{who?.full_name ?? who?.email ?? r.user_id}</td>
-                      <td className="whitespace-nowrap px-4 py-2 font-mono text-xs">
-                        {deal?.reference ?? (r.transaction_id ? r.transaction_id.slice(0, 8) : "—")}
-                      </td>
-                      <td className="px-4 py-2">
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "font-normal border-transparent",
-                            r.event_type === "navigation"
-                              ? "bg-info/15 text-info"
-                              : r.event_type === "click"
-                                ? "bg-muted text-muted-foreground"
-                                : "bg-success/15 text-success",
+          monthGroups.map((mg) => {
+            const monthOpen = openMonths.has(mg.month);
+            return (
+              <div key={mg.month} className="overflow-hidden rounded-md border border-border">
+                <button
+                  type="button"
+                  onClick={() => toggleMonth(mg.month)}
+                  className="flex w-full items-center justify-between gap-2 bg-muted/40 px-4 py-2.5 text-left"
+                  aria-expanded={monthOpen}
+                >
+                  <span className="text-sm font-semibold">{mg.label}</span>
+                  <span className="flex items-center gap-2">
+                    <Badge variant="outline" className="font-normal">
+                      {mg.bids.length} bid{mg.bids.length === 1 ? "" : "s"} · {mg.eventCount} event
+                      {mg.eventCount === 1 ? "" : "s"}
+                    </Badge>
+                    <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", monthOpen && "rotate-180")} />
+                  </span>
+                </button>
+                {monthOpen && (
+                  <div className="divide-y divide-border">
+                    {mg.bids.map((bg) => {
+                      const bidKey = `${mg.month}:${bg.bidKey}`;
+                      const bidOpen = openBids.has(bidKey);
+                      return (
+                        <div key={bidKey}>
+                          <button
+                            type="button"
+                            onClick={() => toggleBid(bidKey)}
+                            className="flex w-full items-center justify-between gap-2 px-4 py-2 text-left hover:bg-accent/50"
+                            aria-expanded={bidOpen}
+                          >
+                            <span className="flex min-w-0 items-center gap-2">
+                              <span className="shrink-0 font-mono text-xs font-semibold">
+                                {bg.deal?.reference ?? (bg.bidKey === "no-bid" ? "No bid" : bg.bidKey.slice(0, 8))}
+                              </span>
+                              {bg.deal?.title && (
+                                <span className="min-w-0 truncate text-xs text-muted-foreground">{bg.deal.title}</span>
+                              )}
+                            </span>
+                            <span className="flex shrink-0 items-center gap-2">
+                              <span className="text-xs text-muted-foreground">
+                                {bg.rows.length} event{bg.rows.length === 1 ? "" : "s"}
+                              </span>
+                              <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform", bidOpen && "rotate-180")} />
+                            </span>
+                          </button>
+                          {bidOpen && (
+                            <div className="max-h-96 overflow-y-auto border-t border-border">
+                              <table className="w-full text-sm">
+                                <thead className="sticky top-0 border-b border-border bg-muted/50 text-left">
+                                  <tr>
+                                    <th className="px-4 py-2 font-medium">User</th>
+                                    <th className="px-4 py-2 font-medium">Event</th>
+                                    <th className="px-4 py-2 font-medium">Detail</th>
+                                    <th className="px-4 py-2 font-medium">Page</th>
+                                    <th className="px-4 py-2 font-medium">When</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-border">
+                                  {bg.rows.map((r) => {
+                                    const who = byUser.get(r.user_id);
+                                    return (
+                                      <tr key={r.id}>
+                                        <td className="whitespace-nowrap px-4 py-2">
+                                          {who?.full_name ?? who?.email ?? r.user_id}
+                                        </td>
+                                        <td className="px-4 py-2">
+                                          <Badge
+                                            variant="outline"
+                                            className={cn(
+                                              "font-normal border-transparent",
+                                              r.event_type === "navigation"
+                                                ? "bg-info/15 text-info"
+                                                : r.event_type === "click"
+                                                  ? "bg-muted text-muted-foreground"
+                                                  : "bg-success/15 text-success",
+                                            )}
+                                          >
+                                            {r.event_type}
+                                          </Badge>
+                                        </td>
+                                        <td className="max-w-xs truncate px-4 py-2 text-muted-foreground">
+                                          {r.label ?? "—"}
+                                        </td>
+                                        <td className="max-w-xs truncate px-4 py-2 font-mono text-xs text-muted-foreground">
+                                          {r.path ?? "—"}
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-2 text-muted-foreground">
+                                          {new Date(r.created_at).toLocaleString()}
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
                           )}
-                        >
-                          {r.event_type}
-                        </Badge>
-                      </td>
-                      <td className="max-w-xs truncate px-4 py-2 text-muted-foreground">{r.label ?? "—"}</td>
-                      <td className="max-w-xs truncate px-4 py-2 font-mono text-xs text-muted-foreground">
-                        {r.path ?? "—"}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-2 text-muted-foreground">
-                        {new Date(r.created_at).toLocaleString()}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })
         )}
       </div>
     </div>
