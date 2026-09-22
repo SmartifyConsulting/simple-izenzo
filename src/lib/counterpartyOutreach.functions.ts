@@ -2,9 +2,136 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-/** Reads a counterparty's own public website (through Firecrawl) and asks AI to report a
- * contact email — but only one that's literally printed on the page. AI is explicitly told never
- * to invent or guess an address; if the site doesn't show one, this comes back empty rather than
+const CONTACT_MODELS = ["gpt-5-mini", "gpt-5"];
+
+/** Finds a company's own official website through the same public-search stack the rest of the
+ * app uses for counterparty search — Tavily when an admin has configured it, OpenAI's own web
+ * search otherwise. Never invents a domain; NONE (from either source) means none was confirmed. */
+async function findOfficialWebsite(
+  name: string,
+  apiKey: string,
+  tavilyKey: string | null,
+): Promise<string | null> {
+  try {
+    if (tavilyKey) {
+      const { tavilySearch } = await import("@/lib/tavily.server");
+      const results = await tavilySearch(tavilyKey, `${name} official website`, { max: 5, timeoutMs: 20_000 });
+      if (results.length === 0) return null;
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "gpt-5-mini",
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are given public search results for a company and report its own official website " +
+                "URL — never a directory, marketplace listing, news article, social profile or unrelated " +
+                "result, and only a URL that actually appears in the results below. Respond with only the " +
+                "URL, or the single word NONE.",
+            },
+            {
+              role: "user",
+              content: `Company: ${name}\n\nResults:\n${results
+                .map((r) => `${r.url}\n${r.title}\n${r.content}`)
+                .join("\n\n")}`,
+            },
+          ],
+        }),
+      });
+      if (!res.ok) return null;
+      const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+      const url = (json.choices?.[0]?.message?.content ?? "").trim();
+      return /^https?:\/\//.test(url) ? url : null;
+    }
+
+    const { webSearch } = await import("@/lib/openaiWebSearch.server");
+    const r = await webSearch({
+      apiKey,
+      instructions:
+        "Find the company's own official website through web search. Reply with only its URL, or the " +
+        "single word NONE if you can't confirm one — never a directory, marketplace, news or social result.",
+      input: `Company: ${name}`,
+      models: CONTACT_MODELS,
+    });
+    const url = r.text.trim();
+    return /^https?:\/\//.test(url) ? url : null;
+  } catch {
+    // Best-effort only — a lookup failure here must never surface as an error to the caller.
+    return null;
+  }
+}
+
+/** Reads a known website — through Tavily's own extracted page text when configured, OpenAI's web
+ * search otherwise — for a contact email and/or phone number literally published on it. Never
+ * guesses or constructs either; NONE means nothing was found, not that nothing exists. */
+async function readContactFromSite(
+  name: string,
+  website: string,
+  apiKey: string,
+  tavilyKey: string | null,
+): Promise<{ email: string | null; phone: string | null }> {
+  try {
+    let pageText = "";
+    if (tavilyKey) {
+      const domain = new URL(website).hostname.replace(/^www\./, "");
+      const { tavilySearch } = await import("@/lib/tavily.server");
+      const results = await tavilySearch(tavilyKey, "contact email phone", {
+        includeDomains: [domain],
+        max: 5,
+        timeoutMs: 20_000,
+      });
+      pageText = results.map((r) => `${r.url}\n${r.content}`).join("\n\n");
+    }
+    if (!pageText.trim()) {
+      const { webSearch } = await import("@/lib/openaiWebSearch.server");
+      const r = await webSearch({
+        apiKey,
+        instructions:
+          "You read a company's own official website through web search and report a contact email " +
+          "and/or phone number, if and only if one is literally published on their own site. Never guess, " +
+          "infer or construct either.",
+        input: `Company: ${name}\nWebsite: ${website}`,
+        models: CONTACT_MODELS,
+      });
+      pageText = r.text;
+    }
+    if (!pageText.trim()) return { email: null, phone: null };
+
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "gpt-5-mini",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You read text gathered from a company's own website and report a contact email and/or " +
+              "phone number, if and only if literally present in the text. Never guess or construct " +
+              "either. Respond with exactly two lines: `email: <address or NONE>` then `phone: <number or " +
+              "NONE>`. No other text.",
+          },
+          { role: "user", content: pageText.slice(0, 12000) },
+        ],
+      }),
+    });
+    if (!res.ok) return { email: null, phone: null };
+    const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+    const raw = json.choices?.[0]?.message?.content ?? "";
+    const emailMatch = raw.match(/email:\s*([^\s]+)/i)?.[1];
+    const phoneMatch = raw.match(/phone:\s*(.+)/i)?.[1]?.trim();
+    const email = emailMatch && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailMatch) ? emailMatch : null;
+    const phone = phoneMatch && phoneMatch.toUpperCase() !== "NONE" ? phoneMatch : null;
+    return { email, phone };
+  } catch {
+    return { email: null, phone: null };
+  }
+}
+
+/** Reads a counterparty's own public website for a contact email — but only one that's literally
+ * printed on the page. Never invents or guesses an address; comes back null rather than
  * fabricating a contact. Nothing here submits anything to the counterparty's own site — it only
  * reads it. */
 export const findCounterpartyContact = createServerFn({ method: "POST" })
@@ -22,39 +149,13 @@ export const findCounterpartyContact = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     if (!cp) throw new Error("Counterparty not found, or you don't have access to it.");
 
-    const { firecrawlConfigured, fetchPageText } = await import("@/lib/firecrawl.server");
-    if (!(await firecrawlConfigured())) {
-      throw new Error("Firecrawl is not connected yet. Add it under Admin → Integrations.");
-    }
-    const pageText = await fetchPageText(data.website);
-    if (!pageText) throw new Error("Could not read that website.");
-
     const { loadOpenAiApiKey } = await import("@/lib/openai.server");
     const apiKey = await loadOpenAiApiKey();
     if (!apiKey) throw new Error("AI is not configured for this workspace.");
+    const { loadTavilyApiKey } = await import("@/lib/tavily.server");
+    const tavilyKey = await loadTavilyApiKey();
 
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "gpt-5-mini",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You read raw web page text and report a contact email address, if and only if one is " +
-              "literally printed on the page. Never guess, infer, or construct an address (e.g. from a " +
-              "name and domain) — if no email appears verbatim in the text, say NONE. Respond with only " +
-              "the email address, or the single word NONE. No other text.",
-          },
-          { role: "user", content: `Page text from ${data.website}:\n\n${pageText.slice(0, 12000)}` },
-        ],
-      }),
-    });
-    if (!res.ok) throw new Error("Could not read that website's contact details just now.");
-    const json = (await res.json()) as { choices: { message: { content: string } }[] };
-    const raw = (json.choices?.[0]?.message?.content ?? "").trim();
-    const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw) ? raw : null;
+    const { email } = await readContactFromSite(cp.name, data.website, apiKey, tavilyKey);
 
     const { error: upErr } = await supabase
       .from("counterparties")
@@ -67,9 +168,9 @@ export const findCounterpartyContact = createServerFn({ method: "POST" })
 
 /** Runs the moment a candidate is shortlisted: if the counterparty's name matches a registered
  * platform organisation, its recorded website/contact email is copied straight over — no need to
- * go looking, it's already on file. Otherwise this does a best-effort open-web lookup (via Bright
- * Data) for the company's own website and reads its contact email/phone off that page, the same
- * way findCounterpartyContact does for a manually-supplied website — AI is told never to invent a
+ * go looking, it's already on file. Otherwise this does a best-effort public-search lookup for
+ * the company's own website and reads its contact email/phone off that, the same way
+ * findCounterpartyContact does for a manually-supplied website — AI is told never to invent a
  * detail that isn't literally present on the page or already on file. */
 export const enrichCounterparty = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -108,87 +209,25 @@ export const enrichCounterparty = createServerFn({ method: "POST" })
       return { source: "platform-org" as const, website: org.website ?? null, email: org.primary_contact_email ?? null };
     }
 
-    // 2) Not a platform org — best-effort open-web lookup, if Firecrawl and AI are both
-    // configured. Silent no-op rather than a hard failure if either isn't (shortlisting itself
-    // must never fail because enrichment couldn't run).
-    const { firecrawlConfigured, fetchPageText } = await import("@/lib/firecrawl.server");
+    // 2) Not a platform org — best-effort public-search lookup. Silent no-op rather than a hard
+    // failure if AI isn't configured (shortlisting itself must never fail because enrichment
+    // couldn't run).
     const { loadOpenAiApiKey } = await import("@/lib/openai.server");
     const apiKey = await loadOpenAiApiKey();
-    if (!(await firecrawlConfigured()) || !apiKey) return { source: "unavailable" as const };
+    if (!apiKey) return { source: "unavailable" as const };
+    const { loadTavilyApiKey } = await import("@/lib/tavily.server");
+    const tavilyKey = await loadTavilyApiKey();
 
-    try {
-      const searchText = await fetchPageText(
-        `https://www.google.com/search?q=${encodeURIComponent(`${row.name} official website contact`)}`,
-      );
-      if (!searchText) return { source: "unavailable" as const };
+    const website = await findOfficialWebsite(row.name, apiKey, tavilyKey);
+    if (!website) return { source: "unavailable" as const };
 
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "gpt-5-mini",
-          messages: [
-            {
-              role: "system",
-              content:
-                "You read raw search-results page text for a company and report its most likely official " +
-                "website URL. Only report a URL if you're confident it's that company's own site (not a " +
-                "directory, news article or unrelated result) — otherwise say NONE. Respond with only the " +
-                "URL, or the single word NONE. No other text.",
-            },
-            { role: "user", content: `Company: ${row.name}\n\nSearch results text:\n\n${searchText.slice(0, 6000)}` },
-          ],
-        }),
-      });
-      if (!res.ok) return { source: "unavailable" as const };
-      const json = (await res.json()) as { choices: { message: { content: string } }[] };
-      const url = (json.choices?.[0]?.message?.content ?? "").trim();
-      if (!/^https?:\/\//.test(url)) return { source: "unavailable" as const };
-
-      const pageText = await fetchPageText(url);
-      if (!pageText) {
-        await supabase.from("counterparties").update({ website: url } as never).eq("id", row.id);
-        return { source: "web" as const, website: url, email: null, phone: null };
-      }
-
-      const contactRes = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "gpt-5-mini",
-          messages: [
-            {
-              role: "system",
-              content:
-                "You read raw web page text and report a contact email and/or phone number, if and only if " +
-                "they are literally printed on the page. Never guess or construct either. Respond with exactly " +
-                "two lines: `email: <address or NONE>` then `phone: <number or NONE>`. No other text.",
-            },
-            { role: "user", content: `Page text from ${url}:\n\n${pageText.slice(0, 12000)}` },
-          ],
-        }),
-      });
-      let email: string | null = null;
-      let phone: string | null = null;
-      if (contactRes.ok) {
-        const contactJson = (await contactRes.json()) as { choices: { message: { content: string } }[] };
-        const raw = contactJson.choices?.[0]?.message?.content ?? "";
-        const emailMatch = raw.match(/email:\s*([^\s]+)/i)?.[1];
-        const phoneMatch = raw.match(/phone:\s*(.+)/i)?.[1]?.trim();
-        email = emailMatch && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailMatch) ? emailMatch : null;
-        phone = phoneMatch && phoneMatch.toUpperCase() !== "NONE" ? phoneMatch : null;
-      }
-
-      const { error: upErr } = await supabase
-        .from("counterparties")
-        .update({ website: url, contact_email: email, phone } as never)
-        .eq("id", row.id);
-      if (upErr) throw new Error(upErr.message);
-      return { source: "web" as const, website: url, email, phone };
-    } catch {
-      // Best-effort only — a lookup failure here should never surface as an error to the user.
-      return { source: "unavailable" as const };
-    }
+    const { email, phone } = await readContactFromSite(row.name, website, apiKey, tavilyKey);
+    const { error: upErr } = await supabase
+      .from("counterparties")
+      .update({ website, contact_email: email, phone } as never)
+      .eq("id", row.id);
+    if (upErr) throw new Error(upErr.message);
+    return { source: "web" as const, website, email, phone };
   });
 
 /** Fires the moment a bidder finalizes their choice of counterparty. Three tiers, in order:
@@ -256,79 +295,22 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
       if (!website) website = org?.website ?? null;
     }
 
-    const { firecrawlConfigured, fetchPageText } = await import("@/lib/firecrawl.server");
     const { loadOpenAiApiKey } = await import("@/lib/openai.server");
     const apiKey = await loadOpenAiApiKey();
-    const canSearch = (await firecrawlConfigured()) && Boolean(apiKey);
-    let pageText: string | null = null;
+    const { loadTavilyApiKey } = await import("@/lib/tavily.server");
+    const tavilyKey = apiKey ? await loadTavilyApiKey() : null;
+    const canSearch = Boolean(apiKey);
 
     // Tier 1b: no website on file at all yet — a quick best-effort search for one, the same way
     // enrichCounterparty does, so there's at least a domain to try before giving up.
     if (!toEmail && !website && canSearch) {
-      try {
-        const searchText = await fetchPageText(
-          `https://www.google.com/search?q=${encodeURIComponent(`${cp.name} official website contact`)}`,
-        );
-        if (searchText) {
-          const res = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              model: "gpt-5-mini",
-              messages: [
-                {
-                  role: "system",
-                  content:
-                    "You read raw search-results page text for a company and report its most likely " +
-                    "official website URL. Only report a URL if you're confident it's that company's own " +
-                    "site — otherwise say NONE. Respond with only the URL, or the single word NONE.",
-                },
-                { role: "user", content: `Company: ${cp.name}\n\nSearch results text:\n\n${searchText.slice(0, 6000)}` },
-              ],
-            }),
-          });
-          if (res.ok) {
-            const json = (await res.json()) as { choices: { message: { content: string } }[] };
-            const url = (json.choices?.[0]?.message?.content ?? "").trim();
-            if (/^https?:\/\//.test(url)) website = url;
-          }
-        }
-      } catch {
-        // Best-effort only.
-      }
+      website = await findOfficialWebsite(cp.name, apiKey!, tavilyKey);
     }
 
     // Tier 1c: a website is known — read it for a literal, verbatim email before ever guessing.
     if (!toEmail && website && canSearch) {
-      try {
-        pageText = await fetchPageText(website);
-        if (pageText) {
-          const res = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              model: "gpt-5-mini",
-              messages: [
-                {
-                  role: "system",
-                  content:
-                    "You read raw web page text and report a contact email address, if and only if one is " +
-                    "literally printed on the page. Never guess, infer, or construct an address. Respond " +
-                    "with only the email address, or the single word NONE.",
-                },
-                { role: "user", content: `Page text from ${website}:\n\n${pageText.slice(0, 12000)}` },
-              ],
-            }),
-          });
-          if (res.ok) {
-            const json = (await res.json()) as { choices: { message: { content: string } }[] };
-            const raw = (json.choices?.[0]?.message?.content ?? "").trim();
-            if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw)) toEmail = raw;
-          }
-        }
-      } catch {
-        // Best-effort only.
-      }
+      const { email } = await readContactFromSite(cp.name, website, apiKey!, tavilyKey);
+      if (email) toEmail = email;
     }
 
     if (toEmail || website) {
@@ -355,17 +337,11 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
                 role: "system",
                 content:
                   "You propose plausible email addresses at a given company domain, following common " +
-                  "corporate conventions (info@, sales@, contact@, trade@) and, only if the page text " +
-                  "names a specific person to contact, a firstname.lastname@ guess for them too. These " +
-                  "are guesses, not confirmed addresses — never claim certainty. Return 2 to 4 addresses, " +
-                  "one per line, nothing else. No prose, no numbering.",
+                  "corporate conventions (info@, sales@, contact@, trade@). These are guesses, not " +
+                  "confirmed addresses — never claim certainty. Return 2 to 4 addresses, one per line, " +
+                  "nothing else. No prose, no numbering.",
               },
-              {
-                role: "user",
-                content: `Domain: ${domain}\nCompany: ${cp.name}${
-                  pageText ? `\n\nPage text (for a named contact, if any):\n\n${pageText.slice(0, 4000)}` : ""
-                }`,
-              },
+              { role: "user", content: `Domain: ${domain}\nCompany: ${cp.name}` },
             ],
           }),
         });
@@ -373,7 +349,7 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
           const { alertLowFunds } = await import("@/lib/opsAlerts.server");
           void alertLowFunds("OpenAI", 402);
         } else if (res.ok) {
-          const json = (await res.json()) as { choices: { message: { content: string } }[] };
+          const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
           const raw = json.choices?.[0]?.message?.content ?? "";
           guessedEmails = raw
             .split("\n")
