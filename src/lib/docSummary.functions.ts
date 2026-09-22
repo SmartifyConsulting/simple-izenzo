@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { ALL_FACT_FIELDS, isTransactionType, TRANSACTION_TYPES, type TransactionType } from "@/lib/transactionType";
 
 /** Reads every document attached to a bid/offer — the ID photo by sight (OCR), and PDF / Word /
  * Excel / CSV / plain-text files as text — asks the AI to extract the deal's details, and saves a
@@ -141,7 +142,18 @@ async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
       "(photos by sight, documents by their text) and write out the party's ask in their own terms.\n" +
       'Reply with JSON only: {"title": string, "summary_bullets": string[], "id_number": string|null, "facts": ' +
       '{"commodity": string|null, "quantity": number|null, "unit": string|null, "price": number|null, ' +
-      '"currency": string|null, "incoterms": string|null, "jurisdiction": string|null, "side": "buy"|"sell"|null}}.\n' +
+      '"currency": string|null, "incoterms": string|null, "jurisdiction": string|null, "side": "buy"|"sell"|null}, ' +
+      '"transaction_type": string, "structured_facts": object}.\n' +
+      `transaction_type is exactly one of ${TRANSACTION_TYPES.map((t) => `"${t}"`).join(", ")} — the kind of transaction ` +
+      "these documents actually describe, not just what commodity field a generic bid form has. Use \"project_finance\" " +
+      "for a power, energy or infrastructure project (a PPA, EPC contract, project financing, or similar), not just " +
+      "any deal that happens to involve a physical commodity. Use \"other\" only when neither fits.\n" +
+      "structured_facts is a flat object using ONLY these keys, one value per key, using null for a key that does not " +
+      `belong to the classified transaction_type or is not stated in the documents:\n` +
+      ALL_FACT_FIELDS.map((f) => `  ${f.key} (${f.type}): ${f.label} — ${f.hint}`).join("\n") +
+      "\nFill only the keys belonging to the classified transaction_type; every other key must be null. Each filled " +
+      "value must be the specific fact stated in the documents (a figure, date, term or name as written) — never a " +
+      "guess, an assumption or a typical/industry-standard figure. Leave a key null rather than approximate it.\n" +
       "title is a concise, specific trade title of 4-10 words suitable for display under a bid ID. " +
       "Use the documents and Search Prompt, never a filename or a generic title such as New Bid. " +
       `Search Prompt: ${tx.search_prompt || "not provided"}.\n` +
@@ -231,6 +243,15 @@ async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
     // The documents only fill blanks — anything the user typed themselves stays as they typed it.
     const facts = parsed.facts;
     const filled: Record<string, unknown> = {};
+    // The transaction type and its structured facts are AI+ orchestration inputs, not a field the
+    // user fills in, so they are always overwritten with the latest read rather than "fill blank
+    // only" — a later document (an EPC contract added after the initial upload) should correct an
+    // earlier misclassification, not be ignored because a type was already set.
+    if (parsed.transactionType) filled["transaction_type"] = parsed.transactionType;
+    if (parsed.structuredFacts) {
+      filled["structured_facts"] = parsed.structuredFacts;
+      filled["structured_facts_generated_at"] = new Date().toISOString();
+    }
     if (!tx.commodity && facts.commodity) filled["commodity"] = facts.commodity;
     // A quantity or price of 0 is the "nothing entered yet" a new bid starts with, not a real value.
     const empty = (v: unknown) => v == null || Number(v) === 0;
@@ -283,7 +304,14 @@ async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
       // The summary is saved either way; a failure here only leaves the record's terms as they were.
     }
 
-    return { summary, title: generatedTitle, facts, unreadable };
+    return {
+      summary,
+      title: generatedTitle,
+      facts,
+      unreadable,
+      transactionType: parsed.transactionType,
+      structuredFacts: parsed.structuredFacts,
+    };
   }
 }
 
@@ -418,11 +446,41 @@ function readFacts(v: unknown): DocumentFacts {
   };
 }
 
+/** Reads `structured_facts` against the known field list, keeping only real keys and dropping
+ * anything blank — the model is asked to null out fields that don't apply, but a defensive read
+ * never trusts that it did. */
+function readStructuredFacts(v: unknown): Record<string, string> | null {
+  if (!v || typeof v !== "object") return null;
+  const src = v as Record<string, unknown>;
+  const known = new Set(ALL_FACT_FIELDS.map((f) => f.key));
+  const out: Record<string, string> = {};
+  for (const [k, val] of Object.entries(src)) {
+    if (!known.has(k)) continue;
+    const s = str(val);
+    if (s) out[k] = s;
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
 /** The model is asked for raw JSON, but tolerate fenced JSON or a plain-prose fallback. */
-function parseReply(raw: string): { title: string | null; bullets: string[]; idNumber: string | null; facts: DocumentFacts } {
+function parseReply(raw: string): {
+  title: string | null;
+  bullets: string[];
+  idNumber: string | null;
+  facts: DocumentFacts;
+  transactionType: TransactionType | null;
+  structuredFacts: Record<string, string> | null;
+} {
   const body = raw.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
   try {
-    const obj = JSON.parse(body) as { title?: unknown; summary_bullets?: unknown; id_number?: unknown; facts?: unknown };
+    const obj = JSON.parse(body) as {
+      title?: unknown;
+      summary_bullets?: unknown;
+      id_number?: unknown;
+      facts?: unknown;
+      transaction_type?: unknown;
+      structured_facts?: unknown;
+    };
     const bullets = Array.isArray(obj.summary_bullets)
       ? obj.summary_bullets.map((b) => normalizeBulletLine(String(b))).filter(Boolean)
       : [];
@@ -432,6 +490,8 @@ function parseReply(raw: string): { title: string | null; bullets: string[]; idN
         bullets,
         idNumber: typeof obj.id_number === "string" && obj.id_number.trim() ? obj.id_number.trim() : null,
         facts: readFacts(obj.facts),
+        transactionType: isTransactionType(obj.transaction_type) ? obj.transaction_type : null,
+        structuredFacts: readStructuredFacts(obj.structured_facts),
       };
     }
   } catch {
@@ -441,7 +501,7 @@ function parseReply(raw: string): { title: string | null; bullets: string[]; idN
     .split(/\n+/)
     .map((line) => normalizeBulletLine(line))
     .filter(Boolean);
-  return { title: null, bullets, idNumber: null, facts: EMPTY_FACTS };
+  return { title: null, bullets, idNumber: null, facts: EMPTY_FACTS, transactionType: null, structuredFacts: null };
 }
 
 /** Keeps a "  - " sub-bullet marker intact (so the Live Workspace can still tell it apart from a

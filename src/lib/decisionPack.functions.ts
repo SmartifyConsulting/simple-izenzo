@@ -2,6 +2,13 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { evidenceCompleteness, parseEvidenceRefs, type EvidenceRef } from "@/lib/confidence";
+import {
+  classifyTransactionTypeHeuristic,
+  isTransactionType,
+  REASONING_RULES,
+  structuredFactsLines,
+  type TransactionType,
+} from "@/lib/transactionType";
 
 /**
  * AI+ is advisory, never the decision-maker.
@@ -99,8 +106,38 @@ type CleanProposal = {
   related_counterparty: string | null;
 };
 
+/** Loose text match used only to police grounding claims: strips everything but letters, digits
+ * and spaces, lowercases, and collapses whitespace, so "PPA tenor: 20 years" and "PPA TENOR - 20
+ * YEARS." compare equal regardless of punctuation. */
+function normalizeForMatch(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+/** Builds the searchable corpus used by `chainIsGrounded` — same normalisation, named for what
+ * it's assembling rather than what it does to one string. */
+function normalizeCorpus(s: string): string {
+  return normalizeForMatch(s);
+}
+
+/** A model may claim a fact was "confirmed in a document on file" when it was not — the evidence
+ * kind alone does not prove it. This checks the claim's specific detail (the part after the last
+ * "→" in its chain, e.g. "20-year PPA at $45/MWh" from "PPA → offtake agreement → 20-year PPA at
+ * $45/MWh") actually appears, word for word in substance, in the facts this request assembled —
+ * the structured facts, the document summary, the bid/offer rows. A claim that fails this is not
+ * proof of fabrication, but it is not proof of grounding either, so it is downgraded rather than
+ * trusted. */
+function chainIsGrounded(chain: string, corpus: string): boolean {
+  const detail = chain.split("→").pop() ?? chain;
+  const tokens = normalizeForMatch(detail)
+    .split(" ")
+    .filter((t) => t.length >= 4);
+  if (tokens.length === 0) return true; // too short/generic a claim to police meaningfully
+  const hits = tokens.filter((t) => corpus.includes(t));
+  return hits.length / tokens.length >= 0.5;
+}
+
 /** Nothing unvalidated is ever written: a bad type or an out-of-range probability is dropped. */
-function validate(raw: RawProposal[], citedUrls: Set<string> = new Set()) {
+function validate(raw: RawProposal[], citedUrls: Set<string> = new Set(), factCorpus: string | null = null) {
   const clean: CleanProposal[] = [];
 
   const rejected: string[] = [];
@@ -123,10 +160,18 @@ function validate(raw: RawProposal[], citedUrls: Set<string> = new Set()) {
     let evidenceRefs: EvidenceRef[] = [];
     let p: number;
     if (Array.isArray(r.evidence)) {
-      evidenceRefs = parseEvidenceRefs(r.evidence).map((e) =>
+      evidenceRefs = parseEvidenceRefs(r.evidence).map((e) => {
         // A cited web page has to be one the market-data lookup actually returned.
-        e.kind === "public_web" && (!e.url || !citedUrls.has(e.url)) ? { ...e, kind: "general_knowledge" as const, verified: false } : e,
-      );
+        if (e.kind === "public_web") {
+          return !e.url || !citedUrls.has(e.url) ? { ...e, kind: "general_knowledge" as const, verified: false } : e;
+        }
+        // A document, extracted-fact or bid-record claim has to actually appear in the facts this
+        // request assembled — otherwise it is grounded in nothing this deal's own record supports.
+        if (e.verified && factCorpus && (e.kind === "extracted_fact" || e.kind === "document" || e.kind === "bid_record")) {
+          return chainIsGrounded(e.chain, factCorpus) ? e : { ...e, verified: false };
+        }
+        return e;
+      });
       p = Math.round(evidenceCompleteness(evidenceRefs) * 100) / 100;
     } else {
       p = typeof r.probability === "number" ? r.probability : Number(r.probability);
@@ -180,6 +225,8 @@ type AiPlusTransaction = {
   currency: string | null;
   incoterms: string | null;
   jurisdiction: string | null;
+  transaction_type?: string | null;
+  structured_facts?: unknown;
 };
 
 /**
@@ -239,6 +286,12 @@ async function tryProtectedAiPlus(args: {
       currency: tx.currency,
       incoterms: tx.incoterms,
       jurisdiction: tx.jurisdiction,
+      // Orchestration context for their side too: the classified transaction type and its
+      // type-specific extracted facts, so a project-finance deal isn't handed to their service as
+      // a bare commodity schema either. Additive to Appendix A — unknown keys are for them to use
+      // or ignore.
+      transaction_type: tx.transaction_type ?? null,
+      structured_facts: tx.structured_facts ?? null,
     },
   });
 
@@ -458,6 +511,32 @@ export const runDecisionPack = createServerFn({ method: "POST" })
     const market = await loadMarketContext({ apiKey, commodity: tx.commodity ?? null, jurisdiction: tx.jurisdiction ?? null });
     const citedUrls = new Set((market?.sources ?? []).map((x) => x.url));
 
+    // AI+ orchestration: what kind of transaction this actually is. `document_summary` reading
+    // classifies it properly from the documents; a transaction with no documents read yet, or
+    // read before this classification existed, falls back to a quick heuristic rather than being
+    // silently treated as a commodity trade.
+    const storedType = (tx as { transaction_type?: string | null }).transaction_type;
+    const transactionType: TransactionType = isTransactionType(storedType)
+      ? storedType
+      : classifyTransactionTypeHeuristic({
+          commodity: tx.commodity,
+          title: tx.title,
+          documentSummary: (tx as { document_summary?: string | null }).document_summary ?? null,
+        });
+    const structuredFacts = (tx as { structured_facts?: unknown }).structured_facts ?? null;
+    const factLines = structuredFactsLines(transactionType, structuredFacts);
+
+    // The corpus this deal's own record actually supports — every "document"/"extracted_fact"/
+    // "bid_record" claim the model makes is checked against this, not trusted on its say-so.
+    const factCorpus = normalizeCorpus(
+      [
+        JSON.stringify(structuredFacts ?? {}),
+        (tx as { document_summary?: string | null }).document_summary ?? "",
+        JSON.stringify(bids ?? []),
+        JSON.stringify(parties ?? []),
+      ].join(" "),
+    );
+
     const system = [
       "You are Izenzo AI+. You are advisory only: you never decide, never select, never adopt, and never change the transaction.",
       `YOUR USER IS THE ${userSide}${isSeller ? " — this is their OFFER TO SELL" : " — this is their BID TO BUY"}. Every recommendation is advice to the user, from the user's position: ${
@@ -465,13 +544,15 @@ export const runDecisionPack = createServerFn({ method: "POST" })
           ? "how to make their offer more executable and more attractive to a buyer and to raise the chance it reaches Execution — for example obtaining independent verification of quality, securing any missing quantity, correcting delivery dates, clarifying Incoterms, and structuring payment security a buyer will accept. Do NOT write advice that protects a hypothetical buyer (what a buyer should insist on, avoid paying, or appoint); use a buyer's likely concerns only to tell the seller what to fix or offer."
           : "how to secure a reliable supplier on sound terms and protect the user as buyer — for example verifying quality and quantity, price against a benchmark, delivery and payment protections. Do NOT write advice to the supplier."
       }`,
+      `TRANSACTION TYPE: ${transactionType}. ${REASONING_RULES[transactionType]}`,
       "Return STRICT JSON: {\"proposals\":[{\"proposal_type\":\"counterparty|pricing|risk|structure|timing|substitution|bundle\",\"addressed_to\":\"user\",\"summary\":\"one sentence: what the user should do\",\"rationale\":\"why\",\"evidence\":[{\"kind\":\"document|extracted_fact|bid_record|public_web|general_knowledge\",\"chain\":\"source → detail → fact\",\"verified\":true,\"url\":\"only for public_web\"}],\"counterparty\":\"the exact counterparty name this proposal is about, from the Counterparties list below, or null if it isn't about a specific one\"}]}",
       "\"rationale\" is mandatory and is the explanation the person reads before accepting or rejecting. Write two to four sentences in plain professional language that (1) state the specific evidence you are relying on, (2) explain the reasoning that leads from that evidence to the recommendation, and (3) say what it would improve or what risk it would avoid. Never write a bare restatement of the summary or an explanation that cites nothing on file.",
-      "\"evidence\" lists every fact the advice rests on and says exactly where each comes from. kind: \"document\" = a named document on file; \"extracted_fact\" = a specific fact read out of a document; \"bid_record\" = a field of the bid/offer record; \"public_web\" = a page in the PUBLIC MARKET DATA section (give its url); \"general_knowledge\" = anything from your own knowledge. \"chain\" traces it from source to fact, for example \"Assay Certificate → sample ID CCA-260918-73 → Cu 99.94%\". \"verified\" is true only if that exact fact appears in the information below; anything from general knowledge is verified:false. Never invent a source, a sample ID or a figure.",
+      "\"evidence\" lists every fact the advice rests on and says exactly where each comes from. kind: \"document\" = a named document on file; \"extracted_fact\" = a specific fact read out of a document, including any of the STRUCTURED FACTS below; \"bid_record\" = a field of the bid/offer record; \"public_web\" = a page in the PUBLIC MARKET DATA section (give its url); \"general_knowledge\" = anything from your own knowledge. \"chain\" traces it from source to fact, for example \"PPA → offtake terms → 20-year tenor at $45/MWh\" or \"Assay Certificate → sample ID CCA-260918-73 → Cu 99.94%\". \"verified\" is true only if that exact fact appears in the information below; anything from general knowledge is verified:false. Never invent a source, a figure, a term length or a capacity number — a claim marked verified that does not actually appear below is discarded before it reaches the person deciding.",
       "Do not give any probability or percentage of your own — confidence is worked out from how much of the evidence is verified.",
       "The user's own submitted terms (price, quantity, delivery terms) are the user's claims, not independently verified facts about the counterparty or the market. Use market prices only from the PUBLIC MARKET DATA section; if it is empty or holds no usable benchmark, say a contemporaneous benchmark could not be obtained instead of supplying a figure.",
-      "A price or quantity shown as \"not recorded\" is a gap in the record, not a value of zero.",
+      "A price or quantity shown as \"not recorded\" is a gap in the record, not a value of zero. The same applies to every STRUCTURED FACT: a fact not listed below was not found in the documents — say so as a gap and what evidence would close it, never assume a typical or industry-standard figure in its place.",
       "Always set \"counterparty\" to the specific party's name whenever a proposal concerns one — never leave it null just because the type isn't \"counterparty\".",
+      "Spread the proposals across whichever of counterparty, pricing, risk, structure, timing, substitution and bundle actually apply to this transaction type and the facts on file — do not default every proposal to pricing or counterparty just because those are the most familiar categories.",
       "Return between 2 and 6 proposals. No prose outside the JSON.",
     ].join("\n");
 
@@ -479,11 +560,15 @@ export const runDecisionPack = createServerFn({ method: "POST" })
       STAGE_BRIEF[data.stageContext],
       "",
       `Transaction: ${tx.title}`,
+      `Transaction type: ${transactionType}`,
       `Commodity: ${tx.commodity ?? "n/a"}`,
       `Quantity: ${tx.quantity ?? "n/a"} ${tx.unit ?? ""}`,
       `Price: ${tx.price ?? "n/a"} ${tx.currency}`,
       `Incoterms: ${tx.incoterms ?? "n/a"}`,
       `Jurisdiction: ${tx.jurisdiction ?? "n/a"}`,
+      factLines.length > 0
+        ? `STRUCTURED FACTS for this transaction type (read from the documents — treat every one of these as verified, and reason over them as the primary evidence for this deal):\n${factLines.map((l) => `- ${l}`).join("\n")}`
+        : `STRUCTURED FACTS for this transaction type: none extracted yet — treat every type-specific fact (${transactionType}) as a gap, not as a typical/default figure.`,
       `Counterparties: ${JSON.stringify(parties ?? [])}`,
       `Bids/offers: ${JSON.stringify(
         (bids ?? []).map((b) => ({
@@ -507,21 +592,7 @@ export const runDecisionPack = createServerFn({ method: "POST" })
     // recorded and advice falls back to the hosted model. Either way the transaction is never
     // blocked and nothing already sealed is touched.
     const external = await tryProtectedAiPlus({
-      transaction: tx as unknown as {
-        id: string;
-        org_id: string;
-        counterparty_org_id: string | null;
-        stage: string;
-        step: string;
-        title: string | null;
-        commodity: string | null;
-        quantity: number | null;
-        unit: string | null;
-        price: number | null;
-        currency: string | null;
-        incoterms: string | null;
-        jurisdiction: string | null;
-      },
+      transaction: tx as unknown as AiPlusTransaction,
       stageContext: data.stageContext,
       actorId: userId,
     });
@@ -597,7 +668,7 @@ export const runDecisionPack = createServerFn({ method: "POST" })
       if (!raw) {
         throw new Error("AI+ returned an analysis that could not be read. Please run it again.");
       }
-      const validated = validate(raw, citedUrls);
+      const validated = validate(raw, citedUrls, factCorpus);
       clean = validated.clean;
       rejected = validated.rejected;
     }
