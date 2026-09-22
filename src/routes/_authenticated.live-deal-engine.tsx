@@ -1291,7 +1291,7 @@ function LiveDealEngine() {
       notifyChosen({ data: { counterpartyId } })
         .then((res) => {
           if (res.method === "platform" || res.method === "web") {
-            toast.success("The counterparty has been emailed about this deal — you're cc'd.");
+            toast.success("The counterparty has been emailed about this deal.");
           } else if (res.method === "guessed") {
             toast.message(
               `No confirmed email for this counterparty — sent a best-effort outreach to ${res.guessed.length} likely address${res.guessed.length === 1 ? "" : "es"} instead. You've been emailed a copy.`,

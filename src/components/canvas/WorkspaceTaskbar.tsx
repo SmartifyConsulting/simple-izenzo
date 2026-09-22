@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Plus, Search, X } from "lucide-react";
+import { Plus, Search, X, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
   Command,
@@ -150,6 +150,7 @@ export function WorkspaceTaskbar() {
   // bid mid-negotiation shouldn't disappear from the taskbar without the person choosing whether
   // that also means calling it off.
   const [closeConfirm, setCloseConfirm] = useState<{ id: string; label: string } | null>(null);
+  const [clearAllConfirm, setClearAllConfirm] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const cancelBidFn = useServerFn(cancelBid);
 
@@ -348,6 +349,46 @@ export function WorkspaceTaskbar() {
       })}
       </div>
       </TooltipProvider>
+
+      {/* Pinned to the far right, outside the scrollable strip, same as Search/New on the left. */}
+      {deals.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setClearAllConfirm(true)}
+          title="Close all tabs"
+          aria-label="Close all tabs"
+          className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-t-md border border-border border-b-transparent bg-transparent text-muted-foreground hover:bg-card/50 hover:text-destructive"
+        >
+          <XCircle className="h-3.5 w-3.5" />
+        </button>
+      )}
+
+      <AlertDialog open={clearAllConfirm} onOpenChange={setClearAllConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Close all {deals.length} tab{deals.length === 1 ? "" : "s"}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This only closes them from this view — every bid and offer is saved and stays exactly
+              as it is. Reopen any of them anytime from Search or My Trades.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button type="button" variant="outline" onClick={() => setClearAllConfirm(false)}>
+              Keep tabs open
+            </Button>
+            <AlertDialogAction
+              onClick={() => {
+                for (const w of deals) close(w.id);
+                forgetRememberedDeal();
+                setClearAllConfirm(false);
+                void navigate({ to: "/live-deal-engine", search: { fresh: true, n: Date.now() } });
+              }}
+            >
+              Close all
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={closeConfirm !== null} onOpenChange={(open) => !open && setCloseConfirm(null)}>
         <AlertDialogContent>

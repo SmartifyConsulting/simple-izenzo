@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { Building2, Coins, CreditCard, History, KeyRound, Plug, Users, type LucideIcon } from "lucide-react";
+import { Archive, Building2, Coins, CreditCard, History, KeyRound, Plug, Users, type LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { issueEvidencePack, downloadEvidencePack } from "@/lib/evidencePack.func
 import { IntegrationsTab } from "@/components/admin/IntegrationsTab";
 import { AuditLogTab } from "@/components/admin/AuditLogTab";
 import { ApiKeysTab } from "@/components/admin/ApiKeysTab";
+import { ArchiveTab } from "@/components/admin/ArchiveTab";
 import { OrganisationsTab, useOrgDirectory } from "@/components/admin/OrganisationsTab";
 
 type AdminSearch = { group?: string; tab?: string; activityUser?: string };
@@ -63,6 +64,7 @@ const ADMIN_TABS: AdminTab[] = [
   { value: "users", label: "Users", Component: UsersTab, Icon: Users },
   { value: "organisations", label: "Organisations", Component: OrganisationsTab, Icon: Building2 },
   { value: "payments", label: "Payments", Component: PaymentsTab, Icon: CreditCard },
+  { value: "archive", label: "Archive", Component: ArchiveTab, Icon: Archive, superuserOnly: true },
   { value: "integrations", label: "Integrations", Component: IntegrationsTab, Icon: Plug, superuserOnly: true },
   { value: "activity-log", label: "Activity Log", Component: AuditLogTab, Icon: History, superuserOnly: true },
   { value: "tokens", label: "Tokens", Component: TokensTab, Icon: Coins },
@@ -2592,7 +2594,6 @@ function AuditorsTab() {
 function PaymentsTab() {
   const qc = useQueryClient();
   const [mismatchForm, setMismatchForm] = useState({ description: "", izenzoAmount: "", payfastAmount: "", evidence: "" });
-  const [candidateForm, setCandidateForm] = useState({ entityType: "", entityId: "", eligibleReason: "" });
 
   const { data: refunds = [] } = useQuery({
     queryKey: ["admin-refund-requests"],
@@ -2618,17 +2619,6 @@ function PaymentsTab() {
     },
   });
 
-  const { data: candidates = [] } = useQuery({
-    queryKey: ["admin-archive-candidates"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("archive_move_candidates")
-        .select("*, archive_moves(*)")
-        .order("flagged_at", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
 
   async function refreshRefunds() {
     await qc.invalidateQueries({ queryKey: ["admin-refund-requests"] });
@@ -2636,10 +2626,6 @@ function PaymentsTab() {
   async function refreshMismatches() {
     await qc.invalidateQueries({ queryKey: ["admin-settlement-mismatches"] });
   }
-  async function refreshCandidates() {
-    await qc.invalidateQueries({ queryKey: ["admin-archive-candidates"] });
-  }
-
   async function approveForProcessing(id: string) {
     const { error } = await supabase.rpc("admin_approve_refund_for_processing", { p_id: id });
     if (error) {
@@ -2720,55 +2706,6 @@ function PaymentsTab() {
     }
     toast.success("Mismatch resolved");
     await refreshMismatches();
-  }
-
-  async function flagCandidate(e: React.FormEvent) {
-    e.preventDefault();
-    if (!candidateForm.entityType.trim() || !candidateForm.entityId.trim() || !candidateForm.eligibleReason.trim()) {
-      toast.error("Entity type, entity ID and eligibility reason are required.");
-      return;
-    }
-    const { error } = await supabase.rpc("admin_flag_archive_candidate", {
-      p_entity_type: candidateForm.entityType,
-      p_entity_id: candidateForm.entityId,
-      p_eligible_reason: candidateForm.eligibleReason,
-    });
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    toast.success("Candidate flagged for archiving — nothing moved yet");
-    setCandidateForm({ entityType: "", entityId: "", eligibleReason: "" });
-    await refreshCandidates();
-  }
-
-  async function approveMove(id: string) {
-    const retentionBasis = window.prompt("Retention basis (required):");
-    if (!retentionBasis) return;
-    const retrievalRoute = window.prompt("Retrieval route (required):");
-    if (!retrievalRoute) return;
-    const { error } = await supabase.rpc("admin_approve_archive_move", {
-      p_candidate_id: id,
-      p_retention_basis: retentionBasis,
-      p_retrieval_route: retrievalRoute,
-    });
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    toast.success("Archive move approved and recorded");
-    await refreshCandidates();
-  }
-
-  async function dismissCandidate(id: string) {
-    const reason = window.prompt("Dismissal reason (optional):") ?? undefined;
-    const { error } = await supabase.rpc("admin_dismiss_archive_candidate", { p_id: id, p_reason: reason ?? "" });
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    toast.success("Candidate dismissed");
-    await refreshCandidates();
   }
 
   return (
@@ -2880,70 +2817,6 @@ function PaymentsTab() {
                 )}
               </li>
             ))}
-          </ul>
-        )}
-      </div>
-
-      <div>
-        <h2 className="text-sm font-semibold">Cold-storage archiving</h2>
-        <form onSubmit={flagCandidate} className="mt-2 grid gap-3 rounded-md border border-border p-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label>Entity type</Label>
-            <Input value={candidateForm.entityType} onChange={(e) => setCandidateForm({ ...candidateForm, entityType: e.target.value })} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Entity ID</Label>
-            <Input value={candidateForm.entityId} onChange={(e) => setCandidateForm({ ...candidateForm, entityId: e.target.value })} />
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label>Eligibility reason (dry-run flag)</Label>
-            <Textarea rows={2} value={candidateForm.eligibleReason} onChange={(e) => setCandidateForm({ ...candidateForm, eligibleReason: e.target.value })} />
-          </div>
-          <div className="sm:col-span-2 text-right">
-            <Button type="submit" size="sm">
-              Flag candidate
-            </Button>
-          </div>
-        </form>
-
-        {candidates.length > 0 && (
-          <ul className="mt-3 space-y-2">
-            {candidates.map((c) => {
-              const moves = (c as { archive_moves?: { id: string; approved_at: string }[] }).archive_moves ?? [];
-              const moved = moves.length > 0;
-              return (
-                <li key={c.id} className="rounded-md border border-border p-3 text-xs">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span>
-                      {c.entity_type} · {c.entity_id} — {c.eligible_reason}
-                    </span>
-                    {moved ? (
-                      <Badge variant="secondary" className="font-normal">
-                        moved
-                      </Badge>
-                    ) : c.dismissed_at ? (
-                      <Badge variant="secondary" className="font-normal">
-                        dismissed
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="font-normal">
-                        pending
-                      </Badge>
-                    )}
-                  </div>
-                  {!moved && !c.dismissed_at && (
-                    <div className="mt-1.5 flex gap-1.5">
-                      <Button size="sm" onClick={() => approveMove(c.id)}>
-                        Approve move
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => dismissCandidate(c.id)}>
-                        Dismiss
-                      </Button>
-                    </div>
-                  )}
-                </li>
-              );
-            })}
           </ul>
         )}
       </div>
