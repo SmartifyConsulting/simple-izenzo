@@ -15,7 +15,7 @@
 // Without BRIGHTDATA_API_KEY, search mode returns no web results (registry results still show).
 // Without either secret, scrape mode returns no page text (the product-match badge is skipped).
 
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { createClient } from "jsr:@supabase/supabase-js@2.115.0";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
