@@ -5,11 +5,11 @@ import { Trash2 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { AuthorityDocumentCard } from "@/components/verification/AuthorityDocumentCard";
+import { NotificationPreferences } from "@/components/account/NotificationPreferences";
 import { OrganisationsPanel } from "@/components/account/OrganisationsPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -147,23 +147,7 @@ function SettingsPage() {
             </div>
 
             <div className="space-y-6">
-              <div className="space-y-4 rounded-md border border-border p-5">
-                <h2 className="text-sm font-semibold">Notification rules</h2>
-                {[
-                  { label: "New bid or offer received", desc: "Someone opens a match on a trade you're party to" },
-                  { label: "Proof of Intent sealed", desc: "A counterparty seals intent on a shared trade" },
-                  { label: "WaD case needs attention", desc: "A compliance check on your trade is waiting" },
-                  { label: "Token balance running low", desc: "Fewer than 5 tokens remain" },
-                ].map((rule) => (
-                  <div key={rule.label} className="flex items-center justify-between gap-4 border-b border-border pb-3 last:border-0 last:pb-0">
-                    <div>
-                      <p className="text-sm font-medium">{rule.label}</p>
-                      <p className="text-xs text-muted-foreground">{rule.desc}</p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-                ))}
-              </div>
+              {profile && <NotificationPreferences profileId={profile.id} />}
 
               <DangerZone />
             </div>
