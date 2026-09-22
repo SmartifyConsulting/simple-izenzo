@@ -309,7 +309,6 @@ function LiveDealEngine() {
   // Set when a search finished and found nothing relevant, so Bid Information can show what was
   // searched for and let the person refine it instead of implying a search is still running.
   const [noMatchesTx, setNoMatchesTx] = useState<string | null>(null);
-  const [refineText, setRefineText] = useState("");
   const [refining, setRefining] = useState(false);
   const [screening, setScreening] = useState(false);
   const [screeningResults, setScreeningResults] = useState<ScreeningResult[] | null>(null);
@@ -1730,21 +1729,32 @@ function LiveDealEngine() {
     }
   }
 
-  /** Saves the edited search string onto the bid and runs the search again on it. */
-  async function refineSearch(txId: string) {
-    const text = refineText.trim();
-    if (!text) return;
+  /** Saves the edited search string onto the bid and runs the search again on it — the "Edit
+   * Search" action in the Search Results record. */
+  async function refineSearch(txId: string, text: string) {
+    const trimmed = text.trim();
+    if (!trimmed) return;
     setRefining(true);
     try {
-      const { error } = await supabase.from("transactions").update({ search_prompt: text }).eq("id", txId);
+      const { error } = await supabase.from("transactions").update({ search_prompt: trimmed }).eq("id", txId);
       if (error) {
         toast.error(`Your search could not be saved: ${error.message}`);
         return;
       }
+      setDealTx((prev) => (prev ? ({ ...prev, search_prompt: trimmed } as Transaction) : prev));
+      setNoMatchesTx(null);
       await runSearch(txId);
     } finally {
       setRefining(false);
     }
+  }
+
+  /** Gives up watching a search that's taking a long time (e.g. AI silently retrying a rate limit
+   * for 10-20s with nothing on screen to show for it) — the request itself is left to finish on
+   * its own server-side and will still save whatever it finds; this only stops the "Searching…"
+   * state so editing is available straight away instead of leaving no way out of the spinner. */
+  function stopSearch() {
+    setFlowStep("results");
   }
 
   /** "Find Counterparties" — runs the AI/AI+ search. Online media screening comes later, only once
@@ -1809,14 +1819,9 @@ function LiveDealEngine() {
       }
       // Counterparties found: fold Bid Information away so the results list gets the room.
       if ((count ?? 0) > 0) setBidInfoCollapsed(txId, true);
-      // Nothing relevant came back: keep Bid Information open, showing the search string to refine.
+      // Nothing relevant came back: keep Bid Information open, showing the search string next to
+      // its own heading — "Edit Search" in the Search Results record below is where it's refined.
       else if (noMatches) {
-        const { data: fresh } = await supabase
-          .from("transactions")
-          .select("search_prompt")
-          .eq("id", txId)
-          .maybeSingle();
-        setRefineText(((fresh as { search_prompt?: string | null } | null)?.search_prompt ?? "").trim());
         setNoMatchesTx(txId);
         setBidInfoCollapsed(txId, false);
       }
@@ -2334,36 +2339,6 @@ function LiveDealEngine() {
                     : ""}
                 </p>
               )}
-              {noMatchesTx === dealTx.id && flowStep !== "searching" && (
-                <div className="space-y-1.5 rounded-lg border border-border bg-muted/30 p-2.5">
-                  <p className="text-xs font-semibold text-foreground">No matches found</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    Nothing relevant came back for this search. Add more words — a product, place, size
-                    or quantity — and search again.
-                  </p>
-                  <Textarea
-                    rows={2}
-                    value={refineText}
-                    onChange={(e) => setRefineText(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        if (!refining && refineText.trim()) void refineSearch(dealTx.id);
-                      }
-                    }}
-                    disabled={refining}
-                    className="min-h-0 resize-none text-sm"
-                  />
-                  <Button
-                    size="sm"
-                    className="w-full"
-                    disabled={refining || refineText.trim().length === 0}
-                    onClick={() => void refineSearch(dealTx.id)}
-                  >
-                    Search again
-                  </Button>
-                </div>
-              )}
               {documentSummary ? (
                 <ul className="mt-1 space-y-1 text-xs leading-relaxed text-foreground">
                   {documentSummary
@@ -2671,7 +2646,9 @@ function LiveDealEngine() {
                       onFinalize={finalizeChoice}
                       finalizing={finalizing}
                       locked={Boolean(dealTx.intent_confirmed_at)}
-                      onRetrySearch={() => void runSearch(dealTx.id)}
+                      searchPrompt={(dealTx as unknown as { search_prompt?: string | null }).search_prompt ?? null}
+                      onSearchAgain={(text) => void refineSearch(dealTx.id, text)}
+                      onStopSearch={stopSearch}
                     />
                     </div>
                     )}

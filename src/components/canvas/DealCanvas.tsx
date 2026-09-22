@@ -27,6 +27,8 @@ import {
   X,
   UploadCloud,
   FileText,
+  StopCircle,
+  Pencil,
 } from "lucide-react";
 import { CanvasNode, Connector, GateBar, type NodeState } from "./CanvasNode";
 import { StepScreen } from "@/components/steps/StepScreen";
@@ -1150,7 +1152,9 @@ export function CounterpartyRecord({
   onFinalize,
   finalizing = false,
   locked = false,
-  onRetrySearch,
+  searchPrompt = null,
+  onSearchAgain,
+  onStopSearch,
 }: {
   txId?: string | null;
   /** True while the AI/AI+ search is still running, so the panel polls for freshly saved rows. */
@@ -1158,11 +1162,19 @@ export function CounterpartyRecord({
   error?: string | null;
   /** Fires the background screening for the ticked counterparties. */
   onContinue?: (counterpartyIds: string[]) => void;
-  /** Runs the search again — surfaced whenever the record says "run the search again" but nothing
-   * on screen actually did that. A search left running when the workspace was closed never gets
-   * auto-resumed on return (the effect that would restart it depends on this-session-only local
-   * state), so without this the deal was stuck reading "no matches" with no way forward. */
-  onRetrySearch?: () => void;
+  /** The search text as it currently stands — pre-fills the edit box "Edit Search" opens. */
+  searchPrompt?: string | null;
+  /** Runs the search again with (possibly edited) text — surfaced whenever the record has nothing
+   * to show but nothing on screen actually offered a way to try again. A search left running when
+   * the workspace was closed never auto-resumes on return (the effect that would restart it
+   * depends on this-session-only local state), so without this the deal was stuck reading "no
+   * matches" with no way forward. */
+  onSearchAgain?: (prompt: string) => void;
+  /** Gives up waiting on a search that's taking a long time (e.g. AI rate-limited, retrying
+   * silently for 10-20s with nothing on screen to show for it) — the search itself keeps running
+   * server-side and will still save whatever it finds, this just stops watching for it and opens
+   * editing straight away instead of leaving no way out of the spinner. */
+  onStopSearch?: () => void;
   /** True once intent is confirmed — the shortlist/pick is settled by then, so the checkboxes and
    * radio buttons here stop taking input rather than silently accepting a click that changes
    * nothing (or that the server would reject anyway). */
@@ -1194,6 +1206,17 @@ export function CounterpartyRecord({
   const raiseChallengeFn = useServerFn(raiseChallenge);
   const listChallengesFn = useServerFn(listChallenges);
   const [pickedId, setPickedId] = useState<string | null>(null);
+  // "Edit Search" reveals this inline, pre-filled with the current search text, instead of
+  // silently re-running the exact same search that just came back empty.
+  const [editingSearch, setEditingSearch] = useState(false);
+  const [editedPrompt, setEditedPrompt] = useState("");
+  // Lets someone stop watching a search that's taking a long time (AI silently retrying a rate
+  // limit can run 10-20s with nothing on screen) without waiting it out — the request itself keeps
+  // running server-side regardless.
+  const [stoppedWatching, setStoppedWatching] = useState(false);
+  useEffect(() => {
+    if (searching) setStoppedWatching(false);
+  }, [searching]);
   const [challengeOpen, setChallengeOpen] = useState(false);
   const [governanceOpen, setGovernanceOpen] = useState(false);
   const [challengeSubject, setChallengeSubject] = useState("");
@@ -1537,7 +1560,7 @@ export function CounterpartyRecord({
       )}
 
       {candidates.length === 0 ? (
-        searching ? (
+        searching && !stoppedWatching ? (
           // Centered in the space this card takes up while nothing else is in it yet, rather
           // than pinned to the top the moment the heading ends.
           <div className="flex min-h-[72px] flex-col items-center justify-center gap-1.5 py-2">
@@ -1545,19 +1568,69 @@ export function CounterpartyRecord({
             <div className="h-1 w-1/2 overflow-hidden rounded-full bg-progress-track">
               <div className="h-full w-1/3 animate-[slide-in-right_1.4s_ease-in-out_infinite] rounded-full bg-success" />
             </div>
+            {/* AI silently retrying a rate limit can leave this spinner running for 10-20s with no
+                error to show for it — this is the way out, not a cancel of the actual server-side
+                request (it keeps running and will still save whatever it finds). */}
+            {onStopSearch && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="mt-1 h-6 gap-1 text-[11px] text-slate-500 hover:text-slate-900"
+                onClick={() => {
+                  setStoppedWatching(true);
+                  onStopSearch();
+                }}
+              >
+                <StopCircle className="h-3 w-3" /> Stop
+              </Button>
+            )}
+          </div>
+        ) : editingSearch ? (
+          <div className="mt-2 space-y-1.5">
+            <Textarea
+              rows={2}
+              value={editedPrompt}
+              onChange={(e) => setEditedPrompt(e.target.value)}
+              autoFocus
+              className="min-h-0 resize-none text-sm"
+            />
+            <div className="flex gap-1.5">
+              <Button
+                size="sm"
+                className="flex-1"
+                disabled={editedPrompt.trim().length === 0}
+                onClick={() => {
+                  setEditingSearch(false);
+                  onSearchAgain?.(editedPrompt.trim());
+                }}
+              >
+                Search
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setEditingSearch(false)}>
+                Cancel
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <p className="text-xs text-slate-500">
               {error
                 ? error.startsWith("No organisations relevant")
-                  ? "No relevant organisations were found. Edit the search in the information panel above and search again."
+                  ? "No relevant organisations were found — edit the search and try again."
                   : `Search could not finish: ${error}`
-                : "No matches found yet — run the search again."}
+                : "No matches found yet — edit the search and try again."}
             </p>
-            {onRetrySearch && (
-              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onRetrySearch}>
-                Search again
+            {onSearchAgain && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 gap-1 text-xs"
+                onClick={() => {
+                  setEditedPrompt(searchPrompt ?? "");
+                  setEditingSearch(true);
+                }}
+              >
+                <Pencil className="h-3 w-3" /> Edit Search
               </Button>
             )}
           </div>
