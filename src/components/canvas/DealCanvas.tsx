@@ -802,11 +802,41 @@ export function InlineFrame({
   const locked = lockReason(stage, step, tx);
   const canChangeParty =
     !viewOnly && Boolean(onChangeParty) && !tx.poi_sealed_at && (step === "intent" || step === "poi");
+  const changePartyLink = canChangeParty && (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <button
+          type="button"
+          className="mt-4 text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+        >
+          Choose a different party
+        </button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Choose a different party?</AlertDialogTitle>
+          <AlertDialogDescription>
+            The party you picked is released and the counterparty list opens again. Nothing that
+            has already been screened is lost.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Keep this party</AlertDialogCancel>
+          <AlertDialogAction onClick={() => onChangeParty?.()}>
+            Reopen the list
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
   if (bare) {
     return locked ? (
       <p className="rounded-xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">{locked}.</p>
     ) : (
-      <StepScreen tx={tx} stage={stage} step={step} reload={reload} />
+      <>
+        <StepScreen tx={tx} stage={stage} step={step} reload={reload} />
+        {changePartyLink}
+      </>
     );
   }
   return (
@@ -848,33 +878,7 @@ export function InlineFrame({
       ) : (
         <StepScreen tx={tx} stage={stage} step={step} reload={reload} />
       )}
-      {canChangeParty && (
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <button
-              type="button"
-              className="mt-4 text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
-            >
-              Choose a different party
-            </button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Choose a different party?</AlertDialogTitle>
-              <AlertDialogDescription>
-                The party you picked is released and the counterparty list opens again. Nothing that
-                has already been screened is lost.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Keep this party</AlertDialogCancel>
-              <AlertDialogAction onClick={() => onChangeParty?.()}>
-                Reopen the list
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
+      {changePartyLink}
     </div>
   );
 }

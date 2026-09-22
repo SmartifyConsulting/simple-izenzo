@@ -20,6 +20,7 @@ import {
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { sealProofOfIntent, completeWad, runAiProposal, searchCounterparties, extractMaterialTerms } from "@/lib/izenzo.functions";
+import { notifyChosenCounterparty } from "@/lib/counterpartyOutreach.functions";
 import { sourceLabel, userFacingText } from "@/lib/userFacingText";
 import { type ScreeningCheck } from "@/lib/screening.functions";
 import { emitAiPlusSpineEvent, type StageContext } from "@/lib/decisionPack.functions";
@@ -148,27 +149,34 @@ function Panel({
     // label, small body copy, and compact list text — so Proof of Intent and every frame after it
     // read at the same size rather than a step larger.
     <div className={cn("rounded-md border", light ? "border-slate-200 bg-white text-slate-900" : "border-border")}>
-      <div className={cn("border-b px-4 py-3", light ? "border-slate-200" : "border-border")}>
-        {/* Same heading treatment as the Bid Registration frame: small caps, muted. */}
-        {/* font-sans is explicit: headings otherwise inherit the display face, which made this
-            read in a different font from the LIVE WORKSPACE / BID INFORMATION labels. */}
-        {title ? (
-          pill ? (
-            <h2 className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 font-sans text-[var(--lw-pill-fg)]">
-              {title}
-            </h2>
-          ) : (
-            <h2 className={cn("label-caps font-sans font-bold", light ? "text-slate-900" : "text-muted-foreground")}>
-              {title}
-            </h2>
-          )
-        ) : null}
+      {/* Both the header and the body used to render unconditionally — an empty bordered strip
+          for a titleless Panel, and another for one with nothing to say in its body (e.g. Seal
+          Intent once intent is already confirmed and tokens are sufficient) — reading as two
+          blank frames stacked above the actual footer content. Both are skipped when there is
+          nothing in them. */}
+      {(title || description) && (
+        <div className={cn("border-b px-4 py-3", light ? "border-slate-200" : "border-border")}>
+          {/* Same heading treatment as the Bid Registration frame: small caps, muted. */}
+          {/* font-sans is explicit: headings otherwise inherit the display face, which made this
+              read in a different font from the LIVE WORKSPACE / BID INFORMATION labels. */}
+          {title ? (
+            pill ? (
+              <h2 className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 font-sans text-[var(--lw-pill-fg)]">
+                {title}
+              </h2>
+            ) : (
+              <h2 className={cn("label-caps font-sans font-bold", light ? "text-slate-900" : "text-muted-foreground")}>
+                {title}
+              </h2>
+            )
+          ) : null}
 
-        {description && (
-          <p className={cn("mt-1 text-xs", light ? "text-slate-500" : "text-muted-foreground")}>{description}</p>
-        )}
-      </div>
-      <div className="p-4 text-xs leading-relaxed">{children}</div>
+          {description && (
+            <p className={cn("mt-1 text-xs", light ? "text-slate-500" : "text-muted-foreground")}>{description}</p>
+          )}
+        </div>
+      )}
+      {children != null && <div className="p-4 text-xs leading-relaxed">{children}</div>}
       {footer && (
         <div className={cn("border-t px-4 py-3 text-xs", light ? "border-slate-200" : "border-border")}>{footer}</div>
       )}
@@ -1227,19 +1235,21 @@ function IntentStep({ tx, reload }: Props) {
   });
   const materialTerms = termsData?.terms ?? [];
 
-  // The party chosen after background screening — the intent is signed against them.
-  const { data: chosen } = useQuery({
+  // The party chosen after background screening — the intent is signed against them, and the id
+  // is what actually gets them emailed once intent is confirmed (see confirm() below).
+  const notifyChosen = useServerFn(notifyChosenCounterparty);
+  const { data: chosenParty } = useQuery({
     queryKey: ["chosen-counterparty", tx.id],
     queryFn: async () => {
       const { data } = await supabase
         .from("counterparties")
-        .select("name")
+        .select("id, name")
         .eq("transaction_id", tx.id)
         .eq("status", "chosen")
         .order("chosen_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      return data?.name ?? null;
+      return data ? { id: data.id as string, name: data.name as string } : null;
     },
   });
 
@@ -1248,7 +1258,7 @@ function IntentStep({ tx, reload }: Props) {
       "IZENZO — CONFIRMATION OF INTENT",
       "",
       ...materialTerms.map((t) => `${t.label}: ${t.value}`),
-      `Counterparty: ${chosen ?? "—"}`,
+      `Counterparty: ${chosenParty?.name ?? "—"}`,
       `Signed by: ${signer}`,
       `Confirmed: ${confirmedAt}`,
     ].join("\n");
@@ -1276,7 +1286,7 @@ function IntentStep({ tx, reload }: Props) {
       "IZENZO — PROPOSAL",
       "",
       ...materialTerms.map((t) => `${t.label}: ${t.value}`),
-      `Counterparty: ${chosen ?? "—"}`,
+      `Counterparty: ${chosenParty?.name ?? "—"}`,
     ].join("\n");
     const path = `deals/${tx.id}/${Date.now()}-proposal.txt`;
     const { error: upErr } = await supabase.storage
@@ -1285,7 +1295,7 @@ function IntentStep({ tx, reload }: Props) {
     if (upErr) return;
     await supabase.from("documents").insert({
       transaction_id: tx.id,
-      name: `Proposal — ${chosen ?? tx.title}.txt`,
+      name: `Proposal — ${chosenParty?.name ?? tx.title}.txt`,
       doc_type: "proposal",
       notes: "Proposal",
       storage_path: path,
@@ -1307,7 +1317,7 @@ function IntentStep({ tx, reload }: Props) {
           price: tx.price,
           quantity: tx.quantity,
           currency: tx.currency,
-          counterparty: chosen,
+          counterparty: chosenParty?.name,
           signed_by: signer,
           signed_at: now,
         },
@@ -1324,6 +1334,30 @@ function IntentStep({ tx, reload }: Props) {
       // immediately meant the panel changed before anyone actually saw it become a real record.
       setConfirmedLocally(true);
       toast.success("Intent confirmed");
+
+      // The counterparty is only actually reached out to once the bidder has confirmed intent —
+      // this used to fire the moment the party was chosen, well before intent (or the terms
+      // themselves) were ever confirmed. Best-effort and never blocks the confirmation itself.
+      if (chosenParty?.id) {
+        notifyChosen({ data: { counterpartyId: chosenParty.id } })
+          .then((res) => {
+            if (res.method === "platform" || res.method === "web") {
+              toast.success("The counterparty has been emailed about this deal.");
+            } else if (res.method === "guessed") {
+              toast.message(
+                `No confirmed email for this counterparty — sent a best-effort outreach to ${res.guessed.length} likely address${res.guessed.length === 1 ? "" : "es"} instead. You've been emailed a copy.`,
+              );
+            } else if (res.method === "bidder-only") {
+              toast.message("No contact details found for this counterparty — check your email, we've sent you what to do next.");
+            } else if (res.reason === "email-not-connected") {
+              toast.message("Intent confirmed, but email isn't connected yet — reach out to the counterparty yourself for now.");
+            }
+          })
+          .catch((err) => {
+            toast.error(`Couldn't email the counterparty: ${(err as Error).message || "please try again shortly."}`);
+          });
+      }
+
       await new Promise((resolve) => setTimeout(resolve, 1600));
       await advance(tx.id, "trading", "poi");
       reload();
@@ -1348,7 +1382,7 @@ function IntentStep({ tx, reload }: Props) {
       heading="Confirmation of Intent"
       lines={[
         ...materialTerms,
-        { label: "Counterparty", value: chosen ?? "—" },
+        { label: "Counterparty", value: chosenParty?.name ?? "—" },
         { label: "Signed by", value: signer },
       ]}
       sealId={tx.intent_confirmed_at || confirmedLocally ? shortHash(tx.id) : null}
@@ -1356,14 +1390,17 @@ function IntentStep({ tx, reload }: Props) {
   );
 
   // Already confirmed: this sits inside the "Confirmed Intent" accordion, which already carries
-  // both the heading and this same explanatory line as its subtext — the full certificate is
-  // filed as a document already, so this just needs to say, briefly, that it happened.
+  // the heading and its own explanatory subtext — expanding it now shows the actual certificate,
+  // not just a one-line summary of what happened.
   if (tx.intent_confirmed_at) {
     return (
-      <p className="text-xs leading-relaxed text-muted-foreground">
-        Confirmed with <span className="font-medium text-foreground">{chosen ?? "the counterparty"}</span> —
-        signed by {signer} on {when(tx.intent_confirmed_at)}.
-      </p>
+      <div className="text-xs leading-relaxed">
+        <p className="text-muted-foreground">
+          Confirmed with <span className="font-medium text-foreground">{chosenParty?.name ?? "the counterparty"}</span> —
+          signed by {signer} on {when(tx.intent_confirmed_at)}.
+        </p>
+        <div className="mt-3">{certificate}</div>
+      </div>
     );
   }
 

@@ -78,7 +78,6 @@ import { runOnlineMediaChecks, type MediaCheckResult, type MediaFinding } from "
 import { listVerificationsForTx } from "@/lib/didit.functions";
 import { summarizeBidDocuments } from "@/lib/docSummary.functions";
 import { cancelBid } from "@/lib/cancelBid.functions";
-import { notifyChosenCounterparty } from "@/lib/counterpartyOutreach.functions";
 import { runComplianceSnapshot } from "@/lib/complianceSnapshot.functions";
 import { readDocument } from "@/lib/documents.functions";
 
@@ -581,7 +580,6 @@ function LiveDealEngine() {
   const cancelBidFn = useServerFn(cancelBid);
   const fetchDocument = useServerFn(readDocument);
   const classifySide = useServerFn(classifyTradeSide);
-  const notifyChosen = useServerFn(notifyChosenCounterparty);
   const runComplianceCheck = useServerFn(runComplianceSnapshot);
   const [rereading, setRereading] = useState(false);
   // Once interest is being fetched the submitted detail collapses out of the way, so the results
@@ -1287,25 +1285,9 @@ function LiveDealEngine() {
       setDbHasChosenParty(true);
       toast.success("Choice recorded — confirm the intent to continue");
 
-      // Reaching the counterparty is best-effort and must never undo the choice that was just
-      // recorded — a failure here surfaces as its own toast, not an error on the choice itself.
-      notifyChosen({ data: { counterpartyId } })
-        .then((res) => {
-          if (res.method === "platform" || res.method === "web") {
-            toast.success("The counterparty has been emailed about this deal.");
-          } else if (res.method === "guessed") {
-            toast.message(
-              `No confirmed email for this counterparty — sent a best-effort outreach to ${res.guessed.length} likely address${res.guessed.length === 1 ? "" : "es"} instead. You've been emailed a copy.`,
-            );
-          } else if (res.method === "bidder-only") {
-            toast.message("No contact details found for this counterparty — check your email, we've sent you what to do next.");
-          } else if (res.reason === "email-not-connected") {
-            toast.message("Chose the counterparty, but email isn't connected yet — reach out to them yourself for now.");
-          }
-        })
-        .catch((err) => {
-          toast.error(`Couldn't email the counterparty: ${(err as Error).message || "please try again shortly."}`);
-        });
+      // The counterparty is emailed only once intent is actually confirmed (see IntentStep's
+      // confirm() in StepScreen.tsx) — choosing them here is not yet a commitment worth reaching
+      // out on.
 
       // A lightweight, automated go/no-go signal on the organisation just chosen — a registry
       // lookup plus one focused sanctions/adverse-media search, never a hosted verification the
