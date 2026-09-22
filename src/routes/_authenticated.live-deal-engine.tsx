@@ -747,7 +747,7 @@ function LiveDealEngine() {
     workspaceKind === "offer"
       ? "bg-[#4169e1] text-white"
       : workspaceKind === "bid"
-        ? "bg-teal-600 text-white"
+        ? "bg-emerald-600 text-white"
         : "bg-[var(--lw-pill-bg)] text-[var(--lw-pill-fg)]";
   const { data: workspaceDocs = [], isPending: workspaceDocsPending } = useQuery({
     queryKey: ["documents", dealTx?.id],
@@ -2277,8 +2277,22 @@ function LiveDealEngine() {
           {activity && dealTx && (
             <div className="glass-node mt-1.5 space-y-1.5 p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
-                  {informationLabel}
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="label-caps shrink-0 rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+                    {informationLabel}
+                  </span>
+                  {/* The search phrase this bid is actually running on — kept visible here
+                      regardless of which step the workspace is on or whether this frame is
+                      collapsed, so it's never necessary to reopen Bid Information (or step back
+                      to Search) just to be reminded what was searched for. */}
+                  {(dealTx as unknown as { search_prompt?: string | null } | null)?.search_prompt && (
+                    <span
+                      className="min-w-0 truncate text-[11px] text-muted-foreground"
+                      title={(dealTx as unknown as { search_prompt?: string | null }).search_prompt!}
+                    >
+                      "{(dealTx as unknown as { search_prompt?: string | null }).search_prompt}"
+                    </span>
+                  )}
                 </span>
                 {/* The ID check status already shows once, next to the submitter's name on the
                     Bid Registration card above — showing it again here (from the same
@@ -2289,7 +2303,7 @@ function LiveDealEngine() {
                   onClick={() => setBidInfoCollapsed(dealTx.id, bidInfoOpen)}
                   aria-expanded={bidInfoOpen}
                   aria-label={bidInfoOpen ? `Collapse ${informationLabel}` : `Expand ${informationLabel}`}
-                  className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                 >
                   <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", bidInfoOpen && "rotate-180")} />
                 </button>
