@@ -502,7 +502,7 @@ export function MapView({
 
         {/* Step 1 — trading. Bid and Load Deal Documents drive the workspace beside the map. */}
 
-        {node("bid", "Bid", "trading", "bid-offer", Gavel, {
+        {node("bid", "Register Bid/Offer", "trading", "bid-offer", Gavel, {
           overrideKey: "bidRegistration",
           ...(onBid ? { onClick: onBid } : {}),
         })}

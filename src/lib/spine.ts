@@ -17,7 +17,7 @@ export const SPINE: StageDef[] = [
     key: "trading",
     label: "Trading Gate",
     steps: [
-      { key: "bid-offer", label: "Bid / Offer", blurb: "Record the opening bid or offer and its terms." },
+      { key: "bid-offer", label: "Register Bid/Offer", blurb: "Record the opening bid or offer and its terms." },
       { key: "documents", label: "Upload Docs", blurb: "Attach supporting documents with a fingerprint." },
       { key: "search", label: "Search", blurb: "Run a structured search for possible counterparties." },
       { key: "ai", label: "AI", blurb: "AI reads the record and proposes. It never decides." },
