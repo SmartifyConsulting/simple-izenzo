@@ -2356,17 +2356,20 @@ function LiveDealEngine() {
                     {rereading ? "Reading…" : "Try again"}
                   </Button>
                 </div>
-              ) : workspaceDocs.length === 0 && noMatchesTx === dealTx.id ? null : workspaceDocs.length === 0 ? (
+              ) : workspaceDocs.length === 0 && noMatchesTx === dealTx.id ? null : workspaceDocs.length === 0 && flowStep === "searching" ? (
                 /* Submitted with no documents at all — there is nothing to read, so the search on
                    the typed Search field runs immediately instead of showing a "reading" state
-                   that would never resolve. */
+                   that would never resolve. Gated to flowStep === "searching" only: once the
+                   search has actually finished (results found, or no-matches handled above) this
+                   bar has nothing left to report and must not keep pulsing for the rest of the
+                   deal — the Search Results / Online Scanning frames below say what happened. */
                 <div className="space-y-1.5 pt-1">
                   <p className="text-[11px] font-medium text-muted-foreground">Searching…</p>
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-progress-track">
                     <div className="h-full w-1/3 animate-[slide-in-right_1.4s_ease-in-out_infinite] rounded-full bg-success" />
                   </div>
                 </div>
-              ) : (
+              ) : workspaceDocs.length === 0 ? null : (
                 /* Documents are in and the summary isn't saved yet — show the read running as a
                    progress bar rather than a line of text about it not having happened. */
                 <div className="space-y-1.5 pt-1">
