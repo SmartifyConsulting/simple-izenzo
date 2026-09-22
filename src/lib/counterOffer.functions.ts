@@ -81,12 +81,13 @@ export const sendCounterOffer = createServerFn({ method: "POST" })
       detail: `Counter offer sent to ${cp.name}`,
     } as never);
 
-    await supabase.from("notifications").insert({
-      org_id: tx.org_id,
-      transaction_id: tx.id,
+    const { notifyTransactionOwner } = await import("@/lib/bidderNotify.server");
+    await notifyTransactionOwner({
+      orgId: tx.org_id,
+      transactionId: tx.id,
       title: `Counter offer sent to ${cp.name}`,
       body: `${label}: ${data.terms}`,
-    } as never);
+    });
 
     let emailed = false;
     let emailNote: string | null = null;

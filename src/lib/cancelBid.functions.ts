@@ -54,15 +54,30 @@ export const cancelBid = createServerFn({ method: "POST" })
       if (emails.length > 0) {
         const { data: matched } = await supabase.from("profiles").select("id, email").in("email", emails);
         const dealName = tx.reference ?? tx.title;
+        const title = `${dealName} was cancelled`;
+        const body = `${actorName} cancelled this bid/offer. No further action is needed on your side.`;
+        const { getNotificationChannel } = await import("@/lib/bidderNotify.server");
         for (const m of matched ?? []) {
           if (m.id === userId) continue;
-          await supabase.from("notifications").insert({
-            user_id: m.id,
-            org_id: null,
-            transaction_id: tx.id,
-            title: `${dealName} was cancelled`,
-            body: `${actorName} cancelled this bid/offer. No further action is needed on your side.`,
-          });
+          const channel = await getNotificationChannel(supabase, m.id);
+          if (channel === "in_app" || channel === "both") {
+            await supabase.from("notifications").insert({
+              user_id: m.id,
+              org_id: null,
+              transaction_id: tx.id,
+              title,
+              body,
+            });
+          }
+          if ((channel === "email" || channel === "both") && m.email) {
+            try {
+              const { loadResendCreds, sendEmail, renderBrandedEmail } = await import("@/lib/resend.server");
+              const creds = await loadResendCreds();
+              await sendEmail(creds, { to: m.email, subject: title, html: renderBrandedEmail(`<p>${body}</p>`) });
+            } catch {
+              // Email is a courtesy on top of the in-app record here too — never blocks the count below.
+            }
+          }
           notified += 1;
         }
       }

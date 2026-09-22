@@ -53,9 +53,10 @@ export async function notifyIfFullyMatched(counterpartyId: string): Promise<void
       .maybeSingle();
     if (!tx) return;
 
-    await supabaseAdmin.from("notifications").insert({
-      org_id: tx.org_id,
-      transaction_id: tx.id,
+    const { notifyTransactionOwner } = await import("@/lib/bidderNotify.server");
+    await notifyTransactionOwner({
+      orgId: tx.org_id,
+      transactionId: tx.id,
       title: `${cp.name} matched on all checks`,
       body: `${tx.reference ? `${tx.reference} — ` : ""}${tx.title}: registry, ID document, company and sanctions checks all came back clear. Open the deal to choose who to proceed with.`,
     });
