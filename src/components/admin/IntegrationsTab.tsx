@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2, Copy, CreditCard, Eye, Lock, Loader2, Plug, XCircle } from "lucide-react";
+import { ChevronDown, ChevronRight, CheckCircle2, Copy, CreditCard, Eye, KeyRound, Lock, Loader2, Plug, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,11 +12,13 @@ import { PasswordInput } from "@/components/PasswordInput";
 import { INTEGRATION_PROVIDERS, type IntegrationProvider } from "@/lib/integrations.catalog";
 import {
   deleteIntegration,
+  getProviderPricing,
   listIntegrations,
   revealIntegrationSecrets,
   saveIntegration,
   testIntegration,
   type IntegrationRow,
+  type ProviderPricingCache,
 } from "@/lib/integrations.functions";
 
 /** Opens a provider page in a new tab without handing it our referrer. */
@@ -51,6 +53,15 @@ export function IntegrationsTab() {
     queryKey: ["integrations"],
     queryFn: () => load({ data: undefined as never }),
     retry: false,
+  });
+
+  // One shared lookup, refreshed at most monthly and cached for every org — never fetched per org.
+  const loadPricing = useServerFn(getProviderPricing);
+  const { data: pricing = {} } = useQuery({
+    queryKey: ["integrations-pricing"],
+    queryFn: () => loadPricing({ data: undefined as never }),
+    retry: false,
+    staleTime: 60 * 60 * 1000,
   });
 
   const [guided, setGuided] = useState(false);
@@ -116,7 +127,7 @@ export function IntegrationsTab() {
       {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
 
       {guided ? (
-        <GuidedSetup byProvider={byProvider} onChanged={refresh} />
+        <GuidedSetup byProvider={byProvider} pricing={pricing} onChanged={refresh} />
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-2">
@@ -131,7 +142,7 @@ export function IntegrationsTab() {
             ) : (
               <div className="space-y-2">
                 {activeProviders.map((p) => (
-                  <ProviderCard key={p.id} provider={p} row={byProvider[p.id]} onChanged={refresh} />
+                  <ProviderCard key={p.id} provider={p} row={byProvider[p.id]} pricing={pricing[p.id]} onChanged={refresh} />
                 ))}
               </div>
             )}
@@ -146,7 +157,7 @@ export function IntegrationsTab() {
             </h3>
             <div className="space-y-2">
               {inactiveProviders.map((p) => (
-                <ProviderCard key={p.id} provider={p} row={byProvider[p.id]} onChanged={refresh} />
+                <ProviderCard key={p.id} provider={p} row={byProvider[p.id]} pricing={pricing[p.id]} onChanged={refresh} />
               ))}
             </div>
           </div>
@@ -158,9 +169,11 @@ export function IntegrationsTab() {
 
 function GuidedSetup({
   byProvider,
+  pricing,
   onChanged,
 }: {
   byProvider: Record<string, IntegrationRow>;
+  pricing: ProviderPricingCache;
   onChanged: () => void;
 }) {
   const steps = useMemo(guidedProviders, []);
@@ -226,6 +239,7 @@ function GuidedSetup({
         key={provider.id}
         provider={provider}
         row={byProvider[provider.id]}
+        pricing={pricing[provider.id]}
         onChanged={onChanged}
       />
 
@@ -258,10 +272,12 @@ function GuidedSetup({
 function ProviderCard({
   provider,
   row,
+  pricing,
   onChanged,
 }: {
   provider: IntegrationProvider;
   row: IntegrationRow | undefined;
+  pricing?: ProviderPricingCache[string] | undefined;
   onChanged: () => void;
 }) {
   const save = useServerFn(saveIntegration);
@@ -275,6 +291,7 @@ function ProviderCard({
   const [enabled, setEnabled] = useState(row?.enabled ?? (provider.id === "tavily" || provider.id === "openai"));
   const [busy, setBusy] = useState<null | "save" | "test" | "reveal">(null);
   const [expanded, setExpanded] = useState(false);
+  const [credentialsOpen, setCredentialsOpen] = useState(false);
   const [vaultPrompt, setVaultPrompt] = useState(false);
   const [vaultPassword, setVaultPassword] = useState("");
 
@@ -418,9 +435,14 @@ function ProviderCard({
         <p className="text-[11px] text-muted-foreground">
           <span className="font-semibold text-foreground">Used at:</span> {provider.usedAt}
         </p>
-        {provider.costNote && (
+        {(pricing?.text || provider.costNote) && (
           <p className="text-[11px] text-muted-foreground">
-            <span className="font-semibold text-foreground">Cost:</span> {provider.costNote}
+            <span className="font-semibold text-foreground">Cost:</span> {pricing?.text || provider.costNote}
+            {pricing?.text && (
+              <span className="block text-[10px] text-muted-foreground/70">
+                Auto-checked {new Date(pricing.fetchedAt).toLocaleDateString()} — refreshed monthly, shared across all orgs.
+              </span>
+            )}
           </p>
         )}
         {provider.topUpUrl && (
@@ -455,79 +477,104 @@ function ProviderCard({
           </div>
         )}
 
-        {provider.fields.map((field) => {
-          const saved = field.secret
-            ? Boolean(row?.maskedSecrets[field.key])
-            : Boolean((config[field.key] ?? "").trim());
-          const pending = field.secret && Boolean((secrets[field.key] ?? "").trim());
-          if (field.type === "switch") {
-            return (
-              <div key={field.key} className="space-y-1.5 rounded-md border border-border p-2.5">
-                <div className="flex items-center justify-between gap-3">
-                  <Label htmlFor={`${provider.id}-${field.key}`}>{field.label}</Label>
-                  <Switch
-                    id={`${provider.id}-${field.key}`}
-                    checked={config[field.key] === "true"}
-                    onCheckedChange={(v) =>
-                      setConfig((c) => ({ ...c, [field.key]: v ? "true" : "false" }))
-                    }
-                  />
-                </div>
-                {field.help && <p className="text-xs text-muted-foreground">{field.help}</p>}
-              </div>
-            );
-          }
-          return (
-          <div key={field.key} className="space-y-1.5">
-            <div className="flex items-center justify-between gap-2">
-              <Label htmlFor={`${provider.id}-${field.key}`}>{field.label}</Label>
-              <div className="flex items-center gap-1.5">
-                <span
-                  className={
-                    saved || pending
-                      ? "text-[10px] font-medium text-emerald-600"
-                      : "text-[10px] text-muted-foreground"
-                  }
-                >
-                  {pending ? "Unsaved change" : saved ? "Saved" : "Not set"}
-                </span>
-                {(() => {
-                  // Secrets can only be copied once they have been revealed with the vault password.
-                  const value = field.secret ? (secrets[field.key] ?? "") : (config[field.key] ?? "");
-                  if (!value.trim()) return null;
-                  return (
-                    <button
-                      type="button"
-                      title={`Copy ${field.label}`}
-                      className="text-muted-foreground hover:text-foreground"
-                      onClick={() => void copyValue(field.label, value)}
-                    >
-                      <Copy className="h-3 w-3" />
-                    </button>
-                  );
-                })()}
-              </div>
-            </div>
-            {field.secret ? (
-              <PasswordInput
-                id={`${provider.id}-${field.key}`}
-                value={secrets[field.key] ?? ""}
-                placeholder={row?.maskedSecrets[field.key] ?? field.placeholder ?? "Enter to set"}
-                autoComplete="new-password"
-                onChange={(e) => setSecrets((s) => ({ ...s, [field.key]: e.target.value }))}
-              />
+        <div className="rounded-md border border-border">
+          <button
+            type="button"
+            onClick={() => setCredentialsOpen((v) => !v)}
+            className="flex w-full items-center justify-between gap-2 p-2.5 text-left"
+          >
+            <span className="flex items-center gap-1.5 text-xs font-semibold">
+              <KeyRound className="h-3.5 w-3.5 text-muted-foreground" />
+              Credentials
+              <span className="font-normal text-[10px] text-muted-foreground">
+                {savedFieldCount}/{provider.fields.length} saved
+              </span>
+            </span>
+            {credentialsOpen ? (
+              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             ) : (
-              <Input
-                id={`${provider.id}-${field.key}`}
-                value={config[field.key] ?? ""}
-                placeholder={field.placeholder ?? ""}
-                onChange={(e) => setConfig((c) => ({ ...c, [field.key]: e.target.value }))}
-              />
+              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             )}
-            {field.help && <p className="text-xs text-muted-foreground">{field.help}</p>}
-          </div>
-          );
-        })}
+          </button>
+
+          {credentialsOpen && (
+            <div className="space-y-3 border-t border-border p-2.5">
+              {provider.fields.map((field) => {
+                const saved = field.secret
+                  ? Boolean(row?.maskedSecrets[field.key])
+                  : Boolean((config[field.key] ?? "").trim());
+                const pending = field.secret && Boolean((secrets[field.key] ?? "").trim());
+                if (field.type === "switch") {
+                  return (
+                    <div key={field.key} className="space-y-1.5 rounded-md border border-border p-2.5">
+                      <div className="flex items-center justify-between gap-3">
+                        <Label htmlFor={`${provider.id}-${field.key}`}>{field.label}</Label>
+                        <Switch
+                          id={`${provider.id}-${field.key}`}
+                          checked={config[field.key] === "true"}
+                          onCheckedChange={(v) =>
+                            setConfig((c) => ({ ...c, [field.key]: v ? "true" : "false" }))
+                          }
+                        />
+                      </div>
+                      {field.help && <p className="text-xs text-muted-foreground">{field.help}</p>}
+                    </div>
+                  );
+                }
+                return (
+                <div key={field.key} className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label htmlFor={`${provider.id}-${field.key}`}>{field.label}</Label>
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={
+                          saved || pending
+                            ? "text-[10px] font-medium text-emerald-600"
+                            : "text-[10px] text-muted-foreground"
+                        }
+                      >
+                        {pending ? "Unsaved change" : saved ? "Saved" : "Not set"}
+                      </span>
+                      {(() => {
+                        // Secrets can only be copied once they have been revealed with the vault password.
+                        const value = field.secret ? (secrets[field.key] ?? "") : (config[field.key] ?? "");
+                        if (!value.trim()) return null;
+                        return (
+                          <button
+                            type="button"
+                            title={`Copy ${field.label}`}
+                            className="text-muted-foreground hover:text-foreground"
+                            onClick={() => void copyValue(field.label, value)}
+                          >
+                            <Copy className="h-3 w-3" />
+                          </button>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                  {field.secret ? (
+                    <PasswordInput
+                      id={`${provider.id}-${field.key}`}
+                      value={secrets[field.key] ?? ""}
+                      placeholder={row?.maskedSecrets[field.key] ?? field.placeholder ?? "Enter to set"}
+                      autoComplete="new-password"
+                      onChange={(e) => setSecrets((s) => ({ ...s, [field.key]: e.target.value }))}
+                    />
+                  ) : (
+                    <Input
+                      id={`${provider.id}-${field.key}`}
+                      value={config[field.key] ?? ""}
+                      placeholder={field.placeholder ?? ""}
+                      onChange={(e) => setConfig((c) => ({ ...c, [field.key]: e.target.value }))}
+                    />
+                  )}
+                  {field.help && <p className="text-xs text-muted-foreground">{field.help}</p>}
+                </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
       {row?.lastTestedAt && (
         <p className="mt-3 flex items-start gap-1.5 text-xs text-muted-foreground">

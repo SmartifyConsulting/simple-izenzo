@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { providerById } from "@/lib/integrations.catalog";
+import { INTEGRATION_PROVIDERS, providerById } from "@/lib/integrations.catalog";
 import {
   classifyFailure,
   classifyThrown,
@@ -423,4 +423,84 @@ export const testIntegration = createServerFn({ method: "POST" })
       .eq("provider", data.provider);
 
     return result;
+  });
+
+export type ProviderPricingEntry = { text: string; fetchedAt: string; sourceUrl?: string | undefined };
+export type ProviderPricingCache = Record<string, ProviderPricingEntry>;
+
+const PRICING_SETTINGS_KEY = "provider_pricing_cache";
+/** Refreshed at most once a month — pricing pages don't move often enough to justify checking on
+ * every page load, and this is one shared cache for every org, not a per-org lookup. */
+const PRICING_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+/** gpt-5-mini only — Astra (Izenzo AI+'s model) is reserved for AI+ Recommendations and never used
+ * for background admin lookups like this one. */
+const PRICING_MODELS = ["gpt-5-mini", "gpt-5"];
+
+function pricingIsStale(entry: ProviderPricingEntry | undefined): boolean {
+  if (!entry) return true;
+  const at = new Date(entry.fetchedAt).getTime();
+  return !Number.isFinite(at) || Date.now() - at > PRICING_MAX_AGE_MS;
+}
+
+/** Every admin who opens Integrations reads the same cached row — pricing text is fetched from the
+ * web at most once a month, shared globally, never per-org. If OpenAI isn't configured yet, or a
+ * provider's lookup fails, whatever is cached (possibly nothing) is returned as-is and the screen
+ * falls back to each provider's static `costNote`. */
+export const getProviderPricing = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<ProviderPricingCache> => {
+    await assertAdmin(context as any);
+    const db = await admin();
+
+    const { data: row } = await db
+      .from("admin_settings")
+      .select("value")
+      .eq("key", PRICING_SETTINGS_KEY)
+      .maybeSingle();
+    const cache: ProviderPricingCache = { ...((row?.value as ProviderPricingCache | null) ?? {}) };
+
+    const { loadOpenAiApiKey } = await import("@/lib/openai.server");
+    const apiKey = await loadOpenAiApiKey();
+    if (!apiKey) return cache;
+
+    const stale = INTEGRATION_PROVIDERS.filter(
+      (p) => p.id !== "izenzo_ai_plus" && pricingIsStale(cache[p.id]),
+    );
+    if (stale.length === 0) return cache;
+
+    const { webSearch } = await import("@/lib/openaiWebSearch.server");
+    const results = await Promise.allSettled(
+      stale.map(async (provider) => {
+        const result = await webSearch({
+          apiKey,
+          instructions:
+            "You find current, publicly published pricing for a named software/API provider. Reply with one or two short plain-text sentences suitable for an admin dashboard: how the provider currently charges (rate, unit, and free tier if any). No markdown, no headings, no bullet points. If current pricing can't be found, say so briefly.",
+          input: `Provider: ${provider.name}. Used here for: ${provider.summary}${
+            provider.docsUrl ? ` Docs: ${provider.docsUrl}` : ""
+          } What does ${provider.name} currently charge, as of today?`,
+          models: PRICING_MODELS,
+          effort: "low",
+        });
+        return { id: provider.id, result };
+      }),
+    );
+
+    let changed = false;
+    for (const settled of results) {
+      if (settled.status !== "fulfilled") continue;
+      const { id, result } = settled.value;
+      if (!result.text) continue;
+      cache[id] = { text: result.text, fetchedAt: new Date().toISOString(), sourceUrl: result.sources[0]?.url };
+      changed = true;
+    }
+
+    if (changed) {
+      await db
+        .from("admin_settings")
+        .upsert(
+          { key: PRICING_SETTINGS_KEY, value: cache as any, updated_by: (context as any).userId },
+          { onConflict: "key" },
+        );
+    }
+    return cache;
   });
