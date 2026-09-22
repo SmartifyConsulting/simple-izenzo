@@ -1843,14 +1843,19 @@ function WadStep({ tx, reload }: Props) {
     queryFn: async () => {
       const { data } = await supabase
         .from("counterparties")
-        .select("id, name, rating_band, rating_override")
+        .select("id, name, rating_band, rating_override, media_flags")
         .eq("transaction_id", tx.id)
         .eq("status", "chosen")
         .maybeSingle();
       return data;
     },
   });
-  const flagged = chosenCp && (chosenCp.rating_override ?? chosenCp.rating_band) === "flagged";
+  const effectiveRating = chosenCp && (chosenCp.rating_override ?? chosenCp.rating_band);
+  const flagged = effectiveRating === "flagged";
+  const trusted = effectiveRating === "trusted";
+  const complianceFlags =
+    (chosenCp?.media_flags as { compliance?: { flags?: { reason: string; url: string | null }[] } } | null)
+      ?.compliance?.flags ?? [];
 
   // Nothing is screened again here — Step 1 already ran the background screening. This only
   // reads back what came in, so the same checks are never paid for or repeated twice.
@@ -2063,9 +2068,34 @@ function WadStep({ tx, reload }: Props) {
       )}
       {flagged && (
         <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
-          <strong>{chosenCp?.name}</strong> carries a Flagged counterparty rating. This requires
-          admin review before WaD proceeds — the rating itself does not clear or block any
-          compliance gate on its own.
+          <p>
+            <strong>{chosenCp?.name}</strong> carries a Flagged counterparty rating. This requires
+            admin review before WaD proceeds — the rating itself does not clear or block any
+            compliance gate on its own.
+          </p>
+          {complianceFlags.length > 0 && (
+            <ul className="mt-2 list-disc space-y-1 pl-4">
+              {complianceFlags.map((f, i) => (
+                <li key={i}>
+                  {f.reason}
+                  {f.url && (
+                    <>
+                      {" "}
+                      <a href={f.url} target="_blank" rel="noreferrer noopener" className="underline">
+                        Source
+                      </a>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+      {trusted && (
+        <div className="mb-4 rounded-md border border-success/40 bg-success/10 p-3 text-xs text-success">
+          <strong>{chosenCp?.name}</strong>: no sanctions, fraud or legal concerns found by the
+          automated compliance check. This is a screening signal, not a substitute for WaD.
         </div>
       )}
       {!allChecked && (

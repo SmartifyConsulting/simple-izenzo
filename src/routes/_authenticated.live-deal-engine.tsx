@@ -78,6 +78,7 @@ import { listVerificationsForTx } from "@/lib/didit.functions";
 import { summarizeBidDocuments } from "@/lib/docSummary.functions";
 import { cancelBid } from "@/lib/cancelBid.functions";
 import { notifyChosenCounterparty } from "@/lib/counterpartyOutreach.functions";
+import { runComplianceSnapshot } from "@/lib/complianceSnapshot.functions";
 import { readDocument } from "@/lib/documents.functions";
 
 import { pushRecentDeal } from "@/lib/recentDeals";
@@ -579,6 +580,7 @@ function LiveDealEngine() {
   const fetchDocument = useServerFn(readDocument);
   const classifySide = useServerFn(classifyTradeSide);
   const notifyChosen = useServerFn(notifyChosenCounterparty);
+  const runComplianceCheck = useServerFn(runComplianceSnapshot);
   const [rereading, setRereading] = useState(false);
   // Once interest is being fetched the submitted detail collapses out of the way, so the results
   // have the room. Remembered per bid, so it stays collapsed on a refresh or a tab switch; the
@@ -1293,6 +1295,27 @@ function LiveDealEngine() {
         })
         .catch((err) => {
           toast.error(`Couldn't email the counterparty: ${(err as Error).message || "please try again shortly."}`);
+        });
+
+      // A lightweight, automated go/no-go signal on the organisation just chosen — a registry
+      // lookup plus one focused sanctions/adverse-media search, never a hosted verification the
+      // counterparty would need to complete. Best-effort: it never undoes the choice, and it
+      // never claims a clean result it didn't actually check for.
+      runComplianceCheck({ data: { counterpartyId } })
+        .then((res) => {
+          if (res.verdict === "red") {
+            toast.warning(
+              `Compliance check raised ${res.flags.length} concern${res.flags.length === 1 ? "" : "s"} on this counterparty: ${res.flags.map((f) => f.reason).join(" · ")}`,
+              { duration: 12000 },
+            );
+          } else if (res.verdict === "green") {
+            toast.success("Compliance check: no sanctions, fraud or legal concerns found for this counterparty.");
+          }
+          // "unknown" (nothing configured, or the search failed) stays quiet here — it's recorded
+          // as Neutral rather than presented as either a pass or a failure.
+        })
+        .catch(() => {
+          // Best-effort only — never blocks or alarms over a check that simply couldn't run.
         });
 
     } catch (err) {
