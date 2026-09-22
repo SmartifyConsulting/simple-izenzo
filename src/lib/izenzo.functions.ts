@@ -17,13 +17,16 @@ async function sha256(input: string) {
 
 const txInput = (data: unknown) => z.object({ transactionId: z.string().uuid() }).parse(data);
 
-/** GPT-6 Astra is reserved for AI+. Every other search and check runs on the standard model, through
- * Tavily (public internet search) and OpenAI. */
+/** GPT-6 Astra is reserved strictly for the AI+ Recommendations engine (decisionPack.functions.ts).
+ * Counterparty search and every web check — the "AI" step and the "AI+" step alike — run on the
+ * standard model through Tavily (public internet search) and OpenAI. The "AI+" kind still gets a
+ * more thorough pass (higher reasoning effort, a bigger token budget), just never a different,
+ * heavier model — Astra was previously used here too, which both broke that separation and made
+ * every search wait on Astra's own latency for no benefit specific to search. */
 const AI_MODEL = "gpt-5-mini";
-const AI_PLUS_MODEL = "gpt-6-astra";
 
 function aiPlusOptions(model: string, kind: "ai" | "ai_plus" = "ai_plus") {
-  if (model !== AI_MODEL && model !== AI_PLUS_MODEL) return {};
+  if (model !== AI_MODEL) return {};
   return {
     reasoning_effort: (kind === "ai" ? "low" : "high") as "low" | "high",
     max_completion_tokens: kind === "ai" ? 8000 : 16000,
@@ -321,7 +324,7 @@ async function listingCandidates(query: string, limit = 6): Promise<CandidateRes
 /** Scrapes the open web for one query and turns the pages into grounding context for the model.
  * When the live web cannot be read, it falls back to the published Izenzo directory rather than
  * failing the whole search — but it never lets the model answer without real sources. */
-const webModelsFor = (kind: "ai" | "ai_plus") => [kind === "ai" ? AI_MODEL : AI_PLUS_MODEL, "gpt-5"];
+const webModelsFor = (_kind: "ai" | "ai_plus") => [AI_MODEL, "gpt-5"];
 
 /** Finds real organisations on the live web with OpenAI's web search. A failure is returned, not
  * thrown, so the caller can still fall back to the published directory. */
@@ -341,7 +344,7 @@ async function findOnWeb(
     try {
       const pages = await tavilySearch(tavilyKey, query, { depth: kind === "ai" ? "basic" : "advanced", max: 8 });
       if (pages.length > 0) {
-        const model = kind === "ai" ? AI_MODEL : AI_PLUS_MODEL;
+        const model = AI_MODEL;
         const res = await chatCompletion(apiKey, {
           model,
           ...aiPlusOptions(model, kind),
@@ -684,7 +687,7 @@ export const searchCounterparties = createServerFn({ method: "POST" })
     const pipeline = await findCounterparties({
       apiKey,
       kind: data.kind,
-      chatModel: data.kind === "ai" ? AI_MODEL : AI_PLUS_MODEL,
+      chatModel: AI_MODEL,
       webModels: webModelsFor(data.kind),
       tavilyKey: await (await import("@/lib/tavily.server")).loadTavilyApiKey(),
       txKey: tx.id,
@@ -1041,7 +1044,7 @@ export const runAiProposal = createServerFn({ method: "POST" })
       .filter(Boolean)
       .join("\n");
 
-    const model = data.kind === "ai" ? AI_MODEL : AI_PLUS_MODEL;
+    const model = AI_MODEL;
     const res = await chatCompletion(apiKey, {
       model,
       ...aiPlusOptions(model, data.kind),
