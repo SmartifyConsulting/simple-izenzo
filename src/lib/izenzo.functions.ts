@@ -66,6 +66,24 @@ export const sealProofOfIntent = createServerFn({ method: "POST" })
     // No separate media-scan gate: Online Media Screening and Background Screening are both part
     // of Step 1 and must already be complete for intent to have been confirmed at all.
 
+    // The counterparty's own opt-out, if it linked its account and declined, is checked right up
+    // to the moment of sealing — this is exactly the "before any binding agreement" window the
+    // opt-out is for.
+    // counterparty_response predates the generated Supabase types being refreshed — select "*"
+    // and cast, rather than name the column directly.
+    const { data: chosenCpRaw } = await supabase
+      .from("counterparties")
+      .select("*")
+      .eq("transaction_id", tx.id)
+      .eq("status", "chosen")
+      .maybeSingle();
+    const chosenCp = chosenCpRaw as { name?: string | null; counterparty_response?: string | null } | null;
+    if (chosenCp?.counterparty_response === "declined") {
+      throw new Error(
+        `${chosenCp?.name ?? "The counterparty"} has opted out of this deal — Proof of Intent cannot be sealed for this choice.`,
+      );
+    }
+
 
     const { data: org } = await supabase
       .from("organisations")

@@ -460,11 +460,12 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
     }
 
     if (toEmail) {
-      // Tier 1: a real, confirmed address — send it there directly, cc the bidder.
-      const ctaHtml = ctaButtonHtml(
-        onPlatform ? "https://api.trade.izenzo.co.za/" : "https://api.trade.izenzo.co.za/",
-        onPlatform ? "Sign in to respond" : "Create your free account",
-      );
+      // Tier 1: a real, confirmed address — send it there directly, cc the bidder. The link goes
+      // straight to the claim page: signing in (or creating an account, if they don't have one
+      // yet) links their organisation to this specific deal and opens the same workspace,
+      // restricted to their view of it.
+      const claimUrl = `https://api.trade.izenzo.co.za/counterparty/claim?cp=${cp.id}`;
+      const ctaHtml = ctaButtonHtml(claimUrl, onPlatform ? "Sign in to respond" : "Create your free account");
       await sendEmail(creds, {
         to: toEmail,
         ...(bidderEmail ? { cc: [bidderEmail] } : {}),

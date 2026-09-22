@@ -29,6 +29,7 @@ import {
   FLOWCHART_PREVIEW_TX,
   type RecordedActivity,
 } from "@/components/canvas/DealCanvas";
+import { CounterpartyWorkspaceView } from "@/components/canvas/CounterpartyWorkspaceView";
 import { TradeSummary } from "@/components/canvas/TradeSummary";
 // Performance only: the AI+ panel, the map and the classic stepper are each large and only one of
 // them is on screen at a time, so they load as their own chunks instead of inside the first
@@ -1965,6 +1966,13 @@ function LiveDealEngine() {
         </div>
       </AppShell>
     );
+  }
+
+  // A linked counterparty organisation gets a different, read-only view of this exact same
+  // record — Bid Registration, Bid Information, and everything from Proof of Intent onward.
+  // Never the bidder's own working steps (Search, AI/AI+, Choice, Online Media).
+  if (dealTx && org && dealTx.counterparty_org_id === org.id) {
+    return <CounterpartyWorkspaceView tx={dealTx} reload={() => void reloadDeal()} />;
   }
 
   const workspaceContent = (
