@@ -579,6 +579,11 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data, context }) => {
+    // Timing only, so a slow search can be diagnosed with real numbers next time instead of a
+    // guess — recorded as a transaction_event once the search finishes, win or lose.
+    const startedAt = Date.now();
+    let localMs = 0;
+    let pipelineMs = 0;
     const { supabase } = context;
     const { loadOpenAiApiKey } = await import("@/lib/openai.server");
     const apiKey = await loadOpenAiApiKey();
@@ -652,24 +657,29 @@ export const searchCounterparties = createServerFn({ method: "POST" })
     // local lookup failure here must never block the search the person is waiting on.
     let localMatches: CandidateResult[] = [];
     let localEmails = new Map<string, string>();
-    try {
-      const { data: orgs } = await supabase
-        .from("organisations")
-        .select("name, sector, industry, offerings, ai_brief, country, website, primary_contact_email")
-        .neq("id", tx.org_id)
-        .not("primary_contact_email", "is", null)
-        .limit(300);
-      const local = localOrgCandidates((orgs ?? []) as LocalOrgRow[], relevanceQuery, ownOrg?.name ?? "");
-      localMatches = local.candidates;
-      localEmails = local.emails;
-    } catch {
-      // The local registry is an enhancement, never a blocker.
+    {
+      const t0 = Date.now();
+      try {
+        const { data: orgs } = await supabase
+          .from("organisations")
+          .select("name, sector, industry, offerings, ai_brief, country, website, primary_contact_email")
+          .neq("id", tx.org_id)
+          .not("primary_contact_email", "is", null)
+          .limit(300);
+        const local = localOrgCandidates((orgs ?? []) as LocalOrgRow[], relevanceQuery, ownOrg?.name ?? "");
+        localMatches = local.candidates;
+        localEmails = local.emails;
+      } catch {
+        // The local registry is an enhancement, never a blocker.
+      }
+      localMs = Date.now() - t0;
     }
     const localKeys = new Set(localMatches.map((c) => nameKey(c.name) || c.name.toLowerCase()));
 
     // Bid + documents → understand the transaction → determine the required counterparty → search
     // the public internet → identify real organisations → test relevance → reason over the
     // evidence → return the counterparties.
+    const pipelineStartedAt = Date.now();
     const { findCounterparties } = await import("@/lib/counterpartyPipeline.server");
     const pipeline = await findCounterparties({
       apiKey,
@@ -691,6 +701,7 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       fallbackSubject: subject,
       ownOrgName: ownOrg?.name ?? "",
     });
+    pipelineMs = Date.now() - pipelineStartedAt;
     const { model, sources, failures } = pipeline;
     const web = { webError: pipeline.webError };
     // A last, loose sanity check against the brief's own wording, on top of the evidence test.
@@ -823,7 +834,22 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       // Directory publishing must never break the search the person is waiting on.
     }
 
-
+    // Timing only — recorded so a slow search can be diagnosed with real numbers (which stage
+    // actually took the time) rather than a guess, the next time someone reports one.
+    const totalMs = Date.now() - startedAt;
+    try {
+      await supabase.from("transaction_events").insert({
+        transaction_id: tx.id,
+        actor_id: context.userId,
+        stage: "trading",
+        step: "search",
+        action: "counterparty_search_completed",
+        summary: `${data.kind.toUpperCase()} search found ${(inserted ?? []).length} counterpart${(inserted ?? []).length === 1 ? "y" : "ies"} in ${(totalMs / 1000).toFixed(1)}s`,
+        payload: { kind: data.kind, totalMs, localMs, pipelineMs, candidateCount: (inserted ?? []).length, hadDocuments: Boolean(docSummary) },
+      });
+    } catch {
+      // Diagnostics only — never blocks returning the result.
+    }
 
     return {
       candidates: inserted ?? [],
