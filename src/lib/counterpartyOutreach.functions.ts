@@ -404,7 +404,7 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
               ? `<p>Sign in to your Izenzo account to see the details and respond.</p>`
               : `<p>Izenzo is a trading platform with hash-sealed Proof of Intent and independent ` +
                 `verification at every step. You don't have an account yet — create one to see the ` +
-                `details and respond.</p><p><a href="https://izenzo.co.za/">Create your account</a></p>`) +
+                `details and respond.</p><p><a href="https://api.trade.izenzo.co.za/">Create your account</a></p>`) +
             `<p>If you weren't expecting this, you can ignore this email.</p>`,
         ),
       });
@@ -491,7 +491,7 @@ export const inviteCounterparty = createServerFn({ method: "POST" })
         `<p>A bidder on the Izenzo Trading Gateway has shortlisted <strong>${cp.name}</strong> as a potential counterparty for ${dealName}.</p>` +
         `<p>Izenzo is a trading platform with hash-sealed Proof of Intent and independent verification at every step. ` +
         `You don't have an account yet — create one to see the details and respond.</p>` +
-        `<p><a href="https://izenzo.co.za/">Create your account</a></p>` +
+        `<p><a href="https://api.trade.izenzo.co.za/">Create your account</a></p>` +
         `<p>If you weren't expecting this, you can ignore this email.</p>`,
       ),
     });
