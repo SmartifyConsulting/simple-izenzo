@@ -69,6 +69,9 @@ export function DecisionPackPanel({
   const [error, setError] = useState<string | null>(null);
   const [deciding, setDeciding] = useState<string | null>(null);
   const [selectingAll, setSelectingAll] = useState(false);
+  // Bumped by the "Try again" button to re-run the effect below — a transient failure (rate
+  // limited, a slow gateway) previously had no way back short of leaving the deal and reopening it.
+  const [retryTick, setRetryTick] = useState(0);
 
   useEffect(() => {
     let live = true;
@@ -88,16 +91,19 @@ export function DecisionPackPanel({
     return () => {
       live = false;
     };
-  }, [transactionId, stageContext, run]);
+  }, [transactionId, stageContext, run, retryTick]);
 
   const allDecided =
     Boolean(proposals) && proposals!.length > 0 && proposals!.every((p) => Boolean(p.decided_at));
   const pending = (proposals ?? []).filter((p) => !p.decided_at).length;
 
+  // A failed fetch (proposals stays null) must still tell the caller "not decided" — otherwise a
+  // gate that was satisfied by a *previous* transaction (onAllDecided(true) from an earlier deal)
+  // stays satisfied here too, since nothing ever calls it again to say otherwise, and Intent opens
+  // for a deal whose AI+ recommendations were never actually shown, let alone answered.
   useEffect(() => {
-    if (!proposals) return;
     if (!allDecided) onAllDecided?.(false);
-  }, [proposals, allDecided, onAllDecided]);
+  }, [proposals, error, allDecided, onAllDecided]);
 
   // Once everything is answered the modal closes itself — a brief pause so the last
   // "Accepted"/"Rejected" state is actually seen — and the caller is told it is fully decided.
@@ -178,7 +184,20 @@ export function DecisionPackPanel({
           )}
         </Button>
         {busy && <span className="text-[11px] text-muted-foreground">AI+ is analysing…</span>}
-        {error && <span className="text-[11px] text-destructive">{error}</span>}
+        {error && (
+          <>
+            <span className="text-[11px] text-destructive">{error}</span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setRetryTick((n) => n + 1)}
+              className="h-6 rounded-full px-2 text-[10px] font-semibold text-destructive hover:bg-destructive/10"
+            >
+              Try again
+            </Button>
+          </>
+        )}
         {!busy && !error && (proposals ?? []).length === 0 && (
           <span className="text-[11px] text-muted-foreground">AI+ had nothing to add here.</span>
         )}

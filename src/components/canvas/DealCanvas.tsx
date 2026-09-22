@@ -1038,21 +1038,12 @@ function ProposalDialog({
                     <div key={d.label} className="contents">
                       <dt className="text-muted-foreground">{d.label}</dt>
                       <dd className="break-words font-medium text-foreground">
-                        {d.label === "Website" ? (
-                          <a
-                            href={d.value!.startsWith("http") ? d.value! : `https://${d.value}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="underline underline-offset-2"
-                          >
-                            {d.value}
-                          </a>
-                        ) : d.label === "Contact" ? (
-                          // A named individual is shown so a person can see one exists, but never
-                          // legibly — direct contact must go through Izenzo, not around it. The
-                          // company's own website and email stay fully readable above and below.
+                        {d.label === "Website" || d.label === "Contact" || d.label === "Email" ? (
+                          // Shown so a person can see one exists, but never legibly, and never as a
+                          // clickable link — direct contact must go through Izenzo, not around it,
+                          // until there's an actual introduction.
                           <span
-                            title="The named contact is not shown — reach this company through Izenzo, not directly."
+                            title="Not shown — reach this company through Izenzo, not directly."
                             className="select-none blur-[3px]"
                           >
                             {d.value}
@@ -1598,8 +1589,15 @@ export function CounterpartyRecord({
                   {[c.jurisdiction, c.sector].filter(Boolean).join(" · ") || sourceLabel(c.source)}
                 </span>
                 {(c.website || c.contact_email || c.phone) && (
-                  <span className="mt-0.5 block truncate text-[11px] text-slate-400">
-                    {[c.website, c.contact_email, c.phone].filter(Boolean).join(" · ")}
+                  <span className="mt-0.5 flex flex-wrap items-center gap-1 truncate text-[11px] text-slate-400">
+                    {/* Website and email stay hidden until there's an actual introduction — same
+                        rule as the named contact in the profile dialog, just applied here too, in
+                        the shortlist itself where they were previously shown in the clear. */}
+                    {c.website && <span className="select-none truncate blur-[3px]">{c.website}</span>}
+                    {c.website && (c.contact_email || c.phone) && <span>·</span>}
+                    {c.contact_email && <span className="select-none truncate blur-[3px]">{c.contact_email}</span>}
+                    {c.contact_email && c.phone && <span>·</span>}
+                    {c.phone && <span className="truncate">{c.phone}</span>}
                   </span>
                 )}
               </label>

@@ -380,6 +380,7 @@ function LiveDealEngine() {
     setStagePanel(null);
     setMapPanel(null);
     setIntentDismissed(false);
+    setChoicePackDecided(false);
     // Start from whatever this bid's own row already has, never a previous bid's leftover value
     // (the earlier bug this guarded against) — but unlike hardcoding null, this doesn't also wipe
     // out a summary (or a recorded read failure) the new bid already had saved. Resetting to null
@@ -1369,6 +1370,7 @@ function LiveDealEngine() {
       setHasChosen(false);
       setDbHasChosenParty(false);
       setIntentDismissed(false);
+      setChoicePackDecided(false);
       setStagePanel(null);
       setMediaRunning(false);
       setMediaResults(null);
@@ -1450,6 +1452,7 @@ function LiveDealEngine() {
     setHasChosen(false);
     setDbHasChosenParty(false);
       setIntentDismissed(false);
+      setChoicePackDecided(false);
     setMapPanel(null);
     setPendingDirection(null);
     setDraftReference(null);
@@ -1537,6 +1540,7 @@ function LiveDealEngine() {
         setHasChosen(false);
         setDbHasChosenParty(false);
       setIntentDismissed(false);
+      setChoicePackDecided(false);
         setDocumentSummary((tx as unknown as { document_summary: string | null }).document_summary ?? null);
         setFlowStep(tx.step === "documents" ? "documents" : "results");
         const { data: docs } = await supabase
@@ -1600,6 +1604,7 @@ function LiveDealEngine() {
         setHasChosen(false);
         setDbHasChosenParty(false);
       setIntentDismissed(false);
+      setChoicePackDecided(false);
         setDocumentSummary((tx as unknown as { document_summary: string | null }).document_summary ?? null);
         setFlowStep(tx.step === "documents" ? "documents" : "results");
         const { data: docs } = await supabase
@@ -1646,6 +1651,7 @@ function LiveDealEngine() {
     setHasChosen(false);
     setDbHasChosenParty(false);
     setIntentDismissed(false);
+    setChoicePackDecided(false);
     setStagePanel(null);
     setMapPanel(null);
     setSearchError(null);
