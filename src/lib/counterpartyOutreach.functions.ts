@@ -293,6 +293,7 @@ export const enrichCounterparty = createServerFn({ method: "POST" })
             transactionId: row.transaction_id,
             title: `${row.name} is a verified Izenzo account`,
             body: `${tx.reference ? `${tx.reference} — ` : ""}${tx.title ?? "Your deal"}: ${row.name} matched a registered organisation already on Izenzo.`,
+            kind: "counterparty_verified",
           });
         }
       } catch {
@@ -495,6 +496,7 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
           transactionId: cp.transaction_id,
           title: `${cp.name} has been emailed`,
           body: `${tx.reference ? `${tx.reference} — ` : ""}${dealName}: ${cp.name} was emailed about this deal.`,
+          kind: "counterparty_emailed",
         });
       }
       return { sent: true, method: onPlatform ? ("platform" as const) : ("web" as const), to: toEmail };

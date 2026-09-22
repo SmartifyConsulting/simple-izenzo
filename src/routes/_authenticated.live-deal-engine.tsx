@@ -2973,14 +2973,10 @@ function LiveDealEngine() {
                 )}
 
                 {/* The human decision on the AI+ proposals comes first: Intent only opens once
-                    every proposal from the Choice pack has been accepted or rejected. */}
-                {dealTx && stagePanel === "intent" && !dealTx.intent_confirmed_at && dbHasChosenParty && !choicePackDecided ? (
-                  <div className="rounded-2xl border border-border bg-card px-3.5 py-3">
-                    <p className="text-xs text-muted-foreground">
-                      Accept or reject each AI+ proposal above, then Intent opens.
-                    </p>
-                  </div>
-                ) : (
+                    every proposal from the Choice pack has been accepted or rejected. The
+                    reminder itself now lives inline next to the AI+ Recommendations button
+                    (DecisionPackPanel), not as a separate message down here. */}
+                {dealTx && stagePanel === "intent" && !dealTx.intent_confirmed_at && dbHasChosenParty && !choicePackDecided ? null : (
                   /* The active step's own panel — skipped for intent and poi once those are
                      recorded, since the folded records above already hold them. */
                   dealTx &&

@@ -182,6 +182,13 @@ export function DecisionPackPanel({
         {!busy && !error && (proposals ?? []).length === 0 && (
           <span className="text-[11px] text-muted-foreground">AI+ had nothing to add here.</span>
         )}
+        {/* The gate itself lives here, next to the button that opens it, rather than as a
+            separate message elsewhere in the workspace. */}
+        {!busy && !error && gating && pending > 0 && (
+          <span className="text-[11px] text-muted-foreground">
+            Accept or reject each AI+ proposal above, then Intent opens.
+          </span>
+        )}
       </div>
 
       <Dialog

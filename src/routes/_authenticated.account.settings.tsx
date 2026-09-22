@@ -78,23 +78,16 @@ function SettingsPage() {
         <TabsContent value="profile" className="mt-6">
           <div className="grid gap-6 lg:grid-cols-[380px_1fr] lg:items-start">
             <div className="space-y-6">
-              <div className="rounded-md border border-border p-5">
-                <h2 className="text-sm font-semibold">Profile picture</h2>
-                <p className="text-xs text-muted-foreground">Shown across your account</p>
-                <div className="mt-3">
-                  {profile && (
-                    <AvatarUpload
-                      url={profile.avatar_url}
-                      fallback={(profile.full_name ?? profile.email ?? "?").slice(0, 2).toUpperCase()}
-                      folder="users"
-                      ownerId={profile.id}
-                      onUploaded={onAvatarUploaded}
-                    />
-                  )}
-                </div>
-              </div>
-
               <form onSubmit={save} className="space-y-4 rounded-md border border-border p-5">
+                {profile && (
+                  <AvatarUpload
+                    url={profile.avatar_url}
+                    fallback={(profile.full_name ?? profile.email ?? "?").slice(0, 2).toUpperCase()}
+                    folder="users"
+                    ownerId={profile.id}
+                    onUploaded={onAvatarUploaded}
+                  />
+                )}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label htmlFor="first_name">First name</Label>

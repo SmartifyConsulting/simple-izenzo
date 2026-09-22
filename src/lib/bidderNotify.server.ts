@@ -7,7 +7,23 @@ const ADMIN_EMAIL = "support@izenzo.co.za";
 
 export type NotifyChannel = "email" | "in_app" | "both";
 
-type Recipient = { userId: string; email: string | null; channel: NotifyChannel };
+/** Matches the checkbox keys in src/components/account/NotificationPreferences.tsx. Passing a
+ * `kind` lets a caller be opted out of specifically; omitting it (most callers) always sends,
+ * unchanged from before per-type opt-outs existed. */
+export type NotificationTypeKey =
+  | "new_bid_or_offer"
+  | "poi_sealed"
+  | "wad_attention"
+  | "low_token_balance"
+  | "counterparty_emailed"
+  | "counterparty_verified";
+
+type Recipient = {
+  userId: string;
+  email: string | null;
+  channel: NotifyChannel;
+  subscriptions: Partial<Record<NotificationTypeKey, boolean>>;
+};
 
 /** The transaction's own creator — "the bidder" for every notification this file sends. */
 async function resolveRecipient(supabaseAdmin: any, transactionId: string): Promise<Recipient | null> {
@@ -18,19 +34,24 @@ async function resolveRecipient(supabaseAdmin: any, transactionId: string): Prom
       .eq("id", transactionId)
       .maybeSingle();
     if (!tx?.created_by) return null;
-    // notification_channel predates the generated Supabase types being refreshed — read the whole
-    // row and cast, rather than name the column directly, so this degrades to the "both" default
-    // instead of throwing if the migration hasn't run yet in this environment.
+    // notification_channel/notification_subscriptions predate the generated Supabase types being
+    // refreshed — read the whole row and cast, rather than name the columns directly, so this
+    // degrades to the defaults instead of throwing if a migration hasn't run yet in this environment.
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("*")
       .eq("id", tx.created_by)
       .maybeSingle();
-    const row = profile as { email?: string | null; notification_channel?: NotifyChannel | null } | null;
+    const row = profile as {
+      email?: string | null;
+      notification_channel?: NotifyChannel | null;
+      notification_subscriptions?: Partial<Record<NotificationTypeKey, boolean>> | null;
+    } | null;
     return {
       userId: tx.created_by,
       email: row?.email ?? null,
       channel: row?.notification_channel ?? "both",
+      subscriptions: row?.notification_subscriptions ?? {},
     };
   } catch {
     return null;
@@ -58,10 +79,15 @@ export async function notifyTransactionOwner(args: {
   transactionId: string;
   title: string;
   body: string;
+  /** One of the checkbox types in Notification Preferences — omit for events that aren't
+   * individually switchable there (everything before per-type opt-outs existed). */
+  kind?: NotificationTypeKey;
 }): Promise<void> {
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const recipient = await resolveRecipient(supabaseAdmin, args.transactionId);
+    // A missing key means "subscribed" — the checkbox defaults to ticked.
+    if (args.kind && recipient?.subscriptions[args.kind] === false) return;
     const channel = recipient?.channel ?? "both";
 
     if (channel === "in_app" || channel === "both") {
@@ -106,6 +132,7 @@ export async function notifyBidder(args: {
   transactionId: string;
   title: string;
   body: string;
+  kind?: NotificationTypeKey;
 }): Promise<void> {
   await notifyTransactionOwner(args);
 
