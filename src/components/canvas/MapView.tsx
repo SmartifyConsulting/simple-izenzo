@@ -340,7 +340,12 @@ function MapNode({
     <button
       type="button"
       onClick={locked ? undefined : onClick}
-      disabled={locked || !onClick}
+      // A native `disabled` button blocks pointer/hover events on everything inside it — including
+      // the artefact-hint tooltip below, so hovering it while the step is locked showed the
+      // browser's not-allowed cursor and the tooltip could never open. `aria-disabled` keeps the
+      // same locked appearance and still no-ops the click (onClick is already undefined when
+      // locked), without swallowing hover events from its children.
+      aria-disabled={locked || !onClick}
       title={locked ? (lock ?? undefined) : undefined}
       style={{ left: px(box.x), top: py(box.y), width: px(box.w), height: py(box.h) }}
       className={cn(
