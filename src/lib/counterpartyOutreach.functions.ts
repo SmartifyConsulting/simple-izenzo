@@ -15,7 +15,7 @@ type AuthedClient = { from: (t: string) => any };
  * search for a company that didn't need one. Narrows the query with a wildcard on the name's
  * first significant word (cheap, indexable) then confirms the match with the exact normalised
  * key so an unrelated company sharing that first word is never picked up. */
-async function findRegisteredOrg(
+export async function findRegisteredOrg(
   supabase: AuthedClient,
   name: string,
 ): Promise<{ website: string | null; primary_contact_email: string | null } | null> {
