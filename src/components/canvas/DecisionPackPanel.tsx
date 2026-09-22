@@ -189,10 +189,10 @@ export function DecisionPackPanel({
             <span className="text-[11px] text-destructive">{error}</span>
             <Button
               type="button"
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={() => setRetryTick((n) => n + 1)}
-              className="h-6 rounded-full px-2 text-[10px] font-semibold text-destructive hover:bg-destructive/10"
+              className="h-7 rounded-full border-destructive/50 px-3 text-[11px] font-semibold text-destructive hover:bg-destructive/10"
             >
               Try again
             </Button>
@@ -208,18 +208,21 @@ export function DecisionPackPanel({
             Accept or reject each AI+ proposal above, then Intent opens.
           </span>
         )}
-        {/* Testing shortcut, explicitly requested: does exactly what "Accept all" inside the modal
-            already does (records a real accepted decision against every pending proposal — same
-            decideProposal call, same audit trail), just reachable without opening the modal first
-            and even when there's only one proposal (Accept all only shows once there are 2+). Not
-            a bypass of anything the product doesn't already let a participant do themselves. */}
-        {!busy && !error && gating && pending > 0 && (
+        {/* Testing shortcut, explicitly requested: with pending proposals on hand it does exactly
+            what "Accept all" inside the modal already does (records a real accepted decision
+            against every one — same decideProposal call, same audit trail), just reachable without
+            opening the modal first and even with only one proposal (Accept all only shows at 2+).
+            With nothing loaded at all — AI+ erroring, e.g. not configured — there is nothing to
+            accept, so it just tells the caller "treat this as decided" directly instead. Shown
+            alongside "Try again" too: testing often means skipping past an error, not waiting on
+            it to clear. */}
+        {!busy && gating && (error || pending > 0) && (
           <Button
             type="button"
             variant="ghost"
             size="sm"
             disabled={selectingAll || deciding !== null}
-            onClick={() => void decideAll("accepted")}
+            onClick={() => (pending > 0 ? void decideAll("accepted") : onAllDecided?.(true))}
             className="h-7 gap-1 rounded-full border border-dashed border-muted-foreground/40 px-2.5 text-[10px] font-semibold text-muted-foreground hover:text-foreground"
           >
             {selectingAll ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}

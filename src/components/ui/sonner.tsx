@@ -11,6 +11,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
       position="bottom-right"
       closeButton
       duration={4500}
+      // Sonner's default gap (14px) reads as touching once two cards with a border and shadow
+      // stack up — wider gap so several toasts arriving close together stay visually separate.
+      gap={20}
       toastOptions={{
         classNames: {
           toast:

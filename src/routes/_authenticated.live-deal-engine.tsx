@@ -1771,6 +1771,11 @@ function LiveDealEngine() {
     // land — so the search/results view always has the room, not the bid's own details.
     setBidInfoCollapsed(txId, true);
     setFlowStep("searching");
+    // Force it open the moment a search starts — a re-run (after "Choose a different party", a
+    // counter offer, etc.) could otherwise still be carrying the collapsed state a *previous*
+    // round of this same deal left behind, hiding the "Search — Using AI" progress entirely
+    // until someone thought to click the frame open by hand.
+    setSearchResultsOpen(txId, true);
 
     setSearchError(null);
     setNoMatchesTx(null);
