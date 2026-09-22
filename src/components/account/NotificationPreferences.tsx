@@ -1,22 +1,32 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 
 export type NotificationChannel = "email" | "in_app" | "both";
 
-const OPTIONS: { value: NotificationChannel; label: string; desc: string }[] = [
-  { value: "both", label: "Email and in-app", desc: "Get every notification both ways" },
-  { value: "email", label: "Email only", desc: "No in-app notices — just email" },
-  { value: "in_app", label: "In-app only", desc: "No email — just your Inbox on Izenzo" },
+const CHANNEL_LABEL: Record<NotificationChannel, string> = {
+  both: "Email and in-app",
+  email: "Email only",
+  in_app: "In-app only",
+};
+
+/** What a person is actually subscribed to — informational, not individually switchable; the one
+ * choice that matters is how (below), not which. */
+const SUBSCRIBED_TO = [
+  "New bid or offer received",
+  "Proof of Intent sealed",
+  "WaD case needs attention",
+  "Token balance running low",
+  "Counterparty has been emailed",
+  "Counterparty has been verified",
 ];
 
-/** One choice for how this person wants to hear about everything the platform notifies them
- * about (a new bid, POI sealed, a WaD case, low tokens, a counterparty being emailed or
- * verified…) — not a separate setting per notification type. Stored on their own profile
- * (notification_channel), read by whatever sends each notification. */
+/** One row, one choice — how this person wants to hear about everything the platform notifies
+ * them about. Stored on their own profile (notification_channel), read by whatever sends each
+ * notification. */
 export function NotificationPreferences({ profileId }: { profileId: string }) {
   const [channel, setChannel] = useState<NotificationChannel>("both");
   const [loading, setLoading] = useState(true);
@@ -61,35 +71,35 @@ export function NotificationPreferences({ profileId }: { profileId: string }) {
   }
 
   return (
-    <div className="space-y-3 rounded-md border border-border p-5">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <h2 className="text-sm font-semibold">Notification Preferences</h2>
-          <p className="text-xs text-muted-foreground">How you want to hear about everything on Izenzo.</p>
-        </div>
-        {saving && <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-muted-foreground" />}
-      </div>
-      {loading ? (
-        <p className="text-xs text-muted-foreground">Loading…</p>
-      ) : (
-        <RadioGroup value={channel} onValueChange={(v) => void save(v as NotificationChannel)} className="space-y-2">
-          {OPTIONS.map((opt) => (
-            <label
-              key={opt.value}
-              htmlFor={`notif-channel-${opt.value}`}
-              className="flex cursor-pointer items-start gap-2.5 rounded-md border border-transparent p-1.5 hover:border-border"
-            >
-              <RadioGroupItem value={opt.value} id={`notif-channel-${opt.value}`} className="mt-0.5" />
-              <span>
-                <Label htmlFor={`notif-channel-${opt.value}`} className="cursor-pointer text-sm font-medium">
-                  {opt.label}
-                </Label>
-                <p className="text-xs text-muted-foreground">{opt.desc}</p>
-              </span>
-            </label>
+    <div className="space-y-4 rounded-md border border-border p-5">
+      <div>
+        <h2 className="text-sm font-semibold">Notification Preferences</h2>
+        <p className="mt-1 text-xs text-muted-foreground">You're subscribed to:</p>
+        <ul className="mt-1.5 list-disc space-y-0.5 pl-4 text-xs text-muted-foreground">
+          {SUBSCRIBED_TO.map((label) => (
+            <li key={label}>{label}</li>
           ))}
-        </RadioGroup>
-      )}
+        </ul>
+      </div>
+
+      <div className="flex items-center justify-between gap-4 border-t border-border pt-4">
+        <Label htmlFor="notification-channel" className="text-sm font-medium">
+          Notify me via
+        </Label>
+        <div className="flex items-center gap-2">
+          {saving && <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-muted-foreground" />}
+          <Select value={channel} onValueChange={(v) => void save(v as NotificationChannel)} disabled={loading}>
+            <SelectTrigger id="notification-channel" className="h-8 w-[170px] text-xs">
+              <SelectValue>{CHANNEL_LABEL[channel]}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="both">Email and in-app</SelectItem>
+              <SelectItem value="email">Email only</SelectItem>
+              <SelectItem value="in_app">In-app only</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
     </div>
   );
 }
