@@ -1684,24 +1684,23 @@ function LiveDealEngine() {
   }
 
   /** Asks the AI whether the person is searching for a seller or for a buyer, before the search
-   * runs (the search itself depends on it). Only ever happens while the workspace is still a plain
-   * Workspace. */
+   * runs. Only ever happens while the workspace is still a plain Workspace.
+   *
+   * The reference and every Bid/Offer label are only ever changed once the AI is actually certain.
+   * A search that is only keywords, with nothing in the wording pointing either way, must not have
+   * its ID or labels committed to Bid or Offer on a guess — it stays a plain Workspace (ID…) until
+   * a clearer search or an uploaded document resolves it. The search itself still runs regardless:
+   * bid_offers already defaults to "bid" internally, so nothing here blocks finding counterparties —
+   * this only decides whether the visible identity of the workspace changes. */
   async function categoriseSearch(txId: string) {
     try {
       const { data: row } = await supabase.from("transactions").select("reference").eq("id", txId).maybeSingle();
       if (tradeKindOf((row as { reference?: string | null } | null)?.reference) !== "workspace") return;
       const { direction } = await classifySide({ data: { transactionId: txId } });
-      // A search is under way, so the workspace has to become one or the other: when nothing points
-      // either way, a search for counterparties is treated as a bid (the deal's default side).
-      await applyClassification(txId, direction ?? "bid");
+      if (direction) await applyClassification(txId, direction);
     } catch {
-      // Could not be categorised (e.g. offline) — treated as a bid, the default side, rather than
-      // leaving a search running against a workspace that is neither.
-      try {
-        await applyClassification(txId, "bid");
-      } catch {
-        // Never blocks the search.
-      }
+      // Could not be categorised (e.g. offline) — leave the workspace as it is rather than
+      // guessing. Never blocks the search itself.
     }
   }
 
