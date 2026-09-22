@@ -178,6 +178,30 @@ export type Database = {
           },
         ]
       }
+      ai_rate_limit_log: {
+        Row: {
+          first_seen_at: string
+          hit_count: number
+          last_seen_at: string
+          model: string
+          service: string
+        }
+        Insert: {
+          first_seen_at?: string
+          hit_count?: number
+          last_seen_at?: string
+          model: string
+          service: string
+        }
+        Update: {
+          first_seen_at?: string
+          hit_count?: number
+          last_seen_at?: string
+          model?: string
+          service?: string
+        }
+        Relationships: []
+      }
       ai_suggestion_events: {
         Row: {
           actor_id: string
@@ -754,6 +778,7 @@ export type Database = {
       }
       bug_reports: {
         Row: {
+          attachment_paths: string[]
           created_at: string
           created_via: string
           description: string | null
@@ -766,6 +791,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          attachment_paths?: string[]
           created_at?: string
           created_via?: string
           description?: string | null
@@ -778,6 +804,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          attachment_paths?: string[]
           created_at?: string
           created_via?: string
           description?: string | null
@@ -1014,6 +1041,8 @@ export type Database = {
         Row: {
           chosen_at: string | null
           contact_email: string | null
+          counterparty_responded_at: string | null
+          counterparty_response: string | null
           created_at: string
           id: string
           invited_at: string | null
@@ -1045,6 +1074,8 @@ export type Database = {
         Insert: {
           chosen_at?: string | null
           contact_email?: string | null
+          counterparty_responded_at?: string | null
+          counterparty_response?: string | null
           created_at?: string
           id?: string
           invited_at?: string | null
@@ -1076,6 +1107,8 @@ export type Database = {
         Update: {
           chosen_at?: string | null
           contact_email?: string | null
+          counterparty_responded_at?: string | null
+          counterparty_response?: string | null
           created_at?: string
           id?: string
           invited_at?: string | null
@@ -2386,6 +2419,8 @@ export type Database = {
           last_accessed_at: string | null
           last_name: string | null
           login_count: number
+          notification_channel: string
+          notification_subscriptions: Json
           org_id: string | null
           seat: string
           terms_accepted_at: string | null
@@ -2407,6 +2442,8 @@ export type Database = {
           last_accessed_at?: string | null
           last_name?: string | null
           login_count?: number
+          notification_channel?: string
+          notification_subscriptions?: Json
           org_id?: string | null
           seat?: string
           terms_accepted_at?: string | null
@@ -2428,6 +2465,8 @@ export type Database = {
           last_accessed_at?: string | null
           last_name?: string | null
           login_count?: number
+          notification_channel?: string
+          notification_subscriptions?: Json
           org_id?: string | null
           seat?: string
           terms_accepted_at?: string | null
@@ -3098,7 +3137,10 @@ export type Database = {
           stage: Database["public"]["Enums"]["spine_stage"]
           status: string
           step: string
+          structured_facts: Json | null
+          structured_facts_generated_at: string | null
           title: string
+          transaction_type: string | null
           unit: string | null
           updated_at: string
           wad_completed_at: string | null
@@ -3128,7 +3170,10 @@ export type Database = {
           stage?: Database["public"]["Enums"]["spine_stage"]
           status?: string
           step?: string
+          structured_facts?: Json | null
+          structured_facts_generated_at?: string | null
           title: string
+          transaction_type?: string | null
           unit?: string | null
           updated_at?: string
           wad_completed_at?: string | null
@@ -3158,7 +3203,10 @@ export type Database = {
           stage?: Database["public"]["Enums"]["spine_stage"]
           status?: string
           step?: string
+          structured_facts?: Json | null
+          structured_facts_generated_at?: string | null
           title?: string
+          transaction_type?: string | null
           unit?: string | null
           updated_at?: string
           wad_completed_at?: string | null
