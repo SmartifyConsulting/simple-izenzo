@@ -254,7 +254,7 @@ export const enrichCounterparty = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: cp, error } = await supabase
       .from("counterparties")
-      .select("id, name, website, contact_email, phone")
+      .select("id, name, transaction_id, website, contact_email, phone")
       .eq("id", data.counterpartyId)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -262,6 +262,7 @@ export const enrichCounterparty = createServerFn({ method: "POST" })
     const row = cp as unknown as {
       id: string;
       name: string;
+      transaction_id: string;
       website: string | null;
       contact_email: string | null;
       phone: string | null;
@@ -277,6 +278,26 @@ export const enrichCounterparty = createServerFn({ method: "POST" })
         .update({ website: org.website ?? null, contact_email: org.primary_contact_email ?? null } as never)
         .eq("id", row.id);
       if (upErr) throw new Error(upErr.message);
+      // A registered platform account is the one thing today that stands in for "verified" — a
+      // real, known account rather than an unconfirmed web claim. Notify the bidder (and Admin).
+      try {
+        const { data: tx } = await supabase
+          .from("transactions")
+          .select("org_id, title, reference")
+          .eq("id", row.transaction_id)
+          .maybeSingle();
+        if (tx?.org_id) {
+          const { notifyBidder } = await import("@/lib/bidderNotify.server");
+          await notifyBidder({
+            orgId: tx.org_id,
+            transactionId: row.transaction_id,
+            title: `${row.name} is a verified Izenzo account`,
+            body: `${tx.reference ? `${tx.reference} — ` : ""}${tx.title ?? "Your deal"}: ${row.name} matched a registered organisation already on Izenzo.`,
+          });
+        }
+      } catch {
+        // Notification only — never blocks enrichment itself.
+      }
       return { source: "platform-org" as const, website: org.website ?? null, email: org.primary_contact_email ?? null };
     }
 
@@ -336,7 +357,7 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
 
     const { data: tx } = await supabase
       .from("transactions")
-      .select("title, commodity, quantity, unit, price, currency, incoterms, jurisdiction")
+      .select("title, reference, org_id, commodity, quantity, unit, price, currency, incoterms, jurisdiction")
       .eq("id", cp.transaction_id)
       .maybeSingle();
     const dealName = tx?.title ?? "a trade";
@@ -466,6 +487,15 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
         .from("counterparties")
         .update({ invited_at: new Date().toISOString() } as never)
         .eq("id", cp.id);
+      if (tx?.org_id) {
+        const { notifyBidder } = await import("@/lib/bidderNotify.server");
+        void notifyBidder({
+          orgId: tx.org_id,
+          transactionId: cp.transaction_id,
+          title: `${cp.name} has been emailed`,
+          body: `${tx.reference ? `${tx.reference} — ` : ""}${dealName}: ${cp.name} was emailed about this deal.`,
+        });
+      }
       return { sent: true, method: onPlatform ? ("platform" as const) : ("web" as const), to: toEmail };
     }
 
