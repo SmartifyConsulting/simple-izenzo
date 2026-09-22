@@ -145,14 +145,31 @@ async function scanWithTavily(
       const url = j.url ?? firstUrl;
       return { source: src.source, label: src.label, status: j.status, detail: j.detail, ...(url ? { url } : {}) };
     }
-    const text = pages.map((pg) => `${pg.title} ${pg.content}`).join(" ").toLowerCase();
-    const hits = ADVERSE.filter((w) => text.includes(w));
-    const base2 = { source: src.source, label: src.label, ...(firstUrl ? { url: firstUrl } : {}) };
-    if (hits.length > 0) {
-      return { ...base2, status: "adverse", detail: `${pages[0]?.title ? `"${pages[0].title.slice(0, 90)}" — ` : ""}mentions ${hits.slice(0, 4).join(", ")} alongside the company name. Read the source before continuing.` };
+    // Checked per page, not across the whole blob of up to 5 results concatenated together — an
+    // adverse word on a page that never mentions this company (a different result Tavily happened
+    // to return) must never brand this company "adverse". Both have to show up on the same page.
+    const namePart = name.toLowerCase().slice(0, 24);
+    const companyPages = pages.filter((pg) => `${pg.title} ${pg.content}`.toLowerCase().includes(namePart));
+    let adverseHit: { page: Page; words: string[] } | null = null;
+    for (const pg of companyPages) {
+      const t = `${pg.title} ${pg.content}`.toLowerCase();
+      const words = ADVERSE.filter((w) => t.includes(w));
+      if (words.length > 0) {
+        adverseHit = { page: pg, words };
+        break;
+      }
     }
-    if (text.includes(name.toLowerCase().slice(0, 24))) {
-      return { ...base2, status: "found", detail: `${pages[0]?.title ? `Found "${pages[0].title.slice(0, 90)}". ` : ""}Nothing adverse shows in the visible results.` };
+    const base2 = { source: src.source, label: src.label, ...(firstUrl ? { url: firstUrl } : {}) };
+    if (adverseHit) {
+      return {
+        ...base2,
+        status: "adverse",
+        url: adverseHit.page.url,
+        detail: `"${adverseHit.page.title.slice(0, 90)}" — mentions ${adverseHit.words.slice(0, 4).join(", ")} alongside the company name.`,
+      };
+    }
+    if (companyPages.length > 0) {
+      return { ...base2, status: "found", detail: `${companyPages[0]?.title ? `Found "${companyPages[0].title.slice(0, 90)}". ` : ""}Nothing adverse shows in the visible results.` };
     }
     return { ...base2, status: "not_found", detail: `Searched ${src.label} for ${name}${jurisdiction ? ` (${jurisdiction})` : ""} — no page for this company came up.` };
   });

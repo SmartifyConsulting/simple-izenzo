@@ -2793,7 +2793,7 @@ function LiveDealEngine() {
                                             href={f.url}
                                             target="_blank"
                                             rel="noreferrer noopener"
-                                            className="text-primary hover:underline"
+                                            className="text-blue-600 underline hover:text-blue-800"
                                           >
                                             Source
                                           </a>
