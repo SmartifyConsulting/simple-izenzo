@@ -1769,18 +1769,17 @@ function LiveDealEngine() {
     // progress even though it had genuinely finished.
     await advance(txId, "trading", "search");
     setDealTx((prev) => (prev ? { ...prev, stage: "trading", step: "search" } : prev));
-    // Runs long enough to actually read as "AI and AI+ are searching" — otherwise, when both
-    // calls happen to resolve fast, the step flashes past before anyone can see it.
+    // Runs long enough to actually read as "AI is searching" — otherwise, when the call happens
+    // to resolve fast, the step flashes past before anyone can see it.
     const minDuration = new Promise((resolve) => setTimeout(resolve, 3200));
     try {
-      const [ai, aiPlus] = await Promise.allSettled([
-        search({ data: { transactionId: txId, kind: "ai" } }),
-        search({ data: { transactionId: txId, kind: "ai_plus" } }),
-      ]);
+      // AI+ no longer runs alongside the first search: it's a deeper, heavier pass that only has
+      // something to be deep about once a person has actually picked candidates from this first,
+      // lighter search to shortlist — see requestAiPlusForShortlist, fired from the shortlist
+      // toggle. Running it upfront for every search meant every search waited on its slower,
+      // more thorough pipeline even when nobody had looked at the first results yet.
+      await search({ data: { transactionId: txId, kind: "ai" } });
       await minDuration;
-      if (ai.status === "rejected" && aiPlus.status === "rejected") {
-        throw ai.reason instanceof Error ? ai.reason : new Error("AI and AI+ search both failed");
-      }
       // Straight to "choice" — once every candidate has surfaced and no more are forthcoming,
       // the counterparties step is already done, so the active-step pulse should land on Choice
       // rather than sitting on Counterparties.

@@ -66,7 +66,7 @@ import { sourceLabel } from "@/lib/userFacingText";
 import { ensureOrg } from "@/lib/org";
 import { FLAT_STEPS, lockReason, stepDef, stepIndex, type StageKey } from "@/lib/spine";
 import { advance, money, recordEvent, when, type Transaction, type TxEvent } from "@/lib/tx";
-import { setCounterpartyShortlist } from "@/lib/izenzo.functions";
+import { setCounterpartyShortlist, searchCounterparties } from "@/lib/izenzo.functions";
 import { enrichCounterparty } from "@/lib/counterpartyOutreach.functions";
 import { dedupeOrgs } from "@/lib/dedupeOrgs";
 import { keepForBid, loadBidRelevance } from "@/lib/bidRelevance";
@@ -1184,6 +1184,12 @@ export function CounterpartyRecord({
   const qc = useQueryClient();
   const setShortlist = useServerFn(setCounterpartyShortlist);
   const enrichContact = useServerFn(enrichCounterparty);
+  const runAiPlusSearch = useServerFn(searchCounterparties);
+  // AI+ is a deeper, heavier search pass. It has nothing to be deep about until a person has
+  // actually shortlisted candidates from the first (lighter, "AI") search, so it's requested once
+  // per transaction the first time that happens here, rather than run for every search regardless
+  // of whether anyone has looked at the results yet.
+  const aiPlusRequested = useRef<Set<string>>(new Set());
   const raiseChallengeFn = useServerFn(raiseChallenge);
   const listChallengesFn = useServerFn(listChallenges);
   const [pickedId, setPickedId] = useState<string | null>(null);
@@ -1414,6 +1420,17 @@ export function CounterpartyRecord({
         void enrichContact({ data: { counterpartyId: c.id } })
           .then(() => qc.invalidateQueries({ queryKey: ["counterparties", txId] }))
           .catch(() => {});
+        // The first time a candidate is actually shortlisted for this transaction, run the
+        // deeper AI+ pass over it — never before, and never more than once per transaction here.
+        if (txId && !aiPlusRequested.current.has(txId)) {
+          aiPlusRequested.current.add(txId);
+          void runAiPlusSearch({ data: { transactionId: txId, kind: "ai_plus" } })
+            .then(() => qc.invalidateQueries({ queryKey: ["counterparties", txId] }))
+            .catch(() => {
+              // Best-effort — AI+ failing here must never disrupt the shortlist the person just made.
+              aiPlusRequested.current.delete(txId);
+            });
+        }
       }
     } catch (err) {
       toast.error((err as Error).message);
