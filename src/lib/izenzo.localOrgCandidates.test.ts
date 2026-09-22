@@ -30,10 +30,12 @@ describe("localOrgCandidates", () => {
     expect(emails.get("cocoa processing")).toBe("trade@cocoaprocessing.example");
   });
 
-  it("drops a registered organisation with no recorded email — nothing gained over web search", () => {
+  it("still surfaces a relevant registered organisation with no recorded email — it just has no email ready until enrichment finds one", () => {
     const orgs = [row({ name: "Cocoa Processing Company Limited", sector: "Cocoa processing" })];
-    const { candidates } = localOrgCandidates(orgs, "cocoa buyer", "");
-    expect(candidates).toEqual([]);
+    const { candidates, emails } = localOrgCandidates(orgs, "cocoa buyer", "");
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]?.name).toBe("Cocoa Processing Company Limited");
+    expect(emails.size).toBe(0);
   });
 
   it("excludes the bidder's own organisation, matched by normalised name", () => {

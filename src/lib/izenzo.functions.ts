@@ -276,10 +276,11 @@ export type LocalOrgRow = {
 };
 
 /** Turns registered-organisation rows into search candidates: keeps only the ones relevant to
- * this search, excludes the bidder's own organisation, and skips anything without a recorded
- * contact email (an org with no email on file gives this step nothing over the ordinary AI/web
- * search). Exported for direct testing — the DB query stays inline in searchCounterparties, since
- * that's the one part that needs a live Supabase connection. */
+ * this search and excludes the bidder's own organisation. A recorded contact email is a bonus
+ * (used straight away instead of needing enrichment) but never a requirement to be found — a real,
+ * relevant registered company with no email on file still belongs in the results. Exported for
+ * direct testing — the DB query stays inline in searchCounterparties, since that's the one part
+ * that needs a live Supabase connection. */
 export function localOrgCandidates(
   orgs: LocalOrgRow[],
   relevanceQuery: string,
@@ -289,7 +290,11 @@ export function localOrgCandidates(
   const emails = new Map<string, string>();
   const ownKey = nameKey(ownName);
   for (const org of orgs) {
-    if (!org.primary_contact_email) continue;
+    // A registered org with no saved contact email used to be excluded outright here — dropped
+    // from local matching entirely, no matter how relevant, rather than just missing a pre-filled
+    // email the same way any AI/web-found candidate would need enrichment for one. A real,
+    // well-matched registered company (e.g. one that simply hasn't filled in that field yet)
+    // should still surface; it just won't have an email ready until enrichment finds one.
     if (ownKey && (nameKey(org.name) || org.name.trim().toLowerCase()) === ownKey) continue;
     const candidate: CandidateResult = {
       name: org.name,
@@ -307,7 +312,9 @@ export function localOrgCandidates(
       )
     ) {
       candidates.push(candidate);
-      emails.set(nameKey(candidate.name) || candidate.name.toLowerCase(), org.primary_contact_email);
+      if (org.primary_contact_email) {
+        emails.set(nameKey(candidate.name) || candidate.name.toLowerCase(), org.primary_contact_email);
+      }
     }
   }
   return { candidates, emails };
@@ -685,7 +692,6 @@ export const searchCounterparties = createServerFn({ method: "POST" })
           .from("organisations")
           .select("name, sector, industry, offerings, ai_brief, country, website, primary_contact_email")
           .neq("id", tx.org_id)
-          .not("primary_contact_email", "is", null)
           .limit(300);
         const local = localOrgCandidates((orgs ?? []) as LocalOrgRow[], relevanceQuery, ownOrg?.name ?? "");
         localMatches = local.candidates;

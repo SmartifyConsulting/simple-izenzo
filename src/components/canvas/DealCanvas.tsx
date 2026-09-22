@@ -1491,29 +1491,76 @@ export function CounterpartyRecord({
               : "Select a counterparty to continue"}
         </p>
 
-        {CHALLENGES_FEATURE_ENABLED && txId && (
-          <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1">
+          {/* Available whenever there's still a choice to be made — not just once a search comes
+              back empty. A single 45%-match candidate is as much "this needs a better search" as
+              zero candidates is. */}
+          {onSearchAgain && !searching && !screeningDone && !continued && !editingSearch && (
             <button
               type="button"
-              onClick={() => setGovernanceOpen(true)}
-              title="View governance record"
+              onClick={() => {
+                setEditedPrompt(searchPrompt ?? "");
+                setEditingSearch(true);
+              }}
+              title="Edit the search and try again"
               className="flex items-center gap-1 rounded p-1 text-[11px] font-medium text-slate-500 hover:bg-slate-200 hover:text-slate-800"
             >
-              <ScrollText className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Governance record</span>
+              <Pencil className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Edit Search</span>
             </button>
-            <button
-              type="button"
-              onClick={() => setChallengeOpen(true)}
-              title="Raise a challenge"
-              className="flex items-center gap-1 rounded p-1 text-[11px] font-medium text-slate-500 hover:bg-slate-200 hover:text-destructive"
-            >
-              <ShieldAlert className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Raise a challenge</span>
-            </button>
-          </div>
-        )}
+          )}
+          {CHALLENGES_FEATURE_ENABLED && txId && (
+            <>
+              <button
+                type="button"
+                onClick={() => setGovernanceOpen(true)}
+                title="View governance record"
+                className="flex items-center gap-1 rounded p-1 text-[11px] font-medium text-slate-500 hover:bg-slate-200 hover:text-slate-800"
+              >
+                <ScrollText className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Governance record</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setChallengeOpen(true)}
+                title="Raise a challenge"
+                className="flex items-center gap-1 rounded p-1 text-[11px] font-medium text-slate-500 hover:bg-slate-200 hover:text-destructive"
+              >
+                <ShieldAlert className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Raise a challenge</span>
+              </button>
+            </>
+          )}
+        </div>
       </div>
+
+      {editingSearch && (
+        <div className="mt-2 space-y-1.5 rounded-lg border border-slate-300 bg-white p-2.5">
+          <Textarea
+            rows={2}
+            value={editedPrompt}
+            onChange={(e) => setEditedPrompt(e.target.value)}
+            autoFocus
+            className="min-h-0 resize-none text-sm"
+          />
+          <div className="flex gap-1.5">
+            <Button
+              size="sm"
+              className="flex-1"
+              disabled={editedPrompt.trim().length === 0}
+              onClick={() => {
+                setEditingSearch(false);
+                onSearchAgain?.(editedPrompt.trim());
+              }}
+            >
+              Search
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setEditingSearch(false)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* The record of what the search found, kept plain inside the workspace's Search Results
           frame — no second heading, and no repeat of the screening findings, which have their own
@@ -1585,33 +1632,10 @@ export function CounterpartyRecord({
               </Button>
             )}
           </div>
-        ) : editingSearch ? (
-          <div className="mt-2 space-y-1.5">
-            <Textarea
-              rows={2}
-              value={editedPrompt}
-              onChange={(e) => setEditedPrompt(e.target.value)}
-              autoFocus
-              className="min-h-0 resize-none text-sm"
-            />
-            <div className="flex gap-1.5">
-              <Button
-                size="sm"
-                className="flex-1"
-                disabled={editedPrompt.trim().length === 0}
-                onClick={() => {
-                  setEditingSearch(false);
-                  onSearchAgain?.(editedPrompt.trim());
-                }}
-              >
-                Search
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => setEditingSearch(false)}>
-                Cancel
-              </Button>
-            </div>
-          </div>
-        ) : (
+        ) : !editingSearch ? (
+          // The edit form itself (and its own trigger, in the empty case since the header's
+          // title is blank with nothing to show) lives once, in the shared block above the
+          // candidates list — this is just the plain status line.
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <p className="text-xs text-slate-500">
               {error
@@ -1634,7 +1658,7 @@ export function CounterpartyRecord({
               </Button>
             )}
           </div>
-        )
+        ) : null
       ) : mediaResults ? null : (
         // Once media results are in, the Online Media Screening accordion below carries the
         // selection control (circle/checkbox), match % and subtext itself — repeating the same
