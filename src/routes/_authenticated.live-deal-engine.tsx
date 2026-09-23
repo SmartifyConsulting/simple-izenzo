@@ -736,7 +736,7 @@ function LiveDealEngine() {
   );
   const kindWord = workspaceKind === "offer" ? "Offer" : workspaceKind === "bid" ? "Bid" : "Bid/Offer";
   const registrationLabel = `${kindWord} Registration`;
-  const informationLabel = `${kindWord} Information`;
+  const informationLabel = `${kindWord} Information and Documentation`;
   const registrationPill =
     workspaceKind === "offer"
       ? "bg-[#4169e1] text-white"

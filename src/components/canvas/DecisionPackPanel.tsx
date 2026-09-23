@@ -1,16 +1,9 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, X, Loader2, Sparkles } from "lucide-react";
+import { Check, X, ChevronDown, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { runDecisionPack, decideProposal, type StageContext } from "@/lib/decisionPack.functions";
 import { confidenceOf, EVIDENCE_LABEL, parseEvidenceRefs } from "@/lib/confidence";
 
@@ -36,7 +29,7 @@ const HEADING: Record<StageContext, string> = {
 };
 
 const PILL_LABEL: Record<StageContext, string> = {
-  choice_made: "RUN AI+ ANALYSIS",
+  choice_made: "AI+ RECOMMENDATIONS",
   intent_confirmed: "AI+ RECOMMENDATIONS",
   poi_sealed: "AI+ RECOMMENDATIONS",
   wad_updated: "AI+ RECOMMENDATIONS",
@@ -187,150 +180,158 @@ export function DecisionPackPanel({
 
   // Nothing is left to decide: no control, just the quiet record that it happened. The filed
   // document lives in the Documents panel.
-  /** Closing is always allowed. While gating, the set still has to be answered before the next step
-   * opens, and the button above brings this window back. */
-  function closeModal() {
-    setOpen(false);
-    if (gating && pending > 0) {
-      toast.info("You still need to accept or reject each recommendation before the next step opens.");
-    }
-  }
-
-  if (allDecided && !open) {
-    return (
-      <p className="px-1 text-[11px] text-muted-foreground">
-        {nothingToAdd ? "AI+ had nothing to add here." : "AI+ recommendations recorded — filed in Documents."}
-      </p>
-    );
-  }
+  // Status text for the collapsed header — one line, changes with what's actually happening.
+  const statusText = !started
+    ? "Not run yet"
+    : busy
+      ? "Analysing…"
+      : error
+        ? error
+        : nothingToAdd
+          ? "Nothing to add"
+          : allDecided
+            ? "Reviewed — click to see what it found"
+            : `${pending} to review`;
 
   return (
-    <>
-      {/* Explained up front, always visible — not a tooltip — so pressing this isn't a leap of
-          faith. Only shown before the first run; once results exist the explanation would just be
-          clutter next to the actual findings. */}
-      {!started && VALUE_EXPLANATION[stageContext] && (
-        <p className="mb-2 rounded-lg bg-orange-500/5 p-2.5 text-[11px] leading-relaxed text-foreground/80">
-          <Sparkles className="mr-1 inline h-3 w-3 text-orange-500" />
-          {VALUE_EXPLANATION[stageContext]}
-        </p>
-      )}
-      <div className="flex items-center gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={busy || (started && (Boolean(error) || (proposals ?? []).length === 0))}
-          onClick={() => (started ? setOpen(true) : setStarted(true))}
-          className={cn(
-            "h-8 gap-2 rounded-full border-orange-500/60 px-3 text-[11px] font-semibold text-orange-600 hover:bg-orange-500/10",
-            !started && "animate-pulse",
-          )}
-        >
-          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-          {PILL_LABEL[stageContext]}
+    <div className="rounded-2xl border border-border bg-card">
+      {/* A permanent, foldable frame — not a one-off popup — so what AI+ found (and what was
+          decided about it) stays reviewable for the rest of the deal, the same way Confirmed
+          Intent and Seal Intent stay reviewable as folded records elsewhere in the workspace. */}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-2 px-3.5 py-2 text-left"
+        aria-expanded={open}
+      >
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="label-caps inline-flex shrink-0 items-center gap-1 rounded-full bg-orange-500/10 px-2.5 py-1 text-orange-600">
+            <Sparkles className="h-3 w-3" /> AI+ Recommendations
+          </span>
+          <span className={cn("min-w-0 truncate text-[11px]", error ? "text-destructive" : "text-muted-foreground")}>
+            {statusText}
+          </span>
           {started && !busy && pending > 0 && (
-            <span className="rounded-full bg-orange-500 px-1.5 py-0.5 text-[10px] text-white">
+            <span className="shrink-0 rounded-full bg-orange-500 px-1.5 py-0.5 text-[10px] text-white">
               {pending}
             </span>
           )}
-        </Button>
-        {busy && <span className="text-[11px] text-muted-foreground">AI+ is analysing…</span>}
-        {error && (
-          <>
-            <span className="text-[11px] text-destructive">{error}</span>
+        </span>
+        <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} />
+      </button>
+
+      {open && (
+        <div className="space-y-2 px-3.5 pb-3">
+          {/* Explained up front, always visible — not a tooltip — so pressing this isn't a leap of
+              faith. Only shown before the first run. */}
+          {!started && VALUE_EXPLANATION[stageContext] && (
+            <p className="rounded-lg bg-orange-500/5 p-2.5 text-[11px] leading-relaxed text-foreground/80">
+              {VALUE_EXPLANATION[stageContext]}
+            </p>
+          )}
+
+          {!started && (
             <Button
               type="button"
-              variant="outline"
               size="sm"
-              onClick={() => setRetryTick((n) => n + 1)}
-              className="h-7 rounded-full border-destructive/50 px-3 text-[11px] font-semibold text-destructive hover:bg-destructive/10"
+              onClick={() => setStarted(true)}
+              className="gap-2 rounded-full bg-orange-500 text-white hover:bg-orange-500/90"
             >
-              Try again
+              <Sparkles className="h-3.5 w-3.5" />
+              {PILL_LABEL[stageContext]}
             </Button>
-          </>
-        )}
-        {started && !busy && !error && (proposals ?? []).length === 0 && (
-          <span className="text-[11px] text-muted-foreground">AI+ had nothing to add here.</span>
-        )}
-        {/* The gate itself lives here, next to the button that opens it, rather than as a
-            separate message elsewhere in the workspace. */}
-        {!busy && !error && gating && pending > 0 && (
-          <span className="text-[11px] text-muted-foreground">
-            Accept or reject each AI+ proposal above, then {gatedStepLabel} opens.
-          </span>
-        )}
-        {/* Testing shortcut, explicitly requested: with pending proposals on hand it does exactly
-            what "Accept all" inside the modal already does (records a real accepted decision
-            against every one — same decideProposal call, same audit trail), just reachable without
-            opening the modal first and even with only one proposal (Accept all only shows at 2+).
-            With nothing loaded at all — AI+ erroring, e.g. not configured — there is nothing to
-            accept, so it just tells the caller "treat this as decided" directly instead. Shown
-            alongside "Try again" too: testing often means skipping past an error, not waiting on
-            it to clear. */}
-        {!busy && gating && (error || pending > 0) && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            disabled={selectingAll || deciding !== null}
-            onClick={() => (pending > 0 ? void decideAll("accepted") : onAllDecided?.(true))}
-            className="h-7 gap-1 rounded-full border border-dashed border-muted-foreground/40 px-2.5 text-[10px] font-semibold text-muted-foreground hover:text-foreground"
-          >
-            {selectingAll ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-            Skip (testing) — accept all
-          </Button>
-        )}
-      </div>
+          )}
 
-      <Dialog
-        open={open}
-        onOpenChange={(v) => (v ? setOpen(true) : closeModal())}
-      >
-        <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <Sparkles className="h-4 w-4 text-orange-500" /> AI+ Recommendations
-              <span className="label-caps rounded-full bg-orange-500/10 px-2 py-0.5 text-[9px] font-semibold text-orange-600">
-                Powered by AI+
-              </span>
-            </DialogTitle>
-            <DialogDescription className="text-[11px]">
-              {HEADING[stageContext]}. AI+ is advisory — it cannot select, change or seal anything.
-              You decide, and your decision is recorded against your name.
-            </DialogDescription>
-          </DialogHeader>
+          {error && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] text-destructive">{error}</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setRetryTick((n) => n + 1)}
+                className="h-7 rounded-full border-destructive/50 px-3 text-[11px] font-semibold text-destructive hover:bg-destructive/10"
+              >
+                Try again
+              </Button>
+              {/* Testing shortcut: with nothing loaded at all there's nothing to accept, so this
+                  just tells the caller "treat this as decided" directly instead. */}
+              {gating && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onAllDecided?.(true)}
+                  className="h-7 gap-1 rounded-full border border-dashed border-muted-foreground/40 px-2.5 text-[10px] font-semibold text-muted-foreground hover:text-foreground"
+                >
+                  <Check className="h-3 w-3" />
+                  Skip (testing) — treat as decided
+                </Button>
+              )}
+            </div>
+          )}
+
+          {started && !busy && !error && nothingToAdd && (
+            <p className="text-[11px] text-muted-foreground">AI+ had nothing to add here.</p>
+          )}
+
+          {started && !busy && !error && (proposals ?? []).length > 0 && (
+            <>
+              {gating && pending > 0 && (
+                <p className="text-[11px] text-muted-foreground">
+                  Accept or reject each proposal below, then {gatedStepLabel} opens.
+                </p>
+              )}
+              <div className="flex flex-wrap items-center justify-end gap-1.5">
+                {/* Testing shortcut, explicitly requested: does exactly what "Accept all" below
+                    already does, reachable even with only one proposal (Accept all only shows at
+                    2+). */}
+                {gating && pending > 0 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={selectingAll || deciding !== null}
+                    onClick={() => void decideAll("accepted")}
+                    className="h-7 gap-1 rounded-full border border-dashed border-muted-foreground/40 px-2.5 text-[10px] font-semibold text-muted-foreground hover:text-foreground"
+                  >
+                    {selectingAll ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                    Skip (testing) — accept all
+                  </Button>
+                )}
+                {pending > 1 && (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 gap-1 rounded-full px-2.5 text-[11px]"
+                      disabled={selectingAll || deciding !== null}
+                      onClick={() => void decideAll("rejected")}
+                    >
+                      <X className="h-3 w-3" />
+                      Reject all
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 gap-1 rounded-full px-2.5 text-[11px]"
+                      disabled={selectingAll || deciding !== null}
+                      onClick={() => void decideAll("accepted")}
+                    >
+                      {selectingAll ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Check className="h-3 w-3" />
+                      )}
+                      Accept all
+                    </Button>
+                  </>
+                )}
+              </div>
+            </>
+          )}
 
           <div className="space-y-2">
-            {pending > 1 && (
-              <div className="flex justify-end gap-1.5">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 gap-1 rounded-full px-2.5 text-[11px]"
-                  disabled={selectingAll || deciding !== null}
-                  onClick={() => void decideAll("rejected")}
-                >
-                  <X className="h-3 w-3" />
-                  Reject all
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 gap-1 rounded-full px-2.5 text-[11px]"
-                  disabled={selectingAll || deciding !== null}
-                  onClick={() => void decideAll("accepted")}
-                >
-                  {selectingAll ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <Check className="h-3 w-3" />
-                  )}
-                  Accept all
-                </Button>
-              </div>
-            )}
-
             {(proposals ?? []).map((p) => {
               const refs = parseEvidenceRefs(p.source_references);
               const confidence = confidenceOf(refs, p.probability == null ? null : Number(p.probability));
@@ -473,14 +474,8 @@ export function DecisionPackPanel({
               );
             })}
           </div>
-
-          <div className="flex justify-end pt-1">
-            <Button type="button" variant="outline" size="sm" onClick={closeModal}>
-              Close
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+        </div>
+      )}
+    </div>
   );
 }

@@ -1725,12 +1725,26 @@ export function CounterpartyRecord({
                       {c.score}% match
                     </span>
                   )}
-                  {/* Added by AI+'s own analysis of the result set — not something the search
-                      itself independently verified, so it's marked distinctly rather than blended
-                      in as if it were an ordinary search hit. */}
-                  {c.source === "ai_plus_recommendation" && (
+                  {/* The list combines results from more than one pass — the first (lighter)
+                      search, the deeper "Extended Search" pass, and now AI+ Recommendations'
+                      own finds — so each is badged with exactly which one delivered it, rather
+                      than reading as one undifferentiated list. */}
+                  {(c.source === "ai_search" || c.source === "web_search" || c.source === "ai") && (
+                    <span className="shrink-0 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                      AI
+                    </span>
+                  )}
+                  {c.source === "ai_plus_search" && (
                     <span className="shrink-0 rounded-full border border-orange-500/50 bg-orange-500/10 px-2 py-0.5 text-[10px] font-semibold text-orange-600">
-                      AI+ result
+                      AI+
+                    </span>
+                  )}
+                  {c.source === "ai_plus_recommendation" && (
+                    <span
+                      title="Added by AI+ Recommendations — a counterparty the search itself didn't independently verify"
+                      className="shrink-0 rounded-full border border-orange-500/50 bg-orange-500/10 px-2 py-0.5 text-[10px] font-semibold text-orange-600"
+                    >
+                      AI+
                     </span>
                   )}
                 </span>
