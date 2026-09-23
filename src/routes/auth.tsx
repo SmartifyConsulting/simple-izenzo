@@ -45,8 +45,18 @@ function AuthPage() {
     if (!loading && session) navigate({ to: safeNext(next), replace: true });
   }, [loading, session, next, navigate]);
 
+  // A counterparty following the "View this opportunity" link from an email lands here first
+  // (the _authenticated layout sends anyone signed out through here and back) — say what signing
+  // in or creating an account is actually for, rather than a generic sign-in screen with no context.
+  const forOpportunity = Boolean(next && next.startsWith("/counterparty/claim"));
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-muted/40 px-5 py-12">
+      {forOpportunity && (
+        <p className="w-full max-w-sm rounded-xl border border-border bg-background px-4 py-3 text-center text-sm font-medium">
+          To view your opportunity, sign in or sign up.
+        </p>
+      )}
       {expired && (
         <p className="w-full max-w-sm rounded-xl border border-border bg-background px-4 py-3 text-xs text-muted-foreground">
           Your session expired — please sign in again to continue.

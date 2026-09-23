@@ -29,9 +29,28 @@ export const claimCounterparty = createServerFn({ method: "POST" })
       .select("org_id")
       .eq("user_id", userId)
       .maybeSingle();
-    const myOrgId = membership?.org_id as string | undefined;
+    let myOrgId = membership?.org_id as string | undefined;
     if (!myOrgId) {
-      throw new Error("You need to belong to an organisation on Izenzo first — create or join one, then use this link again.");
+      // A brand-new counterparty following this link from an email has just signed up for the
+      // first time — they haven't been through (and shouldn't have to go through) a separate
+      // "create your company" step before they can even see the opportunity they were invited to.
+      // Give them the same lightweight personal organisation ensureOrg() creates for a bidder in
+      // the same situation, named after them, rather than dead-ending here.
+      const { data: profile } = await supabase.from("profiles").select("full_name, email").eq("id", userId).maybeSingle();
+      const displayName =
+        (profile as { full_name?: string | null; email?: string | null } | null)?.full_name ||
+        (profile as { full_name?: string | null; email?: string | null } | null)?.email ||
+        "My account";
+      const { data: newOrg, error: orgErr } = await supabase
+        .from("organisations")
+        .insert({ name: displayName })
+        .select("id")
+        .single();
+      if (orgErr) throw new Error(orgErr.message);
+      myOrgId = newOrg.id as string;
+      const { error: mErr } = await supabase.from("org_members").insert({ org_id: myOrgId, user_id: userId, role: "owner" });
+      if (mErr) throw new Error(mErr.message);
+      await supabase.from("profiles").update({ org_id: myOrgId }).eq("id", userId);
     }
 
     const { data: tx, error: txErr } = await supabase
