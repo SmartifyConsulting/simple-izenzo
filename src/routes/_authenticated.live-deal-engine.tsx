@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -2071,7 +2071,20 @@ function LiveDealEngine() {
                 </button>
               </div>
             </div>
-            <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
+            <div
+              className="mt-3 min-h-0 flex-1 overflow-y-auto"
+              // The active-step pulse reads as royal blue rather than the usual aqua/primary
+              // accent when this org is the counterparty on this deal — a quick visual cue for
+              // which side of the deal you're looking at, matching the blue already used for
+              // "Offer" elsewhere in the workspace. --throb-accent is what animate-throb-aqua
+              // actually pulses, so overriding it here cascades to both the map and the classic
+              // stepper without touching either component.
+              style={
+                org?.id && dealTx?.counterparty_org_id === org.id
+                  ? ({ "--throb-accent": "#4169e1" } as CSSProperties)
+                  : undefined
+              }
+            >
               {/* The map scales to fit the panel, so this scrollbar shouldn't usually need to
                   move — but it's a real native scrollbar (not custom buttons) as a fallback for
                   a short/narrow window where the scaled map is still taller than the panel. */}
