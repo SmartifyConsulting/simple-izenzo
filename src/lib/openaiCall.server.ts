@@ -22,12 +22,13 @@ function saysNoCredit(message: string): boolean {
   return m.includes("no credits remaining") || m.includes("exceeded your current quota") || m.includes("add credits");
 }
 
-async function errorCodeOf(res: Response): Promise<string | undefined> {
+async function isTerminalResponse(res: Response): Promise<boolean> {
   const payload = (await res
     .clone()
     .json()
-    .catch(() => null)) as { error?: { code?: string; type?: string }; type?: string } | null;
-  return payload?.error?.code ?? payload?.error?.type ?? payload?.type;
+    .catch(() => null)) as { error?: { code?: string; type?: string; message?: string }; type?: string } | null;
+  const code = payload?.error?.code ?? payload?.error?.type ?? payload?.type;
+  return isTerminalAccountCode(code) || saysNoCredit(payload?.error?.message ?? "");
 }
 
 /** Sends one chat request, retrying only genuinely transient refusals (429 and 5xx) with bounded
