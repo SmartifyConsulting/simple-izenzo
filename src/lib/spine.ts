@@ -56,7 +56,7 @@ export const SPINE: StageDef[] = [
     steps: [
       {
         key: "business-docs",
-        label: "Business Docs",
+        label: "Legal Agreements",
         blurb: "Upload the NDA, MOU and any other contracts for this deal.",
       },
       { key: "entry", label: "Execution Entry", blurb: "Open execution and record the entry position." },

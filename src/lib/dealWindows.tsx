@@ -156,7 +156,12 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
     keyRef.current = key;
     closedKeyRef.current = closedKeyFor(user?.id ?? null);
     userIdRef.current = user?.id ?? null;
-    setWindows(readAll(key));
+    // The taskbar starts empty on every sign-in rather than restoring whatever was left open
+    // last time — both the in-memory state and the stored copy, so a stale entry can't leak back
+    // in the moment something else calls readAll(). Tabs opened from here on (register/open) are
+    // still remembered for the rest of this session, and still written to storage as usual.
+    setWindows([]);
+    writeAll(key, []);
     const onStorage = (e: StorageEvent) => {
       if (e.key === key) setWindows(readAll(key));
     };

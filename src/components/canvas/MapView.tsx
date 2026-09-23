@@ -147,9 +147,9 @@ const MEMORY = { cx: 390, cy: 555, r: 147 };
 
 // The otherwise-empty band between Step 1's frame and Memory's own top edge — every uploaded
 // document lands here instead of sitting in a plain list inside Bid Information, so there's one
-// place on the canvas that visibly fills up as the deal collects paperwork. A small square sitting
-// left of Memory rather than a wide pill centred on it.
-const DOCS_BOX: Box = { x: 90, y: 320, w: 100, h: 100 };
+// place on the canvas that visibly fills up as the deal collects paperwork. Sized to half of
+// Memory's own diameter (2 * MEMORY.r), sitting left of it with clear air between the two.
+const DOCS_BOX: Box = { x: 75, y: 320, w: MEMORY.r, h: MEMORY.r };
 
 
 
@@ -698,9 +698,9 @@ export function MapView({
         {/* Step 2 — compliance & governance */}
         {node("poi", "Seal Intent", "trading", "poi", Building2, { overrideKey: "poi" })}
 
-        {/* After Seal Intent the Responder reviews The Offer: Approve, Reject or Challenge — the
+        {/* After Seal Intent the Responder reviews the Offer: Approve, Reject or Challenge — the
             Counter Offer loop can go back and forth until agreement, which opens Without a Doubt. */}
-        {node("offer", "The Offer", "compliance", "wad", Tag, { noArtefact: true })}
+        {node("offer", "Offer", "compliance", "wad", Tag, { noArtefact: true })}
         {node("counterOffer", "Counter Offer", "compliance", "wad", undefined, {
           state: overrideStates?.["counterOffer"] ?? (lock("compliance", "wad") ? "locked" : "open"),
           noArtefact: true,
@@ -710,7 +710,7 @@ export function MapView({
           sub: "KYC & KYB on each other",
           subTone: "gate",
         })}
-        {node("businessDocs", "Business Docs", "execution", "business-docs", FolderClosed, {
+        {node("businessDocs", "Legal Agreements", "execution", "business-docs", FolderClosed, {
           sub: "Digital sign-off by both parties",
           overrideKey: "businessDocs",
         })}

@@ -137,7 +137,7 @@ function DealSearchDialog({
  * of pill buttons. Rendered once from the root so it persists across every authenticated page,
  * not just Live Deal Engine — but never shows on the marketing site itself. */
 export function WorkspaceTaskbar() {
-  const { windows, setMode, close, reorder, hydrate, storedOpenIds } = useDealWindows();
+  const { windows, setMode, close, reorder } = useDealWindows();
   const { org, user } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -154,35 +154,9 @@ export function WorkspaceTaskbar() {
   const [cancelling, setCancelling] = useState(false);
   const cancelBidFn = useServerFn(cancelBid);
 
-  // Exactly the deals this person left open, read from their own account — not a guess from their
-  // most recent bids, which is what kept putting closed tabs back. Cancelled bids are left out.
-  const { data: savedDeals } = useQuery({
-    queryKey: ["taskbar-deals", user?.id, (storedOpenIds ?? []).join(",")],
-    enabled: Boolean(user?.id) && Array.isArray(storedOpenIds) && storedOpenIds.length > 0,
-    queryFn: async () => {
-      const ids = storedOpenIds ?? [];
-      const { data, error } = await supabase
-        .from("transactions")
-        .select("id, reference, title, commodity, status")
-        .in("id", ids);
-      if (error) throw error;
-      const order = new Map(ids.map((id, i) => [id, i]));
-      return (data ?? [])
-        .map((t) => t as { id: string; reference: string | null; title: string | null; commodity: string | null; status: string | null })
-        .filter((t) => (t.status ?? "") !== "cancelled")
-        // Left-to-right in the order they were opened or arranged.
-        .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))
-        .map((t) => ({
-          id: t.id,
-          label: t.reference ?? fallbackReference(t.id, "bid"),
-          name: t.commodity ?? t.title ?? undefined,
-        }));
-    },
-  });
-
-  useEffect(() => {
-    if (savedDeals && savedDeals.length > 0) hydrate(savedDeals);
-  }, [savedDeals, hydrate]);
+  // The taskbar deliberately no longer restores whatever was left open last time (see
+  // DealWindowsProvider's own sign-in effect) — it starts empty on every sign-in, and only ever
+  // shows tabs actually opened during the current session.
 
   /** Closing the last tab must leave a genuinely empty workspace — otherwise a later visit
    * resumes the bid that was just closed, name, bidder details and all. */

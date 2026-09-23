@@ -2297,7 +2297,7 @@ function BusinessDocsStep({ tx, reload }: Props) {
   return (
     <div className="space-y-6">
       <Panel
-        title="Business Docs"
+        title="Legal Agreements"
         description="Upload the NDA, MOU and any other contracts for this deal — each one is added to the Bid Information archive automatically."
         footer={
           <div className="flex justify-end">

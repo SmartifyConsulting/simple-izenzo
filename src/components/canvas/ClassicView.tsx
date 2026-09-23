@@ -98,7 +98,7 @@ const STEPS: StepDef[] = [
         icon: ShieldCheck,
         sub: "Hard gate · non-waivable",
       },
-      { key: "businessDocs", label: "Business Docs", stage: "execution", step: "business-docs", icon: FolderClosed },
+      { key: "businessDocs", label: "Legal Agreements", stage: "execution", step: "business-docs", icon: FolderClosed },
     ],
   },
   {

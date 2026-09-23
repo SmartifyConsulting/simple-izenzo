@@ -812,7 +812,7 @@ export function InlineFrame({
   // appears only once agreement is reached.
   const def =
     isWad && engagement && engagement.decided !== "accepted"
-      ? { key: "offer", label: "The Offer", blurb: "Agree the terms with the counterparty. Without a Doubt opens once they approve." }
+      ? { key: "offer", label: "Offer", blurb: "Agree the terms with the counterparty. Without a Doubt opens once they approve." }
       : baseDef;
   const locked = lockReason(stage, step, tx);
   const canChangeParty =
