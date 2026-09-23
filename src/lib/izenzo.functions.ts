@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { POI_COST, WAD_COST } from "@/lib/spine";
 import { userFacingText } from "@/lib/userFacingText";
-import { isRelevant } from "@/lib/relevance";
+import { isRelevant, relevanceTerms } from "@/lib/relevance";
 import { guessSideFromWording } from "@/lib/tradeSide";
 import { nameKey } from "@/lib/dedupeOrgs";
 
@@ -732,16 +732,26 @@ export const searchCounterparties = createServerFn({ method: "POST" })
     {
       const t0 = Date.now();
       try {
-        const { data: orgs } = await supabase
+        const searchCols = ["name", "sector", "industry", "offerings", "ai_brief"] as const;
+        const terms = relevanceTerms(relevanceQuery);
+        let query = supabase
           .from("organisations")
           .select("name, sector, industry, offerings, ai_brief, country, website, primary_contact_email")
-          .neq("id", tx.org_id)
-          // Without an explicit order, which 300 rows a table past that size returns is whatever
-          // order Postgres happens to hand back — not guaranteed to be the same rows twice, and
-          // not guaranteed to include any particular organisation at all. Most-recently-updated
-          // first is at least deterministic and biases toward the freshest, most complete profiles.
-          .order("updated_at", { ascending: false })
-          .limit(300);
+          .neq("id", tx.org_id);
+        if (terms.length > 0) {
+          // Matching in the database, on the query's own terms, instead of pulling an arbitrary
+          // recency-ordered sample and filtering client-side — otherwise a genuinely relevant
+          // organisation that simply hasn't been touched recently (which has nothing to do with
+          // whether it's someone's *active* organisation; every registered org is an equally valid
+          // search candidate regardless of whose "primary" it is) could fall outside a fixed-size
+          // page and never even be considered, no matter how good a match it is.
+          query = query.or(searchCols.map((col) => terms.map((t) => `${col}.ilike.%${t}%`).join(",")).join(","));
+        } else {
+          // Nothing distinctive to match on (an all-generic query) — fall back to a bounded,
+          // deterministic sample rather than the whole table.
+          query = query.order("updated_at", { ascending: false }).limit(300);
+        }
+        const { data: orgs } = await query;
         const local = localOrgCandidates((orgs ?? []) as LocalOrgRow[], relevanceQuery, ownOrg?.name ?? "");
         localMatches = local.candidates;
         localEmails = local.emails;
