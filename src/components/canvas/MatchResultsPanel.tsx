@@ -108,6 +108,27 @@ export function MatchResultsPanel({
     },
   });
 
+  /** What the last search found but did not keep, and why — recorded on the search's own event, so
+   * an empty or short result list can be explained instead of leaving the person guessing. */
+  const notKept = useQuery({
+    queryKey: ["search-not-kept", transactionId],
+    enabled: Boolean(transactionId),
+    queryFn: async (): Promise<{ name: string; reason: string }[]> => {
+      const { data, error } = await supabase
+        .from("transaction_events")
+        .select("payload")
+        .eq("transaction_id", transactionId!)
+        .eq("action", "counterparty_search_completed")
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (error) throw error;
+      const payload = (data?.[0]?.payload ?? {}) as { notKept?: { name?: string; reason?: string }[] };
+      return (payload.notKept ?? [])
+        .map((r) => ({ name: String(r.name ?? "").trim(), reason: String(r.reason ?? "").trim() }))
+        .filter((r) => r.name.length > 0);
+    },
+  });
+
   const directory = useQuery({
     queryKey: ["all-matches", terms.join(",")],
     enabled: !transactionId,
