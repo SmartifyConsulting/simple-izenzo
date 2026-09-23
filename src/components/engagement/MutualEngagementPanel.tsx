@@ -1,0 +1,512 @@
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
+import { CheckCircle2, FileSignature, Loader2, MessageSquareWarning, ShieldCheck, XCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+import {
+  getEngagement,
+  listSignableDocuments,
+  respondToEngagement,
+  setDiligenceState,
+  setDocumentNeedsSignature,
+  signDocument,
+  type CheckState,
+  type Side,
+} from "@/lib/engagement.functions";
+
+const STATE_LABEL: Record<CheckState, string> = {
+  pending: "Not done yet",
+  passed: "Passed",
+  failed: "Not passed",
+  waived: "Switched off",
+};
+
+const STATE_TONE: Record<CheckState, string> = {
+  pending: "border-border bg-muted text-muted-foreground",
+  passed: "border-success/40 bg-success/10 text-success",
+  failed: "border-destructive/40 bg-destructive/10 text-destructive",
+  waived: "border-warning/40 bg-warning/15 text-warning-foreground",
+};
+
+function sideWord(side: Side) {
+  return side === "bidder" ? "the bidder" : "the counterparty";
+}
+
+function when(value: string | null | undefined) {
+  return value ? new Date(value).toLocaleString() : "";
+}
+
+/**
+ * The two-way part of an engagement, on one panel: each side's KYC and KYB checks on the other,
+ * the counterparty's accept / challenge / opt-out decision, and the documents both sides sign.
+ * Nothing here decides anything on its own — every state change is a person's own recorded action.
+ */
+export function MutualEngagementPanel({ transactionId }: { transactionId: string }) {
+  const qc = useQueryClient();
+  const load = useServerFn(getEngagement);
+  const setState = useServerFn(setDiligenceState);
+  const respond = useServerFn(respondToEngagement);
+  const listDocs = useServerFn(listSignableDocuments);
+  const sign = useServerFn(signDocument);
+  const setNeeds = useServerFn(setDocumentNeedsSignature);
+
+  const [busy, setBusy] = useState<string | null>(null);
+  const [waive, setWaive] = useState<{ check: "kyc" | "kyb" } | null>(null);
+  const [waiveReason, setWaiveReason] = useState("");
+  const [challengeOpen, setChallengeOpen] = useState(false);
+  const [challengeMessage, setChallengeMessage] = useState("");
+  const [signing, setSigning] = useState<{ id: string; name: string } | null>(null);
+  const [signerName, setSignerName] = useState("");
+
+  const { data: state, isLoading } = useQuery({
+    queryKey: ["engagement", transactionId],
+    queryFn: () => load({ data: { transactionId } }),
+  });
+
+  const { data: docs = [] } = useQuery({
+    queryKey: ["engagement-docs", transactionId],
+    queryFn: () => listDocs({ data: { transactionId } }),
+    enabled: Boolean(state),
+  });
+
+  async function refresh() {
+    await qc.invalidateQueries({ queryKey: ["engagement", transactionId] });
+    await qc.invalidateQueries({ queryKey: ["engagement-docs", transactionId] });
+    await qc.invalidateQueries({ queryKey: ["documents", transactionId] });
+  }
+
+  if (isLoading) return <p className="text-sm text-muted-foreground">Loading the engagement…</p>;
+  if (!state) return null;
+
+  const mine = state.diligence.find((d) => d.reviewer_side === state.side);
+  const theirs = state.diligence.find((d) => d.reviewer_side !== state.side);
+  const otherSide: Side = state.side === "bidder" ? "counterparty" : "bidder";
+  const otherName =
+    (otherSide === "counterparty" ? state.counterpartyName : state.bidderName) ?? sideWord(otherSide);
+
+  async function record(check: "kyc" | "kyb", next: CheckState, reason?: string) {
+    setBusy(`${check}-${next}`);
+    try {
+      await setState({ data: { transactionId, check, state: next, ...(reason ? { reason } : {}) } });
+      await refresh();
+      toast.success("Recorded.");
+      setWaive(null);
+      setWaiveReason("");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function sendResponse(response: "accepted" | "challenged" | "opted_out", message?: string) {
+    setBusy(response);
+    try {
+      await respond({ data: { transactionId, response, ...(message ? { message } : {}) } });
+      await refresh();
+      setChallengeOpen(false);
+      setChallengeMessage("");
+      toast.success(
+        response === "accepted"
+          ? "Accepted — the Business Docs frame is open for both of you."
+          : response === "challenged"
+            ? "Your challenge has been sent to the other party."
+            : "You've opted out of this engagement.",
+      );
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function doSign() {
+    if (!signing) return;
+    setBusy("sign");
+    try {
+      const res = await sign({ data: { transactionId, documentId: signing.id, signerName: signerName.trim() } });
+      await refresh();
+      setSigning(null);
+      setSignerName("");
+      toast.success(
+        res.bothSigned
+          ? "Signed by both parties — the signed record is now in Bid Information."
+          : "Signed. The other party still needs to sign.",
+      );
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  function DiligenceCard({
+    heading,
+    row,
+    editable,
+  }: {
+    heading: string;
+    row: typeof mine;
+    editable: boolean;
+  }) {
+    return (
+      <div className="space-y-3 rounded-xl border border-border p-4">
+        <p className="text-xs font-semibold">{heading}</p>
+        {(["kyc", "kyb"] as const).map((check) => {
+          const value = (row?.[`${check}_state`] ?? "pending") as CheckState;
+          const reason = row?.[`${check}_waiver_reason`] ?? null;
+          return (
+            <div key={check} className="space-y-1.5 border-t border-border pt-3 first:border-0 first:pt-0">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-xs font-medium">
+                  {check === "kyc" ? "KYC — the people" : "KYB — the company"}
+                </span>
+                <Badge variant="outline" className={cn(STATE_TONE[value])}>
+                  {STATE_LABEL[value]}
+                </Badge>
+              </div>
+              {reason && <p className="text-[11px] text-muted-foreground">Reason given: {reason}</p>}
+              {editable && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-[11px]"
+                    disabled={busy !== null || value === "passed"}
+                    onClick={() => void record(check, "passed")}
+                  >
+                    Record as passed
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 border-destructive/40 text-[11px] text-destructive hover:bg-destructive/10"
+                    disabled={busy !== null || value === "failed"}
+                    onClick={() => void record(check, "failed")}
+                  >
+                    Not passed
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-[11px]"
+                    disabled={busy !== null}
+                    onClick={() => {
+                      setWaive({ check });
+                      setWaiveReason("");
+                    }}
+                  >
+                    Switch off with a reason
+                  </Button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {row?.updated_at && (
+          <p className="text-[11px] text-muted-foreground">Last updated {when(row.updated_at)}</p>
+        )}
+      </div>
+    );
+  }
+
+  const signable = docs.filter((d) => d.requires_signature || d.signatures.length > 0 || d.fully_signed_at);
+  const canManageDocs = state.decided === "accepted";
+
+  return (
+    <div className="space-y-4">
+      <section className="rounded-xl border border-border">
+        <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+          <ShieldCheck className="h-4 w-4 text-primary" />
+          <h2 className="label-caps font-sans">Checks on each other</h2>
+        </div>
+        <div className="space-y-3 p-4">
+          {!state.counterpartyLinked ? (
+            <p className="text-xs text-muted-foreground">
+              The counterparty has not created an account and linked it to this deal yet. Once they do, both
+              sides can run their checks here.
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              {otherName} has an account on this deal. Both sides run KYC and KYB on each other. A check can be
+              switched off, but only with a written reason, which is kept on the record.
+            </p>
+          )}
+          <div className="grid gap-3 md:grid-cols-2">
+            <DiligenceCard heading={`Your checks on ${otherName}`} row={mine} editable={state.counterpartyLinked} />
+            <DiligenceCard heading={`${otherName}'s checks on you`} row={theirs} editable={false} />
+          </div>
+          {state.bothCleared && (
+            <p className="flex items-center gap-1.5 text-xs font-medium text-success">
+              <CheckCircle2 className="h-3.5 w-3.5" /> Both sides' checks are settled.
+            </p>
+          )}
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-border">
+        <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+          <MessageSquareWarning className="h-4 w-4 text-primary" />
+          <h2 className="label-caps font-sans">The engagement</h2>
+        </div>
+        <div className="space-y-3 p-4">
+          {state.decided === "accepted" && (
+            <p className="flex items-center gap-1.5 text-sm font-medium text-success">
+              <CheckCircle2 className="h-4 w-4" /> The counterparty accepted the engagement.
+            </p>
+          )}
+          {state.decided === "opted_out" && (
+            <p className="flex items-center gap-1.5 text-sm font-medium text-destructive">
+              <XCircle className="h-4 w-4" /> A party opted out — this engagement is closed.
+            </p>
+          )}
+
+          {state.responses.length > 0 && (
+            <ul className="space-y-2">
+              {state.responses.map((r) => (
+                <li key={r.id} className="rounded-lg border border-border p-3 text-xs">
+                  <p className="font-medium">
+                    {r.responder_name ?? sideWord(r.responder_side)} ({sideWord(r.responder_side)}){" "}
+                    {r.response === "accepted"
+                      ? "accepted"
+                      : r.response === "challenged"
+                        ? "raised a challenge"
+                        : "opted out"}
+                  </p>
+                  {r.message && <p className="mt-1 text-muted-foreground">{r.message}</p>}
+                  <p className="mt-1 text-[11px] text-muted-foreground">{when(r.created_at)}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {state.decided !== "opted_out" && (
+            <div className="flex flex-wrap gap-2">
+              {state.side === "counterparty" && state.decided !== "accepted" && (
+                <Button
+                  size="sm"
+                  disabled={busy !== null || !state.bothCleared}
+                  onClick={() => void sendResponse("accepted")}
+                >
+                  {busy === "accepted" ? "Accepting…" : "Accept"}
+                </Button>
+              )}
+              <Button size="sm" variant="outline" disabled={busy !== null} onClick={() => setChallengeOpen(true)}>
+                Challenge
+              </Button>
+              {state.decided !== "accepted" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-destructive/40 text-destructive hover:bg-destructive/10"
+                  disabled={busy !== null}
+                  onClick={() => void sendResponse("opted_out")}
+                >
+                  {busy === "opted_out" ? "Opting out…" : "Opt out"}
+                </Button>
+              )}
+            </div>
+          )}
+          {state.side === "counterparty" && !state.bothCleared && state.decided !== "accepted" && (
+            <p className="text-[11px] text-muted-foreground">
+              Accepting becomes available once both sides' KYC and KYB checks are settled.
+            </p>
+          )}
+          {state.side === "bidder" && (
+            <p className="text-[11px] text-muted-foreground">
+              Only the counterparty can accept. You can raise a challenge here and both sides keep replying until
+              you reach consensus.
+            </p>
+          )}
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-border">
+        <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+          <FileSignature className="h-4 w-4 text-primary" />
+          <h2 className="label-caps font-sans">Business docs to sign</h2>
+        </div>
+        <div className="space-y-3 p-4">
+          {!canManageDocs ? (
+            <p className="text-xs text-muted-foreground">
+              This opens for both sides once the counterparty has accepted the engagement.
+            </p>
+          ) : (
+            <>
+              <p className="text-xs text-muted-foreground">
+                Both sides sign the same record. Once both signatures are on it, a tidy PDF record is filed in Bid
+                Information, ready to open or download.
+              </p>
+              {docs.length === 0 && <p className="text-xs text-muted-foreground">No documents shared yet.</p>}
+              <ul className="divide-y divide-border">
+                {docs.map((d) => {
+                  const iSigned = d.signatures.some((s) => s.signer_side === state.side);
+                  return (
+                    <li key={d.id} className="space-y-1.5 py-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-xs font-medium">{d.name}</p>
+                        <div className="flex items-center gap-2">
+                          {d.fully_signed_at ? (
+                            <Badge variant="outline" className={STATE_TONE.passed}>
+                              Signed by both
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className={STATE_TONE.pending}>
+                              {d.signatures.length === 0 ? "Not signed" : "One signature"}
+                            </Badge>
+                          )}
+                          {!d.fully_signed_at && !iSigned && (
+                            <Button
+                              size="sm"
+                              className="h-7 text-[11px]"
+                              disabled={busy !== null}
+                              onClick={() => {
+                                setSigning({ id: d.id, name: d.name });
+                                setSignerName("");
+                              }}
+                            >
+                              Sign
+                            </Button>
+                          )}
+                          {!d.requires_signature && !d.fully_signed_at && state.side === "bidder" && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 text-[11px]"
+                              disabled={busy !== null}
+                              onClick={async () => {
+                                setBusy("needs");
+                                try {
+                                  await setNeeds({
+                                    data: { documentId: d.id, transactionId, required: true },
+                                  });
+                                  await refresh();
+                                } catch (err) {
+                                  toast.error((err as Error).message);
+                                } finally {
+                                  setBusy(null);
+                                }
+                              }}
+                            >
+                              Mark for signing
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      {d.signatures.length > 0 && (
+                        <p className="text-[11px] text-muted-foreground">
+                          {d.signatures
+                            .map((s) => `${s.signer_name} (${sideWord(s.signer_side)}) — ${when(s.signed_at)}`)
+                            .join(" · ")}
+                        </p>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+              {signable.length === 0 && docs.length > 0 && (
+                <p className="text-[11px] text-muted-foreground">Nothing has been marked for signing yet.</p>
+              )}
+            </>
+          )}
+        </div>
+      </section>
+
+      <Dialog open={waive !== null} onOpenChange={(open) => !open && setWaive(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Switch this check off</DialogTitle>
+            <DialogDescription>
+              Say why this check is not being run. Your explanation is kept on the deal record permanently.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={waiveReason}
+            onChange={(e) => setWaiveReason(e.target.value)}
+            rows={4}
+            placeholder="Why is this check not being run?"
+          />
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => setWaive(null)}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              disabled={waiveReason.trim().length < 5 || busy !== null}
+              onClick={() => waive && void record(waive.check, "waived", waiveReason.trim())}
+            >
+              {busy?.endsWith("waived") ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Switch off"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={challengeOpen} onOpenChange={setChallengeOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Raise a challenge</DialogTitle>
+            <DialogDescription>
+              Your message goes to the other party, who can reply here. Both of you keep replying until you reach
+              consensus.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={challengeMessage}
+            onChange={(e) => setChallengeMessage(e.target.value)}
+            rows={5}
+            placeholder="What are you challenging, and what would settle it?"
+          />
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => setChallengeOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              disabled={challengeMessage.trim().length < 3 || busy !== null}
+              onClick={() => void sendResponse("challenged", challengeMessage.trim())}
+            >
+              {busy === "challenged" ? "Sending…" : "Send challenge"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={signing !== null} onOpenChange={(open) => !open && setSigning(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sign {signing?.name}</DialogTitle>
+            <DialogDescription>
+              Type your full name to sign. Your name, your side of the deal and the exact date and time are stored
+              on this one shared record.
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            value={signerName}
+            onChange={(e) => setSignerName(e.target.value)}
+            placeholder="Your full name"
+            autoComplete="name"
+          />
+          {signerName.trim().length > 1 && (
+            <p className="rounded-lg border border-border bg-muted/40 p-3 text-2xl" style={{ fontFamily: "cursive" }}>
+              {signerName.trim()}
+            </p>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => setSigning(null)}>
+              Cancel
+            </Button>
+            <Button size="sm" disabled={signerName.trim().length < 2 || busy !== null} onClick={() => void doSign()}>
+              {busy === "sign" ? "Signing…" : "Sign document"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
