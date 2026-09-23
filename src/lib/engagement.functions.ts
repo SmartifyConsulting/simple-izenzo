@@ -38,7 +38,7 @@ export type ResponseRow = {
 };
 
 export type EngagementState = {
-  side: Side;
+  side: Side | "observer";
   /** True once the counterparty has linked its own Izenzo account to this deal. */
   counterpartyLinked: boolean;
   counterpartyName: string | null;
@@ -57,7 +57,12 @@ function isCleared(row: DiligenceRow | undefined) {
 }
 
 /** Which side of this deal the caller is on — refuses anyone who is on neither. */
-async function sideOf(supabase: any, userId: string, transactionId: string) {
+async function sideOf(
+  supabase: any,
+  userId: string,
+  transactionId: string,
+  options: { allowAdminObserver?: boolean } = {},
+) {
   const { data: tx, error } = await supabase
     .from("transactions")
     .select("id, org_id, counterparty_org_id, title, reference, poi_sealed_at, created_by")
@@ -85,6 +90,27 @@ async function sideOf(supabase: any, userId: string, transactionId: string) {
   // organisation membership is in place.
   if (tx.created_by === userId || (tx.org_id && myOrgs.has(tx.org_id))) side = "bidder";
   else if (tx.counterparty_org_id && myOrgs.has(tx.counterparty_org_id)) side = "counterparty";
+  if (!side && options.allowAdminObserver) {
+    const { data: isAdmin, error: roleError } = await supabase.rpc("has_role", {
+      _user_id: userId,
+      _role: "admin",
+    });
+    if (roleError) throw new Error(roleError.message);
+    if (isAdmin) {
+      return {
+        side: "observer" as const,
+        tx: tx as {
+          id: string;
+          org_id: string;
+          counterparty_org_id: string | null;
+          title: string | null;
+          reference: string | null;
+          poi_sealed_at: string | null;
+        },
+        myName: (profile as { full_name?: string | null } | null)?.full_name ?? null,
+      };
+    }
+  }
   if (!side) throw new Error("You're not a party to this deal.");
 
   return {
@@ -102,7 +128,7 @@ async function sideOf(supabase: any, userId: string, transactionId: string) {
 }
 
 async function loadState(supabase: any, userId: string, transactionId: string): Promise<EngagementState> {
-  const { side, tx } = await sideOf(supabase, userId, transactionId);
+  const { side, tx } = await sideOf(supabase, userId, transactionId, { allowAdminObserver: true });
 
   const [{ data: dil }, { data: res }, { data: cp }, { data: org }] = await Promise.all([
     supabase.from("engagement_diligence").select("*").eq("transaction_id", transactionId),
@@ -352,7 +378,7 @@ export const listSignableDocuments = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ transactionId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    await sideOf(supabase, userId, data.transactionId);
+    await sideOf(supabase, userId, data.transactionId, { allowAdminObserver: true });
 
     const { data: docs, error } = await supabase
       .from("documents")
