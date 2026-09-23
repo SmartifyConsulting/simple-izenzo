@@ -71,6 +71,7 @@ import { advance, money, recordEvent, when, type Transaction, type TxEvent } fro
 import { setCounterpartyShortlist, searchCounterparties } from "@/lib/izenzo.functions";
 import { enrichCounterparty } from "@/lib/counterpartyOutreach.functions";
 import { dedupeOrgs } from "@/lib/dedupeOrgs";
+import { getEngagement } from "@/lib/engagement.functions";
 import { keepForBid, loadBidRelevance } from "@/lib/bidRelevance";
 import type { ScreeningCheck, ScreeningResult } from "@/lib/screening.functions";
 import type { MediaCheckResult, MediaFinding } from "@/lib/onlineMedia.functions";
@@ -800,7 +801,20 @@ export function InlineFrame({
    * snapshot rather than the live, editable step, since its data can't be changed anymore. */
   viewOnly?: boolean | undefined;
 }) {
-  const def = stepDef(stage, step);
+  const baseDef = stepDef(stage, step);
+  const loadEngagement = useServerFn(getEngagement);
+  const isWad = stage === "compliance" && step === "wad" && !tx.wad_completed_at;
+  const { data: engagement } = useQuery({
+    queryKey: ["engagement", tx.id],
+    queryFn: () => loadEngagement({ data: { transactionId: tx.id } }),
+    enabled: isWad,
+  });
+  // Before the counterparty approves the offer, this frame is the Offer alone — Without a Doubt
+  // appears only once agreement is reached.
+  const def =
+    isWad && engagement && engagement.decided !== "accepted"
+      ? { key: "offer", label: "The Offer", blurb: "Agree the terms with the counterparty. Without a Doubt opens once they approve." }
+      : baseDef;
   const locked = lockReason(stage, step, tx);
   const canChangeParty =
     !viewOnly && Boolean(onChangeParty) && !tx.poi_sealed_at && (step === "intent" || step === "poi");
