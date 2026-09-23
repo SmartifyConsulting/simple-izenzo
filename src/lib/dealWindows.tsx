@@ -122,6 +122,10 @@ type DealWindowsValue = {
   /** Puts the person's own bids back on the taskbar (oldest first, newest on the right) without
    * touching any tab already open or reopening one they closed. */
   hydrate: (items: { id: string; label: string; name?: string | undefined }[]) => void;
+  /** The deals this person left open, as recorded against their account — `null` until that has
+   * been read. Anything not in this list was either closed or never opened, so it must not be put
+   * back on the taskbar. */
+  storedOpenIds: string[] | null;
 };
 
 const DealWindowsContext = createContext<DealWindowsValue | null>(null);
