@@ -25,10 +25,10 @@ import {
   ShieldAlert,
   ScrollText,
   X,
-  UploadCloud,
   FileText,
   StopCircle,
   Pencil,
+  Plus,
 } from "lucide-react";
 import { CanvasNode, Connector, GateBar, type NodeState } from "./CanvasNode";
 import { StepScreen } from "@/components/steps/StepScreen";
@@ -2383,7 +2383,39 @@ export function CanvasStart({
           Sell
         </button>
       </div>
-      <div className="flex items-stretch gap-2 rounded-xl border border-border bg-background p-1.5 shadow-sm transition-colors focus-within:border-primary">
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragOver(false);
+          const files = Array.from(e.dataTransfer.files);
+          if (files.length === 0) return;
+          setPendingFiles(files);
+        }}
+        className={cn(
+          "flex items-center gap-1.5 rounded-full border bg-background py-1.5 pl-1.5 pr-2 shadow-sm transition-colors focus-within:border-primary",
+          dragOver ? "border-primary bg-primary/5" : "border-border",
+        )}
+      >
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          aria-label={pendingFiles.length > 0 ? `${pendingFiles.length} file(s) attached — add more` : "Attach files"}
+          title="Attach files"
+          className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <Plus className="h-4 w-4" />
+          {pendingFiles.length > 0 && (
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-semibold text-primary-foreground">
+              {pendingFiles.length}
+            </span>
+          )}
+        </button>
+
         <input
           type="text"
           value={prompt}
@@ -2395,39 +2427,8 @@ export function CanvasStart({
             }
           }}
           placeholder="Enter bid/offer description"
-          className="min-w-0 flex-1 basis-1/2 bg-transparent px-2 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+          className="min-w-0 flex-1 bg-transparent px-1 text-sm text-foreground outline-none placeholder:text-muted-foreground"
         />
-
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragOver(true);
-          }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDragOver(false);
-            const files = Array.from(e.dataTransfer.files);
-            if (files.length === 0) return;
-            setPendingFiles(files);
-          }}
-          aria-label="Drop files here or click to browse"
-          className={cn(
-            "flex min-w-0 flex-1 basis-1/2 items-center justify-center gap-2 rounded-lg border border-dashed px-2 py-1.5 text-xs transition-colors",
-            dragOver
-              ? "border-primary bg-primary/5 text-foreground"
-              : "border-muted-foreground/70 text-muted-foreground hover:border-primary/60 hover:text-foreground",
-          )}
-        >
-          <UploadCloud className="h-4 w-4 shrink-0" />
-          <span className="truncate">
-            {pendingFiles.length > 0
-              ? `${pendingFiles.length} file${pendingFiles.length === 1 ? "" : "s"} attached`
-              : "Drop files here or click to browse"}
-          </span>
-        </button>
 
         <input
           ref={fileInputRef}
@@ -2448,11 +2449,10 @@ export function CanvasStart({
           disabled={!canBeginPicking}
           aria-label="Submit"
           title="Submit"
-          className="flex h-8 w-8 shrink-0 items-center justify-center self-center rounded-full bg-foreground text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <ArrowUp className="h-4 w-4" />
         </button>
-
       </div>
 
       {pendingFiles.length > 0 && (
