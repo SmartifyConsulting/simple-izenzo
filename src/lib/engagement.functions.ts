@@ -552,6 +552,21 @@ export const signDocument = createServerFn({ method: "POST" })
         .eq("id", data.documentId);
       if (updErr) throw new Error(updErr.message);
 
+      // Filed as its own record so it appears in the Bid Information archive as a finished,
+      // openable PDF alongside everything else on the deal.
+      await supabase.from("documents").insert({
+        transaction_id: data.transactionId,
+        name: pdfName,
+        doc_type: "certificate",
+        notes: `Signed by both parties — ${(doc as any).name}`,
+        version: 1,
+        sha256: (doc as any).sha256 ?? null,
+        storage_path: path,
+        fully_signed_at: signedAt,
+      } as never);
+
+
+
       await supabase.from("transaction_events").insert({
         transaction_id: data.transactionId,
         actor_id: userId,
