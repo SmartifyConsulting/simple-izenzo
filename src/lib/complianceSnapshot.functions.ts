@@ -97,10 +97,8 @@ export const runComplianceSnapshot = createServerFn({ method: "POST" })
         }
 
         if (pageText.trim()) {
-          const res = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
+          const { callAiChat } = await import("@/lib/lovableAi.server");
+          const res = await callAiChat(apiKey, {
               model: "gpt-5-mini",
               response_format: { type: "json_object" },
               messages: [
@@ -119,7 +117,6 @@ export const runComplianceSnapshot = createServerFn({ method: "POST" })
                   content: `Company: ${cp.name}${cp.jurisdiction ? ` (${cp.jurisdiction})` : ""}\n\n${pageText.slice(0, 10000)}`,
                 },
               ],
-            }),
           });
           if (res.ok) {
             const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };

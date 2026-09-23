@@ -92,10 +92,8 @@ async function findOfficialWebsite(
       const { tavilySearch } = await import("@/lib/tavily.server");
       const results = await tavilySearch(tavilyKey, `${name} official website`, { max: 5, timeoutMs: 20_000 });
       if (results.length === 0) return null;
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const { callAiChat } = await import("@/lib/lovableAi.server");
+      const res = await callAiChat(apiKey, {
           model: "gpt-5-mini",
           messages: [
             {
@@ -113,7 +111,6 @@ async function findOfficialWebsite(
                 .join("\n\n")}`,
             },
           ],
-        }),
       });
       if (!res.ok) return null;
       const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
@@ -174,10 +171,8 @@ async function readContactFromSite(
     }
     if (!pageText.trim()) return { email: null, phone: null };
 
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const { callAiChat } = await import("@/lib/lovableAi.server");
+    const res = await callAiChat(apiKey, {
         model: "gpt-5-mini",
         messages: [
           {
@@ -190,7 +185,6 @@ async function readContactFromSite(
           },
           { role: "user", content: pageText.slice(0, 12000) },
         ],
-      }),
     });
     if (!res.ok) return { email: null, phone: null };
     const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
@@ -417,10 +411,8 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
     if (!toEmail && website && apiKey) {
       try {
         const domain = new URL(website).hostname.replace(/^www\./, "");
-        const res = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
+        const { callAiChat } = await import("@/lib/lovableAi.server");
+        const res = await callAiChat(apiKey, {
             model: "gpt-5-mini",
             messages: [
               {
@@ -433,7 +425,6 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
               },
               { role: "user", content: `Domain: ${domain}\nCompany: ${cp.name}` },
             ],
-          }),
         });
         if (res.status === 402) {
           const { alertLowFunds } = await import("@/lib/opsAlerts.server");
