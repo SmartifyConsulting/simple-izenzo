@@ -154,27 +154,24 @@ export function WorkspaceTaskbar() {
   const [cancelling, setCancelling] = useState(false);
   const cancelBidFn = useServerFn(cancelBid);
 
-  // The person's own bids specifically — not the whole organisation's — so the tab strip survives
-  // a reload or a new device instead of only remembering what this browser session happened to
-  // open, without also pulling in every colleague's deals in the same org. Cancelled bids are
-  // left out.
+  // Exactly the deals this person left open, read from their own account — not a guess from their
+  // most recent bids, which is what kept putting closed tabs back. Cancelled bids are left out.
   const { data: savedDeals } = useQuery({
-    queryKey: ["taskbar-deals", org?.id, user?.id],
-    enabled: Boolean(org?.id) && Boolean(user?.id),
+    queryKey: ["taskbar-deals", user?.id, (storedOpenIds ?? []).join(",")],
+    enabled: Boolean(user?.id) && Array.isArray(storedOpenIds) && storedOpenIds.length > 0,
     queryFn: async () => {
+      const ids = storedOpenIds ?? [];
       const { data, error } = await supabase
         .from("transactions")
-        .select("id, reference, title, commodity, status, created_at")
-        .eq("org_id", org!.id)
-        .eq("created_by", user!.id)
-        // Newest first for the limit, then flipped so the taskbar reads oldest-left/newest-right.
-        .order("created_at", { ascending: false })
-        .limit(10);
+        .select("id, reference, title, commodity, status")
+        .in("id", ids);
       if (error) throw error;
+      const order = new Map(ids.map((id, i) => [id, i]));
       return (data ?? [])
         .map((t) => t as { id: string; reference: string | null; title: string | null; commodity: string | null; status: string | null })
         .filter((t) => (t.status ?? "") !== "cancelled")
-        .reverse()
+        // Left-to-right in the order they were opened or arranged.
+        .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))
         .map((t) => ({
           id: t.id,
           label: t.reference ?? fallbackReference(t.id, "bid"),
