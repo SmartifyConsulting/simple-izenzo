@@ -156,7 +156,8 @@ function UsersTab() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"created" | "accessed">("created");
   const [profileId, setProfileId] = useState<string | null>(null);
-  const { orgNamesByUser } = useOrgDirectory();
+  const { orgs, orgNamesByUser } = useOrgDirectory();
+  const orgNameById = new Map(orgs.map((o) => [o.id, o.name]));
 
   const { data: users = [] } = useQuery({
     queryKey: ["admin-users"],
@@ -262,19 +263,34 @@ function UsersTab() {
           {filteredUsers.map((u) => {
             const isUserAdmin = adminIds.has(u.id);
             const orgNames = orgNamesByUser.get(u.id) ?? [];
+            const primaryOrgName = u.org_id ? orgNameById.get(u.org_id) : undefined;
             return (
               <li key={u.id} className="space-y-2 p-4 text-sm sm:space-y-0 sm:grid sm:grid-cols-5 sm:items-center sm:gap-x-4">
-                <button
-                  type="button"
-                  onClick={() => setProfileId(u.id)}
-                  className="min-w-0 text-left hover:underline"
-                  title="View profile"
-                >
+                <div className="min-w-0">
                   <p className="truncate font-medium">{u.full_name ?? u.email}</p>
                   <p className="truncate text-xs text-muted-foreground">{u.email}</p>
-                </button>
-                <p className="truncate text-xs text-foreground" title={orgNames.join(", ")}>
-                  {orgNames.length > 0 ? orgNames.join(", ") : <span className="text-muted-foreground">No organisation</span>}
+                </div>
+                <p
+                  className="truncate text-xs text-foreground"
+                  title={orgNames.map((n) => (n === primaryOrgName ? `${n} (Primary)` : n)).join(", ")}
+                >
+                  {orgNames.length > 0 ? (
+                    orgNames.map((n, i) => (
+                      <span key={n}>
+                        {i > 0 && ", "}
+                        {n === primaryOrgName ? (
+                          <>
+                            <span className="font-semibold">{n}</span>{" "}
+                            <span className="text-[10px] text-muted-foreground">(Primary)</span>
+                          </>
+                        ) : (
+                          n
+                        )}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-muted-foreground">No organisation</span>
+                  )}
                 </p>
                 <span className="text-xs text-muted-foreground" title={new Date(u.created_at).toLocaleString()}>
                   {when(u.created_at)}
@@ -291,6 +307,9 @@ function UsersTab() {
                       System Admin
                     </Badge>
                   )}
+                  <Button size="sm" variant="ghost" onClick={() => setProfileId(u.id)}>
+                    View
+                  </Button>
                   <Button size="sm" variant="outline" onClick={() => toggleAdmin(u.id, isUserAdmin, u.email)}>
                     {isUserAdmin ? "Revoke admin" : "Make admin"}
                   </Button>
