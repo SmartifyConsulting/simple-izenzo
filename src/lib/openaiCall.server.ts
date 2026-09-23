@@ -5,9 +5,21 @@
 
 const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 
-/** Codes that mean the account itself is out of money or capped — retrying cannot help. */
+/** Codes that mean the account itself is out of money or capped — retrying cannot help. OpenAI
+ * reports an empty balance under several names, so all of them are treated the same. */
 function isTerminalAccountCode(code: string | undefined): boolean {
-  return code === "insufficient_quota" || code === "billing_hard_limit_reached";
+  return (
+    code === "insufficient_quota" ||
+    code === "billing_hard_limit_reached" ||
+    code === "credit_balance_exhausted" ||
+    code === "billing_not_active"
+  );
+}
+
+/** A worded balance complaint counts too, in case OpenAI renames the code again. */
+function saysNoCredit(message: string): boolean {
+  const m = message.toLowerCase();
+  return m.includes("no credits remaining") || m.includes("exceeded your current quota") || m.includes("add credits");
 }
 
 async function errorCodeOf(res: Response): Promise<string | undefined> {
