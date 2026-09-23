@@ -137,8 +137,8 @@ export function DecisionPackPanel({
     if (!allDecided) onAllDecided?.(false);
   }, [proposals, error, allDecided, onAllDecided]);
 
-  // Once everything is answered the modal closes itself — a brief pause so the last
-  // "Accepted"/"Rejected" state is actually seen — and the caller is told it is fully decided.
+  // Once everything is reviewed the frame folds itself away — a brief pause so the last
+  // "Reviewed" state is actually seen — and the caller is told it is fully decided.
   useEffect(() => {
     if (!allDecided) return;
     const id = setTimeout(() => {
@@ -157,9 +157,9 @@ export function DecisionPackPanel({
           : prev,
       );
     } catch (err) {
-      // A stale local list (this one was already acknowledged by a previous click, or by this
-      // very "Acknowledge All" run reading proposals from just before a refresh) shouldn't surface
-      // as a failure — the end state ("decided") is exactly what was being asked for either way, so
+      // A stale local list (this one was already reviewed by a previous click, or by this very
+      // "Reviewed All" run reading proposals from just before a refresh) shouldn't surface as a
+      // failure — the end state ("decided") is exactly what was being asked for either way, so
       // the local copy is brought in line rather than left stuck showing "Pending" forever.
       if ((err as Error).message?.toLowerCase().includes("already")) {
         setProposals((prev) =>
@@ -287,7 +287,7 @@ export function DecisionPackPanel({
             <>
               {gating && pending > 0 && (
                 <p className="text-[11px] text-muted-foreground">
-                  Review the recommendations below, then Acknowledge All to open {gatedStepLabel}.
+                  Review the recommendations below, then Reviewed All to open {gatedStepLabel}.
                 </p>
               )}
               {pending > 0 && (
@@ -299,7 +299,7 @@ export function DecisionPackPanel({
                     onClick={() => void decideAll("accepted")}
                   >
                     {selectingAll ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-                    Acknowledge All
+                    Reviewed All
                   </Button>
                 </div>
               )}
@@ -409,7 +409,7 @@ export function DecisionPackPanel({
 
                     {p.decided_at ? (
                       <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
-                        Acknowledged
+                        Reviewed
                       </span>
                     ) : (
                       <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
