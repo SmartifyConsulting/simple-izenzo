@@ -1668,7 +1668,6 @@ export function CounterpartyRecord({
           asChild
           value={pickedId ?? ""}
           onValueChange={(v) => setPickedId(v)}
-          disabled={!screeningDone}
         >
         <ul className="mt-2 space-y-2.5">
           {visibleCandidates.map((c) => (
@@ -1679,7 +1678,6 @@ export function CounterpartyRecord({
                 <RadioGroupItem
                   id={`shortlist-${c.id}`}
                   value={c.id}
-                  disabled={locked}
                   className="mt-0.5"
                 />
               ) : (
@@ -1687,13 +1685,12 @@ export function CounterpartyRecord({
                   id={`shortlist-${c.id}`}
                   checked={Boolean(c.shortlisted)}
                   onCheckedChange={(v) => toggle(c, Boolean(v))}
-                  disabled={locked}
                   className="mt-0.5"
                 />
               )}
               <label
                 htmlFor={`shortlist-${c.id}`}
-                className={cn("min-w-0 flex-1", locked ? "cursor-not-allowed" : "cursor-pointer")}
+                className="min-w-0 flex-1 cursor-pointer"
               >
                 <span className="flex items-center gap-2">
                   <span className="text-sm font-medium text-slate-900">{c.name}</span>

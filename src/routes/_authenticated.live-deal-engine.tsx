@@ -2706,7 +2706,6 @@ function LiveDealEngine() {
                       <RadioGroup
                         value={mediaPick ?? ""}
                         onValueChange={setMediaPick}
-                        disabled={dbHasChosenParty}
                         asChild
                       >
                       <ul className="mt-2 space-y-2">
