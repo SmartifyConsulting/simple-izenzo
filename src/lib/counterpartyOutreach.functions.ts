@@ -33,6 +33,8 @@ export async function findRegisteredOrg(
 }
 
 type DealFields = {
+  title: string | null;
+  reference: string | null;
   commodity: string | null;
   quantity: number | null;
   unit: string | null;
@@ -42,13 +44,23 @@ type DealFields = {
   jurisdiction: string | null;
 } | null;
 
-/** A short, honest snapshot of the deal — commodity, quantity, price, Incoterms, jurisdiction —
- * so the first email a counterparty ever gets from Izenzo actually says what's on offer, not just
- * that "someone is interested". A field the bidder hasn't recorded yet is left out rather than
- * shown as a blank or a zero. */
-function dealSnapshotHtml(tx: DealFields): string {
+const GENERIC_TITLES = new Set(["new bid", "new offer"]);
+
+/** A short, honest snapshot of the deal — reference, requirement summary, commodity, quantity,
+ * price, Incoterms, jurisdiction — so the first email a counterparty ever gets from Izenzo actually
+ * says what's on offer, not just that "someone is interested". A field the bidder hasn't recorded
+ * yet is left out rather than shown as a blank or a zero. `referenceUrl`, when given, makes the
+ * reference row a link straight into the deal instead of plain text. */
+function dealSnapshotHtml(tx: DealFields, referenceUrl?: string): string {
   if (!tx) return "";
   const rows: [string, string][] = [];
+  if (tx.reference) {
+    rows.push([
+      "Reference",
+      referenceUrl ? `<a href="${referenceUrl}" style="color:#0d9488;">${tx.reference}</a>` : tx.reference,
+    ]);
+  }
+  if (tx.title && !GENERIC_TITLES.has(tx.title.trim().toLowerCase())) rows.push(["Requirement", tx.title]);
   if (tx.commodity) rows.push(["Commodity", tx.commodity]);
   if (Number(tx.quantity) > 0) rows.push(["Quantity", `${tx.quantity} ${tx.unit ?? ""}`.trim()]);
   if (Number(tx.price) > 0) rows.push(["Price", `${tx.currency ?? ""} ${tx.price}`.trim()]);
@@ -76,6 +88,20 @@ function ctaButtonHtml(url: string, label: string): string {
     `<a href="${url}" style="display:inline-block;background:#14b8a6;color:#0d0f14;font-weight:700;` +
     `font-size:14px;padding:11px 22px;border-radius:9999px;text-decoration:none;">${label}</a>` +
     `</p>`
+  );
+}
+
+/** The account CTA for outreach emails: one button, both paths. The destination page itself
+ * (behind an authenticated route) already sends a signed-out visitor to sign in and bounces them
+ * back afterwards, and the same sign-in screen offers creating an account instead — so a single
+ * link genuinely serves both an existing user and a brand-new one. The line under the button says
+ * so explicitly, since the recipient can't see that redirect happen before they click. */
+function accountCtaHtml(url: string): string {
+  return (
+    ctaButtonHtml(url, "View this opportunity") +
+    `<p style="margin:-12px 0 20px;color:#6b7280;font-size:12px;">Already have an Izenzo account? The button ` +
+    `above takes you straight to sign in. New here? You can create a free account in a couple of minutes — ` +
+    `either way, you'll land on this opportunity next.</p>`
   );
 }
 
@@ -356,7 +382,8 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
       .eq("id", cp.transaction_id)
       .maybeSingle();
     const dealName = tx?.title ?? "a trade";
-    const dealDetailsHtml = dealSnapshotHtml(tx);
+    const claimUrl = `https://api.trade.izenzo.co.za/counterparty/claim?cp=${cp.id}`;
+    const dealDetailsHtml = dealSnapshotHtml(tx, claimUrl);
 
     const { data: bidderProfile } = await supabase
       .from("profiles")
@@ -456,8 +483,6 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
       // straight to the claim page: signing in (or creating an account, if they don't have one
       // yet) links their organisation to this specific deal and opens the same workspace,
       // restricted to their view of it.
-      const claimUrl = `https://api.trade.izenzo.co.za/counterparty/claim?cp=${cp.id}`;
-      const ctaHtml = ctaButtonHtml(claimUrl, onPlatform ? "Sign in to respond" : "Create your free account");
       await sendEmail(creds, {
         to: toEmail,
         ...(bidderEmail ? { cc: [bidderEmail] } : {}),
@@ -465,14 +490,12 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
         html: renderBrandedEmail(
           `<p>Hello,</p>` +
             `<p>Good news — a verified party on the Izenzo Trading Gateway has selected <strong>${cp.name}</strong> ` +
-            `as a potential counterparty for the opportunity below.</p>` +
+            `as a potential counterparty for the opportunity below. The reference above links straight to it ` +
+            `once you're signed in.</p>` +
             dealDetailsHtml +
-            (onPlatform
-              ? `<p>Sign in to your Izenzo account to see the full details and respond.</p>`
-              : `<p>Izenzo is a governed trading platform: every match carries a hash-sealed Proof of Intent ` +
-                `and independent verification at every step, so both sides can move with confidence. ` +
-                `You don't have an account yet — creating one is free and takes a couple of minutes.</p>`) +
-            ctaHtml +
+            `<p>Izenzo is a governed trading platform: every match carries a hash-sealed Proof of Intent ` +
+            `and independent verification at every step, so both sides can move with confidence.</p>` +
+            accountCtaHtml(claimUrl) +
             `<p>Regards,<br>Izenzo</p>`,
         ),
       });
@@ -578,9 +601,8 @@ export const inviteCounterparty = createServerFn({ method: "POST" })
         `as a potential counterparty for the opportunity below.</p>` +
         dealSnapshotHtml(tx) +
         `<p>Izenzo is a governed trading platform: every match carries a hash-sealed Proof of Intent and ` +
-        `independent verification at every step, so both sides can move with confidence. You don't have an ` +
-        `account yet — creating one is free and takes a couple of minutes.</p>` +
-        ctaButtonHtml("https://api.trade.izenzo.co.za/", "Create your free account") +
+        `independent verification at every step, so both sides can move with confidence.</p>` +
+        accountCtaHtml("https://api.trade.izenzo.co.za/") +
         `<p>Regards,<br>Izenzo</p>`,
       ),
     });
