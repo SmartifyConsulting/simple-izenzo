@@ -319,6 +319,9 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
       if (w && !w.closed) w.close();
       popped.current.delete(id);
       rememberClosed(closedKeyRef.current, id);
+      // Recorded against the account, not just this browser, so it stays closed everywhere.
+      setStoredOpenIds((prev) => (prev ? prev.filter((x) => x !== id) : prev));
+      void recordTabState(userIdRef.current, id, "closed");
       persist(readAll(keyRef.current).filter((win) => win.id !== id));
     },
     [persist],
@@ -330,7 +333,8 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
   );
 
   /** Moves one tab to sit right before another — drag-and-drop reordering in the taskbar. Purely
-   * cosmetic (which order the tabs read left-to-right); doesn't touch mode/position. */
+   * cosmetic (which order the tabs read left-to-right); doesn't touch mode/position. The new order
+   * is kept against the account too, so it survives signing out. */
   const reorder = useCallback(
     (draggedId: string, targetId: string) => {
       if (draggedId === targetId) return;
@@ -342,13 +346,16 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
       if (targetIndex === -1) return;
       withoutDragged.splice(targetIndex, 0, dragged);
       persist(withoutDragged);
+      withoutDragged.forEach((w, i) => {
+        void recordTabState(userIdRef.current, w.id, "open", i);
+      });
     },
     [persist],
   );
 
   return (
     <DealWindowsContext.Provider
-      value={{ windows, open, register, setMode, move, close, isPoppedElsewhere, reorder, hydrate }}
+      value={{ windows, open, register, setMode, move, close, isPoppedElsewhere, reorder, hydrate, storedOpenIds }}
     >
       {children}
     </DealWindowsContext.Provider>
