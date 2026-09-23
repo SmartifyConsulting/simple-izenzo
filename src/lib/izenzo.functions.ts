@@ -919,7 +919,16 @@ export const searchCounterparties = createServerFn({ method: "POST" })
         step: "search",
         action: "counterparty_search_completed",
         summary: `${data.kind.toUpperCase()} search found ${(inserted ?? []).length} counterpart${(inserted ?? []).length === 1 ? "y" : "ies"} in ${(totalMs / 1000).toFixed(1)}s`,
-        payload: { kind: data.kind, totalMs, localMs, pipelineMs, candidateCount: (inserted ?? []).length, hadDocuments: Boolean(docSummary) },
+        payload: {
+          kind: data.kind,
+          totalMs,
+          localMs,
+          pipelineMs,
+          candidateCount: (inserted ?? []).length,
+          consideredCount: notKept.length + candidates.length,
+          notKept: notKept.slice(0, 30),
+          hadDocuments: Boolean(docSummary),
+        },
       });
     } catch {
       // Diagnostics only — never blocks returning the result.
@@ -930,6 +939,7 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       model,
       sourcesRead: sources.map((s) => ({ label: s.label, url: s.url })),
       sourcesSkipped: failures.map((f) => ({ label: f.label, reason: f.reason })),
+      notKept: notKept.slice(0, 30),
     };
   });
 
