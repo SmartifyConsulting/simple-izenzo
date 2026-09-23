@@ -280,6 +280,28 @@ export const INTEGRATION_PROVIDERS: IntegrationProvider[] = [
     testable: true,
   },
   {
+    id: "serpapi",
+    topUpUrl: "https://serpapi.com/billing",
+    consoleUrl: "https://serpapi.com/manage-api-key",
+    name: "SerpAPI",
+    group: "Web Search",
+    summary: "Real Google (and other engine) search results, scraped live — a second search source alongside Tavily.",
+    usedAt: "Not yet wired into a live check — saved here so a key is ready when it's connected.",
+    costNote: "Metered per search per month — see SerpAPI's pricing page for current plan rates.",
+    docsUrl: "https://serpapi.com/search-api",
+    fields: [
+      {
+        key: "api_key",
+        label: "API key",
+        secret: true,
+        help: "From serpapi.com → Your Account → API Key. Also read from the server secret SERPAPI_API_KEY.",
+      },
+      { key: "portal_username", label: "Username", secret: false },
+      { key: "portal_credentials", label: "Credentials", secret: true, help: "Password or API secret used to sign in to the provider portal." },
+    ],
+    testable: true,
+  },
+  {
     id: "openai",
     topUpUrl: "https://platform.openai.com/settings/organization/billing/overview",
     consoleUrl: "https://platform.openai.com/api-keys",

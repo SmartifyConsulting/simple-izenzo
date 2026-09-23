@@ -358,6 +358,12 @@ async function probe(
       });
       return say(res, "OpenAI accepted the key.");
     }
+    case "serpapi": {
+      const res = await fetch(
+        `https://serpapi.com/account?api_key=${encodeURIComponent(secrets["api_key"] ?? "")}`,
+      );
+      return say(res, "SerpAPI accepted the key.");
+    }
     case "peach_payments": {
       const base = environment === "production" ? "https://eu-prod.oppwa.com" : "https://eu-test.oppwa.com";
       const res = await fetch(
