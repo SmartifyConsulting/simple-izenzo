@@ -249,19 +249,20 @@ export function WorkspaceTaskbar() {
       <div className="flex items-end gap-1 overflow-x-auto">
       {deals.map((w) => {
         const active = w.mode !== "minimized";
-        // Same rule as the Bid/Offer Registration pill inside the workspace: a Bid tab is green,
-        // an Offer tab is blue — the tab strip previously used one generic "active" colour for
-        // every tab regardless of direction, so an Offer tab read exactly the same as a Bid one.
+        // Every Bid tab is green and every Offer tab is royal blue, full stop — which one is
+        // currently selected is shown by going white instead, rather than by which of them is
+        // colored at all (the previous scheme only colored the selected tab solidly and left
+        // every other one a pale tint of the same color).
         const kind = tradeKindOf(w.label);
         const tabColorClasses =
           kind === "bid"
             ? active
-              ? "border-emerald-600 bg-emerald-600 text-white"
-              : "border-border bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
+              ? "border-emerald-600 bg-white text-emerald-700"
+              : "border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-500"
             : kind === "offer"
               ? active
-                ? "border-[#4169e1] bg-[#4169e1] text-white"
-                : "border-border bg-blue-50 text-blue-900 hover:bg-blue-100"
+                ? "border-[#4169e1] bg-white text-[#4169e1]"
+                : "border-[#4169e1] bg-[#4169e1] text-white hover:opacity-90"
               : active
                 ? "border-[var(--taskbar-active-border)] bg-[var(--taskbar-active-bg)] text-[var(--taskbar-active-fg)]"
                 : "border-border bg-white text-black hover:bg-white/90";
