@@ -79,19 +79,23 @@ const list = (v: unknown, max = 8): string[] =>
         .slice(0, max)
     : [];
 
-/** One JSON-answering request to the chat model. Throws with a plain reason on failure. */
+/** One JSON-answering request to the chat model. Throws with a plain reason on failure.
+ *
+ * Which service answers depends on the search: the ordinary search runs on the OpenAI account saved
+ * under Admin → Integrations, and AI+ runs on the built-in model. */
 async function chatJson(
   apiKey: string,
   model: string,
   effort: "low" | "medium" | "high",
   system: string,
   user: string,
+  kind: "ai" | "ai_plus",
 ): Promise<Record<string, unknown>> {
   const { lovableAiConfigured, callLovableAiChat, lovableAiFailureMessage } = await import("@/lib/lovableAi.server");
   const { callOpenAiChat, openAiFailureMessage } = await import("@/lib/openaiCall.server");
   const request = {
     model,
-    reasoning_effort: effort,
+    reasoning_effort: kind === "ai_plus" ? "medium" : effort,
     max_completion_tokens: 16000,
     response_format: { type: "json_object" },
     messages: [
@@ -99,13 +103,12 @@ async function chatJson(
       { role: "user", content: user },
     ],
   };
-  // Temporarily on Lovable's built-in AI: the saved OpenAI account has no credit and refuses every
-  // request. The credential stays saved and this preference is all that has to change to go back.
-  const useLovable = lovableAiConfigured();
+  const useLovable = kind === "ai_plus" && lovableAiConfigured();
   const res = useLovable
     ? await callLovableAiChat(request, { retries: 2 })
     : await callOpenAiChat(apiKey, request, { retries: 2 });
   if (!res.ok) throw new Error(useLovable ? await lovableAiFailureMessage(res) : await openAiFailureMessage(res));
+
   const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
   const content = json.choices?.[0]?.message?.content ?? "";
   const body = content.slice(content.indexOf("{"), content.lastIndexOf("}") + 1);
