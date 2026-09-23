@@ -68,9 +68,11 @@ const BOXES = {
   search: { x: 225, y: 135, w: 160, h: 62 },
   steps: { x: 410, y: 134, w: 140, h: 64 },
   choice: { x: 575, y: 138, w: 150, h: 56 },
-  // After Seal Intent: The Offer and its Counter Offer / Challenge loop sit side by side.
-  offer: { x: 45, y: 450, w: 170, h: 54 },
-  counterOffer: { x: 235, y: 450, w: 120, h: 54 },
+  // After Seal Intent: The Offer and its Counter Offer / Challenge loop sit side by side. Step 2
+  // sits under Step 1's right-hand side now (Steps 2 and 3 moved right, Steps 4 and 5 moved left),
+  // so Confirm Intent's arrow can drop straight down into it instead of jogging left.
+  offer: { x: 605, y: 450, w: 170, h: 54 },
+  counterOffer: { x: 795, y: 450, w: 120, h: 54 },
   // Last tile on the row.
   socialMedia: { x: 750, y: 136, w: 170, h: 56 },
   // Confirm Intent moves up into the row Online Screening used to occupy, now that row is free —
@@ -79,28 +81,30 @@ const BOXES = {
   // Step 2 (GRC)'s remaining checks, spaced out with the extra height the frame gained now that
   // Step 1 above it is shorter — 40-unit gaps instead of 20, so the column doesn't just end in a
   // block of empty space at the bottom of the taller frame.
-  poi: { x: 60, y: 362, w: 280, h: 48 },
+  poi: { x: 620, y: 362, w: 280, h: 48 },
   // KYC/KYB/PEP/AML no longer gets its own tile (still runs, just not shown separately), so
   // Without a Doubt sits directly under Proof of Intent now.
-  withoutADoubt: { x: 60, y: 544, w: 280, h: 54 },
-  businessDocs: { x: 60, y: 638, w: 280, h: 54 },
+  withoutADoubt: { x: 620, y: 544, w: 280, h: 54 },
+  businessDocs: { x: 620, y: 638, w: 280, h: 54 },
   // Step 3 (Execution, with Entry/Exit beside it) and Step 4 (Finality) each get their own column,
   // one tile per row matching the vertical stepper's own item list instead of a single combined
-  // tile — same row heights and gaps down both columns so they read as a matched pair.
+  // tile — same row heights and gaps down both columns so they read as a matched pair. Step 3
+  // moved right (under Step 2, its own column) and Step 4 moved left, swapping sides.
   // Dropped 15 units further from the frame's top edge (was 10) so the floating pill heading has
   // clear air above the first tile instead of nearly touching it.
-  concept: { x: 45, y: 780, w: 310, h: 36 },
-  prefeasibility: { x: 45, y: 830, w: 310, h: 36 },
-  feasibility: { x: 45, y: 880, w: 310, h: 36 },
-  bankability: { x: 45, y: 930, w: 310, h: 36 },
-  implementation: { x: 45, y: 980, w: 310, h: 36 },
+  concept: { x: 605, y: 780, w: 310, h: 36 },
+  prefeasibility: { x: 605, y: 830, w: 310, h: 36 },
+  feasibility: { x: 605, y: 880, w: 310, h: 36 },
+  bankability: { x: 605, y: 930, w: 310, h: 36 },
+  implementation: { x: 605, y: 980, w: 310, h: 36 },
   // Vertically centred in its own, shorter frame — no longer stretched to match the tall
   // Execution/Finality columns beside it, just tall enough for the tile itself, the same height
-  // as Search Results' own tile.
+  // as Search Results' own tile. Stays centred between the two columns — only which column is
+  // Execution and which is Finality changes, not where the connector between them sits.
   entryExit: { x: 424, y: 872, w: 112, h: 37 },
-  payment: { x: 605, y: 780, w: 310, h: 36 },
-  signoff: { x: 605, y: 880, w: 310, h: 36 },
-  handover: { x: 605, y: 980, w: 310, h: 36 },
+  payment: { x: 45, y: 780, w: 310, h: 36 },
+  signoff: { x: 45, y: 880, w: 310, h: 36 },
+  handover: { x: 45, y: 980, w: 310, h: 36 },
 
 } as const satisfies Record<string, Box>;
 
@@ -112,20 +116,24 @@ const TRADE_ENGINE_FRAME: Box = { x: 14, y: 18, w: 932, h: 262 };
 // Moved up to close the extra gap Step 1's shorter frame would otherwise leave, and made taller —
 // the reclaimed height goes into wider gaps between its own tiles (Proof of Intent, the Offer,
 // Without a Doubt, Business Docs) rather than empty space at the bottom of the frame.
-const COMPLIANCE_FRAME: Box = { x: 30, y: 337, w: 340, h: 380 };
+// Steps 2 and 3 moved to the right-hand column, Steps 4 and 5 to the left — so Confirm Intent's
+// arrow (which sits over on the right, in line with Search's row) can drop straight down into
+// Step 2 instead of jogging across.
+const COMPLIANCE_FRAME: Box = { x: 590, y: 337, w: 340, h: 380 };
 // Execution and Entry/Exit+Finality get the same bordered, labelled group frame as Steps 1 and 2.
 // Tall enough to hold Execution's five sub-step tiles (and Finality's three) stacked one per row.
 // Sits a little lower than Step 2's own bottom edge to leave room for Step 5's bigger circle
 // beside it.
-const EXECUTION_FRAME: Box = { x: 30, y: 755, w: 340, h: 270 };
-const FINALITY_FRAME: Box = { x: 590, y: 755, w: 340, h: 270 };
+const EXECUTION_FRAME: Box = { x: 590, y: 755, w: 340, h: 270 };
+const FINALITY_FRAME: Box = { x: 30, y: 755, w: 340, h: 270 };
 // Shorter now — just tall enough for its own tile, the same height as Search Results, rather than
 // stretched to match the Execution/Finality columns either side of it — centred in that same row.
+// Stays centred between the two columns regardless of which side each one is on.
 const ENTRY_EXIT_FRAME: Box = { x: 408, y: 858, w: 144, h: 64 };
-// Kept beside Step 2 (not stacked under it). Net +40% versus the original (65% bigger, then
-// trimmed 15%) — this is where AI+ actually draws from and keeps learning, so it still earns the
-// biggest shape on the map, just not quite so dominant.
-const MEMORY = { cx: 570, cy: 555, r: 147 };
+// Moved to the left along with Step 4, beside Step 2's new position on the right. Net +40% versus
+// the original (65% bigger, then trimmed 15%) — this is where AI+ actually draws from and keeps
+// learning, so it still earns the biggest shape on the map, just not quite so dominant.
+const MEMORY = { cx: 390, cy: 555, r: 147 };
 
 
 
@@ -201,22 +209,25 @@ const REST_ARROWS: Arrow[] = [
   // Finality's own sub-steps, top to bottom.
   line(bottomOf(BOXES.payment), topOf(BOXES.signoff)),
   line(bottomOf(BOXES.signoff), topOf(BOXES.handover)),
-  // Execution, Entry/Exit and Finality sit in a single row — connectors run frame edge to frame
-  // edge with a small gap at each end, so the tip points at the frame/heading without touching it.
+  // Finality, Entry/Exit and Execution sit in a single row (Finality now on the left, Execution on
+  // the right) — connectors still run in process order, Finality → Entry/Exit → Execution, frame
+  // edge to frame edge with a small gap at each end so the tip points at the frame/heading without
+  // touching it.
   line(
-    { x: EXECUTION_FRAME.x + EXECUTION_FRAME.w + ARROW_GAP, y: cy(ENTRY_EXIT_FRAME) },
+    { x: FINALITY_FRAME.x + FINALITY_FRAME.w + ARROW_GAP, y: cy(ENTRY_EXIT_FRAME) },
     { x: ENTRY_EXIT_FRAME.x - ARROW_GAP, y: cy(ENTRY_EXIT_FRAME) },
   ),
   line(
-    { x: ENTRY_EXIT_FRAME.x + ENTRY_EXIT_FRAME.w + ARROW_GAP, y: cy(FINALITY_FRAME) },
-    { x: FINALITY_FRAME.x - ARROW_GAP, y: cy(FINALITY_FRAME) },
+    { x: ENTRY_EXIT_FRAME.x + ENTRY_EXIT_FRAME.w + ARROW_GAP, y: cy(EXECUTION_FRAME) },
+    { x: EXECUTION_FRAME.x - ARROW_GAP, y: cy(EXECUTION_FRAME) },
   ),
   // Step 4 into Memory: straight up out of the Finality frame, then a single right-angle turn
-  // left into the circle at its centre height, rather than looping down and back up.
+  // right into the circle at its centre height (Memory now sits to Finality's right, not its
+  // left), rather than looping down and back up.
   path(
     { x: cx(FINALITY_FRAME), y: FINALITY_FRAME.y - ARROW_GAP },
     { x: cx(FINALITY_FRAME), y: MEMORY.cy },
-    { x: MEMORY.cx + MEMORY.r + ARROW_GAP, y: MEMORY.cy },
+    { x: MEMORY.cx - MEMORY.r - ARROW_GAP, y: MEMORY.cy },
   ),
 ];
 
