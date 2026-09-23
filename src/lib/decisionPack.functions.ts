@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { evidenceCompleteness, parseEvidenceRefs, type EvidenceRef } from "@/lib/confidence";
+import { nameKey } from "@/lib/dedupeOrgs";
 import {
   classifyTransactionTypeHeuristic,
   isTransactionType,
@@ -493,13 +494,13 @@ export const runDecisionPack = createServerFn({ method: "POST" })
         Boolean(newestDocAt) &&
         existing.some((p) => p.created_at && newestDocAt! > p.created_at);
       if (!stale) {
-        return { packId: existing[0]!.decision_pack_id, proposals: existing, reused: true };
+        return { packId: existing[0]!.decision_pack_id, proposals: existing, reused: true, newCandidateCount: 0 };
       }
     }
 
     const { data: parties } = await supabase
       .from("counterparties")
-      .select("name, jurisdiction, status, score, rating_band, notes")
+      .select("name, jurisdiction, status, score, rating_band, rationale")
       .eq("transaction_id", tx.id);
     const { data: bids } = await supabase
       .from("bid_offers")
@@ -840,7 +841,50 @@ export const runDecisionPack = createServerFn({ method: "POST" })
       },
     });
 
-    return { packId, proposals: inserted ?? [], reused: false };
+    // Search-results time only: a proposal naming a counterparty search itself never surfaced —
+    // whether that's a substitution, a bundle partner, or one search rejected that AI+ says would
+    // work with a change — is a genuine new lead, not just text inside a proposal nobody can act
+    // on. Added as a real, selectable candidate so it can be ticked like any other, but with
+    // `source: "ai_plus_recommendation"` so the workspace can mark it clearly as AI+'s own find
+    // rather than something the search itself verified independently.
+    let newCandidateCount = 0;
+    if (data.stageContext === "choice_made") {
+      const existingKeys = new Set((parties ?? []).map((p) => nameKey(p.name) || p.name.toLowerCase()));
+      const seen = new Set<string>();
+      const newRows: {
+        transaction_id: string;
+        name: string;
+        status: string;
+        source: string;
+        rationale: string | null;
+      }[] = [];
+      for (const c of clean) {
+        const names = c.related_counterparties ?? (c.related_counterparty ? [c.related_counterparty] : []);
+        for (const name of names) {
+          const trimmed = name.trim();
+          if (!trimmed) continue;
+          const key = nameKey(trimmed) || trimmed.toLowerCase();
+          if (existingKeys.has(key) || seen.has(key)) continue;
+          seen.add(key);
+          newRows.push({
+            transaction_id: tx.id,
+            name: trimmed,
+            status: "surfaced",
+            source: "ai_plus_recommendation",
+            rationale: c.rationale,
+          });
+        }
+      }
+      if (newRows.length > 0) {
+        const { data: insertedCandidates, error: candErr } = await supabase
+          .from("counterparties")
+          .insert(newRows as never)
+          .select("id");
+        if (!candErr) newCandidateCount = (insertedCandidates ?? []).length;
+      }
+    }
+
+    return { packId, proposals: inserted ?? [], reused: false, newCandidateCount };
   });
 
 /**

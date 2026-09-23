@@ -20,9 +20,13 @@ export const SPINE: StageDef[] = [
       { key: "bid-offer", label: "Register Bid/Offer", blurb: "Record the opening bid or offer and its terms." },
       { key: "documents", label: "Upload Docs", blurb: "Attach supporting documents with a fingerprint." },
       { key: "search", label: "Search", blurb: "Run a structured search for possible counterparties." },
-      { key: "ai", label: "AI", blurb: "AI reads the record and proposes. It never decides." },
-      { key: "ai-plus", label: "AI+", blurb: "Deeper analysis: risk, pricing sanity, jurisdiction notes." },
-      { key: "counterparties", label: "Counterparties", blurb: "Counterparties surfaced by search and AI." },
+      // "ai"/"ai-plus" are internal step keys (stored on the transaction) for the two passes of the
+      // same search pipeline — a first pass, then a deeper one once a candidate is shortlisted.
+      // Labelled plainly rather than "AI"/"AI+", which read as the same thing as the unrelated AI+
+      // Recommendations feature elsewhere in the workspace.
+      { key: "ai", label: "Search Results", blurb: "The first pass — finds candidate counterparties from what's on file." },
+      { key: "ai-plus", label: "Extended Search", blurb: "A deeper pass once a candidate is shortlisted: more thorough web search and relevance testing." },
+      { key: "counterparties", label: "Counterparties", blurb: "Counterparties surfaced by search." },
       { key: "choice", label: "Choice", blurb: "A person chooses the counterparty. Recorded as an event." },
       {
         key: "online-media",

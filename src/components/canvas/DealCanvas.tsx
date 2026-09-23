@@ -1568,8 +1568,10 @@ export function CounterpartyRecord({
         </div>
       )}
 
-      {/* AI+ analyses the whole result set — kept and dropped — the moment it's in, before anyone
-          picks. Continue below stays disabled until every proposal here is answered. */}
+      {/* AI+ analyses the whole result set — kept and dropped — once pressed, before anyone picks.
+          Continue below stays disabled until every proposal is answered. Selection itself (the
+          checkboxes in the candidate list) is disabled the same way, so nothing can be ticked
+          until AI+ has actually been run and answered — not just before Continue is reachable. */}
       {txId && candidates.length > 0 && !searching && !screeningDone && !continued && (
         <div className="mt-3 border-t border-slate-300 pt-3">
           <DecisionPackPanel
@@ -1577,7 +1579,9 @@ export function CounterpartyRecord({
             stageContext="choice_made"
             gating
             gatedStepLabel="Choice"
+            autoRun={false}
             onAllDecided={setAiPlusDecided}
+            onNewCandidates={() => qc.invalidateQueries({ queryKey: ["counterparties", txId] })}
           />
         </div>
       )}
@@ -1706,16 +1710,27 @@ export function CounterpartyRecord({
                   id={`shortlist-${c.id}`}
                   checked={Boolean(c.shortlisted)}
                   onCheckedChange={(v) => toggle(c, Boolean(v))}
-                  disabled={locked}
+                  disabled={locked || !aiPlusDecided}
                   className="mt-0.5"
                 />
               )}
-              <label htmlFor={`shortlist-${c.id}`} className="min-w-0 flex-1 cursor-pointer">
+              <label
+                htmlFor={`shortlist-${c.id}`}
+                className={cn("min-w-0 flex-1", !screeningDone && !aiPlusDecided ? "cursor-not-allowed" : "cursor-pointer")}
+              >
                 <span className="flex items-center gap-2">
                   <span className="text-sm font-medium text-slate-900">{c.name}</span>
                   {c.score != null && (
                     <span className="shrink-0 rounded-full border border-foreground bg-foreground px-2 py-0.5 text-[11px] font-semibold text-background">
                       {c.score}% match
+                    </span>
+                  )}
+                  {/* Added by AI+'s own analysis of the result set — not something the search
+                      itself independently verified, so it's marked distinctly rather than blended
+                      in as if it were an ordinary search hit. */}
+                  {c.source === "ai_plus_recommendation" && (
+                    <span className="shrink-0 rounded-full border border-orange-500/50 bg-orange-500/10 px-2 py-0.5 text-[10px] font-semibold text-orange-600">
+                      AI+ result
                     </span>
                   )}
                 </span>
@@ -2314,17 +2329,20 @@ export function CanvasStart({
       onDraftReference?.(ref);
     }
     setPicking(true);
-    setDirection("bid");
+    setDirection(startDirection);
     // Passed straight through rather than relying on the pendingFiles state set moments ago by
     // the same event handler — that setPendingFiles call hasn't re-rendered yet, so createDeal
     // would otherwise still read the empty array from this closure and silently drop whatever was
     // just dropped/selected.
-    void createDeal("bid", ref, filesOverride);
+    void createDeal(startDirection, ref, filesOverride);
   }
 
   const [dragOver, setDragOver] = useState(false);
   const [prompt, setPrompt] = useState(initialPrompt ?? "");
   const [pendingFiles, setPendingFiles] = useState<File[]>(initialFiles ?? []);
+  // Explicit Buy/Sell pill on the starting card — defaults to Buy (a bid) since that's the more
+  // common ask, rather than leaving the side to be guessed from wording once documents land.
+  const [startDirection, setStartDirection] = useState<"bid" | "offer">("bid");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const appliedInitialPrompt = useRef(false);
 
@@ -2353,6 +2371,29 @@ export function CanvasStart({
 
   const startNode = (
     <div className="mx-auto w-full max-w-2xl space-y-3">
+      {/* Small, explicit — no need to guess the side from wording once documents land. */}
+      <div className="flex items-center gap-1 rounded-full border border-border bg-background p-0.5 w-fit">
+        <button
+          type="button"
+          onClick={() => setStartDirection("bid")}
+          className={cn(
+            "rounded-full px-3 py-1 text-xs font-semibold transition-colors",
+            startDirection === "bid" ? "bg-emerald-600 text-white" : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          Buy
+        </button>
+        <button
+          type="button"
+          onClick={() => setStartDirection("offer")}
+          className={cn(
+            "rounded-full px-3 py-1 text-xs font-semibold transition-colors",
+            startDirection === "offer" ? "bg-[#4169e1] text-white" : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          Sell
+        </button>
+      </div>
       <div className="flex items-stretch gap-2 rounded-xl border border-border bg-background p-1.5 shadow-sm transition-colors focus-within:border-primary">
         <input
           type="text"

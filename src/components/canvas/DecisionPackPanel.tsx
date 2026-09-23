@@ -36,11 +36,20 @@ const HEADING: Record<StageContext, string> = {
 };
 
 const PILL_LABEL: Record<StageContext, string> = {
-  choice_made: "AI+ RECOMMENDATIONS",
+  choice_made: "RUN AI+ ANALYSIS",
   intent_confirmed: "AI+ RECOMMENDATIONS",
   poi_sealed: "AI+ RECOMMENDATIONS",
   wad_updated: "AI+ RECOMMENDATIONS",
   finality_recorded: "AI+ RECOMMENDATIONS",
+};
+
+/** Shown next to the button, always — not just on hover — so its value and why it's here right now
+ * is plain before anyone is asked to press it. Only "choice_made" is a deliberate, must-press
+ * button today (it's the one that can also surface new candidates); the other stages still run
+ * themselves automatically since they're informational notes further down the spine. */
+const VALUE_EXPLANATION: Partial<Record<StageContext, string>> = {
+  choice_made:
+    "Before you pick, AI+ checks everyone this search found — and dropped — together, to catch pathways a one-by-one look can miss: a stronger substitute, two candidates that cover the requirement as a bundle, or a rejected one that would work with a change. It can also surface counterparties the search itself didn't. Nothing is selected for you — you still choose, from whatever's on the list once this is done.",
 };
 
 
@@ -55,7 +64,9 @@ export function DecisionPackPanel({
   stageContext,
   gating = false,
   gatedStepLabel = "the next step",
+  autoRun = true,
   onAllDecided,
+  onNewCandidates,
 }: {
   transactionId: string;
   stageContext: StageContext;
@@ -64,21 +75,31 @@ export function DecisionPackPanel({
   /** What's actually being held open while gating — named by the caller, since this panel sits at
    * different points in the flow ("Choice" today; it used to gate Intent). */
   gatedStepLabel?: string;
+  /** False for "choice_made": that one is a deliberate press, explained up front, not something
+   * that quietly runs itself the moment the frame mounts. Every other stage keeps running itself,
+   * since those are informational notes further down the spine, not a gate with a value pitch. */
+  autoRun?: boolean;
   onAllDecided?: (allDecided: boolean) => void;
+  /** Fires once, right after a run that actually added new candidates to the search results — lets
+   * the caller refetch the candidate list and show them, clearly marked, instead of them only
+   * existing in the database until the next unrelated refresh. */
+  onNewCandidates?: (count: number) => void;
 }) {
   const run = useServerFn(runDecisionPack);
   const decide = useServerFn(decideProposal);
   const [open, setOpen] = useState(false);
   const [proposals, setProposals] = useState<Proposal[] | null>(null);
-  const [busy, setBusy] = useState(true);
+  const [started, setStarted] = useState(autoRun);
+  const [busy, setBusy] = useState(autoRun);
   const [error, setError] = useState<string | null>(null);
   const [deciding, setDeciding] = useState<string | null>(null);
   const [selectingAll, setSelectingAll] = useState(false);
-  // Bumped by the "Try again" button to re-run the effect below — a transient failure (rate
-  // limited, a slow gateway) previously had no way back short of leaving the deal and reopening it.
+  // Bumped by the "Try again" button (or the initial press, for a manual-start stage) to re-run
+  // the effect below.
   const [retryTick, setRetryTick] = useState(0);
 
   useEffect(() => {
+    if (!started) return;
     let live = true;
     setBusy(true);
     setError(null);
@@ -87,6 +108,16 @@ export function DecisionPackPanel({
         const res = await run({ data: { transactionId, stageContext } });
         if (!live) return;
         setProposals(res.proposals as unknown as Proposal[]);
+        if (res.newCandidateCount > 0) {
+          onNewCandidates?.(res.newCandidateCount);
+          toast.success(
+            `AI+ found ${res.newCandidateCount} additional counterpart${res.newCandidateCount === 1 ? "y" : "ies"} — added to the search results below, marked "AI+ result".`,
+            { duration: 8000 },
+          );
+        }
+        // Reveal what it found the moment it's back, rather than leaving it sitting behind the
+        // button for a second click.
+        setOpen(true);
       } catch (err) {
         if (live) setError((err as Error).message);
       } finally {
@@ -96,7 +127,8 @@ export function DecisionPackPanel({
     return () => {
       live = false;
     };
-  }, [transactionId, stageContext, run, retryTick]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [started, transactionId, stageContext, run, retryTick]);
 
   const pending = (proposals ?? []).filter((p) => !p.decided_at).length;
   // "Nothing to add" is its own satisfied state — a load that genuinely came back with zero
@@ -174,18 +206,30 @@ export function DecisionPackPanel({
 
   return (
     <>
+      {/* Explained up front, always visible — not a tooltip — so pressing this isn't a leap of
+          faith. Only shown before the first run; once results exist the explanation would just be
+          clutter next to the actual findings. */}
+      {!started && VALUE_EXPLANATION[stageContext] && (
+        <p className="mb-2 rounded-lg bg-orange-500/5 p-2.5 text-[11px] leading-relaxed text-foreground/80">
+          <Sparkles className="mr-1 inline h-3 w-3 text-orange-500" />
+          {VALUE_EXPLANATION[stageContext]}
+        </p>
+      )}
       <div className="flex items-center gap-2">
         <Button
           type="button"
           variant="outline"
           size="sm"
-          disabled={busy || Boolean(error) || (proposals ?? []).length === 0}
-          onClick={() => setOpen(true)}
-          className="h-8 gap-2 rounded-full border-orange-500/60 px-3 text-[11px] font-semibold text-orange-600 hover:bg-orange-500/10"
+          disabled={busy || (started && (Boolean(error) || (proposals ?? []).length === 0))}
+          onClick={() => (started ? setOpen(true) : setStarted(true))}
+          className={cn(
+            "h-8 gap-2 rounded-full border-orange-500/60 px-3 text-[11px] font-semibold text-orange-600 hover:bg-orange-500/10",
+            !started && "animate-pulse",
+          )}
         >
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
           {PILL_LABEL[stageContext]}
-          {!busy && pending > 0 && (
+          {started && !busy && pending > 0 && (
             <span className="rounded-full bg-orange-500 px-1.5 py-0.5 text-[10px] text-white">
               {pending}
             </span>
@@ -206,7 +250,7 @@ export function DecisionPackPanel({
             </Button>
           </>
         )}
-        {!busy && !error && (proposals ?? []).length === 0 && (
+        {started && !busy && !error && (proposals ?? []).length === 0 && (
           <span className="text-[11px] text-muted-foreground">AI+ had nothing to add here.</span>
         )}
         {/* The gate itself lives here, next to the button that opens it, rather than as a

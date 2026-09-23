@@ -517,7 +517,9 @@ export function MapView({
         })}
         {node("search", "Search", "trading", "search", Search, {
           overrideKey: "search",
-          sub: "Using AI",
+          // Was "Using AI" — read as the same thing as the separate AI+ Recommendations feature
+          // elsewhere in the workspace, which it isn't.
+          sub: "Matching",
           ...(searching ? { state: "active" as NodeState } : {}),
         })}
         {searching && (
