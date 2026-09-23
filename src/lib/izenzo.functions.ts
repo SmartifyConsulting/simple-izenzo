@@ -425,9 +425,23 @@ async function findOnWeb(
       };
     }
   }
+  if (!apiKey) {
+    // Without a saved OpenAI key there is no internet search of its own to fall back on — the
+    // reasoning still ran on the built-in service above, so report only the missing search.
+    const reason =
+      "Internet search is unavailable: connect Tavily, or add an OpenAI key in Admin → Integrations.";
+    return {
+      output: "",
+      model: AI_MODEL,
+      sources: [] as { label: string; url: string }[],
+      failures: [{ label: "Internet search", reason }],
+      webError: new Error(reason) as Error | null,
+    };
+  }
   try {
     const r = await webSearch({
       apiKey,
+
       instructions,
       input,
       models: webModelsFor(kind),
