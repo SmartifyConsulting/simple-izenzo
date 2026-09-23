@@ -2593,7 +2593,7 @@ function LiveDealEngine() {
                     value={topEditedPrompt}
                     onChange={(e) => setTopEditedPrompt(e.target.value)}
                     autoFocus
-                    className="min-h-0 resize-none text-sm"
+                    className="min-h-0 resize-none text-sm text-slate-800 placeholder:text-slate-400"
                   />
                   <div className="flex gap-1.5">
                     <Button
@@ -2607,7 +2607,12 @@ function LiveDealEngine() {
                     >
                       Search
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setTopEditingSearch(false)}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-slate-700 hover:bg-slate-200 hover:text-slate-900"
+                      onClick={() => setTopEditingSearch(false)}
+                    >
                       Cancel
                     </Button>
                   </div>
