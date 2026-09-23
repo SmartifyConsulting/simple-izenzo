@@ -39,7 +39,7 @@ export type PipelineCandidate = {
 };
 
 export type PipelineInput = {
-  apiKey: string;
+  apiKey: string | null;
   kind: "ai" | "ai_plus";
   chatModel: string;
   webModels: string[];
