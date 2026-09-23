@@ -137,7 +137,7 @@ function DealSearchDialog({
  * of pill buttons. Rendered once from the root so it persists across every authenticated page,
  * not just Live Deal Engine — but never shows on the marketing site itself. */
 export function WorkspaceTaskbar() {
-  const { windows, setMode, close, reorder, hydrate } = useDealWindows();
+  const { windows, setMode, close, reorder, hydrate, storedOpenIds } = useDealWindows();
   const { org, user } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
