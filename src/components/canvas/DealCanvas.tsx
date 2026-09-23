@@ -2277,7 +2277,7 @@ export function CanvasStart({
       if (error?.code === "23505") {
         ({ data: newTx, error } = await supabase
           .from("transactions")
-          .insert({ ...baseRow, reference: await claimReference("workspace") } as never)
+          .insert({ ...baseRow, reference: await claimReference(direction) } as never)
           .select()
           .single());
       }
@@ -2337,11 +2337,13 @@ export function CanvasStart({
   // in between would just be a click for its own sake. Whatever was already typed/dropped rides
   // along via onCreated's `seed` so the real upload step can pick up exactly where this left off.
   async function beginPicking(filesOverride?: File[]) {
-    const ref = draftReference ?? (await claimReference("workspace"));
-    if (!draftReference) {
-      setDraftReference(ref);
-      onDraftReference?.(ref);
-    }
+    // The reference shown before this point (initialReference, drawn the moment an empty
+    // workspace opens) is only ever a placeholder — "WS…"/"ID…" — because direction wasn't known
+    // yet. Now that the Buy/Sell pill makes it explicit, a proper BID/OFF-prefixed reference is
+    // drawn fresh here rather than keeping that generic placeholder regardless of which was picked.
+    const ref = await claimReference(startDirection);
+    setDraftReference(ref);
+    onDraftReference?.(ref);
     setPicking(true);
     setDirection(startDirection);
     // Passed straight through rather than relying on the pendingFiles state set moments ago by
