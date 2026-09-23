@@ -68,11 +68,12 @@ const BOXES = {
   search: { x: 225, y: 135, w: 160, h: 62 },
   steps: { x: 410, y: 134, w: 140, h: 64 },
   choice: { x: 575, y: 138, w: 150, h: 56 },
-  // After Seal Intent: The Offer and its Counter Offer / Challenge loop sit side by side. Step 2
-  // sits under Step 1's right-hand side now (Steps 2 and 3 moved right, Steps 4 and 5 moved left),
-  // so Confirm Intent's arrow can drop straight down into it instead of jogging left.
-  offer: { x: 605, y: 450, w: 170, h: 54 },
-  counterOffer: { x: 795, y: 450, w: 120, h: 54 },
+  // After Seal Intent: Offer and its Counter Offer / Challenge loop sit side by side — Counter
+  // Offer on the left, Offer on the right (swapped from how they first shipped). Step 2 sits
+  // under Step 1's right-hand side now (Steps 2 and 3 moved right, Steps 4 and 5 moved left), so
+  // Confirm Intent's arrow can drop straight down into Seal Intent above this row.
+  counterOffer: { x: 605, y: 450, w: 120, h: 54 },
+  offer: { x: 745, y: 450, w: 170, h: 54 },
   // Last tile on the row.
   socialMedia: { x: 750, y: 136, w: 170, h: 56 },
   // Confirm Intent moves up into the row Online Screening used to occupy, now that row is free —
@@ -189,10 +190,12 @@ const REST_ARROWS: Arrow[] = [
   // The KYC/KYB/PEP/AML tile itself is no longer shown separately (it still runs, and still
   // drives its own pulse state — just folded into Without a Doubt visually), so this arrow now
   // runs straight from Proof of Intent to Without a Doubt instead of stopping at it first.
-  // Seal Intent → The Offer, the Offer ⇄ Counter Offer/Challenge loop, then agreement → WAD.
+  // Seal Intent → Offer, the Offer ⇄ Counter Offer/Challenge loop, then agreement → WAD. Counter
+  // Offer sits on the left now and Offer on the right, so the loop runs between their facing
+  // (inner) edges rather than Offer's own right edge.
   path(bottomOf(BOXES.poi), { x: cx(BOXES.poi), y: BOXES.poi.y + BOXES.poi.h + 10 }, { x: cx(BOXES.offer), y: BOXES.poi.y + BOXES.poi.h + 10 }, topOf(BOXES.offer)),
-  line({ x: BOXES.offer.x + BOXES.offer.w, y: cy(BOXES.offer) - 9 }, { x: BOXES.counterOffer.x, y: cy(BOXES.offer) - 9 }),
-  line({ x: BOXES.counterOffer.x, y: cy(BOXES.offer) + 9 }, { x: BOXES.offer.x + BOXES.offer.w, y: cy(BOXES.offer) + 9 }),
+  line({ x: BOXES.counterOffer.x + BOXES.counterOffer.w, y: cy(BOXES.offer) - 9 }, { x: BOXES.offer.x, y: cy(BOXES.offer) - 9 }),
+  line({ x: BOXES.offer.x, y: cy(BOXES.offer) + 9 }, { x: BOXES.counterOffer.x + BOXES.counterOffer.w, y: cy(BOXES.offer) + 9 }),
   path(bottomOf(BOXES.offer), { x: cx(BOXES.offer), y: BOXES.offer.y + BOXES.offer.h + 10 }, { x: cx(BOXES.withoutADoubt), y: BOXES.offer.y + BOXES.offer.h + 10 }, topOf(BOXES.withoutADoubt)),
   line(bottomOf(BOXES.withoutADoubt), topOf(BOXES.businessDocs)),
   // Step 2 into Step 3: straight down out of Business Docs, stopping just short of the Step 3
@@ -560,9 +563,9 @@ export function MapView({
         {/* Step 2 — compliance & governance */}
         {node("poi", "Seal Intent", "trading", "poi", Building2, { overrideKey: "poi" })}
 
-        {/* After Seal Intent the Responder reviews The Offer: Approve, Reject or Challenge — the
+        {/* After Seal Intent the Responder reviews the Offer: Approve, Reject or Challenge — the
             Counter Offer loop can go back and forth until agreement, which opens Without a Doubt. */}
-        {node("offer", "The Offer", "compliance", "wad", Tag, { noArtefact: true })}
+        {node("offer", "Offer", "compliance", "wad", Tag, { noArtefact: true })}
         {node("counterOffer", "Counter Offer", "compliance", "wad", undefined, {
           state: overrideStates?.["counterOffer"] ?? (lock("compliance", "wad") ? "locked" : "open"),
           noArtefact: true,
