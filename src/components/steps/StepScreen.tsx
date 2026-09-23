@@ -2122,6 +2122,8 @@ function WadStep({ tx, reload }: Props) {
         })}
       </ul>
     </Panel>
+    <MutualEngagementPanel transactionId={tx.id} />
+    </div>
   );
 }
 
