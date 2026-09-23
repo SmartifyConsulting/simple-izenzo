@@ -1213,8 +1213,8 @@ export const extractMaterialTerms = createServerFn({ method: "POST" })
     try {
       // This has a safe fallback below, so it never spends the retry budget a free OpenAI
       // account allows — the document read is what needs those retries.
-      const { callOpenAiChat } = await import("@/lib/openaiCall.server");
-      const res = await callOpenAiChat(
+      const { callAiChat } = await import("@/lib/lovableAi.server");
+      const res = await callAiChat(
         apiKey,
         {
           model: AI_MODEL,
@@ -1294,8 +1294,8 @@ export const classifyDocument = createServerFn({ method: "POST" })
     try {
       // Filename heuristics below cover this completely, so it gives up at once on a busy
       // account rather than using up the few requests a free OpenAI account allows per minute.
-      const { callOpenAiChat } = await import("@/lib/openaiCall.server");
-      const res = await callOpenAiChat(
+      const { callAiChat } = await import("@/lib/lovableAi.server");
+      const res = await callAiChat(
         apiKey,
         {
           model: "gpt-5-mini",
