@@ -23,7 +23,7 @@ export type DiligenceRow = {
   kyc_state: CheckState;
   kyb_state: CheckState;
   kyc_waiver_reason: string | null;
-  kyb_waiver_reason: string | null
+  kyb_waiver_reason: string | null;
   cleared_at: string | null;
   updated_at: string;
 };
