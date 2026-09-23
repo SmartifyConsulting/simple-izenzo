@@ -261,6 +261,21 @@ export function MatchResultsPanel({
           </li>
         ))}
       </ul>
+
+      {transactionId && (notKept.data?.length ?? 0) > 0 && (
+        <details className="mt-3 rounded-xl border border-border bg-muted/30 p-3">
+          <summary className="cursor-pointer text-xs font-medium text-foreground">
+            Considered and not kept ({notKept.data!.length})
+          </summary>
+          <ul className="mt-2 space-y-1.5">
+            {notKept.data!.map((r, i) => (
+              <li key={`${r.name}-${i}`} className="text-xs leading-relaxed text-muted-foreground">
+                <span className="font-medium text-foreground">{r.name}</span> — {r.reason}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
     </div>
   );
 }
