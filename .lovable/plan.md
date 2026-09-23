@@ -82,3 +82,36 @@ document/company helpers) go back to `callOpenAiChat`; the AI+ path
 (`src/lib/decisionPack.functions.ts` `askOnce` and `kind: "ai_plus"`) pins
 `callLovableAiChat` with `reasoning_effort: "medium"`. Failure wording stays split so each
 message names the right account.
+
+## Also: Anastasia was emailed but nothing appeared in her Izenzo inbox
+
+Checked both sides. The match email for Amrod did go out to nonastasia@gmail.com at
+01:03 on 23 September, and the email service reports it as delivered (the sending domain
+izenzo.co.za is verified and sending normally) — so if she can't see it in her mail, it is
+worth checking her spam folder.
+
+What is genuinely missing is the in-app one. When a counterparty is chosen and emailed,
+only the bidder gets an Inbox entry. The matched company gets an email and nothing else,
+so Anastasia's Izenzo inbox shows only bid cancellations — never the match itself. That is
+why it looks like the notification never arrived.
+
+The fix:
+
+- When a counterparty that already has an Izenzo account is matched and emailed, also
+  write an Inbox entry for that account — "You've been matched to BID… " with the deal
+  reference and a link into the deal — so it lands in the app as well as in email.
+- Match the account the same way the email does (by the counterparty's contact address),
+  respect that person's own notification preference, and never fail the match if the Inbox
+  write fails.
+- Record the outcome of each send instead of swallowing it silently, so a failed or
+  refused email is visible rather than invisible.
+- Same for the invite path, so a company invited to join is also told inside the app once
+  they sign in.
+
+Technical detail: `src/lib/counterpartyOutreach.functions.ts` tier-1 branch (~line 458)
+notifies only the bidder via `notifyBidder`; add a counterparty-side insert into
+`notifications` (user_id resolved from `profiles.email` = the counterparty contact address,
+`org_id` left to that profile's org, `transaction_id` set) guarded by
+`getNotificationChannel` from `src/lib/bidderNotify.server.ts`. The existing notifications
+INSERT policy already permits this (parties to an accessible transaction). No schema change,
+no governance change.
