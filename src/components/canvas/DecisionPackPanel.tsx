@@ -80,7 +80,10 @@ export function DecisionPackPanel({
 }) {
   const run = useServerFn(runDecisionPack);
   const decide = useServerFn(decideProposal);
-  const [open, setOpen] = useState(false);
+  // Expanded by default the moment this mounts (i.e. the moment search results are shown) — the
+  // explanation of what AI+ does and why is the first thing to read here, not something to
+  // discover by clicking a collapsed header.
+  const [open, setOpen] = useState(true);
   const [proposals, setProposals] = useState<Proposal[] | null>(null);
   const [started, setStarted] = useState(autoRun);
   const [busy, setBusy] = useState(autoRun);

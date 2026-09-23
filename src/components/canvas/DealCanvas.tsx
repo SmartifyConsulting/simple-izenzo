@@ -1156,6 +1156,7 @@ export function CounterpartyRecord({
   searchPrompt = null,
   onSearchAgain,
   onStopSearch,
+  onAiPlusDecided,
 }: {
   txId?: string | null;
   /** True while the AI/AI+ search is still running, so the panel polls for freshly saved rows. */
@@ -1176,6 +1177,11 @@ export function CounterpartyRecord({
    * server-side and will still save whatever it finds, this just stops watching for it and opens
    * editing straight away instead of leaving no way out of the spinner. */
   onStopSearch?: () => void;
+  /** Tells the caller whether AI+ Recommendations has actually been reviewed for the current
+   * search results — the workflow map's own "Choice" pulse needs this too, since AI+ gates
+   * Choice here but the map computes its pulse state outside this component, from persisted
+   * transaction fields alone. */
+  onAiPlusDecided?: (decided: boolean) => void;
   /** True once intent is confirmed — the shortlist/pick is settled by then, so the checkboxes and
    * radio buttons here stop taking input rather than silently accepting a click that changes
    * nothing (or that the server would reject anyway). */
@@ -1780,7 +1786,10 @@ export function CounterpartyRecord({
             gating
             gatedStepLabel="Choice"
             autoRun={false}
-            onAllDecided={setAiPlusDecided}
+            onAllDecided={(decided) => {
+              setAiPlusDecided(decided);
+              onAiPlusDecided?.(decided);
+            }}
             onNewCandidates={() => qc.invalidateQueries({ queryKey: ["counterparties", txId] })}
           />
         </div>
