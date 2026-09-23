@@ -2667,6 +2667,27 @@ function LiveDealEngine() {
                   </div>
                 )}
 
+                {/* Same slim progress bar treatment as the search above — shown only while
+                    screening is actually running, then replaced by the results frame below once
+                    it's done. */}
+                {mediaRunning && (
+                  <div className="mt-1.5 overflow-hidden rounded-xl border border-border">
+                    <div className="flex items-center gap-3 bg-[#F1F5F9] px-4 py-3">
+                      <p className="text-xs text-slate-700">
+                        Scanning LinkedIn, Facebook, TikTok, marketplaces and news…
+                      </p>
+                      {mediaProgress && mediaProgress.total > 0 && (
+                        <span className="ml-auto shrink-0 text-[11px] text-slate-500">
+                          {mediaProgress.failed
+                            ? "Could not finish"
+                            : `${mediaProgress.done} of ${mediaProgress.total} sources`}
+                        </span>
+                      )}
+                    </div>
+                    <div className="h-1.5 w-full animate-ribbon-sweep" />
+                  </div>
+                )}
+
                 {/* Online Media Screening results, once screening has actually finished — its own
                     collapsed frame right under Search Results, closed by default since this is a
                     record to check back on rather than something needing attention the moment it's

@@ -18,6 +18,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { sealProofOfIntent, completeWad, runAiProposal, searchCounterparties, extractMaterialTerms } from "@/lib/izenzo.functions";
 import { notifyChosenCounterparty } from "@/lib/counterpartyOutreach.functions";
@@ -70,6 +81,9 @@ type Props = {
   stage: StageKey;
   step: string;
   reload: () => void;
+  /** Releases the chosen counterparty and reopens the list — only meaningful on Intent/Seal
+   * Intent, where it's still possible to change who this deal is with. */
+  onChangeParty?: (() => void) | undefined;
 };
 
 /* ---------- shared bits ---------- */
@@ -1217,7 +1231,7 @@ function ChoiceStep({ tx, reload }: Props) {
 }
 
 
-function IntentStep({ tx, reload }: Props) {
+function IntentStep({ tx, reload, onChangeParty }: Props) {
   const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
   // Set the instant the confirm write succeeds, before `reload()`/`advance()` move the workflow
@@ -1397,6 +1411,28 @@ function IntentStep({ tx, reload }: Props) {
             these terms reflect our intent
           </label>
           <div className="flex items-center gap-2">
+            {onChangeParty && !tx.poi_sealed_at && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button type="button" size="sm" variant="outline">
+                    Change Party
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Choose a different party?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      The party you picked is released and the counterparty list opens again. Nothing that
+                      has already been screened is lost.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep this party</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => onChangeParty()}>Reopen the list</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
             <Button size="sm" onClick={confirm} disabled={!agreed || busy || Boolean(tx.intent_confirmed_at)}>
               {tx.intent_confirmed_at ? "Intent confirmed" : "Confirm Intent"}
             </Button>

@@ -136,7 +136,7 @@ export function MutualEngagementPanel({
         <p className="text-[11px] text-muted-foreground">
           {state.decided === "accepted"
             ? "The counterparty accepted the offer."
-            : "The counterparty is evaluating your offer."}
+            : "The counterparty is evaluating your offer. They have an option to approve, counter or reject. Without a Doubt opens once they approve."}
         </p>
       )}
       {isObserver && (

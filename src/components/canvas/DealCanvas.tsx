@@ -812,7 +812,11 @@ export function InlineFrame({
   // appears only once agreement is reached.
   const def =
     isWad && engagement && engagement.decided !== "accepted"
-      ? { key: "offer", label: "Offer", blurb: "Agree the terms with the counterparty. Without a Doubt opens once they approve." }
+      ? {
+          key: "offer",
+          label: "Offer",
+          blurb: "The counterparty is evaluating your offer. They have an option to approve, counter or reject. Without a Doubt opens once they approve.",
+        }
       : baseDef;
   const locked = lockReason(stage, step, tx);
   const canChangeParty =
@@ -849,8 +853,10 @@ export function InlineFrame({
       <p className="rounded-xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">{locked}.</p>
     ) : (
       <>
-        <StepScreen tx={tx} stage={stage} step={step} reload={reload} />
-        {changePartyLink}
+        <StepScreen tx={tx} stage={stage} step={step} reload={reload} onChangeParty={onChangeParty} />
+        {/* Intent now has its own "Change Party" button in its footer, left of Confirm Intent —
+            this standalone link is only still needed for Seal Intent (poi). */}
+        {step !== "intent" && changePartyLink}
       </>
     );
   }
@@ -891,9 +897,11 @@ export function InlineFrame({
           <StepScreen tx={tx} stage={stage} step={step} reload={reload} />
         </div>
       ) : (
-        <StepScreen tx={tx} stage={stage} step={step} reload={reload} />
+        <StepScreen tx={tx} stage={stage} step={step} reload={reload} onChangeParty={onChangeParty} />
       )}
-      {changePartyLink}
+      {/* Intent now has its own "Change Party" button in its footer, left of Confirm Intent —
+          this standalone link is only still needed for Seal Intent (poi). */}
+      {step !== "intent" && changePartyLink}
     </div>
   );
 }

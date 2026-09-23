@@ -143,9 +143,27 @@ function InboxPage() {
                           {reference}
                         </Link>
                       )}
-                      <p className={cn("text-sm", n.read ? "font-medium" : "font-semibold")}>
-                        {n.title}
-                      </p>
+                      {/* The title's own BID/OFF id is baked into its text server-side, so it needs
+                          to be clickable even when the reference lookup above comes back empty
+                          (older rows, or the reference column not yet on this row) — the whole
+                          title links through whenever the notification has a transaction at all. */}
+                      {n.transaction_id ? (
+                        <Link
+                          to="/live-deal-engine"
+                          search={{ tx: n.transaction_id }}
+                          onClick={() => void markRead(n.id)}
+                          className={cn(
+                            "text-sm hover:underline",
+                            n.read ? "font-medium" : "font-semibold",
+                          )}
+                        >
+                          {n.title}
+                        </Link>
+                      ) : (
+                        <p className={cn("text-sm", n.read ? "font-medium" : "font-semibold")}>
+                          {n.title}
+                        </p>
+                      )}
                     </div>
                     {n.body && <p className="mt-0.5 text-xs text-muted-foreground">{n.body}</p>}
                     <p className="mt-0.5 text-xs text-muted-foreground">{when(n.created_at)}</p>
