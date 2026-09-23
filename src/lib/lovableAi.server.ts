@@ -35,6 +35,18 @@ function toGatewayBody(body: unknown): ChatBody {
   out["model"] = LOVABLE_AI_MODEL;
   out["reasoning_effort"] = effort;
   if (typeof out["max_completion_tokens"] !== "number") out["max_completion_tokens"] = 8000;
+  // A request asking for a JSON reply must also say so in the conversation itself, or the service
+  // refuses it outright.
+  const format = out["response_format"] as { type?: string } | undefined;
+  const messages = Array.isArray(out["messages"]) ? (out["messages"] as { role?: string; content?: unknown }[]) : [];
+  if (format?.type === "json_object" && messages.length > 0) {
+    const mentionsJson = messages.some((m) => String(m.content ?? "").toLowerCase().includes("json"));
+    if (!mentionsJson) {
+      out["messages"] = messages.map((m, i) =>
+        i === 0 ? { ...m, content: `${String(m.content ?? "")}\n\nAnswer with a single JSON object.` } : m,
+      );
+    }
+  }
   return out;
 }
 
