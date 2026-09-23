@@ -329,81 +329,93 @@ export function MutualEngagementPanel({
   const signable = docs.filter((d) => d.requires_signature || d.signatures.length > 0 || d.fully_signed_at);
   const canManageDocs = state.decided === "accepted";
 
+  const offerBody = (
+    <div className="space-y-3 p-4">
+      {state.decided === "accepted" && (
+        <p className="flex items-center gap-1.5 text-sm font-medium text-success">
+          <CheckCircle2 className="h-4 w-4" /> The counterparty accepted the offer — KYC/KYB checks are open
+          below.
+        </p>
+      )}
+      {state.decided === "opted_out" && (
+        <p className="flex items-center gap-1.5 text-sm font-medium text-destructive">
+          <XCircle className="h-4 w-4" /> A party rejected the offer — this engagement is closed.
+        </p>
+      )}
+
+      {state.responses.length > 0 && (
+        <ul className="space-y-2">
+          {state.responses.map((r) => (
+            <li key={r.id} className="rounded-lg border border-border p-3 text-xs">
+              <p className="font-medium">
+                {r.responder_name ?? sideWord(r.responder_side)} ({sideWord(r.responder_side)}){" "}
+                {r.response === "accepted"
+                  ? "accepted the offer"
+                  : r.response === "challenged"
+                    ? "raised a challenge"
+                    : "rejected the offer"}
+              </p>
+              {r.message && <p className="mt-1 text-muted-foreground">{r.message}</p>}
+              <p className="mt-1 text-[11px] text-muted-foreground">{when(r.created_at)}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* Once the bidder has put the offer to the counterparty, it's the counterparty's move —
+          the bidder can only wait and read the thread below, not challenge or reject their own
+          offer. */}
+      {state.decided !== "opted_out" && !isObserver && state.side === "counterparty" && (
+        <div className="flex flex-wrap gap-2">
+          {state.decided !== "accepted" && (
+            <Button size="sm" disabled={busy !== null} onClick={() => void sendResponse("accepted")}>
+              {busy === "accepted" ? "Accepting…" : "Accept"}
+            </Button>
+          )}
+          <Button size="sm" variant="outline" disabled={busy !== null} onClick={() => setChallengeOpen(true)}>
+            Challenge
+          </Button>
+          {state.decided !== "accepted" && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-destructive/40 text-destructive hover:bg-destructive/10"
+              disabled={busy !== null}
+              onClick={() => void sendResponse("opted_out")}
+            >
+              {busy === "opted_out" ? "Rejecting…" : "Reject"}
+            </Button>
+          )}
+        </div>
+      )}
+      {state.side === "bidder" && (
+        <p className="text-[11px] text-muted-foreground">
+          {state.decided === "accepted"
+            ? "The counterparty accepted the offer."
+            : "The counterparty is evaluating your offer."}
+        </p>
+      )}
+      {isObserver && (
+        <p className="text-[11px] text-muted-foreground">
+          Administrator view is read-only. Only the bidder and counterparty can respond.
+        </p>
+      )}
+    </div>
+  );
+
   return (
     <div className="space-y-4">
-      <section className="rounded-xl border border-border">
-        <div className="flex items-center gap-2 border-b border-border px-4 py-3">
-          <MessageSquareWarning className="h-4 w-4 text-primary" />
-          <h2 className="label-caps font-sans">The Offer</h2>
-        </div>
-        <div className="space-y-3 p-4">
-          {state.decided === "accepted" && (
-            <p className="flex items-center gap-1.5 text-sm font-medium text-success">
-              <CheckCircle2 className="h-4 w-4" /> The counterparty approved the offer — KYC/KYB checks are open
-              below.
-            </p>
-          )}
-          {state.decided === "opted_out" && (
-            <p className="flex items-center gap-1.5 text-sm font-medium text-destructive">
-              <XCircle className="h-4 w-4" /> A party rejected the offer — this engagement is closed.
-            </p>
-          )}
-
-          {state.responses.length > 0 && (
-            <ul className="space-y-2">
-              {state.responses.map((r) => (
-                <li key={r.id} className="rounded-lg border border-border p-3 text-xs">
-                  <p className="font-medium">
-                    {r.responder_name ?? sideWord(r.responder_side)} ({sideWord(r.responder_side)}){" "}
-                    {r.response === "accepted"
-                      ? "approved the offer"
-                      : r.response === "challenged"
-                        ? "raised a challenge"
-                        : "rejected the offer"}
-                  </p>
-                  {r.message && <p className="mt-1 text-muted-foreground">{r.message}</p>}
-                  <p className="mt-1 text-[11px] text-muted-foreground">{when(r.created_at)}</p>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {state.decided !== "opted_out" && !isObserver && (
-            <div className="flex flex-wrap gap-2">
-              {state.side === "counterparty" && state.decided !== "accepted" && (
-                <Button size="sm" disabled={busy !== null} onClick={() => void sendResponse("accepted")}>
-                  {busy === "accepted" ? "Approving…" : "Approve"}
-                </Button>
-              )}
-              <Button size="sm" variant="outline" disabled={busy !== null} onClick={() => setChallengeOpen(true)}>
-                Challenge
-              </Button>
-              {state.decided !== "accepted" && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="border-destructive/40 text-destructive hover:bg-destructive/10"
-                  disabled={busy !== null}
-                  onClick={() => void sendResponse("opted_out")}
-                >
-                  {busy === "opted_out" ? "Rejecting…" : "Reject"}
-                </Button>
-              )}
-            </div>
-          )}
-          {state.side === "bidder" && (
-            <p className="text-[11px] text-muted-foreground">
-              Only the counterparty can approve the offer. You can raise a challenge here and both sides keep
-              replying until you reach consensus.
-            </p>
-          )}
-          {isObserver && (
-            <p className="text-[11px] text-muted-foreground">
-              Administrator view is read-only. Only the bidder and counterparty can respond.
-            </p>
-          )}
-        </div>
-      </section>
+      {offerOnly ? (
+        offerBody
+      ) : (
+        <section className="rounded-xl border border-border">
+          <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+            <MessageSquareWarning className="h-4 w-4 text-primary" />
+            <h2 className="label-caps font-sans">The Offer</h2>
+          </div>
+          {offerBody}
+        </section>
+      )}
 
       {!offerOnly && (
       <>

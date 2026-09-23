@@ -8,7 +8,6 @@ import {
   Gavel,
   ListChecks,
   LogIn,
-  RefreshCw,
   Search,
   ShieldCheck,
   Share2,
@@ -162,10 +161,11 @@ const TRADING_ARROWS: Arrow[] = [
   line(bottomOf(BOXES.bid), topOf(BOXES.loadDocs)),
   line(rightOf(BOXES.loadDocs), leftOf(BOXES.search)),
   // Search Results now sits in line between Search and Choice, all on Search's row — Online
-  // Screening joins the same row now too, as the last tile in it.
+  // Screening joins the same row now too, as the last tile in it. One arrow carries straight
+  // through from Search Results to Online Screening — Choice no longer has its own tile here, so
+  // it no longer gets its own separate arrow touching Online Screening's edge either.
   line(rightOf(BOXES.search), leftOf(BOXES.steps)),
-  line(rightOf(BOXES.steps), leftOf(BOXES.choice)),
-  line(rightOf(BOXES.choice), leftOf(BOXES.socialMedia)),
+  line(rightOf(BOXES.steps), leftOf(BOXES.socialMedia)),
   // Down out of Online Screening, then left to Confirm Intent's centre-line, into the row it moved
   // up into (the one Online Screening vacated).
   path(
@@ -461,13 +461,17 @@ export function MapView({
       onClick?: () => void;
       plain?: boolean;
       subSize?: "xs" | "sm";
+      /** Suppresses the hoverable document-artefact icon — for a tile that shares its gating step
+       * with another tile that already shows it (The Offer and Counter Offer both gate on "wad",
+       * but the KYC/KYB/AML/PEP artefacts it lists belong to the Without a Doubt tile itself). */
+      noArtefact?: boolean;
     },
   ) => (
     <MapNode
       box={BOXES[key]}
       label={label}
       icon={icon}
-      step={step}
+      step={opts?.noArtefact ? undefined : step}
       {...(opts?.sub ? { sub: opts.sub } : {})}
       {...(opts?.subTone ? { subTone: opts.subTone } : {})}
       {...(opts?.plain ? { plain: true } : {})}
@@ -553,9 +557,10 @@ export function MapView({
 
         {/* After Seal Intent the Responder reviews The Offer: Approve, Reject or Challenge — the
             Counter Offer loop can go back and forth until agreement, which opens Without a Doubt. */}
-        {node("offer", "The Offer", "compliance", "wad", Tag)}
-        {node("counterOffer", "Counter Offer", "compliance", "wad", RefreshCw, {
+        {node("offer", "The Offer", "compliance", "wad", Tag, { noArtefact: true })}
+        {node("counterOffer", "Counter Offer", "compliance", "wad", undefined, {
           state: overrideStates?.["counterOffer"] ?? (lock("compliance", "wad") ? "locked" : "open"),
+          noArtefact: true,
         })}
         {node("withoutADoubt", "Without a Doubt", "compliance", "wad", ShieldCheck, {
           overrideKey: "wad",
