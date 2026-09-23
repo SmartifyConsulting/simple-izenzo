@@ -84,7 +84,8 @@ const list = (v: unknown, max = 8): string[] =>
  * Which service answers depends on the search: the ordinary search runs on the OpenAI account saved
  * under Admin → Integrations, and AI+ runs on the built-in model. */
 async function chatJson(
-  apiKey: string,
+  apiKey: string | null,
+
   model: string,
   effort: "low" | "medium" | "high",
   system: string,
