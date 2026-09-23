@@ -7,9 +7,6 @@ import {
   Archive,
   CheckCircle2,
   ChevronDown,
-  Download,
-
-  Eye,
   Lock,
   Maximize2,
   Minimize2,
@@ -2086,6 +2083,9 @@ function LiveDealEngine() {
                   onOpenStep={openMapStep}
                   overrideStates={stepOverrides}
                   reference={dealTx?.reference ?? draftReference}
+                  documents={savedAttachments}
+                  onOpenDocument={(d) => void openAttachment(d as Attachment)}
+                  onDownloadDocument={(d) => void downloadAttachment(d as Attachment)}
                   {...(dealTx ? {} : { onBid: startNewDeal })}
                 />
               ) : (
@@ -2411,49 +2411,8 @@ function LiveDealEngine() {
                 </div>
               )}
 
-
-              {savedAttachments.length > 0 && (
-                <ul className="mt-2 space-y-1 border-t border-border pt-2">
-                  {savedAttachments.map((a, i) => (
-                    <li
-                      key={i}
-                      className="flex items-center gap-2 rounded-lg bg-foreground px-2.5 py-1.5 text-xs text-background"
-                    >
-                      <Paperclip className="h-3.5 w-3.5 shrink-0 text-background/70" />
-                      <span className="min-w-0 flex-1 truncate">{a.name}</span>
-                      <span className="shrink-0 text-xs text-background/70">{a.kind}</span>
-                      {/* Both icons always show — greyed out for files recorded before uploads
-                          were kept, so a row never looks half-built. */}
-                      <button
-                        type="button"
-                        disabled={!a.path}
-                        onClick={() => openAttachment(a)}
-                        title={
-                          a.path
-                            ? `Preview ${a.name}`
-                            : "No stored copy — this file was recorded before uploads were kept"
-                        }
-                        className="shrink-0 rounded p-1 text-background/80 hover:bg-background/20 hover:text-background disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        disabled={!a.path}
-                        onClick={() => downloadAttachment(a)}
-                        title={
-                          a.path
-                            ? `Download ${a.name}`
-                            : "No stored copy — this file was recorded before uploads were kept"
-                        }
-                        className="shrink-0 rounded p-1 text-background/80 hover:bg-background/20 hover:text-background disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-                      >
-                        <Download className="h-3.5 w-3.5" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              {/* The file list itself now lives on the map, filed under the Documents folder above
+                  Step 5 — Bid Information only shows the AI summary, not a second copy of the list. */}
 
               {/* Explicit go: collapses this frame and hands the workspace over to the search. */}
               {workspaceDocs.length > 0 &&

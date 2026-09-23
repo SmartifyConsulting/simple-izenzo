@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Building2,
   CheckCircle2,
   Database,
+  Download,
+  Eye,
   FileText,
   FolderClosed,
+  FolderOpen,
   Gavel,
   ListChecks,
   LogIn,
@@ -141,6 +144,12 @@ const ENTRY_EXIT_FRAME: Box = { x: 408, y: 858, w: 144, h: 64 };
 // the original (65% bigger, then trimmed 15%) — this is where AI+ actually draws from and keeps
 // learning, so it still earns the biggest shape on the map, just not quite so dominant.
 const MEMORY = { cx: 390, cy: 555, r: 147 };
+
+// The otherwise-empty band between Step 1's frame and Memory's own top edge — every uploaded
+// document lands here instead of sitting in a plain list inside Bid Information, so there's one
+// place on the canvas that visibly fills up as the deal collects paperwork. Centred on Memory's
+// own x so it reads as sitting "above" Step 5 rather than floating unrelated to anything.
+const DOCS_BOX: Box = { x: 265, y: 310, w: 250, h: 90 };
 
 
 
@@ -281,6 +290,107 @@ function MemoryArcLabel() {
 }
 
 
+/**
+ * Where every uploaded document actually "lives" on the canvas — a big folder in the otherwise
+ * empty band above Memory, filling with a count as files are saved instead of sitting as a plain
+ * list inside Bid Information. Briefly bounces and turns success-green the moment a new file is
+ * filed, then settles back to its normal state; click it to see and open/download what's inside.
+ */
+function DocumentsFolder({
+  documents,
+  onOpenDocument,
+  onDownloadDocument,
+}: {
+  documents: { name: string; kind?: string; path?: string | null }[];
+  onOpenDocument?: ((doc: { name: string; kind?: string; path?: string | null }) => void) | undefined;
+  onDownloadDocument?: ((doc: { name: string; kind?: string; path?: string | null }) => void) | undefined;
+}) {
+  const [open, setOpen] = useState(false);
+  const [justFiled, setJustFiled] = useState(false);
+  const prevCount = useRef(documents.length);
+
+  useEffect(() => {
+    if (documents.length > prevCount.current) {
+      setJustFiled(true);
+      const t = setTimeout(() => setJustFiled(false), 1000);
+      prevCount.current = documents.length;
+      return () => clearTimeout(t);
+    }
+    prevCount.current = documents.length;
+    return undefined;
+  }, [documents.length]);
+
+  return (
+    <div
+      className="absolute"
+      style={{ left: px(DOCS_BOX.x), top: py(DOCS_BOX.y), width: px(DOCS_BOX.w), height: py(DOCS_BOX.h) }}
+    >
+      <button
+        type="button"
+        onClick={() => documents.length > 0 && setOpen((v) => !v)}
+        title={documents.length === 0 ? "Documents filed against this deal will appear here" : "See filed documents"}
+        className={cn(
+          "flex h-full w-full flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed transition-all",
+          documents.length === 0
+            ? "cursor-default border-muted-foreground/30"
+            : "border-muted-foreground/50 hover:border-foreground/60 hover:bg-card/60",
+          justFiled && "scale-105 border-success bg-success/10",
+        )}
+      >
+        <span className="relative">
+          <FolderOpen
+            className={cn(
+              "h-10 w-10 transition-colors",
+              documents.length > 0 ? "text-foreground" : "text-muted-foreground/50",
+              justFiled && "animate-bounce text-success",
+            )}
+          />
+          {documents.length > 0 && (
+            <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-foreground px-1 text-[10px] font-bold text-background">
+              {documents.length}
+            </span>
+          )}
+        </span>
+        <span className="label-caps text-[10px] text-muted-foreground">
+          {justFiled ? "Filed!" : "Documents"}
+        </span>
+      </button>
+
+      {open && documents.length > 0 && (
+        <div className="absolute left-1/2 top-full z-20 mt-1 w-56 -translate-x-1/2 rounded-lg border border-border bg-popover p-2 text-left shadow-lg">
+          <ul className="max-h-48 space-y-0.5 overflow-y-auto">
+            {documents.map((d, i) => (
+              <li key={i} className="flex items-center gap-1.5 rounded px-1.5 py-1 text-xs hover:bg-accent">
+                <span className="min-w-0 flex-1 truncate text-popover-foreground">{d.name}</span>
+                {onOpenDocument && (
+                  <button
+                    type="button"
+                    title={`Preview ${d.name}`}
+                    onClick={() => onOpenDocument(d)}
+                    className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-foreground"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                {onDownloadDocument && (
+                  <button
+                    type="button"
+                    title={`Download ${d.name}`}
+                    onClick={() => onDownloadDocument(d)}
+                    className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-foreground"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** A group frame: a hairline rounded outline with its name set into the top edge — drawn from the
  * theme's own colours, so it reads the same way on cream as it does on black. Passing `onToggle`
  * turns the floating label into a collapse toggle for everything inside the frame. */
@@ -416,6 +526,9 @@ export function MapView({
   reference,
   onOpenStep,
   overrideStates,
+  documents,
+  onOpenDocument,
+  onDownloadDocument,
 }: {
   tx: Transaction | null;
   reload: () => void;
@@ -435,6 +548,11 @@ export function MapView({
   /** The same override map the step list uses, keyed by its row names, so the map pulses on
    * exactly the same activity the stepper does. */
   overrideStates?: Record<string, NodeState> | undefined;
+  /** Every file saved against this deal — shown filed under the Documents folder on the canvas
+   * instead of as a plain list inside Bid Information. */
+  documents?: { name: string; kind?: string; path?: string | null }[] | undefined;
+  onOpenDocument?: ((doc: { name: string; kind?: string; path?: string | null }) => void) | undefined;
+  onDownloadDocument?: ((doc: { name: string; kind?: string; path?: string | null }) => void) | undefined;
 }) {
   const [panel, setPanel] = useState<{ stage: StageKey; step: string; viewOnly: boolean } | null>(null);
 
@@ -509,7 +627,11 @@ export function MapView({
       >
         <ArrowLayer />
         <MemoryArcLabel />
-
+        <DocumentsFolder
+          documents={documents ?? []}
+          onOpenDocument={onOpenDocument}
+          onDownloadDocument={onDownloadDocument}
+        />
 
         <Frame box={TRADE_ENGINE_FRAME} label="Step 1 · Trading" />
         <Frame box={COMPLIANCE_FRAME} label="Step 2 · GRC" />
