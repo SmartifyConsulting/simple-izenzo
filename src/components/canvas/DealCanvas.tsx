@@ -74,7 +74,6 @@ import { dedupeOrgs } from "@/lib/dedupeOrgs";
 import { keepForBid, loadBidRelevance } from "@/lib/bidRelevance";
 import type { ScreeningCheck, ScreeningResult } from "@/lib/screening.functions";
 import type { MediaCheckResult, MediaFinding } from "@/lib/onlineMedia.functions";
-import { DecisionPackPanel } from "@/components/canvas/DecisionPackPanel";
 import {
   listVerificationsForTx,
   refreshVerification,
@@ -1156,7 +1155,6 @@ export function CounterpartyRecord({
   searchPrompt = null,
   onSearchAgain,
   onStopSearch,
-  onAiPlusDecided,
 }: {
   txId?: string | null;
   /** True while the AI/AI+ search is still running, so the panel polls for freshly saved rows. */
@@ -1177,11 +1175,6 @@ export function CounterpartyRecord({
    * server-side and will still save whatever it finds, this just stops watching for it and opens
    * editing straight away instead of leaving no way out of the spinner. */
   onStopSearch?: () => void;
-  /** Tells the caller whether AI+ Recommendations has actually been reviewed for the current
-   * search results — the workflow map's own "Choice" pulse needs this too, since AI+ gates
-   * Choice here but the map computes its pulse state outside this component, from persisted
-   * transaction fields alone. */
-  onAiPlusDecided?: (decided: boolean) => void;
   /** True once intent is confirmed — the shortlist/pick is settled by then, so the checkboxes and
    * radio buttons here stop taking input rather than silently accepting a click that changes
    * nothing (or that the server would reject anyway). */
@@ -1214,10 +1207,6 @@ export function CounterpartyRecord({
   const raiseChallengeFn = useServerFn(raiseChallenge);
   const listChallengesFn = useServerFn(listChallenges);
   const [pickedId, setPickedId] = useState<string | null>(null);
-  // AI+ Recommendations: now runs the moment search results are in, analysing the whole set
-  // (kept and dropped) before anyone picks — not after, as it used to. Continue stays disabled
-  // until every proposal here has a decision, same gate this used to put on Confirm Intent.
-  const [aiPlusDecided, setAiPlusDecided] = useState(false);
   // "Edit Search" reveals this inline, pre-filled with the current search text, instead of
   // silently re-running the exact same search that just came back empty.
   const [editingSearch, setEditingSearch] = useState(false);
@@ -1698,13 +1687,13 @@ export function CounterpartyRecord({
                   id={`shortlist-${c.id}`}
                   checked={Boolean(c.shortlisted)}
                   onCheckedChange={(v) => toggle(c, Boolean(v))}
-                  disabled={locked || !aiPlusDecided}
+                  disabled={locked}
                   className="mt-0.5"
                 />
               )}
               <label
                 htmlFor={`shortlist-${c.id}`}
-                className={cn("min-w-0 flex-1", !screeningDone && !aiPlusDecided ? "cursor-not-allowed" : "cursor-pointer")}
+                className={cn("min-w-0 flex-1", locked ? "cursor-not-allowed" : "cursor-pointer")}
               >
                 <span className="flex items-center gap-2">
                   <span className="text-sm font-medium text-slate-900">{c.name}</span>
@@ -1772,29 +1761,6 @@ export function CounterpartyRecord({
         </RadioGroup>
       )}
 
-      {/* AI+ analyses the whole result set — kept and dropped — once pressed, after the search
-          results above so it reads as the last word on them, not a gate ahead of seeing them at
-          all. Select Counterparty(ies) below stays disabled until every proposal is answered.
-          Selection itself (the checkboxes above) is disabled the same way, so nothing can be
-          ticked until AI+ has actually been run and answered — not just before that button is
-          reachable. */}
-      {txId && candidates.length > 0 && !searching && !screeningDone && !continued && (
-        <div className="mt-3 border-t border-slate-300 pt-3">
-          <DecisionPackPanel
-            transactionId={txId}
-            stageContext="choice_made"
-            gating
-            gatedStepLabel="Choice"
-            autoRun={false}
-            onAllDecided={(decided) => {
-              setAiPlusDecided(decided);
-              onAiPlusDecided?.(decided);
-            }}
-            onNewCandidates={() => qc.invalidateQueries({ queryKey: ["counterparties", txId] })}
-          />
-        </div>
-      )}
-
       {/* The match-search progress bar lives under the Counterparties node on the diagram. */}
 
 
@@ -1834,10 +1800,8 @@ export function CounterpartyRecord({
 
 
       {/* The final pick (and its Continue button) belongs to the Online Media Screening Results
-          frame in the workspace — a second one here competed with it. Nothing renders here at all
-          until AI+ has actually been run and answered — the AI+ Recommendations panel below is
-          the call to action at that point, not a disabled bar sitting above it. */}
-      {screeningDone || !aiPlusDecided ? null : (
+          frame in the workspace — a second one here competed with it. */}
+      {screeningDone ? null : (
         onContinue &&
         candidates.length > 0 &&
         !searching &&

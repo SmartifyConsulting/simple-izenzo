@@ -33,9 +33,7 @@ import { CounterpartyWorkspaceView } from "@/components/canvas/CounterpartyWorks
 import { TradeSummary } from "@/components/canvas/TradeSummary";
 // Performance only: the map and the classic stepper are each large and only one of them is on
 // screen at a time, so they load as their own chunks instead of inside the first workspace
-// download. Same components, same props, same behaviour. (AI+'s DecisionPackPanel is no longer
-// lazy-loaded here — it now renders directly inside CounterpartyRecord in DealCanvas.tsx, which is
-// already part of this route's main bundle.)
+// download. Same components, same props, same behaviour.
 
 import { SubmitterIdentity } from "@/components/canvas/SubmitterIdentity";
 import { MatchResultsPanel } from "@/components/canvas/MatchResultsPanel";
@@ -338,10 +336,6 @@ function LiveDealEngine() {
   // already has a chosen counterparty but no signed intent always reopens Intent, whatever step
   // happens to be stored on the row — that is what left users stranded on "Choice recorded".
   const [hasChosen, setHasChosen] = useState(false);
-  // Mirrors CounterpartyRecord's own local "aiPlusDecided" state, reported up via onAiPlusDecided —
-  // the map's Choice pulse needs to know this too, since AI+ gates Choice inside that component but
-  // the pulse itself is computed here, from persisted transaction fields alone.
-  const [aiPlusDecided, setAiPlusDecided] = useState(false);
   // Separate from `hasChosen`: that flag means "the flow has moved past Choice" and is set the
   // moment media screening starts, well before any party is actually finalized — using it to
   // decide whether to force-open the Intent panel meant clicking "Run online media screening"
@@ -981,11 +975,10 @@ function LiveDealEngine() {
       o["choice"] = "open";
       return o;
     }
-    // The moment the search is done, the pulse moves on to Choice — but only once AI+ has actually
-    // been reviewed. Until then, Search Results keeps pulsing (that's where the AI+ Recommendations
-    // frame lives), rather than nothing pulsing at all while Choice waits.
+    // The moment the search is done, the pulse moves straight on to Choice — Search and Search
+    // Results themselves stop pulsing rather than handing off to each other.
     o["search"] = "done";
-    o["searchResults"] = flowStep === "results" && !hasChosen && !aiPlusDecided ? "active" : "done";
+    o["searchResults"] = "done";
 
     // Trust a persisted, unambiguous fact over this session's own local flow flags — hasChosen,
     // mediaResults and intentDismissed are plain React state that start back at their initial
@@ -1018,12 +1011,9 @@ function LiveDealEngine() {
       return o;
     }
 
-    // Choice comes first now: nothing below it can start until a person has picked. AI+
-    // Recommendations gates the actual choosing inside CounterpartyRecord (the checkboxes and the
-    // continue button both stay disabled until it's reviewed) — the pulse has to wait on the same
-    // thing, or it visibly jumps to Choice while AI+ is still the thing to do.
+    // Choice comes first now: nothing below it can start until a person has picked.
     if (!hasChosen) {
-      o["choice"] = flowStep === "results" && aiPlusDecided ? "active" : "open";
+      o["choice"] = flowStep === "results" ? "active" : "open";
       o["onlineMedia"] = "open";
       o["intent"] = "open";
       return o;
@@ -1086,7 +1076,6 @@ function LiveDealEngine() {
     hasChosen,
     intentDismissed,
     workspaceDocs.length,
-    aiPlusDecided,
   ]);
 
 
@@ -2653,7 +2642,6 @@ function LiveDealEngine() {
                       searchPrompt={(dealTx as unknown as { search_prompt?: string | null }).search_prompt ?? null}
                       onSearchAgain={(text) => void refineSearch(dealTx.id, text)}
                       onStopSearch={stopSearch}
-                      onAiPlusDecided={setAiPlusDecided}
                     />
                     </div>
                     )}
@@ -2940,9 +2928,7 @@ function LiveDealEngine() {
                 )}
 
                 {/* The active step's own panel — skipped for intent and poi once those are
-                    recorded, since the folded records above already hold them. Confirm Intent is
-                    no longer gated by AI+ here — that gate now sits earlier, on Choice, in the
-                    Search Results record (CounterpartyRecord/DecisionPackPanel). */}
+                    recorded, since the folded records above already hold them. */}
                 {dealTx &&
                   stagePanel &&
                   !(stagePanel === "intent" && dealTx.intent_confirmed_at) &&
