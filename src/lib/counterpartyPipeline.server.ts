@@ -359,7 +359,7 @@ export async function findCounterparties(input: PipelineInput): Promise<Pipeline
     });
   }
 
-  const citedHosts = new Set(web.sources.map((s) => hostOf(s.url)).filter(Boolean));
+  const citedSites = new Set(web.sources.map((s) => siteOf(s.url)).filter(Boolean));
   const found = parseArray(web.text)
     .map((c) => ({
       name: String(c["name"] ?? "").trim().slice(0, 200),
@@ -388,7 +388,7 @@ export async function findCounterparties(input: PipelineInput): Promise<Pipeline
       rejected.push({ name: c.name, reason: "No page or evidence was given for it." });
       continue;
     }
-    if (citedHosts.size > 0 && !citedHosts.has(hostOf(c.sourceUrl))) {
+    if (citedSites.size > 0 && !citedSites.has(siteOf(c.sourceUrl))) {
       rejected.push({ name: c.name, reason: "Its page was not among those the search read." });
       continue;
     }
