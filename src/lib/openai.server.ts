@@ -28,11 +28,13 @@ export async function loadOpenAiApiKey(): Promise<string | null> {
  * on this account" state — the only way to tell them apart is the JSON body's error code. Getting
  * this wrong means every quota outage reads as "try again shortly" forever. */
 export function isOpenAiQuotaExceeded(bodyText: string): boolean {
+  const codes = /insufficient_quota|billing_hard_limit_reached|credit_balance_exhausted|billing_not_active/i;
+  const words = /no credits remaining|exceeded your current quota|add credits/i;
   try {
-    const body = JSON.parse(bodyText) as { error?: { code?: string; type?: string } };
-    const code = body.error?.code ?? body.error?.type;
-    return code === "insufficient_quota" || code === "billing_hard_limit_reached";
+    const body = JSON.parse(bodyText) as { error?: { code?: string; type?: string; message?: string } };
+    const code = body.error?.code ?? body.error?.type ?? "";
+    return codes.test(code) || words.test(body.error?.message ?? "");
   } catch {
-    return /insufficient_quota|billing_hard_limit_reached/i.test(bodyText);
+    return codes.test(bodyText) || words.test(bodyText);
   }
 }
