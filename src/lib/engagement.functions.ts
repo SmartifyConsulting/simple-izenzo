@@ -60,22 +60,31 @@ function isCleared(row: DiligenceRow | undefined) {
 async function sideOf(supabase: any, userId: string, transactionId: string) {
   const { data: tx, error } = await supabase
     .from("transactions")
-    .select("id, org_id, counterparty_org_id, title, reference, poi_sealed_at")
+    .select("id, org_id, counterparty_org_id, title, reference, poi_sealed_at, created_by")
     .eq("id", transactionId)
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!tx) throw new Error("This deal is no longer available.");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("org_id, full_name")
-    .eq("id", userId)
-    .maybeSingle();
-  const myOrg = (profile as { org_id?: string | null } | null)?.org_id ?? null;
+  const [{ data: profile }, { data: memberships }] = await Promise.all([
+    supabase.from("profiles").select("org_id, full_name").eq("id", userId).maybeSingle(),
+    // A person can belong to more than one organisation, and their profile's own org_id is only
+    // their default one — so membership, not that single field, decides which side they're on.
+    supabase.from("org_members").select("org_id").eq("user_id", userId),
+  ]);
+
+  const myOrgs = new Set<string>(
+    [
+      (profile as { org_id?: string | null } | null)?.org_id ?? null,
+      ...((memberships as { org_id: string }[] | null) ?? []).map((m) => m.org_id),
+    ].filter(Boolean) as string[],
+  );
 
   let side: Side | null = null;
-  if (myOrg && myOrg === tx.org_id) side = "bidder";
-  else if (myOrg && myOrg === tx.counterparty_org_id) side = "counterparty";
+  // The person who registered the deal is always on the bidder's side, even before their
+  // organisation membership is in place.
+  if (tx.created_by === userId || (tx.org_id && myOrgs.has(tx.org_id))) side = "bidder";
+  else if (tx.counterparty_org_id && myOrgs.has(tx.counterparty_org_id)) side = "counterparty";
   if (!side) throw new Error("You're not a party to this deal.");
 
   return {
