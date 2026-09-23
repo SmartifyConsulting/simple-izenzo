@@ -480,6 +480,15 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
         .from("counterparties")
         .update({ invited_at: new Date().toISOString() } as never)
         .eq("id", cp.id);
+      // The counterparty side gets the same news in the app, not only by email — an account that
+      // exists for this contact address sees it in their Inbox when they sign in.
+      const { notifyCounterpartyContact } = await import("@/lib/bidderNotify.server");
+      await notifyCounterpartyContact({
+        email: toEmail,
+        transactionId: cp.transaction_id,
+        title: `${tx?.reference ? `${tx.reference} — ` : ""}you've been matched to a live opportunity`,
+        body: `${cp.name} has been selected as a potential counterparty for ${dealName}. Open the deal to see the full details and respond.`,
+      });
       if (tx?.org_id) {
         const { notifyBidder } = await import("@/lib/bidderNotify.server");
         void notifyBidder({

@@ -174,7 +174,7 @@ async function understand(input: PipelineInput): Promise<BriefCore> {
     .join("\n");
 
   try {
-    const r = await chatJson(input.apiKey, input.chatModel, "low", system, user);
+    const r = await chatJson(input.apiKey, input.chatModel, "low", system, user, input.kind);
     const brief: BriefCore = {
       transactionSummary: String(r["transactionSummary"] ?? "").slice(0, 800),
       role: String(r["role"] ?? "").slice(0, 300),
@@ -305,7 +305,8 @@ async function searchWithTavily(input: PipelineInput, brief: Brief, briefText: s
     `Brief:\n${briefText}\n\nPages:\n${list
       .map((pg, i) => `${i + 1}. ${pg.title} — ${pg.url}\n${pg.content}`)
       .join("\n\n")}`,
-  );
+      input.kind,
+    );
   return {
     text: JSON.stringify(Array.isArray(r["organisations"]) ? r["organisations"] : []),
     sources: list.map((pg) => ({ url: pg.url, title: pg.title })),
@@ -423,6 +424,7 @@ export async function findCounterparties(input: PipelineInput): Promise<Pipeline
       `Brief:\n${briefText}\n\nCandidates:\n${grounded
         .map((c, i) => `${i + 1}. ${c.name} (${c.jurisdiction ?? "place unknown"}, ${c.sector ?? "sector unknown"})\n   Evidence: ${c.evidence}\n   Page: ${c.sourceUrl}`)
         .join("\n")}`,
+      input.kind,
     );
     verdicts = Array.isArray(r["results"]) ? (r["results"] as Record<string, unknown>[]) : [];
   } catch {

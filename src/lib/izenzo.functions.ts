@@ -33,17 +33,15 @@ function aiPlusOptions(model: string, kind: "ai" | "ai_plus" = "ai_plus") {
   };
 }
 
-/** Sends one search request. Temporarily this goes to Lovable's built-in AI rather than the saved
- * OpenAI account, because that OpenAI account has no credit left and refuses every request — the
- * credential stays saved, and removing this preference is all it takes to go back. If the built-in
- * service is unavailable in this environment, the saved OpenAI account is used exactly as before.
- * Either way transient request limits are retried and failures are worded plainly. */
+/** Sends one search request to the OpenAI account saved under Admin → Integrations. The ordinary
+ * counterparty search runs on that account; AI+ runs on the built-in model (see
+ * counterpartyPipeline.server.ts and decisionPack.functions.ts). Transient request limits are
+ * retried and failures are worded plainly. */
 async function chatCompletion(apiKey: string, body: unknown): Promise<Response> {
-  const { lovableAiConfigured, callLovableAiChat } = await import("@/lib/lovableAi.server");
-  if (lovableAiConfigured()) return callLovableAiChat(body);
   const { callOpenAiChat } = await import("@/lib/openaiCall.server");
   return callOpenAiChat(apiKey, body);
 }
+
 
 async function aiFailureMessage(res: Response): Promise<string> {
   const { isLovableAiResponse, lovableAiFailureMessage } = await import("@/lib/lovableAi.server");

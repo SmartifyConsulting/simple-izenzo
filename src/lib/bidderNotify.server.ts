@@ -148,3 +148,39 @@ export async function notifyBidder(args: {
     // Admin's copy is a courtesy, not a requirement — never blocks or surfaces as an error.
   }
 }
+
+/** Tells the counterparty side, inside the app, that they have been matched to a deal.
+ *
+ * The match email goes to the counterparty's contact address; if that address belongs to an Izenzo
+ * account, this writes the same news into that account's Inbox so it is visible in the app and not
+ * only in their mail. No account for that address means there is nothing to write, and nothing here
+ * ever fails the match itself. */
+export async function notifyCounterpartyContact(args: {
+  email: string;
+  transactionId: string;
+  title: string;
+  body: string;
+}): Promise<void> {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("*")
+      .ilike("email", args.email.trim())
+      .maybeSingle();
+    const row = profile as { id?: string | null; org_id?: string | null } | null;
+    if (!row?.id) return;
+    const channel = await getNotificationChannel(supabaseAdmin, row.id);
+    if (channel === "email") return; // They asked for email only, which they have already had.
+    const { error } = await supabaseAdmin.from("notifications").insert({
+      user_id: row.id,
+      ...(row.org_id ? { org_id: row.org_id } : {}),
+      transaction_id: args.transactionId,
+      title: args.title,
+      body: args.body,
+    });
+    if (error) console.error("[notifyCounterpartyContact] inbox write failed:", error.message);
+  } catch (e) {
+    console.error("[notifyCounterpartyContact] failed:", e instanceof Error ? e.message : e);
+  }
+}
