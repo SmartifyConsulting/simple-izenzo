@@ -144,21 +144,52 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
   const [windows, setWindows] = useState<DealWindow[]>([]);
   const popped = useRef(new Map<string, Window>());
   const { user } = useAuth();
+  const [storedOpenIds, setStoredOpenIds] = useState<string[] | null>(null);
   // A ref (not just the userId itself) so the callbacks below — declared once, with stable deps —
   // always read whichever key is current without needing to be recreated on every auth change.
   const keyRef = useRef(keyFor(null));
   const closedKeyRef = useRef(closedKeyFor(null));
+  const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const key = keyFor(user?.id ?? null);
     keyRef.current = key;
     closedKeyRef.current = closedKeyFor(user?.id ?? null);
+    userIdRef.current = user?.id ?? null;
     setWindows(readAll(key));
     const onStorage = (e: StorageEvent) => {
       if (e.key === key) setWindows(readAll(key));
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
+  }, [user?.id]);
+
+  // What this person left open, read from their own account rather than guessed from this browser.
+  // Tabs they closed anywhere are mirrored locally too, so a tab they shut on their phone doesn't
+  // come back on their laptop.
+  useEffect(() => {
+    const userId = user?.id ?? null;
+    if (!userId) {
+      setStoredOpenIds(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const { data, error } = await supabase
+        .from("user_workspace_tabs")
+        .select("transaction_id, state, position")
+        .eq("user_id", userId)
+        .order("position", { ascending: true });
+      if (cancelled || error || !data) return;
+      const open = data.filter((r) => r.state === "open").map((r) => r.transaction_id);
+      for (const row of data) {
+        if (row.state === "closed") rememberClosed(closedKeyFor(userId), row.transaction_id);
+      }
+      setStoredOpenIds(open);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [user?.id]);
 
   const persist = useCallback((next: DealWindow[]) => {
