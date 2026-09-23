@@ -527,6 +527,98 @@ export const setDocumentNeedsSignature = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** Reads the documents on a deal and decides which ones need both parties' signatures — an NDA,
+ * MOU or contract does; a reference attachment, a screenshot or something already stamped as
+ * signed by both parties doesn't. Runs automatically once uploads finish (see BusinessDocsStep),
+ * so nobody has to remember to tick "Mark for signing" on each file by hand. Best-effort: if the
+ * AI call fails, nothing is flagged and the manual toggle in the panel still works as a fallback. */
+export const classifySignatureDocuments = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ transactionId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<{ flagged: string[] }> => {
+    const { supabase, userId } = context;
+    await sideOf(supabase, userId, data.transactionId);
+
+    const { data: docs, error } = await supabase
+      .from("documents")
+      .select("id, name, doc_type, notes, requires_signature, fully_signed_at")
+      .eq("transaction_id", data.transactionId);
+    if (error) throw new Error(error.message);
+
+    const candidates = ((docs ?? []) as {
+      id: string;
+      name: string;
+      doc_type: string | null;
+      notes: string | null;
+      requires_signature: boolean | null;
+      fully_signed_at: string | null;
+    }[]).filter((d) => !d.fully_signed_at && !d.requires_signature && d.doc_type !== "certificate");
+    if (candidates.length === 0) return { flagged: [] };
+
+    let ids: string[] = [];
+    try {
+      const { loadOpenAiApiKey } = await import("@/lib/openai.server");
+      const apiKey = await loadOpenAiApiKey();
+      if (!apiKey) return { flagged: [] };
+      const { callAiChat } = await import("@/lib/lovableAi.server");
+      const res = await callAiChat(
+        apiKey,
+        {
+          model: "gpt-5-mini",
+          messages: [
+            {
+              role: "system",
+              content:
+                "You look at a list of documents attached to a trade deal and decide which of them are " +
+                "the kind that needs both parties' handwritten signature to take effect — an NDA, MOU, " +
+                "contract, agreement, term sheet or similar. Reference material, evidence, screenshots, " +
+                "certificates, correspondence or anything already described as signed is not one of " +
+                "these. Reply with ONLY a JSON array of the matching document ids, nothing else — an " +
+                "empty array if none qualify. No prose, no markdown fence.",
+            },
+            {
+              role: "user",
+              content: JSON.stringify(
+                candidates.map((d) => ({ id: d.id, name: d.name, doc_type: d.doc_type, notes: d.notes })),
+              ),
+            },
+          ],
+        },
+        { retries: 0 },
+      );
+      if (res.ok) {
+        const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+        const raw = (json.choices?.[0]?.message?.content ?? "").trim();
+        const cleaned = raw.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+        const parsed = JSON.parse(cleaned) as unknown;
+        const known = new Set(candidates.map((d) => d.id));
+        if (Array.isArray(parsed)) ids = parsed.filter((v): v is string => typeof v === "string" && known.has(v));
+      }
+    } catch {
+      return { flagged: [] };
+    }
+    if (ids.length === 0) return { flagged: [] };
+
+    const { error: updErr } = await supabase
+      .from("documents")
+      .update({ requires_signature: true } as never)
+      .in("id", ids);
+    if (updErr) throw new Error(updErr.message);
+
+    const names = candidates.filter((d) => ids.includes(d.id)).map((d) => d.name);
+    await supabase.from("transaction_events").insert({
+      transaction_id: data.transactionId,
+      actor_id: userId,
+      stage: "execution",
+      step: "business-docs",
+      action: "signature_documents_identified",
+      summary: `AI identified ${names.length} document${names.length === 1 ? "" : "s"} needing both signatures: ${names.join(", ")}`,
+      payload: { document_ids: ids, names },
+    });
+
+    return { flagged: names };
+  });
+
 function wrap(text: string, max: number, size: number, font: any): string[] {
   const words = text.split(/\s+/).filter(Boolean);
   const lines: string[] = [];

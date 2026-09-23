@@ -20,6 +20,7 @@ import {
   type Side,
 } from "@/lib/engagement.functions";
 import { listVerificationsForTx, refreshVerification, startVerification, type VerificationRow } from "@/lib/didit.functions";
+import { Confetti } from "@/components/effects/Confetti";
 
 const STATE_LABEL: Record<CheckState, string> = {
   pending: "Not done yet",
@@ -67,6 +68,7 @@ export function MutualEngagementPanel({ transactionId }: { transactionId: string
   const [challengeMessage, setChallengeMessage] = useState("");
   const [signing, setSigning] = useState<{ id: string; name: string } | null>(null);
   const [signerName, setSignerName] = useState("");
+  const [celebrate, setCelebrate] = useState(false);
   const popupRef = useRef<Window | null>(null);
 
   const { data: state, isLoading } = useQuery({
@@ -206,6 +208,18 @@ export function MutualEngagementPanel({ transactionId }: { transactionId: string
           ? "Signed by both parties — the signed record is now in Bid Information."
           : "Signed. The other party still needs to sign.",
       );
+      // The celebration is for the deal actually closing — every document that needed both
+      // signatures has them — not for any one signature landing.
+      if (res.bothSigned) {
+        const fresh = await qc.fetchQuery({
+          queryKey: ["engagement-docs", transactionId],
+          queryFn: () => listDocs({ data: { transactionId } }),
+        });
+        const required = fresh.filter((d) => d.requires_signature);
+        if (required.length > 0 && required.every((d) => d.fully_signed_at)) {
+          setCelebrate(true);
+        }
+      }
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -438,7 +452,7 @@ export function MutualEngagementPanel({ transactionId }: { transactionId: string
       <section className="rounded-xl border border-border">
         <div className="flex items-center gap-2 border-b border-border px-4 py-3">
           <FileSignature className="h-4 w-4 text-primary" />
-          <h2 className="label-caps font-sans">Business docs to sign</h2>
+          <h2 className="label-caps font-sans">Digital Signatures</h2>
         </div>
         <div className="space-y-3 p-4">
           {!canManageDocs ? (
@@ -448,8 +462,9 @@ export function MutualEngagementPanel({ transactionId }: { transactionId: string
           ) : (
             <>
               <p className="text-xs text-muted-foreground">
-                Both sides sign the same record. Once both signatures are on it, a tidy PDF record is filed in Bid
-                Information, ready to open or download.
+                Documents that need both parties' signature — an NDA, MOU or contract — are identified
+                automatically as they're uploaded. Both sides sign the same record; once both signatures are on
+                it, a tidy PDF record is filed in Bid Information, ready to open or download.
               </p>
               {docs.length === 0 && <p className="text-xs text-muted-foreground">No documents shared yet.</p>}
               <ul className="divide-y divide-border">
@@ -615,6 +630,13 @@ export function MutualEngagementPanel({ transactionId }: { transactionId: string
           </div>
         </DialogContent>
       </Dialog>
+
+      {celebrate && (
+        <Confetti
+          message="Your trade match has been successful — every document is signed by both parties."
+          onDone={() => setCelebrate(false)}
+        />
+      )}
     </div>
   );
 }

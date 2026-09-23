@@ -31,6 +31,7 @@ import { useAuth } from "@/lib/auth";
 import { routeIdentityVerification } from "@/lib/identityRouting";
 import { Logo } from "@/components/Logo";
 import { MutualEngagementPanel } from "@/components/engagement/MutualEngagementPanel";
+import { classifySignatureDocuments } from "@/lib/engagement.functions";
 import { CommoditySearch } from "@/components/CommoditySearch";
 import { COUNTRIES } from "@/lib/countries";
 import { UNITS } from "@/lib/units";
@@ -2164,6 +2165,7 @@ const BUSINESS_DOC_LABEL: Record<string, string> = Object.fromEntries(
  * automatically in the Bid Information paperclip archive on the Live Workspace. */
 function BusinessDocsStep({ tx, reload }: Props) {
   const qc = useQueryClient();
+  const classifySignatures = useServerFn(classifySignatureDocuments);
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -2234,6 +2236,21 @@ function BusinessDocsStep({ tx, reload }: Props) {
       await qc.invalidateQueries({ queryKey: ["documents", tx.id] });
       reload();
       toast.success(list.length === 1 ? "Document uploaded" : `${list.length} documents uploaded`);
+
+      // Once uploads finish, work out which of them need both parties' signature — the Digital
+      // Signatures frame further down (inside the engagement panel) opens on these automatically,
+      // rather than the bidder having to mark each file for signing by hand.
+      try {
+        const { flagged } = await classifySignatures({ data: { transactionId: tx.id } });
+        if (flagged.length > 0) {
+          await qc.invalidateQueries({ queryKey: ["engagement-docs", tx.id] });
+          toast.success(
+            `Identified for digital signature: ${flagged.join(", ")}`,
+          );
+        }
+      } catch {
+        // Best-effort — the manual "Mark for signing" toggle still works if this doesn't run.
+      }
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
