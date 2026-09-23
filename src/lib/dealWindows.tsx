@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
 
 export type WindowMode = "docked" | "minimized" | "maximized" | "popped";
 
@@ -44,6 +45,37 @@ function rememberClosed(key: string, id: string) {
     // Best-effort only.
   }
 }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Records against the person's account whether a tab is open or closed, so the taskbar shows what
+ * they actually left open — on every browser and device, not just the one they closed it in. View
+ * state only; it never touches the deal itself. Best-effort: the local copy still works if this
+ * write fails. */
+async function recordTabState(
+  userId: string | null,
+  transactionId: string,
+  state: "open" | "closed",
+  position = 0,
+) {
+  if (!userId || !UUID.test(transactionId)) return;
+  try {
+    await supabase.from("user_workspace_tabs").upsert(
+      {
+        user_id: userId,
+        transaction_id: transactionId,
+        state,
+        position,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,transaction_id" },
+    );
+  } catch {
+    // Best-effort only.
+  }
+}
+
+
 
 /** Scoped per signed-in user (not just per browser) — a shared computer with more than one
  * Izenzo account otherwise leaked whoever used it last's open bid tabs into the next person's
@@ -90,6 +122,10 @@ type DealWindowsValue = {
   /** Puts the person's own bids back on the taskbar (oldest first, newest on the right) without
    * touching any tab already open or reopening one they closed. */
   hydrate: (items: { id: string; label: string; name?: string | undefined }[]) => void;
+  /** The deals this person left open, as recorded against their account — `null` until that has
+   * been read. Anything not in this list was either closed or never opened, so it must not be put
+   * back on the taskbar. */
+  storedOpenIds: string[] | null;
 };
 
 const DealWindowsContext = createContext<DealWindowsValue | null>(null);
@@ -108,15 +144,18 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
   const [windows, setWindows] = useState<DealWindow[]>([]);
   const popped = useRef(new Map<string, Window>());
   const { user } = useAuth();
+  const [storedOpenIds, setStoredOpenIds] = useState<string[] | null>(null);
   // A ref (not just the userId itself) so the callbacks below — declared once, with stable deps —
   // always read whichever key is current without needing to be recreated on every auth change.
   const keyRef = useRef(keyFor(null));
   const closedKeyRef = useRef(closedKeyFor(null));
+  const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const key = keyFor(user?.id ?? null);
     keyRef.current = key;
     closedKeyRef.current = closedKeyFor(user?.id ?? null);
+    userIdRef.current = user?.id ?? null;
     setWindows(readAll(key));
     const onStorage = (e: StorageEvent) => {
       if (e.key === key) setWindows(readAll(key));
@@ -125,9 +164,44 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("storage", onStorage);
   }, [user?.id]);
 
+  // What this person left open, read from their own account rather than guessed from this browser.
+  // Tabs they closed anywhere are mirrored locally too, so a tab they shut on their phone doesn't
+  // come back on their laptop.
+  useEffect(() => {
+    const userId = user?.id ?? null;
+    if (!userId) {
+      setStoredOpenIds(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const { data, error } = await supabase
+        .from("user_workspace_tabs")
+        .select("transaction_id, state, position")
+        .eq("user_id", userId)
+        .order("position", { ascending: true });
+      if (cancelled || error || !data) return;
+      const open = data.filter((r) => r.state === "open").map((r) => r.transaction_id);
+      for (const row of data) {
+        if (row.state === "closed") rememberClosed(closedKeyFor(userId), row.transaction_id);
+      }
+      setStoredOpenIds(open);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
   const persist = useCallback((next: DealWindow[]) => {
     setWindows(next);
     writeAll(keyRef.current, next);
+  }, []);
+
+  /** Notes against the person's account that this tab is open, so signing in anywhere brings it
+   * back — and only it. */
+  const markOpen = useCallback((id: string, position: number) => {
+    setStoredOpenIds((prev) => (prev && !prev.includes(id) ? [...prev, id] : prev));
+    void recordTabState(userIdRef.current, id, "open", position);
   }, []);
 
   const open = useCallback(
@@ -139,6 +213,7 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
       }
       const current = readAll(keyRef.current);
       const already = current.find((w) => w.id === id);
+      markOpen(id, current.findIndex((w) => w.id === id) >= 0 ? current.findIndex((w) => w.id === id) : current.length);
       if (already) {
         persist(current.map((w) => (w.id === id ? { ...w, mode: "docked", label } : w)));
         return;
@@ -149,7 +224,7 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
         { id, label, mode: "maximized", x: 80 + offset, y: 80 + offset },
       ]);
     },
-    [persist],
+    [persist, markOpen],
   );
 
   const register = useCallback(
@@ -165,13 +240,14 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
         }
         return;
       }
+      markOpen(id, current.length);
       // A second (or later) workspace takes over the canvas, so whatever was showing before gets
       // out of the way onto the taskbar instead of the two competing for the same space.
       const others = current.map((w) => (w.mode === "minimized" ? w : { ...w, mode: "minimized" as WindowMode }));
       const offset = current.length * 24;
       persist([...others, { id, label, name, mode: "maximized", x: 80 + offset, y: 80 + offset }]);
     },
-    [persist],
+    [persist, markOpen],
   );
 
   const hydrate = useCallback(
@@ -243,6 +319,9 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
       if (w && !w.closed) w.close();
       popped.current.delete(id);
       rememberClosed(closedKeyRef.current, id);
+      // Recorded against the account, not just this browser, so it stays closed everywhere.
+      setStoredOpenIds((prev) => (prev ? prev.filter((x) => x !== id) : prev));
+      void recordTabState(userIdRef.current, id, "closed");
       persist(readAll(keyRef.current).filter((win) => win.id !== id));
     },
     [persist],
@@ -254,7 +333,8 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
   );
 
   /** Moves one tab to sit right before another — drag-and-drop reordering in the taskbar. Purely
-   * cosmetic (which order the tabs read left-to-right); doesn't touch mode/position. */
+   * cosmetic (which order the tabs read left-to-right); doesn't touch mode/position. The new order
+   * is kept against the account too, so it survives signing out. */
   const reorder = useCallback(
     (draggedId: string, targetId: string) => {
       if (draggedId === targetId) return;
@@ -266,13 +346,16 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
       if (targetIndex === -1) return;
       withoutDragged.splice(targetIndex, 0, dragged);
       persist(withoutDragged);
+      withoutDragged.forEach((w, i) => {
+        void recordTabState(userIdRef.current, w.id, "open", i);
+      });
     },
     [persist],
   );
 
   return (
     <DealWindowsContext.Provider
-      value={{ windows, open, register, setMode, move, close, isPoppedElsewhere, reorder, hydrate }}
+      value={{ windows, open, register, setMode, move, close, isPoppedElsewhere, reorder, hydrate, storedOpenIds }}
     >
       {children}
     </DealWindowsContext.Provider>

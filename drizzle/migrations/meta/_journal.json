@@ -120,6 +120,13 @@
       "when": 1789727720059,
       "tag": "0016_security_hardening_rls_and_function_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1790124704263,
+      "tag": "0017_user_workspace_tabs",
+      "breakpoints": true
     }
   ]
 }
