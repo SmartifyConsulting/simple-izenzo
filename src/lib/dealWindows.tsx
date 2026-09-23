@@ -197,6 +197,13 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
     writeAll(keyRef.current, next);
   }, []);
 
+  /** Notes against the person's account that this tab is open, so signing in anywhere brings it
+   * back — and only it. */
+  const markOpen = useCallback((id: string, position: number) => {
+    setStoredOpenIds((prev) => (prev && !prev.includes(id) ? [...prev, id] : prev));
+    void recordTabState(userIdRef.current, id, "open", position);
+  }, []);
+
   const open = useCallback(
     (id: string, label: string) => {
       const existing = popped.current.get(id);
@@ -206,6 +213,7 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
       }
       const current = readAll(keyRef.current);
       const already = current.find((w) => w.id === id);
+      markOpen(id, current.findIndex((w) => w.id === id) >= 0 ? current.findIndex((w) => w.id === id) : current.length);
       if (already) {
         persist(current.map((w) => (w.id === id ? { ...w, mode: "docked", label } : w)));
         return;
@@ -216,7 +224,7 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
         { id, label, mode: "maximized", x: 80 + offset, y: 80 + offset },
       ]);
     },
-    [persist],
+    [persist, markOpen],
   );
 
   const register = useCallback(
@@ -232,13 +240,14 @@ export function DealWindowsProvider({ children }: { children: ReactNode }) {
         }
         return;
       }
+      markOpen(id, current.length);
       // A second (or later) workspace takes over the canvas, so whatever was showing before gets
       // out of the way onto the taskbar instead of the two competing for the same space.
       const others = current.map((w) => (w.mode === "minimized" ? w : { ...w, mode: "minimized" as WindowMode }));
       const offset = current.length * 24;
       persist([...others, { id, label, name, mode: "maximized", x: 80 + offset, y: 80 + offset }]);
     },
-    [persist],
+    [persist, markOpen],
   );
 
   const hydrate = useCallback(
