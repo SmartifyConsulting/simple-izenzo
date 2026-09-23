@@ -367,14 +367,21 @@ export async function findCounterparties(input: PipelineInput): Promise<Pipeline
     ...extra,
   });
 
-  // Steps 3–4 — search the public internet and identify real organisations.
+  // Steps 3–4 — search the public internet and identify real organisations. The first pass ("ai")
+  // is Tavily-only now — no falling back to OpenAI's own (slower) web-search tool for it, even
+  // without a Tavily key. The deeper "ai_plus" pass still falls back to OpenAI's web search when
+  // Tavily isn't configured.
   const briefText = redactBidTerms(JSON.stringify(brief, null, 2), bidTokens);
   const maxOrgs = input.kind === "ai" ? 5 : 8;
   let web: { text: string; sources: { url: string; title: string }[]; model: string; pageText?: Record<string, string> };
   try {
-    web = input.tavilyKey
-      ? await searchWithTavily(input, brief, briefText, maxOrgs)
-      : await searchWithOpenAi(input, briefText, maxOrgs);
+    if (input.tavilyKey) {
+      web = await searchWithTavily(input, brief, briefText, maxOrgs);
+    } else if (input.kind === "ai") {
+      throw new Error("Internet search is unavailable: connect Tavily under Admin → Integrations.");
+    } else {
+      web = await searchWithOpenAi(input, briefText, maxOrgs);
+    }
   } catch (err) {
     return empty({
       failures: [{ label: "Internet search", reason: (err as Error).message }],
