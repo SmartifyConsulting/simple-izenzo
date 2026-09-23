@@ -68,7 +68,6 @@ import { advance, fallbackReference, recordEvent, swapReferencePrefix, tradeKind
 import type { StageKey } from "@/lib/spine";
 import { useAuth } from "@/lib/auth";
 import { classifyTradeSide, searchCounterparties } from "@/lib/izenzo.functions";
-import { listCounterOffers } from "@/lib/counterOffer.functions";
 
 import { runBackgroundScreening, type ScreeningResult } from "@/lib/screening.functions";
 import { runOnlineMediaChecks, type MediaCheckResult, type MediaFinding } from "@/lib/onlineMedia.functions";
@@ -936,18 +935,6 @@ function LiveDealEngine() {
    * "searching" apart from "results are in", so the page says it outright. Search AI + AI+ and
    * Online Media Screening are two separate, independently-timed operations — each pulses only
    * while it is itself actually running, not just because the other one is. */
-  // Is a counter offer sitting out there unanswered? While one is, that's the live step.
-  const listCounterOffersFn = useServerFn(listCounterOffers);
-  const { data: counterOfferData } = useQuery({
-    queryKey: ["counter-offers-open", dealTx?.id],
-    enabled: !!dealTx?.id,
-    refetchInterval: 30000,
-    queryFn: () => listCounterOffersFn({ data: { transactionId: dealTx!.id } }),
-  });
-  const openCounterOffer = (counterOfferData?.offers ?? []).some(
-    (o: { direction: string; status: string }) => o.direction === "from_bidder" && o.status === "sent",
-  );
-
   const stepOverrides = useMemo(() => {
 
     const o: Record<string, "locked" | "open" | "active" | "done"> = {};
@@ -1060,13 +1047,8 @@ function LiveDealEngine() {
 
       }
     }
-    // A counter offer that has gone out and not been answered is what everything now waits on, so
-    // the pulse sits on Counter Offer until a reply is recorded.
-    if (openCounterOffer) o["counterOffer"] = "active";
     return o;
   }, [
-    openCounterOffer,
-
     dealTx,
     flowStep,
     mediaRunning,

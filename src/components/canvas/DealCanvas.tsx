@@ -40,7 +40,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { CounterOfferDialog } from "./CounterOfferDialog";
 import { raiseChallenge, listChallenges, type MatchChallenge } from "@/lib/challenges.functions";
 import { getCounterpartyProfile } from "@/lib/counterpartyProfile.functions";
 
@@ -1268,10 +1267,9 @@ export function CounterpartyRecord({
   const [mediaExpanded, setMediaExpanded] = useState(true);
   // The AI/AI+ match list, kept as a folded record above the screening findings.
   const [searchResultsExpanded, setSearchResultsExpanded] = useState(false);
-  // Negotiation window for one shortlisted counterparty.
-  const [counterOfferFor, setCounterOfferFor] = useState<{ id: string; name: string } | null>(null);
-  // The proposal (this deal's own terms) shown to a counterparty before a counter offer can be
-  // sent — seeing what's on the table comes first.
+  // The proposal (this deal's own terms) shown to a counterparty. Negotiating and agreeing the
+  // offer itself now happens later, via MutualEngagementPanel's Approve/Reject/Challenge once
+  // intent is sealed — not here.
   const [proposalFor, setProposalFor] = useState<{ id: string; name: string } | null>(null);
 
   const movedToScreening = screening || screeningResults !== null;
@@ -1902,17 +1900,6 @@ export function CounterpartyRecord({
           )}
         </DialogContent>
       </Dialog>
-
-      {txId && counterOfferFor && (
-        <CounterOfferDialog
-          open
-          onOpenChange={(o) => !o && setCounterOfferFor(null)}
-          txId={txId}
-          counterpartyId={counterOfferFor.id}
-          counterpartyName={counterOfferFor.name}
-          {...(onContinue ? { onProceed: () => onContinue([counterOfferFor.id]) } : {})}
-        />
-      )}
 
       {txId && proposalFor && (
         <ProposalDialog
