@@ -49,7 +49,14 @@ function when(value: string | null | undefined) {
  * the counterparty's accept / challenge / opt-out decision, and the documents both sides sign.
  * Nothing here decides anything on its own — every state change is a person's own recorded action.
  */
-export function MutualEngagementPanel({ transactionId }: { transactionId: string }) {
+export function MutualEngagementPanel({
+  transactionId,
+  offerOnly = false,
+}: {
+  transactionId: string;
+  /** Show only "The Offer" — used before the counterparty has approved it. */
+  offerOnly?: boolean;
+}) {
   const qc = useQueryClient();
   const load = useServerFn(getEngagement);
   const setState = useServerFn(setDiligenceState);
@@ -398,6 +405,8 @@ export function MutualEngagementPanel({ transactionId }: { transactionId: string
         </div>
       </section>
 
+      {!offerOnly && (
+      <>
       <section className="rounded-xl border border-border">
         <div className="flex items-center gap-2 border-b border-border px-4 py-3">
           <ShieldCheck className="h-4 w-4 text-primary" />
@@ -541,6 +550,8 @@ export function MutualEngagementPanel({ transactionId }: { transactionId: string
           )}
         </div>
       </section>
+      </>
+      )}
 
       <Dialog open={waive !== null} onOpenChange={(open) => !open && setWaive(null)}>
         <DialogContent>
