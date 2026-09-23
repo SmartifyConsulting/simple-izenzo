@@ -47,9 +47,13 @@ export function MainHeader() {
     enabled: Boolean(org?.id) && Boolean(user),
     refetchInterval: 60_000,
     queryFn: async () => {
+      // Same org scoping as the Inbox list itself — without it, this counted unread notifications
+      // across every organisation the account belongs to, not just the one being viewed, so the
+      // badge could read higher than what the Inbox actually shows.
       const { count } = await supabase
         .from("notifications")
         .select("id", { count: "exact", head: true })
+        .eq("org_id", org!.id)
         .eq("read", false);
       return count ?? 0;
     },

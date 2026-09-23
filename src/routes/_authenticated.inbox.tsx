@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
-import { money, when, type Transaction } from "@/lib/tx";
+import { money, tradeKindOf, when, type Transaction } from "@/lib/tx";
 
 
 export const Route = createFileRoute("/_authenticated/inbox")({
@@ -129,7 +129,16 @@ function InboxPage() {
                           to="/live-deal-engine"
                           search={{ tx: n.transaction_id }}
                           onClick={() => void markRead(n.id)}
-                          className="shrink-0 font-mono text-xs font-bold text-primary underline-offset-2 hover:underline"
+                          className={cn(
+                            "shrink-0 font-mono text-xs font-bold underline-offset-2 hover:underline",
+                            // Same Bid=green / Offer=blue convention as the workspace taskbar and
+                            // registration pill, so a reference reads the same way everywhere.
+                            tradeKindOf(reference) === "bid"
+                              ? "text-emerald-600"
+                              : tradeKindOf(reference) === "offer"
+                                ? "text-[#4169e1]"
+                                : "text-primary",
+                          )}
                         >
                           {reference}
                         </Link>
