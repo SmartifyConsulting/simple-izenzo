@@ -46,6 +46,37 @@ function rememberClosed(key: string, id: string) {
   }
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Records against the person's account whether a tab is open or closed, so the taskbar shows what
+ * they actually left open — on every browser and device, not just the one they closed it in. View
+ * state only; it never touches the deal itself. Best-effort: the local copy still works if this
+ * write fails. */
+async function recordTabState(
+  userId: string | null,
+  transactionId: string,
+  state: "open" | "closed",
+  position = 0,
+) {
+  if (!userId || !UUID.test(transactionId)) return;
+  try {
+    await supabase.from("user_workspace_tabs").upsert(
+      {
+        user_id: userId,
+        transaction_id: transactionId,
+        state,
+        position,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,transaction_id" },
+    );
+  } catch {
+    // Best-effort only.
+  }
+}
+
+
+
 /** Scoped per signed-in user (not just per browser) — a shared computer with more than one
  * Izenzo account otherwise leaked whoever used it last's open bid tabs into the next person's
  * session, since a plain browser-wide key doesn't know who's actually logged in. Falls back to a
