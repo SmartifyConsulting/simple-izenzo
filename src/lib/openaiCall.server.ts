@@ -54,7 +54,7 @@ export async function callOpenAiChat(
   let res = await call();
   for (const base of delays) {
     if (res.status !== 429 && res.status < 500) break;
-    if (res.status === 429 && isTerminalAccountCode(await errorCodeOf(res))) break;
+    if (res.status === 429 && (await isTerminalResponse(res))) break;
     const retryAfter = Number(res.headers.get("retry-after"));
     const wait =
       Number.isFinite(retryAfter) && retryAfter > 0
