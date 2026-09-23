@@ -76,20 +76,22 @@ const BOXES = {
   choice: { x: 570, y: 138, w: 160, h: 56 },
   // Counter Offer sits at the very right edge of the Trading frame, level with Choice and Search.
   // After Seal Intent: The Offer and its Counter Offer / Challenge loop sit side by side.
-  offer: { x: 45, y: 498, w: 170, h: 54 },
-  counterOffer: { x: 235, y: 498, w: 120, h: 54 },
-  // Wide enough that "Online Screening" fits on one line instead of wrapping, and only one line tall.
-  socialMedia: { x: 550, y: 214, w: 200, h: 48 },
-  // Express Intent lives inside Step 1's own frame, directly under Online Screening.
-  expressIntent: { x: 510, y: 282, w: 280, h: 48 },
-  // Step 2 (GRC)'s remaining checks — every connecting arrow between them is the same 20-unit span
-  // as Online Screening → Express Intent above, including Without a Doubt into Business Docs
-  // (previously a much longer drop than every other gap in this column).
-  poi: { x: 60, y: 430, w: 280, h: 48 },
+  offer: { x: 45, y: 450, w: 170, h: 54 },
+  counterOffer: { x: 235, y: 450, w: 120, h: 54 },
+  // Online Screening now sits in line with Search Results, Search and Choice — the last tile on
+  // that row — instead of on a row of its own, so Step 1 doesn't need that row's height at all.
+  socialMedia: { x: 750, y: 136, w: 170, h: 56 },
+  // Confirm Intent moves up into the row Online Screening used to occupy, now that row is free —
+  // Step 1 ends one row earlier than it used to.
+  expressIntent: { x: 510, y: 214, w: 280, h: 48 },
+  // Step 2 (GRC)'s remaining checks, spaced out with the extra height the frame gained now that
+  // Step 1 above it is shorter — 40-unit gaps instead of 20, so the column doesn't just end in a
+  // block of empty space at the bottom of the taller frame.
+  poi: { x: 60, y: 362, w: 280, h: 48 },
   // KYC/KYB/PEP/AML no longer gets its own tile (still runs, just not shown separately), so
   // Without a Doubt sits directly under Proof of Intent now.
-  withoutADoubt: { x: 60, y: 572, w: 280, h: 54 },
-  businessDocs: { x: 60, y: 646, w: 280, h: 54 },
+  withoutADoubt: { x: 60, y: 544, w: 280, h: 54 },
+  businessDocs: { x: 60, y: 638, w: 280, h: 54 },
   // Step 3 (Execution, with Entry/Exit beside it) and Step 4 (Finality) each get their own column,
   // one tile per row matching the vertical stepper's own item list instead of a single combined
   // tile — same row heights and gaps down both columns so they read as a matched pair.
@@ -112,12 +114,13 @@ const BOXES = {
 
 // One outer frame holds the whole trading step — Bid, Load Deal Documents, Search, the Search
 // Results card, the counterparty tiles (Offer, Choice, Counter Offer, Online Screening) and
-// Express Intent — trimmed to its actual content height.
-const TRADE_ENGINE_FRAME: Box = { x: 14, y: 18, w: 932, h: 330 };
-// Step 2's frame follows a clean, even gap below Step 1, with room for the connecting arrow — and
-// sits a little lower than it used to, so that arrow has a visible run of its own into the frame's
-// border instead of the two nearly touching.
-const COMPLIANCE_FRAME: Box = { x: 30, y: 405, w: 340, h: 312 };
+// Express Intent — trimmed to its actual content height. Shorter than it used to be now that
+// Online Screening sits in line with Search Results instead of on its own row.
+const TRADE_ENGINE_FRAME: Box = { x: 14, y: 18, w: 932, h: 262 };
+// Moved up to close the extra gap Step 1's shorter frame would otherwise leave, and made taller —
+// the reclaimed height goes into wider gaps between its own tiles (Proof of Intent, the Offer,
+// Without a Doubt, Business Docs) rather than empty space at the bottom of the frame.
+const COMPLIANCE_FRAME: Box = { x: 30, y: 337, w: 340, h: 380 };
 // Execution and Entry/Exit+Finality get the same bordered, labelled group frame as Steps 1 and 2.
 // Tall enough to hold Execution's five sub-step tiles (and Finality's three) stacked one per row.
 // Sits a little lower than Step 2's own bottom edge to leave room for Step 5's bigger circle
@@ -158,13 +161,19 @@ const TRADING_ARROWS: Arrow[] = [
   // line), down into the step chips, then across into Choice.
   line(bottomOf(BOXES.bid), topOf(BOXES.loadDocs)),
   line(rightOf(BOXES.loadDocs), leftOf(BOXES.search)),
-  // Search Results now sits in line between Search and Choice, all on Search's row.
+  // Search Results now sits in line between Search and Choice, all on Search's row — Online
+  // Screening joins the same row now too, as the last tile in it.
   line(rightOf(BOXES.search), leftOf(BOXES.steps)),
   line(rightOf(BOXES.steps), leftOf(BOXES.choice)),
-  line(bottomOf(BOXES.choice), topOf(BOXES.socialMedia)),
-  // Straight down into Express Intent — both tiles share the same centre-line now that it sits
-  // directly under Online Screening inside Step 1's own frame.
-  line(bottomOf(BOXES.socialMedia), topOf(BOXES.expressIntent)),
+  line(rightOf(BOXES.choice), leftOf(BOXES.socialMedia)),
+  // Down out of Online Screening, then left to Confirm Intent's centre-line, into the row it moved
+  // up into (the one Online Screening vacated).
+  path(
+    bottomOf(BOXES.socialMedia),
+    { x: cx(BOXES.socialMedia), y: BOXES.socialMedia.y + BOXES.socialMedia.h + 10 },
+    { x: cx(BOXES.expressIntent), y: BOXES.socialMedia.y + BOXES.socialMedia.h + 10 },
+    topOf(BOXES.expressIntent),
+  ),
   // Out of Step 1 and into Step 2's checks: down, then left to Proof of Intent's centre-line,
   // stopping just short of the GRC frame's edge (matching the Step 2 → Step 3 connector below).
   path(
