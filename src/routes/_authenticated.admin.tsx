@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { when, type Transaction } from "@/lib/tx";
@@ -44,9 +45,16 @@ type ProfileRow = {
   id: string;
   email: string | null;
   full_name: string | null;
+  last_name: string | null;
+  contact_number: string | null;
+  avatar_url: string | null;
+  seat: string | null;
   org_id: string | null;
   created_at: string;
   last_accessed_at?: string | null;
+  email_verified_at: string | null;
+  login_count: number | null;
+  terms_accepted_at: string | null;
 };
 
 type AdminTab = {
@@ -147,6 +155,7 @@ function UsersTab() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"created" | "accessed">("created");
+  const [profileId, setProfileId] = useState<string | null>(null);
   const { orgNamesByUser } = useOrgDirectory();
 
   const { data: users = [] } = useQuery({
@@ -154,7 +163,9 @@ function UsersTab() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, email, full_name, org_id, created_at, last_accessed_at")
+        .select(
+          "id, email, full_name, last_name, contact_number, avatar_url, seat, org_id, created_at, last_accessed_at, email_verified_at, login_count, terms_accepted_at",
+        )
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as ProfileRow[];
@@ -253,10 +264,15 @@ function UsersTab() {
             const orgNames = orgNamesByUser.get(u.id) ?? [];
             return (
               <li key={u.id} className="space-y-2 p-4 text-sm sm:space-y-0 sm:grid sm:grid-cols-5 sm:items-center sm:gap-x-4">
-                <div className="min-w-0">
+                <button
+                  type="button"
+                  onClick={() => setProfileId(u.id)}
+                  className="min-w-0 text-left hover:underline"
+                  title="View profile"
+                >
                   <p className="truncate font-medium">{u.full_name ?? u.email}</p>
                   <p className="truncate text-xs text-muted-foreground">{u.email}</p>
-                </div>
+                </button>
                 <p className="truncate text-xs text-foreground" title={orgNames.join(", ")}>
                   {orgNames.length > 0 ? orgNames.join(", ") : <span className="text-muted-foreground">No organisation</span>}
                 </p>
@@ -286,7 +302,67 @@ function UsersTab() {
         </div>
       )}
       </div>
+      <UserProfileDialog
+        user={users.find((u) => u.id === profileId) ?? null}
+        orgNames={profileId ? (orgNamesByUser.get(profileId) ?? []) : []}
+        isAdmin={profileId ? adminIds.has(profileId) : false}
+        onClose={() => setProfileId(null)}
+      />
     </div>
+  );
+}
+
+/** The full profile behind one row in the Users list — everything the row itself only had space
+ * to summarise (name and org), plus what it had no room for at all (contact number, verification
+ * status, sign-in count, terms acceptance). Read-only: changes to a user's own details are made by
+ * the user, not overridden here. */
+function UserProfileDialog({
+  user,
+  orgNames,
+  isAdmin,
+  onClose,
+}: {
+  user: ProfileRow | null;
+  orgNames: string[];
+  isAdmin: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <Dialog open={user !== null} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent>
+        {user && (
+          <>
+            <DialogHeader>
+              <DialogTitle>{user.full_name ?? user.email ?? "User profile"}</DialogTitle>
+              <DialogDescription>
+                {[user.email, orgNames.join(", ") || "No organisation"].filter(Boolean).join(" · ")}
+              </DialogDescription>
+            </DialogHeader>
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+              {[
+                ["First name", user.full_name ?? "—"],
+                ["Last name", user.last_name ?? "—"],
+                ["Email", user.email ?? "—"],
+                ["Contact number", user.contact_number ?? "—"],
+                ["Seat", user.seat ?? "—"],
+                ["Organisation(s)", orgNames.length > 0 ? orgNames.join(", ") : "None"],
+                ["System admin", isAdmin ? "Yes" : "No"],
+                ["Email verified", user.email_verified_at ? new Date(user.email_verified_at).toLocaleString() : "Not verified"],
+                ["Terms accepted", user.terms_accepted_at ? new Date(user.terms_accepted_at).toLocaleString() : "Not yet"],
+                ["Sign-ins", String(user.login_count ?? 0)],
+                ["Created", new Date(user.created_at).toLocaleString()],
+                ["Last accessed", user.last_accessed_at ? new Date(user.last_accessed_at).toLocaleString() : "Never signed in"],
+              ].map(([label, value]) => (
+                <div key={label} className="min-w-0">
+                  <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</dt>
+                  <dd className="mt-0.5 truncate" title={value}>{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 

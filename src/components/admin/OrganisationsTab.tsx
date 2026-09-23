@@ -13,9 +13,20 @@ type OrgRow = {
   name: string;
   country: string | null;
   industry: string | null;
+  sector: string | null;
   credits: number;
   created_at: string;
+  updated_at: string;
   website: string | null;
+  address: string | null;
+  registration_no: string | null;
+  years_in_business: number | null;
+  offerings: string | null;
+  ai_brief: string | null;
+  primary_contact_name: string | null;
+  primary_contact_email: string | null;
+  terms_of_trade: string | null;
+  invite_code: string;
 };
 type MemberRow = { user_id: string; org_id: string; role: string };
 type PersonRow = { id: string; email: string | null; full_name: string | null; org_id: string | null };
@@ -28,7 +39,9 @@ export function useOrgDirectory() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("organisations")
-        .select("id, name, country, industry, credits, created_at, website")
+        .select(
+          "id, name, country, industry, sector, credits, created_at, updated_at, website, address, registration_no, years_in_business, offerings, ai_brief, primary_contact_name, primary_contact_email, terms_of_trade, invite_code",
+        )
         .order("name");
       if (error) throw error;
       return (data ?? []) as OrgRow[];
@@ -165,6 +178,39 @@ export function OrganisationsTab() {
                   </button>
                   {open && (
                     <div className="border-t border-border bg-muted/20 px-4 py-3">
+                      <dl className="mb-4 grid grid-cols-2 gap-x-4 gap-y-2 border-b border-border pb-3 text-xs sm:grid-cols-3">
+                        {[
+                          ["Sector", o.sector ?? "—"],
+                          ["Industry", o.industry ?? "—"],
+                          ["Website", o.website ?? "—"],
+                          ["Address", o.address ?? "—"],
+                          ["Registration no.", o.registration_no ?? "—"],
+                          ["Years in business", o.years_in_business != null ? String(o.years_in_business) : "—"],
+                          ["Primary contact", o.primary_contact_name ?? "—"],
+                          ["Contact email", o.primary_contact_email ?? "—"],
+                          ["Invite code", o.invite_code],
+                          ["Tokens", String(o.credits)],
+                          ["Created", new Date(o.created_at).toLocaleDateString()],
+                          ["Last updated", new Date(o.updated_at).toLocaleDateString()],
+                        ].map(([label, value]) => (
+                          <div key={label} className="min-w-0">
+                            <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</dt>
+                            <dd className="mt-0.5 truncate" title={value}>{value}</dd>
+                          </div>
+                        ))}
+                        {o.offerings && (
+                          <div className="col-span-2 min-w-0 sm:col-span-3">
+                            <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">Offerings</dt>
+                            <dd className="mt-0.5">{o.offerings}</dd>
+                          </div>
+                        )}
+                        {o.terms_of_trade && (
+                          <div className="col-span-2 min-w-0 sm:col-span-3">
+                            <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">Terms of trade</dt>
+                            <dd className="mt-0.5">{o.terms_of_trade}</dd>
+                          </div>
+                        )}
+                      </dl>
                       {people.length === 0 ? (
                         <p className="text-xs text-muted-foreground">No users in this organisation yet.</p>
                       ) : (
