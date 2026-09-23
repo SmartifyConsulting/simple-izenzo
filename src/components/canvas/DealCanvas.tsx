@@ -1851,9 +1851,7 @@ export function CounterpartyRecord({
             disabled={ticked.length === 0}
             onClick={() => onContinue(ticked)}
           >
-            {ticked.length === 0
-              ? "Tick a counterparty to continue"
-              : `Select Counterpart${ticked.length === 1 ? "y" : "ies"}`}
+            Select Counterparty(ies) to continue
           </Button>
         )
       )}

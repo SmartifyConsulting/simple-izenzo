@@ -29,11 +29,11 @@ const HEADING: Record<StageContext, string> = {
 };
 
 const PILL_LABEL: Record<StageContext, string> = {
-  choice_made: "Run AI+ to Improve Results",
-  intent_confirmed: "Run AI+ to Improve Results",
-  poi_sealed: "Run AI+ to Improve Results",
-  wad_updated: "Run AI+ to Improve Results",
-  finality_recorded: "Run AI+ to Improve Results",
+  choice_made: "Show AI+ Recommendations",
+  intent_confirmed: "Show AI+ Recommendations",
+  poi_sealed: "Show AI+ Recommendations",
+  wad_updated: "Show AI+ Recommendations",
+  finality_recorded: "Show AI+ Recommendations",
 };
 
 /** Shown next to the button, always — not just on hover — so its value and why it's here right now
