@@ -62,3 +62,23 @@ are all untouched.
   `src/lib/relevance.test.ts` — `isRelevant` itself is not modified), a clean build, and
   a signed-in check on BID1798792 that Amrod appears at the top of the results with the
   bid wording that does **not** mention amrod.
+
+## Also: which AI does what
+
+- The normal counterparty search goes back to the **OpenAI account** saved under
+  Admin → Integrations, as it was before.
+- **AI+** (recommendations and AI+ search) runs on the built-in **Astra** model at medium
+  reasoning.
+
+Worth knowing before this is switched: the OpenAI account currently has no credit left,
+so the normal search will refuse again the moment it is moved back, until about $5–$10 of
+pay-as-you-go credit is added to that OpenAI account. AI+ on Astra is unaffected and will
+keep working.
+
+Technical detail: the provider switch already exists (`src/lib/lovableAi.server.ts`
+`callAiChat`). The ordinary-search call sites (`src/lib/counterpartyPipeline.server.ts`
+for `kind: "ai"`, `chatCompletion` in `src/lib/izenzo.functions.ts`, and the small
+document/company helpers) go back to `callOpenAiChat`; the AI+ path
+(`src/lib/decisionPack.functions.ts` `askOnce` and `kind: "ai_plus"`) pins
+`callLovableAiChat` with `reasoning_effort: "medium"`. Failure wording stays split so each
+message names the right account.
