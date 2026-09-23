@@ -370,7 +370,8 @@ const webModelsFor = (_kind: "ai" | "ai_plus") => [AI_MODEL, "gpt-5"];
 /** Finds real organisations on the live web with OpenAI's web search. A failure is returned, not
  * thrown, so the caller can still fall back to the published directory. */
 async function findOnWeb(
-  apiKey: string,
+  apiKey: string | null,
+
   kind: "ai" | "ai_plus",
   instructions: string,
   input: string,
