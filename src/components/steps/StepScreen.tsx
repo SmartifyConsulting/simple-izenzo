@@ -2004,7 +2004,7 @@ function WadStep({ tx, reload }: Props) {
   if (!offerApproved) {
     return (
       <div className="space-y-6">
-        <MutualEngagementPanel transactionId={tx.id} />
+        <MutualEngagementPanel transactionId={tx.id} offerOnly />
       </div>
     );
   }
