@@ -1568,24 +1568,6 @@ export function CounterpartyRecord({
         </div>
       )}
 
-      {/* AI+ analyses the whole result set — kept and dropped — once pressed, before anyone picks.
-          Continue below stays disabled until every proposal is answered. Selection itself (the
-          checkboxes in the candidate list) is disabled the same way, so nothing can be ticked
-          until AI+ has actually been run and answered — not just before Continue is reachable. */}
-      {txId && candidates.length > 0 && !searching && !screeningDone && !continued && (
-        <div className="mt-3 border-t border-slate-300 pt-3">
-          <DecisionPackPanel
-            transactionId={txId}
-            stageContext="choice_made"
-            gating
-            gatedStepLabel="Choice"
-            autoRun={false}
-            onAllDecided={setAiPlusDecided}
-            onNewCandidates={() => qc.invalidateQueries({ queryKey: ["counterparties", txId] })}
-          />
-        </div>
-      )}
-
       {/* The record of what the search found, kept plain inside the workspace's Search Results
           frame — no second heading, and no repeat of the screening findings, which have their own
           frame below in the workspace. */}
@@ -1784,6 +1766,26 @@ export function CounterpartyRecord({
         </RadioGroup>
       )}
 
+      {/* AI+ analyses the whole result set — kept and dropped — once pressed, after the search
+          results above so it reads as the last word on them, not a gate ahead of seeing them at
+          all. Select Counterparty(ies) below stays disabled until every proposal is answered.
+          Selection itself (the checkboxes above) is disabled the same way, so nothing can be
+          ticked until AI+ has actually been run and answered — not just before that button is
+          reachable. */}
+      {txId && candidates.length > 0 && !searching && !screeningDone && !continued && (
+        <div className="mt-3 border-t border-slate-300 pt-3">
+          <DecisionPackPanel
+            transactionId={txId}
+            stageContext="choice_made"
+            gating
+            gatedStepLabel="Choice"
+            autoRun={false}
+            onAllDecided={setAiPlusDecided}
+            onNewCandidates={() => qc.invalidateQueries({ queryKey: ["counterparties", txId] })}
+          />
+        </div>
+      )}
+
       {/* The match-search progress bar lives under the Counterparties node on the diagram. */}
 
 
@@ -1839,10 +1841,10 @@ export function CounterpartyRecord({
             onClick={() => onContinue(ticked)}
           >
             {!aiPlusDecided
-              ? "Accept or reject each AI+ proposal above first"
+              ? "Review the AI+ recommendations below first"
               : ticked.length === 0
                 ? "Tick a counterparty to continue"
-                : `Run online media screening on ${ticked.length} counterpart${ticked.length === 1 ? "y" : "ies"}`}
+                : `Select Counterpart${ticked.length === 1 ? "y" : "ies"}`}
           </Button>
         )
       )}
