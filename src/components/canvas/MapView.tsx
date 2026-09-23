@@ -73,10 +73,11 @@ const BOXES = {
   steps: { x: 406.7, y: 134, w: 140, h: 64 },
   // Offer/Choice/Counter Offer/Online Media Screening move further right to leave room for the
   // Search Results card between Search and Choice.
-  offer: { x: 570, y: 62, w: 160, h: 56 },
   choice: { x: 570, y: 138, w: 160, h: 56 },
   // Counter Offer sits at the very right edge of the Trading frame, level with Choice and Search.
-  counterOffer: { x: 750, y: 134, w: 150, h: 64 },
+  // After Seal Intent: The Offer and its Counter Offer / Challenge loop sit side by side.
+  offer: { x: 45, y: 498, w: 170, h: 54 },
+  counterOffer: { x: 235, y: 498, w: 120, h: 54 },
   // Wide enough that "Online Screening" fits on one line instead of wrapping, and only one line tall.
   socialMedia: { x: 550, y: 214, w: 200, h: 48 },
   // Express Intent lives inside Step 1's own frame, directly under Online Screening.
@@ -87,8 +88,8 @@ const BOXES = {
   poi: { x: 60, y: 430, w: 280, h: 48 },
   // KYC/KYB/PEP/AML no longer gets its own tile (still runs, just not shown separately), so
   // Without a Doubt sits directly under Proof of Intent now.
-  withoutADoubt: { x: 60, y: 498, w: 280, h: 54 },
-  businessDocs: { x: 60, y: 572, w: 280, h: 54 },
+  withoutADoubt: { x: 60, y: 572, w: 280, h: 54 },
+  businessDocs: { x: 60, y: 646, w: 280, h: 54 },
   // Step 3 (Execution, with Entry/Exit beside it) and Step 4 (Finality) each get their own column,
   // one tile per row matching the vertical stepper's own item list instead of a single combined
   // tile — same row heights and gaps down both columns so they read as a matched pair.
@@ -116,7 +117,7 @@ const TRADE_ENGINE_FRAME: Box = { x: 14, y: 18, w: 932, h: 330 };
 // Step 2's frame follows a clean, even gap below Step 1, with room for the connecting arrow — and
 // sits a little lower than it used to, so that arrow has a visible run of its own into the frame's
 // border instead of the two nearly touching.
-const COMPLIANCE_FRAME: Box = { x: 30, y: 405, w: 340, h: 239 };
+const COMPLIANCE_FRAME: Box = { x: 30, y: 405, w: 340, h: 312 };
 // Execution and Entry/Exit+Finality get the same bordered, labelled group frame as Steps 1 and 2.
 // Tall enough to hold Execution's five sub-step tiles (and Finality's three) stacked one per row.
 // Sits a little lower than Step 2's own bottom edge to leave room for Step 5's bigger circle
@@ -160,15 +161,6 @@ const TRADING_ARROWS: Arrow[] = [
   // Search Results now sits in line between Search and Choice, all on Search's row.
   line(rightOf(BOXES.search), leftOf(BOXES.steps)),
   line(rightOf(BOXES.steps), leftOf(BOXES.choice)),
-  // Counterparty loop: Offer into Choice and back — two separate one-directional arrows side by
-  // side, the same treatment as the Choice/Counter Offer loop just below, rather than one line
-  // with an arrowhead at each end.
-  path({ x: cx(BOXES.offer) - 11, y: BOXES.offer.y + BOXES.offer.h }, { x: cx(BOXES.offer) - 11, y: BOXES.choice.y }),
-  path({ x: cx(BOXES.offer) + 11, y: BOXES.choice.y }, { x: cx(BOXES.offer) + 11, y: BOXES.offer.y + BOXES.offer.h }),
-  // Choice out to Counter Offer and back, then Social Media.
-  path({ x: BOXES.choice.x + BOXES.choice.w, y: cy(BOXES.choice) - 11 }, { x: BOXES.counterOffer.x, y: cy(BOXES.choice) - 11 }),
-  path({ x: BOXES.counterOffer.x, y: cy(BOXES.choice) + 11 }, { x: BOXES.choice.x + BOXES.choice.w, y: cy(BOXES.choice) + 11 }),
-  path(topOf(BOXES.counterOffer), { x: cx(BOXES.counterOffer), y: cy(BOXES.offer) }, rightOf(BOXES.offer)),
   line(bottomOf(BOXES.choice), topOf(BOXES.socialMedia)),
   // Straight down into Express Intent — both tiles share the same centre-line now that it sits
   // directly under Online Screening inside Step 1's own frame.
@@ -187,7 +179,11 @@ const REST_ARROWS: Arrow[] = [
   // The KYC/KYB/PEP/AML tile itself is no longer shown separately (it still runs, and still
   // drives its own pulse state — just folded into Without a Doubt visually), so this arrow now
   // runs straight from Proof of Intent to Without a Doubt instead of stopping at it first.
-  line(bottomOf(BOXES.poi), topOf(BOXES.withoutADoubt)),
+  // Seal Intent → The Offer, the Offer ⇄ Counter Offer/Challenge loop, then agreement → WAD.
+  path(bottomOf(BOXES.poi), { x: cx(BOXES.poi), y: BOXES.poi.y + BOXES.poi.h + 10 }, { x: cx(BOXES.offer), y: BOXES.poi.y + BOXES.poi.h + 10 }, topOf(BOXES.offer)),
+  line({ x: BOXES.offer.x + BOXES.offer.w, y: cy(BOXES.offer) - 9 }, { x: BOXES.counterOffer.x, y: cy(BOXES.offer) - 9 }),
+  line({ x: BOXES.counterOffer.x, y: cy(BOXES.offer) + 9 }, { x: BOXES.offer.x + BOXES.offer.w, y: cy(BOXES.offer) + 9 }),
+  path(bottomOf(BOXES.offer), { x: cx(BOXES.offer), y: BOXES.offer.y + BOXES.offer.h + 10 }, { x: cx(BOXES.withoutADoubt), y: BOXES.offer.y + BOXES.offer.h + 10 }, topOf(BOXES.withoutADoubt)),
   line(bottomOf(BOXES.withoutADoubt), topOf(BOXES.businessDocs)),
   // Step 2 into Step 3: straight down out of Business Docs, stopping just short of the Step 3
   // frame's edge — pointing at it (and the heading floating on it) rather than touching it.
@@ -534,18 +530,6 @@ export function MapView({
             </div>
           </div>
         )}
-        {node("offer", "Offer", "trading", "counterparties", Tag)}
-        {node("choice", "Choice", "trading", "choice", Share2, { overrideKey: "choice" })}
-        {/* Counter Offer is an optional side-loop, not a mandatory step in the linear flow — it
-            should never read as "done" (ticked/green) just because the deal has moved past this
-            point, since a counteroffer may never actually have happened. */}
-        {node("counterOffer", "Counter Offer", "trading", "counterparties", RefreshCw, {
-          // Pulses while a counter offer is out and unanswered; otherwise a plain side-loop tile —
-          // but it still reads as locked like its neighbours until there's actually a deal to
-          // counter on, instead of always showing the brighter "open" colour regardless of state.
-          state: overrideStates?.["counterOffer"] ?? (lock("trading", "counterparties") ? "locked" : "open"),
-        })}
-
         {node("socialMedia", "Online Screening", "trading", "online-media", Users, {
           overrideKey: "onlineMedia",
         })}
@@ -558,13 +542,24 @@ export function MapView({
         {/* Step 2 — compliance & governance */}
         {node("poi", "Seal Intent", "trading", "poi", Building2, { overrideKey: "poi" })}
 
+        {/* After Seal Intent the Responder reviews The Offer: Approve, Reject or Challenge — the
+            Counter Offer loop can go back and forth until agreement, which opens Without a Doubt. */}
+        {node("offer", "The Offer", "compliance", "wad", Tag, {
+          sub: "Approve · Reject · Challenge",
+          subTone: "muted",
+        })}
+        {node("counterOffer", "Counter Offer", "compliance", "wad", RefreshCw, {
+          state: overrideStates?.["counterOffer"] ?? (lock("compliance", "wad") ? "locked" : "open"),
+          sub: "Challenge loop",
+          subTone: "muted",
+        })}
         {node("withoutADoubt", "Without a Doubt", "compliance", "wad", ShieldCheck, {
           overrideKey: "wad",
-          sub: "Hard gate · non-waivable",
+          sub: "KYC & KYB on each other",
           subTone: "gate",
         })}
         {node("businessDocs", "Business Docs", "execution", "business-docs", FolderClosed, {
-          sub: "POI, NDA, MOU, Contract",
+          sub: "Digital sign-off by both parties",
           overrideKey: "businessDocs",
         })}
 
