@@ -118,6 +118,7 @@ export type Database = {
           prompt: string | null
           proposal_type: Database["public"]["Enums"]["ai_proposal_type"] | null
           rationale: string | null
+          related_counterparties: Json | null
           related_counterparty: string | null
           source_references: Json
           stage_context: string | null
@@ -140,6 +141,7 @@ export type Database = {
           prompt?: string | null
           proposal_type?: Database["public"]["Enums"]["ai_proposal_type"] | null
           rationale?: string | null
+          related_counterparties?: Json | null
           related_counterparty?: string | null
           source_references?: Json
           stage_context?: string | null
@@ -162,6 +164,7 @@ export type Database = {
           prompt?: string | null
           proposal_type?: Database["public"]["Enums"]["ai_proposal_type"] | null
           rationale?: string | null
+          related_counterparties?: Json | null
           related_counterparty?: string | null
           source_references?: Json
           stage_context?: string | null
