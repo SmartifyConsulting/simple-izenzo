@@ -3279,6 +3279,38 @@ export type Database = {
         }
         Relationships: []
       }
+      user_workspace_tabs: {
+        Row: {
+          position: number
+          state: string
+          transaction_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          position?: number
+          state?: string
+          transaction_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          position?: number
+          state?: string
+          transaction_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_workspace_tabs_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wad_cases: {
         Row: {
           authority: Json
