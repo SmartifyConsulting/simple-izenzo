@@ -28,6 +28,25 @@ const HEADING: Record<StageContext, string> = {
   finality_recorded: "AI+ closing notes",
 };
 
+// The model's own category names for what a proposal is about — plain enough for AI+'s own
+// prompt, but jargon to someone reading the panel who's never heard "substitution" or "bundle"
+// used this way. These say the same thing in words a first-time user already knows.
+const PROPOSAL_TYPE_LABEL: Record<string, string> = {
+  counterparty: "Which company to choose",
+  pricing: "Price",
+  risk: "Risk to watch",
+  structure: "How the deal is structured",
+  timing: "Timing",
+  substitution: "A better alternative company",
+  bundle: "Combine two companies",
+};
+
+const CONFIDENCE_PILL_TONE: Record<"High" | "Medium" | "Low", string> = {
+  High: "border-emerald-400/60 bg-emerald-100 text-emerald-800",
+  Medium: "border-orange-400/60 bg-orange-100 text-orange-800",
+  Low: "border-red-400/60 bg-red-100 text-red-800",
+};
+
 const PILL_LABEL: Record<StageContext, string> = {
   choice_made: "Show AI+ Recommendations",
   intent_confirmed: "Show AI+ Recommendations",
@@ -321,24 +340,20 @@ export function DecisionPackPanel({
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span className="label-caps text-[10px] text-muted-foreground">
-                          {p.proposal_type}
+                          {(p.proposal_type && PROPOSAL_TYPE_LABEL[p.proposal_type]) ?? p.proposal_type}
                         </span>
                         <span
                           title={
                             structured
-                              ? `${confirmed} of ${refs.length} supporting facts are confirmed in the record`
-                              : "Confidence as reported for this recommendation"
+                              ? `${confirmed} of ${refs.length} supporting facts are confirmed in the record — that's what this is based on`
+                              : "How sure AI+ is about this recommendation"
                           }
                           className={cn(
-                            "rounded-full px-2 py-0.5 text-[10px] font-semibold",
-                            confidence === "High"
-                              ? "bg-emerald-100 text-emerald-800"
-                              : confidence === "Medium"
-                                ? "bg-amber-100 text-amber-800"
-                                : "bg-muted text-muted-foreground",
+                            "rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                            CONFIDENCE_PILL_TONE[confidence],
                           )}
                         >
-                          Confidence: {confidence}
+                          {confidence === "Medium" ? "Moderate confidence" : `${confidence} confidence`}
                         </span>
                         {(p.related_counterparties && p.related_counterparties.length > 0
                           ? p.related_counterparties
@@ -348,7 +363,11 @@ export function DecisionPackPanel({
                         ).map((name) => (
                           <span
                             key={name}
-                            className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary"
+                            title={`${confidence === "Medium" ? "Moderate" : confidence} confidence`}
+                            className={cn(
+                              "rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                              CONFIDENCE_PILL_TONE[confidence],
+                            )}
                           >
                             {name}
                           </span>
