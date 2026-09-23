@@ -1108,7 +1108,9 @@ export const runAiProposal = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { loadOpenAiApiKey } = await import("@/lib/openai.server");
     const apiKey = await loadOpenAiApiKey();
-    if (!apiKey) throw new Error("OpenAI is not configured. Add and enable it in Admin → Integrations.");
+    if (!(await aiAvailable(apiKey)))
+      throw new Error("No AI service is available. Add and enable OpenAI in Admin → Integrations.");
+
 
     const { data: tx } = await supabase
       .from("transactions")
