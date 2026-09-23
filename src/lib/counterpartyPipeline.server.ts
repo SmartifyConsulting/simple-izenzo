@@ -244,13 +244,26 @@ const SIDE_AND_PROVENANCE_RULES =
   "Organisations on the SAME side as the requester (personSide) are competitors and must not be returned. " +
   "Anything shown as [requester's term] is the requester's own quantity, price or delivery term: it is a requirement to match against, never a fact about any organisation — do not attribute it to one, and never quote it as evidence. Evidence must come only from that organisation's own page. ";
 
+const searchInstructions = (maxOrgs: number) =>
+  "You find real organisations that could be the counterparty described in the brief, using web search. " +
+  "Run several searches, starting from the query ideas given and adding your own. " +
+  "Only report organisations you actually found on pages you searched — never from memory, never invented. " +
+  "Report operating organisations that act in the required counterparty role in the brief, not directories, news articles, job boards or lists. " +
+  SIDE_AND_PROVENANCE_RULES +
+  "For each one give: name, jurisdiction, sector, evidence (one or two concrete facts from that organisation's own page showing it acts in the required role) and sourceUrl (the page address). " +
+  `Return up to ${maxOrgs} organisations as a JSON array only, or [] if none qualify. ` +
+  'Each item: {"name":string,"jurisdiction":string,"sector":string,"evidence":string,"sourceUrl":string}.';
+
 /** Step 3 through OpenAI's own web search, which also names the organisations it found. */
 async function searchWithOpenAi(input: PipelineInput, briefText: string, maxOrgs: number) {
-  const { webSearch } = await import("@/lib/openaiWebSearch.server");
+  const { webSearch, gatewayWebSearch } = await import("@/lib/openaiWebSearch.server");
   if (!input.apiKey) {
-    throw new Error(
-      "Internet search is unavailable: connect Tavily, or add an OpenAI key in Admin → Integrations.",
-    );
+    // No OpenAI key saved — search the web through the built-in AI service instead.
+    return gatewayWebSearch({
+      effort: input.kind === "ai" ? "low" : "medium",
+      instructions: searchInstructions(maxOrgs),
+      input: `Required counterparty brief:\n${briefText}`,
+    });
   }
   return webSearch({
     apiKey: input.apiKey,
