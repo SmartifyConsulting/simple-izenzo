@@ -206,6 +206,18 @@ const hostOf = (u: string): string => {
   }
 };
 
+/** The registrable part of a hostname ("shop.example.co.za" → "example.co.za"), so a sub-page,
+ * sub-domain or redirect of a page the search really read still counts as that same page's site.
+ * Insisting on a letter-for-letter hostname match threw away legitimate finds. */
+const siteOf = (u: string): string => {
+  const host = hostOf(u);
+  if (!host) return "";
+  const parts = host.split(".");
+  if (parts.length <= 2) return host;
+  const twoLevelSuffix = /^(co|com|org|net|gov|edu|ac|co)\.[a-z]{2}$/.test(parts.slice(-2).join("."));
+  return parts.slice(twoLevelSuffix ? -3 : -2).join(".");
+};
+
 function parseArray(raw: string): Record<string, unknown>[] {
   const match = raw.match(/\[[\s\S]*\]/);
   if (!match) return [];
@@ -251,13 +263,13 @@ async function searchWithTavily(input: PipelineInput, brief: Brief, briefText: s
   const queries = (brief.searchQueries.length > 0
     ? brief.searchQueries
     : [`${brief.capabilities.join(" ")} ${brief.role}`.trim()]
-  ).slice(0, input.kind === "ai" ? 3 : 5);
+  ).slice(0, input.kind === "ai" ? 5 : 6);
 
   const settled = await Promise.allSettled(
     queries.map((q) =>
       tavilySearch(input.tavilyKey as string, q, {
         depth: input.kind === "ai" ? "basic" : "advanced",
-        max: 6,
+        max: 8,
       }),
     ),
   );
