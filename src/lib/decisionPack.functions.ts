@@ -637,6 +637,8 @@ export const runDecisionPack = createServerFn({ method: "POST" })
         }
         if (!res.ok) {
           if (useLovable) throw new Error(await lovableAiFailureMessage(res));
+          const { openAiFailureMessage } = await import("@/lib/openaiCall.server");
+          const message = await openAiFailureMessage(res);
           const body = await res.text().catch(() => "");
           const { isOpenAiQuotaExceeded } = await import("@/lib/openai.server");
           if (isOpenAiQuotaExceeded(body)) {
@@ -646,8 +648,7 @@ export const runDecisionPack = createServerFn({ method: "POST" })
             const { logAiRateLimit } = await import("@/lib/opsAlerts.server");
             void logAiRateLimit("OpenAI", AI_PLUS_MODEL);
           }
-          const { openAiFailureMessage } = await import("@/lib/openaiCall.server");
-          throw new Error(await openAiFailureMessage(res));
+          throw new Error(message);
         }
 
         const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
