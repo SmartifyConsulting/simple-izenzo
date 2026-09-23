@@ -1275,14 +1275,63 @@ export type Database = {
         }
         Relationships: []
       }
+      document_signatures: {
+        Row: {
+          document_id: string
+          id: string
+          signed_at: string
+          signer_name: string
+          signer_side: string
+          signer_user_id: string
+          transaction_id: string
+        }
+        Insert: {
+          document_id: string
+          id?: string
+          signed_at?: string
+          signer_name: string
+          signer_side: string
+          signer_user_id?: string
+          transaction_id: string
+        }
+        Update: {
+          document_id?: string
+          id?: string
+          signed_at?: string
+          signer_name?: string
+          signer_side?: string
+          signer_user_id?: string
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_signatures_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_signatures_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           created_at: string
           doc_type: string
+          fully_signed_at: string | null
           id: string
           name: string
           notes: string | null
+          requires_signature: boolean
           sha256: string | null
+          signed_pdf_name: string | null
+          signed_pdf_path: string | null
           storage_path: string | null
           transaction_id: string
           uploaded_by: string
@@ -1291,10 +1340,14 @@ export type Database = {
         Insert: {
           created_at?: string
           doc_type?: string
+          fully_signed_at?: string | null
           id?: string
           name: string
           notes?: string | null
+          requires_signature?: boolean
           sha256?: string | null
+          signed_pdf_name?: string | null
+          signed_pdf_path?: string | null
           storage_path?: string | null
           transaction_id: string
           uploaded_by?: string
@@ -1303,10 +1356,14 @@ export type Database = {
         Update: {
           created_at?: string
           doc_type?: string
+          fully_signed_at?: string | null
           id?: string
           name?: string
           notes?: string | null
+          requires_signature?: boolean
           sha256?: string | null
+          signed_pdf_name?: string | null
+          signed_pdf_path?: string | null
           storage_path?: string | null
           transaction_id?: string
           uploaded_by?: string
@@ -1315,6 +1372,97 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "documents_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      engagement_diligence: {
+        Row: {
+          cleared_at: string | null
+          created_at: string
+          id: string
+          kyb_state: string
+          kyb_waiver_reason: string | null
+          kyc_state: string
+          kyc_waiver_reason: string | null
+          reviewer_side: string
+          transaction_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          cleared_at?: string | null
+          created_at?: string
+          id?: string
+          kyb_state?: string
+          kyb_waiver_reason?: string | null
+          kyc_state?: string
+          kyc_waiver_reason?: string | null
+          reviewer_side: string
+          transaction_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          cleared_at?: string | null
+          created_at?: string
+          id?: string
+          kyb_state?: string
+          kyb_waiver_reason?: string | null
+          kyc_state?: string
+          kyc_waiver_reason?: string | null
+          reviewer_side?: string
+          transaction_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "engagement_diligence_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      engagement_responses: {
+        Row: {
+          created_at: string
+          id: string
+          message: string | null
+          responder_name: string | null
+          responder_side: string
+          responder_user_id: string
+          response: string
+          transaction_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          responder_name?: string | null
+          responder_side: string
+          responder_user_id?: string
+          response: string
+          transaction_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          responder_name?: string | null
+          responder_side?: string
+          responder_user_id?: string
+          response?: string
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "engagement_responses_transaction_id_fkey"
             columns: ["transaction_id"]
             isOneToOne: false
             referencedRelation: "transactions"

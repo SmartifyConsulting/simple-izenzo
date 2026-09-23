@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { routeIdentityVerification } from "@/lib/identityRouting";
 import { Logo } from "@/components/Logo";
+import { MutualEngagementPanel } from "@/components/engagement/MutualEngagementPanel";
 import { CommoditySearch } from "@/components/CommoditySearch";
 import { COUNTRIES } from "@/lib/countries";
 import { UNITS } from "@/lib/units";
@@ -1949,6 +1950,7 @@ function WadStep({ tx, reload }: Props) {
 
   if (tx.wad_completed_at) {
     return (
+      <div className="space-y-6">
       <Panel
         title="Without a Doubt — cleared"
         description={`Cleared ${when(tx.wad_completed_at)}`}
@@ -1973,10 +1975,15 @@ function WadStep({ tx, reload }: Props) {
           Without a Doubt has cleared. Execution is open.
         </p>
       </Panel>
+      {/* Two-way checks, the counterparty's decision and dual signing stay available after
+          clearance — they are a separate, mutual record, not part of the WaD gate itself. */}
+      <MutualEngagementPanel transactionId={tx.id} />
+      </div>
     );
   }
 
   return (
+    <div className="space-y-6">
     <Panel
       title="Without a Doubt"
       footer={
@@ -2116,6 +2123,8 @@ function WadStep({ tx, reload }: Props) {
         })}
       </ul>
     </Panel>
+    <MutualEngagementPanel transactionId={tx.id} />
+    </div>
   );
 }
 
@@ -2312,6 +2321,10 @@ function BusinessDocsStep({ tx, reload }: Props) {
           </ul>
         )}
       </Panel>
+
+      {/* Signing lives with the shared documents: both sides sign the same record, and the signed
+          PDF is filed in Bid Information once both signatures are on it. */}
+      <MutualEngagementPanel transactionId={tx.id} />
     </div>
   );
 }

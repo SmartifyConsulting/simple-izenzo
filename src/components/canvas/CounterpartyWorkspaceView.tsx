@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { respondAsCounterparty } from "@/lib/counterpartyClaim.functions";
 import { InlineFrame } from "@/components/canvas/DealCanvas";
+import { MutualEngagementPanel } from "@/components/engagement/MutualEngagementPanel";
 import { money, tradeKindOf, when, type Transaction } from "@/lib/tx";
 
 /**
@@ -149,6 +150,10 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
             )}
           </div>
         )}
+
+        {/* The counterparty's own side of the two-way checks, its accept / challenge / opt-out
+            decision, and the documents both parties sign on one shared record. */}
+        <MutualEngagementPanel transactionId={tx.id} />
 
         {tx.intent_confirmed_at && (
           <div className="glass-node p-4">
