@@ -191,7 +191,12 @@ function OpenDealsPicker({ currentId, hasAttachment }: { currentId: string | nul
       const { data, error } = await supabase
         .from("transactions")
         .select("id, reference, title, commodity, stage, status, created_at, bid_offers(direction, created_at)")
-        .eq("org_id", org!.id)
+        // A deal this org was chosen as the counterparty on belongs in the tab bar too — not just
+        // ones it registered itself. Restricting to org_id alone meant opening one as a
+        // counterparty found no matching row here, so the tab fell back to a bare "ID…" label
+        // (fallbackReference has no real reference to work from) even though the deal itself has
+        // a real BID/OFF reference.
+        .or(`org_id.eq.${org!.id},counterparty_org_id.eq.${org!.id}`)
         .neq("stage", "memory")
         .not("status", "in", "(cancelled,archived)")
         // Newest first, so the most recent trade is what the picker lands on.
