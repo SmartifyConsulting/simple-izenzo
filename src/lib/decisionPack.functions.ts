@@ -34,7 +34,12 @@ export const PROPOSAL_TYPES = [
 
 export type ProposalType = (typeof PROPOSAL_TYPES)[number];
 
-/** The stage of the spine that asked for advice. AI+ only ever reads these. */
+/** The stage of the spine that asked for advice. AI+ only ever reads these.
+ *
+ * `search_results` replaced the old `choice_made` (kept as the same DB value for backward
+ * compatibility with rows already written) — AI+ now runs on the full candidate set the moment
+ * search results are in, *before* a person picks one, rather than reviewing a pick already made.
+ * See runDecisionPack's search_results branch for the collective, two-pass analysis this drives. */
 export const STAGE_CONTEXTS = [
   "choice_made",
   "intent_confirmed",
@@ -46,7 +51,7 @@ export const STAGE_CONTEXTS = [
 export type StageContext = (typeof STAGE_CONTEXTS)[number];
 
 const STAGE_LABEL: Record<StageContext, string> = {
-  choice_made: "Choice",
+  choice_made: "Search Results",
   intent_confirmed: "Before Sealing Intent",
   poi_sealed: "After Sealing Proof of Intent",
   wad_updated: "Compliance Case",
@@ -55,7 +60,7 @@ const STAGE_LABEL: Record<StageContext, string> = {
 
 const STAGE_BRIEF: Record<StageContext, string> = {
   choice_made:
-    "A counterparty has just been chosen by a person. Advise on that choice: is the counterparty sound, is the pricing sane, what risks and structuring points matter, is the timing right, is a substitution or a bundle worth considering.",
+    "Search has just returned a set of candidate counterparties — nobody has picked one yet. Analyse the WHOLE set collectively, together with anything the search considered and rejected, to find potentially executable pathways a person choosing one-by-one might miss: is there a strong direct match; would substituting one candidate for another close a gap; would combining two candidates as a bundle cover what no single one does alone; would a rejected candidate become viable with a structural change (different timing, staged performance, escrow or another risk control, added evidence). Name what specifically would need to change for any non-obvious pathway to work. This is advice to inform the choice, not a choice itself.",
   intent_confirmed:
     "Intent has been confirmed and the Proof of Intent is about to be sealed and become immutable. This is the last advisory word before that seal: name anything that should be settled first.",
   poi_sealed:
@@ -94,7 +99,12 @@ type RawProposal = {
    * bid record, a cited web page or general knowledge, and whether it is confirmed. */
   evidence?: unknown;
   addressed_to?: string;
+  /** Legacy single-name field — still read for anything (the protected AI+ service, older prompts)
+   * that only ever names one counterparty. */
   counterparty?: string | null;
+  /** Every counterparty name this proposal concerns — a bundle or substitution can legitimately
+   * name two or more. Preferred over `counterparty` when present. */
+  counterparties?: unknown;
 };
 
 type CleanProposal = {
@@ -103,7 +113,10 @@ type CleanProposal = {
   output: string;
   rationale: string;
   source_references: unknown[];
+  /** First name only, kept for older code paths that still read the singular field. */
   related_counterparty: string | null;
+  /** Every counterparty this proposal concerns, in full. */
+  related_counterparties: string[] | null;
 };
 
 /** Loose text match used only to police grounding claims: strips everything but letters, digits
@@ -198,14 +211,21 @@ function validate(raw: RawProposal[], citedUrls: Set<string> = new Set(), factCo
         : Array.isArray(r.source_references)
           ? r.source_references.map((s) => String(s)).filter(Boolean).slice(0, 8)
           : [];
-    const counterparty = String(r.counterparty ?? "").trim();
+    // Prefer the plural field (a bundle or substitution can name several); fall back to the
+    // singular one for anything that still only ever sends one name.
+    const namesFromArray = Array.isArray(r.counterparties)
+      ? r.counterparties.map((c) => String(c ?? "").trim()).filter(Boolean)
+      : [];
+    const singular = String(r.counterparty ?? "").trim();
+    const names = namesFromArray.length > 0 ? namesFromArray : singular ? [singular] : [];
     clean.push({
       proposal_type: type,
       probability: p,
       output: summary,
       rationale,
       source_references: refs,
-      related_counterparty: counterparty || null,
+      related_counterparty: names[0] ?? null,
+      related_counterparties: names.length > 0 ? names : null,
     });
   }
   return { clean, rejected };
@@ -486,6 +506,27 @@ export const runDecisionPack = createServerFn({ method: "POST" })
       .select("direction, price, quantity, unit, currency, terms, status")
       .eq("transaction_id", tx.id);
 
+    // Search-results-time only: organisations the search actually considered and dropped, with
+    // why — recorded on the completed search's own event (izenzo.functions.ts's
+    // counterparty_search_completed), never persisted to `counterparties` itself. Without this,
+    // AI+ can only ever see the survivors, and can never reason about whether a structural change
+    // (different terms, added evidence, a different role) would make a near-miss viable.
+    let rejectedCandidates: { name: string; reason: string }[] = [];
+    if (data.stageContext === "choice_made") {
+      const { data: searchEvent } = await supabase
+        .from("transaction_events")
+        .select("payload")
+        .eq("transaction_id", tx.id)
+        .eq("action", "counterparty_search_completed")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const payload = searchEvent?.payload as { notKept?: { name?: string; reason?: string }[] } | null;
+      rejectedCandidates = (payload?.notKept ?? [])
+        .map((r) => ({ name: String(r.name ?? "").trim(), reason: String(r.reason ?? "").trim() }))
+        .filter((r) => r.name);
+    }
+
     // AI+ memory of this bid: what the documents say, and what the person has already accepted
     // or rejected here, so later advice builds on the record instead of ignoring it.
     const { data: priorDecisions } = await supabase
@@ -528,12 +569,15 @@ export const runDecisionPack = createServerFn({ method: "POST" })
 
     // The corpus this deal's own record actually supports — every "document"/"extracted_fact"/
     // "bid_record" claim the model makes is checked against this, not trusted on its say-so.
+    // Rejected candidates and their reasons count too, so a proposal that reasons about why one
+    // was dropped (and what would change that) is grounded, not treated as fabrication.
     const factCorpus = normalizeCorpus(
       [
         JSON.stringify(structuredFacts ?? {}),
         (tx as { document_summary?: string | null }).document_summary ?? "",
         JSON.stringify(bids ?? []),
         JSON.stringify(parties ?? []),
+        JSON.stringify(rejectedCandidates),
       ].join(" "),
     );
 
@@ -545,16 +589,70 @@ export const runDecisionPack = createServerFn({ method: "POST" })
           : "how to secure a reliable supplier on sound terms and protect the user as buyer — for example verifying quality and quantity, price against a benchmark, delivery and payment protections. Do NOT write advice to the supplier."
       }`,
       `TRANSACTION TYPE: ${transactionType}. ${REASONING_RULES[transactionType]}`,
-      "Return STRICT JSON: {\"proposals\":[{\"proposal_type\":\"counterparty|pricing|risk|structure|timing|substitution|bundle\",\"addressed_to\":\"user\",\"summary\":\"one sentence: what the user should do\",\"rationale\":\"why\",\"evidence\":[{\"kind\":\"document|extracted_fact|bid_record|public_web|general_knowledge\",\"chain\":\"source → detail → fact\",\"verified\":true,\"url\":\"only for public_web\"}],\"counterparty\":\"the exact counterparty name this proposal is about, from the Counterparties list below, or null if it isn't about a specific one\"}]}",
+      "Return STRICT JSON: {\"proposals\":[{\"proposal_type\":\"counterparty|pricing|risk|structure|timing|substitution|bundle\",\"addressed_to\":\"user\",\"summary\":\"one sentence: what the user should do\",\"rationale\":\"why\",\"evidence\":[{\"kind\":\"document|extracted_fact|bid_record|public_web|general_knowledge\",\"chain\":\"source → detail → fact\",\"verified\":true,\"url\":\"only for public_web\"}],\"counterparties\":[\"exact name(s) this proposal concerns, from the Counterparties or Considered-and-dropped lists below — two or more for a bundle or a substitution naming an alternative\"]}]}",
       "\"rationale\" is mandatory and is the explanation the person reads before accepting or rejecting. Write two to four sentences in plain professional language that (1) state the specific evidence you are relying on, (2) explain the reasoning that leads from that evidence to the recommendation, and (3) say what it would improve or what risk it would avoid. Never write a bare restatement of the summary or an explanation that cites nothing on file.",
       "\"evidence\" lists every fact the advice rests on and says exactly where each comes from. kind: \"document\" = a named document on file; \"extracted_fact\" = a specific fact read out of a document, including any of the STRUCTURED FACTS below; \"bid_record\" = a field of the bid/offer record; \"public_web\" = a page in the PUBLIC MARKET DATA section (give its url); \"general_knowledge\" = anything from your own knowledge. \"chain\" traces it from source to fact, for example \"PPA → offtake terms → 20-year tenor at $45/MWh\" or \"Assay Certificate → sample ID CCA-260918-73 → Cu 99.94%\". \"verified\" is true only if that exact fact appears in the information below; anything from general knowledge is verified:false. Never invent a source, a figure, a term length or a capacity number — a claim marked verified that does not actually appear below is discarded before it reaches the person deciding.",
       "Do not give any probability or percentage of your own — confidence is worked out from how much of the evidence is verified.",
       "The user's own submitted terms (price, quantity, delivery terms) are the user's claims, not independently verified facts about the counterparty or the market. Use market prices only from the PUBLIC MARKET DATA section; if it is empty or holds no usable benchmark, say a contemporaneous benchmark could not be obtained instead of supplying a figure.",
       "A price or quantity shown as \"not recorded\" is a gap in the record, not a value of zero. The same applies to every STRUCTURED FACT: a fact not listed below was not found in the documents — say so as a gap and what evidence would close it, never assume a typical or industry-standard figure in its place.",
-      "Always set \"counterparty\" to the specific party's name whenever a proposal concerns one — never leave it null just because the type isn't \"counterparty\".",
+      "Always list every specific party a proposal concerns in \"counterparties\" — never leave it empty just because the type isn't \"counterparty\".",
       "Spread the proposals across whichever of counterparty, pricing, risk, structure, timing, substitution and bundle actually apply to this transaction type and the facts on file — do not default every proposal to pricing or counterparty just because those are the most familiar categories.",
       "Return between 2 and 6 proposals. No prose outside the JSON.",
     ].join("\n");
+
+    // Search-results time only: a first pass that reasons over the whole candidate set — kept and
+    // rejected alike — before the second pass writes the actual proposals. Doing this as one call
+    // reliably produced per-candidate commentary that read like individual reviews; splitting it
+    // into "assess the set" then "propose from that assessment" is what actually makes the second
+    // call reason about combinations and gaps instead of restating one candidate at a time.
+    let compatibilityMatrix: string | null = null;
+    if (data.stageContext === "choice_made" && (parties ?? []).length > 0) {
+      try {
+        const matrixSystem = [
+          "You assess how a set of candidate counterparties, together, relate to one trade requirement. This is analysis only — you are not choosing anything.",
+          `The user is the ${userSide}. Required counterparty role: ${isSeller ? "a buyer/off-taker" : "a supplier"}.`,
+          "For EVERY candidate listed below (both kept and considered-and-dropped), and then once for the SET as a whole, judge:",
+          "- compatibility: how well it fits the requirement given the facts on file",
+          "- gaps: what is missing, unconfirmed or unresolved for it specifically",
+          "- wouldBecomeViableIf: for a weak or dropped candidate only, the specific structural change (different quantity split, staged delivery, escrow or another risk control, added evidence, a different role) that would make it usable — or null if nothing plausible would",
+          "- combinesWith: names of other candidates it could combine with as a bundle to cover the full requirement, or [] if none",
+          "Base every judgement only on the facts given — never invent capacity, certifications or terms no candidate is shown to have.",
+          "Reply with JSON only: {\"candidates\":[{\"name\":string,\"compatibility\":\"strong\"|\"partial\"|\"weak\"|\"dropped\",\"gaps\":string[],\"wouldBecomeViableIf\":string|null,\"combinesWith\":string[]}],\"setLevelObservation\":\"one or two sentences on the set as a whole — e.g. whether any single candidate covers the full requirement, or it would take a combination\"}",
+        ].join("\n");
+        const matrixUser = [
+          `Requirement: ${tx.commodity ?? tx.title ?? "n/a"}, quantity ${tx.quantity ?? "n/a"} ${tx.unit ?? ""}, ${tx.incoterms ?? "incoterms n/a"}, ${tx.jurisdiction ?? "jurisdiction n/a"}.`,
+          factLines.length > 0 ? `Known facts:\n${factLines.map((l) => `- ${l}`).join("\n")}` : "",
+          `Kept candidates: ${JSON.stringify(parties ?? [])}`,
+          rejectedCandidates.length > 0
+            ? `Considered and dropped by search, with why: ${JSON.stringify(rejectedCandidates)}`
+            : "Considered and dropped by search: none recorded.",
+        ]
+          .filter(Boolean)
+          .join("\n\n");
+        const { callAiChat } = await import("@/lib/lovableAi.server");
+        const res = await callAiChat(apiKey, {
+          model: AI_PLUS_MODEL,
+          reasoning_effort: "medium",
+          max_completion_tokens: 8000,
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: matrixSystem },
+            { role: "user", content: matrixUser },
+          ],
+        });
+        if (res.ok) {
+          const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+          const content = json.choices?.[0]?.message?.content ?? "";
+          const body = content.slice(content.indexOf("{"), content.lastIndexOf("}") + 1);
+          const parsed = JSON.parse(body) as unknown;
+          compatibilityMatrix = JSON.stringify(parsed);
+        }
+      } catch {
+        // The matrix is an aid to the second pass, not a requirement — if it fails, the final
+        // pass still runs on the raw candidate/rejected lists directly.
+        compatibilityMatrix = null;
+      }
+    }
 
     const prompt = [
       STAGE_BRIEF[data.stageContext],
@@ -570,6 +668,12 @@ export const runDecisionPack = createServerFn({ method: "POST" })
         ? `STRUCTURED FACTS for this transaction type (read from the documents — treat every one of these as verified, and reason over them as the primary evidence for this deal):\n${factLines.map((l) => `- ${l}`).join("\n")}`
         : `STRUCTURED FACTS for this transaction type: none extracted yet — treat every type-specific fact (${transactionType}) as a gap, not as a typical/default figure.`,
       `Counterparties: ${JSON.stringify(parties ?? [])}`,
+      rejectedCandidates.length > 0
+        ? `Considered and dropped by search, with why (a "substitution" or gap-driven proposal may legitimately name one of these — say what would need to change): ${JSON.stringify(rejectedCandidates)}`
+        : "",
+      compatibilityMatrix
+        ? `COLLECTIVE ASSESSMENT of the set above (compatibility, gaps, what would make a weak/dropped candidate viable, and which candidates could combine as a bundle) — reason from this, do not just restate it:\n${compatibilityMatrix}`
+        : "",
       `Bids/offers: ${JSON.stringify(
         (bids ?? []).map((b) => ({
           ...b,
@@ -701,6 +805,7 @@ export const runDecisionPack = createServerFn({ method: "POST" })
           rationale: c.rationale,
           source_references: c.source_references,
           related_counterparty: c.related_counterparty,
+          related_counterparties: c.related_counterparties,
         })) as unknown as never[],
       )
       .select();
@@ -842,7 +947,14 @@ export const decideProposal = createServerFn({ method: "POST" })
               ? `   Based on: ${parseEvidenceRefs(p.source_references).map((e) => `${e.chain}${e.verified ? "" : " (not verified)"}`).join("; ")}`
               : null,
             p.probability != null ? `   Evidence confirmed: ${Math.round(Number(p.probability) * 100)}%` : null,
-            p.related_counterparty ? `   Counterparty: ${p.related_counterparty}` : null,
+            (() => {
+              const names = Array.isArray((p as { related_counterparties?: unknown }).related_counterparties)
+                ? ((p as { related_counterparties?: unknown }).related_counterparties as string[])
+                : p.related_counterparty
+                  ? [p.related_counterparty]
+                  : [];
+              return names.length > 0 ? `   Counterpart${names.length === 1 ? "y" : "ies"}: ${names.join(", ")}` : null;
+            })(),
             `   Decision: ${(p.id === proposal.id ? data.decision : p.decision) ?? "—"} by ${nameOf(p.id === proposal.id ? userId : p.decided_by)} at ${p.id === proposal.id ? decidedAt : p.decided_at}`,
           ].filter((line): line is string => Boolean(line)).join("\n")),
       ].join("\n");
@@ -924,6 +1036,7 @@ export const emitAiPlusSpineEvent = createServerFn({ method: "POST" })
         rationale: c.rationale,
         source_references: c.source_references,
         related_counterparty: c.related_counterparty,
+        related_counterparties: c.related_counterparties,
       })) as unknown as never[],
     );
 

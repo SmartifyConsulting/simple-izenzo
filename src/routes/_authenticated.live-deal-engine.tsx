@@ -31,12 +31,11 @@ import {
 } from "@/components/canvas/DealCanvas";
 import { CounterpartyWorkspaceView } from "@/components/canvas/CounterpartyWorkspaceView";
 import { TradeSummary } from "@/components/canvas/TradeSummary";
-// Performance only: the AI+ panel, the map and the classic stepper are each large and only one of
-// them is on screen at a time, so they load as their own chunks instead of inside the first
-// workspace download. Same components, same props, same behaviour.
-const DecisionPackPanel = lazy(() =>
-  import("@/components/canvas/DecisionPackPanel").then((m) => ({ default: m.DecisionPackPanel })),
-);
+// Performance only: the map and the classic stepper are each large and only one of them is on
+// screen at a time, so they load as their own chunks instead of inside the first workspace
+// download. Same components, same props, same behaviour. (AI+'s DecisionPackPanel is no longer
+// lazy-loaded here — it now renders directly inside CounterpartyRecord in DealCanvas.tsx, which is
+// already part of this route's main bundle.)
 
 import { SubmitterIdentity } from "@/components/canvas/SubmitterIdentity";
 import { MatchResultsPanel } from "@/components/canvas/MatchResultsPanel";
@@ -378,7 +377,6 @@ function LiveDealEngine() {
     setStagePanel(null);
     setMapPanel(null);
     setIntentDismissed(false);
-    setChoicePackDecided(false);
     // Start from whatever this bid's own row already has, never a previous bid's leftover value
     // (the earlier bug this guarded against) — but unlike hardcoding null, this doesn't also wipe
     // out a summary (or a recorded read failure) the new bid already had saved. Resetting to null
@@ -665,9 +663,6 @@ function LiveDealEngine() {
   // Once Intent is confirmed, its frame folds into a small accordion nested under Online Media
   // Screening Results rather than staying open as its own full-size panel.
   const [confirmedIntentOpen, setConfirmedIntentOpen] = useState(false);
-  // AI+ proposes; a person decides. Tracks whether every proposal in the Choice pack has been
-  // accepted or rejected, which is what lets Intent open.
-  const [choicePackDecided, setChoicePackDecided] = useState(false);
 
   // The sealed Proof of Intent folds the same way — closed until the certificate is wanted.
   const [sealedPoiOpen, setSealedPoiOpen] = useState(false);
@@ -1357,7 +1352,6 @@ function LiveDealEngine() {
       setHasChosen(false);
       setDbHasChosenParty(false);
       setIntentDismissed(false);
-      setChoicePackDecided(false);
       setStagePanel(null);
       setMediaRunning(false);
       setMediaResults(null);
@@ -1439,7 +1433,6 @@ function LiveDealEngine() {
     setHasChosen(false);
     setDbHasChosenParty(false);
       setIntentDismissed(false);
-      setChoicePackDecided(false);
     setMapPanel(null);
     setPendingDirection(null);
     setDraftReference(null);
@@ -1527,7 +1520,6 @@ function LiveDealEngine() {
         setHasChosen(false);
         setDbHasChosenParty(false);
       setIntentDismissed(false);
-      setChoicePackDecided(false);
         setDocumentSummary((tx as unknown as { document_summary: string | null }).document_summary ?? null);
         setFlowStep(tx.step === "documents" ? "documents" : "results");
         const { data: docs } = await supabase
@@ -1591,7 +1583,6 @@ function LiveDealEngine() {
         setHasChosen(false);
         setDbHasChosenParty(false);
       setIntentDismissed(false);
-      setChoicePackDecided(false);
         setDocumentSummary((tx as unknown as { document_summary: string | null }).document_summary ?? null);
         setFlowStep(tx.step === "documents" ? "documents" : "results");
         const { data: docs } = await supabase
@@ -1638,7 +1629,6 @@ function LiveDealEngine() {
     setHasChosen(false);
     setDbHasChosenParty(false);
     setIntentDismissed(false);
-    setChoicePackDecided(false);
     setStagePanel(null);
     setMapPanel(null);
     setSearchError(null);
@@ -2812,25 +2802,10 @@ function LiveDealEngine() {
                   </div>
                 )}
 
-                {/* AI+ is advisory, never the decision-maker: after the person makes the Choice it
-                    offers proposals, each with a numeric probability, and the person accepts or
-                    rejects them before Intent is available. */}
-                {dealTx && dbHasChosenParty && !dealTx.poi_sealed_at && (
-                  <Suspense fallback={null}>
-                    <DecisionPackPanel
-                      transactionId={dealTx.id}
-                      stageContext="choice_made"
-                      gating={!dealTx.intent_confirmed_at}
-                      onAllDecided={setChoicePackDecided}
-                    />
-                  </Suspense>
-                )}
-
-                {/* No further AI+ recommendations appear later in the deal: the person answers the
-                    one set at Choice and then proceeds on their own. */}
-
-
-
+                {/* AI+ moved earlier in the flow: it now analyses the whole search-result set (and
+                    what was rejected) the moment results are in, inside the Search Results record
+                    itself, before anyone picks — see CounterpartyRecord in DealCanvas.tsx. Nothing
+                    runs here anymore; Confirm Intent is no longer gated by it. */}
 
                 {/* Confirmed Intent, kept for the rest of the deal as a folded record. It no longer
                     depends on which step the workspace is asking about, so it stops disappearing
@@ -2949,14 +2924,11 @@ function LiveDealEngine() {
                   </div>
                 )}
 
-                {/* The human decision on the AI+ proposals comes first: Intent only opens once
-                    every proposal from the Choice pack has been accepted or rejected. The
-                    reminder itself now lives inline next to the AI+ Recommendations button
-                    (DecisionPackPanel), not as a separate message down here. */}
-                {dealTx && stagePanel === "intent" && !dealTx.intent_confirmed_at && dbHasChosenParty && !choicePackDecided ? null : (
-                  /* The active step's own panel — skipped for intent and poi once those are
-                     recorded, since the folded records above already hold them. */
-                  dealTx &&
+                {/* The active step's own panel — skipped for intent and poi once those are
+                    recorded, since the folded records above already hold them. Confirm Intent is
+                    no longer gated by AI+ here — that gate now sits earlier, on Choice, in the
+                    Search Results record (CounterpartyRecord/DecisionPackPanel). */}
+                {dealTx &&
                   stagePanel &&
                   !(stagePanel === "intent" && dealTx.intent_confirmed_at) &&
                   !(stagePanel === "poi" && dealTx.poi_sealed_at) &&
@@ -2972,9 +2944,7 @@ function LiveDealEngine() {
                       }}
                       onChangeParty={() => void reopenChoice()}
                     />
-                  )
-
-                )}
+                  )}
 
 
                 {/* Only once Step 2's own documents (Business Docs) are in — not the moment the

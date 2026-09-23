@@ -24,10 +24,11 @@ type Proposal = {
   decision: string | null;
   decided_at: string | null;
   related_counterparty: string | null;
+  related_counterparties?: string[] | null;
 };
 
 const HEADING: Record<StageContext, string> = {
-  choice_made: "AI+ advice on your choice",
+  choice_made: "AI+ analysis of the search results, before you choose",
   intent_confirmed: "AI+ advice before sealing",
   poi_sealed: "AI+ notes on the sealed Proof of Intent",
   wad_updated: "AI+ advice on the compliance case",
@@ -53,12 +54,16 @@ export function DecisionPackPanel({
   transactionId,
   stageContext,
   gating = false,
+  gatedStepLabel = "the next step",
   onAllDecided,
 }: {
   transactionId: string;
   stageContext: StageContext;
   /** When true the modal opens itself and asks for a decision on every recommendation. */
   gating?: boolean;
+  /** What's actually being held open while gating — named by the caller, since this panel sits at
+   * different points in the flow ("Choice" today; it used to gate Intent). */
+  gatedStepLabel?: string;
   onAllDecided?: (allDecided: boolean) => void;
 }) {
   const run = useServerFn(runDecisionPack);
@@ -93,14 +98,17 @@ export function DecisionPackPanel({
     };
   }, [transactionId, stageContext, run, retryTick]);
 
-  const allDecided =
-    Boolean(proposals) && proposals!.length > 0 && proposals!.every((p) => Boolean(p.decided_at));
   const pending = (proposals ?? []).filter((p) => !p.decided_at).length;
+  // "Nothing to add" is its own satisfied state — a load that genuinely came back with zero
+  // proposals must count as decided, or a deal with no AI+ advice would sit gated forever.
+  const nothingToAdd = Boolean(proposals) && proposals!.length === 0;
+  const allDecided =
+    nothingToAdd || (Boolean(proposals) && proposals!.length > 0 && proposals!.every((p) => Boolean(p.decided_at)));
 
   // A failed fetch (proposals stays null) must still tell the caller "not decided" — otherwise a
   // gate that was satisfied by a *previous* transaction (onAllDecided(true) from an earlier deal)
-  // stays satisfied here too, since nothing ever calls it again to say otherwise, and Intent opens
-  // for a deal whose AI+ recommendations were never actually shown, let alone answered.
+  // stays satisfied here too, since nothing ever calls it again to say otherwise, and the next step
+  // opens for a deal whose AI+ recommendations were never actually shown, let alone answered.
   useEffect(() => {
     if (!allDecided) onAllDecided?.(false);
   }, [proposals, error, allDecided, onAllDecided]);
@@ -159,7 +167,7 @@ export function DecisionPackPanel({
   if (allDecided && !open) {
     return (
       <p className="px-1 text-[11px] text-muted-foreground">
-        AI+ recommendations recorded — filed in Documents.
+        {nothingToAdd ? "AI+ had nothing to add here." : "AI+ recommendations recorded — filed in Documents."}
       </p>
     );
   }
@@ -205,7 +213,7 @@ export function DecisionPackPanel({
             separate message elsewhere in the workspace. */}
         {!busy && !error && gating && pending > 0 && (
           <span className="text-[11px] text-muted-foreground">
-            Accept or reject each AI+ proposal above, then Intent opens.
+            Accept or reject each AI+ proposal above, then {gatedStepLabel} opens.
           </span>
         )}
         {/* Testing shortcut, explicitly requested: with pending proposals on hand it does exactly
@@ -309,11 +317,19 @@ export function DecisionPackPanel({
                         >
                           Confidence: {confidence}
                         </span>
-                        {p.related_counterparty && (
-                          <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                            {p.related_counterparty}
+                        {(p.related_counterparties && p.related_counterparties.length > 0
+                          ? p.related_counterparties
+                          : p.related_counterparty
+                            ? [p.related_counterparty]
+                            : []
+                        ).map((name) => (
+                          <span
+                            key={name}
+                            className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary"
+                          >
+                            {name}
                           </span>
-                        )}
+                        ))}
                       </div>
                       <p className="mt-1 text-xs font-semibold">{p.output}</p>
                       {structured && (

@@ -74,6 +74,7 @@ import { dedupeOrgs } from "@/lib/dedupeOrgs";
 import { keepForBid, loadBidRelevance } from "@/lib/bidRelevance";
 import type { ScreeningCheck, ScreeningResult } from "@/lib/screening.functions";
 import type { MediaCheckResult, MediaFinding } from "@/lib/onlineMedia.functions";
+import { DecisionPackPanel } from "@/components/canvas/DecisionPackPanel";
 import {
   listVerificationsForTx,
   refreshVerification,
@@ -1197,15 +1198,20 @@ export function CounterpartyRecord({
   const qc = useQueryClient();
   const setShortlist = useServerFn(setCounterpartyShortlist);
   const enrichContact = useServerFn(enrichCounterparty);
+  // NOTE: this is a different "AI+" from the one below — a deeper, heavier pass of the ordinary
+  // search pipeline (more thorough web search + relevance testing), not the AI+ Recommendations
+  // panel. It has nothing to be deep about until a person has actually shortlisted candidates from
+  // the first (lighter, "AI") search, so it's requested once per transaction the first time that
+  // happens here, rather than run for every search regardless of whether anyone has looked yet.
   const runAiPlusSearch = useServerFn(searchCounterparties);
-  // AI+ is a deeper, heavier search pass. It has nothing to be deep about until a person has
-  // actually shortlisted candidates from the first (lighter, "AI") search, so it's requested once
-  // per transaction the first time that happens here, rather than run for every search regardless
-  // of whether anyone has looked at the results yet.
   const aiPlusRequested = useRef<Set<string>>(new Set());
   const raiseChallengeFn = useServerFn(raiseChallenge);
   const listChallengesFn = useServerFn(listChallenges);
   const [pickedId, setPickedId] = useState<string | null>(null);
+  // AI+ Recommendations: now runs the moment search results are in, analysing the whole set
+  // (kept and dropped) before anyone picks — not after, as it used to. Continue stays disabled
+  // until every proposal here has a decision, same gate this used to put on Confirm Intent.
+  const [aiPlusDecided, setAiPlusDecided] = useState(false);
   // "Edit Search" reveals this inline, pre-filled with the current search text, instead of
   // silently re-running the exact same search that just came back empty.
   const [editingSearch, setEditingSearch] = useState(false);
@@ -1562,6 +1568,20 @@ export function CounterpartyRecord({
         </div>
       )}
 
+      {/* AI+ analyses the whole result set — kept and dropped — the moment it's in, before anyone
+          picks. Continue below stays disabled until every proposal here is answered. */}
+      {txId && candidates.length > 0 && !searching && !screeningDone && !continued && (
+        <div className="mt-3 border-t border-slate-300 pt-3">
+          <DecisionPackPanel
+            transactionId={txId}
+            stageContext="choice_made"
+            gating
+            gatedStepLabel="Choice"
+            onAllDecided={setAiPlusDecided}
+          />
+        </div>
+      )}
+
       {/* The record of what the search found, kept plain inside the workspace's Search Results
           frame — no second heading, and no repeat of the screening findings, which have their own
           frame below in the workspace. */}
@@ -1784,14 +1804,16 @@ export function CounterpartyRecord({
             type="button"
             className={cn(
               "mt-3 w-full bg-info text-white hover:bg-info/90",
-              ticked.length === 0 && "bg-slate-300 text-slate-700 hover:bg-slate-300 disabled:opacity-100",
+              (ticked.length === 0 || !aiPlusDecided) && "bg-slate-300 text-slate-700 hover:bg-slate-300 disabled:opacity-100",
             )}
-            disabled={ticked.length === 0}
+            disabled={ticked.length === 0 || !aiPlusDecided}
             onClick={() => onContinue(ticked)}
           >
-            {ticked.length === 0
-              ? "Tick a counterparty to continue"
-              : `Run online media screening on ${ticked.length} counterpart${ticked.length === 1 ? "y" : "ies"}`}
+            {!aiPlusDecided
+              ? "Accept or reject each AI+ proposal above first"
+              : ticked.length === 0
+                ? "Tick a counterparty to continue"
+                : `Run online media screening on ${ticked.length} counterpart${ticked.length === 1 ? "y" : "ies"}`}
           </Button>
         )
       )}
