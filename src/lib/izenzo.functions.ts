@@ -1022,6 +1022,8 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       // Diagnostics only — never blocks returning the result.
     }
 
+    await fileSearchResultsDocument(supabase, tx.id, tx.title ?? null);
+
     return {
       candidates: inserted ?? [],
       model,
@@ -1030,6 +1032,74 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       notKept: notKept.slice(0, 30),
     };
   });
+
+/** Files (replacing any previous copy) a snapshot of every counterparty the search has surfaced
+ * for this deal so far — the list actually shown in Search Results, not just what one particular
+ * run added — as a document in the Bid Information archive. Called after every search run (AI and
+ * AI+ alike) and after AI+ Recommendations adds a candidate of its own, so the filed copy never
+ * goes stale. Best-effort: a filing failure must never break the search itself. */
+export async function fileSearchResultsDocument(supabase: any, transactionId: string, dealTitle: string | null) {
+  try {
+    const { data: rows } = await supabase
+      .from("counterparties")
+      .select("name, score, source, jurisdiction, sector, status")
+      .eq("transaction_id", transactionId)
+      .order("score", { ascending: false, nullsFirst: false });
+    const list = (rows ?? []) as {
+      name: string;
+      score: number | null;
+      source: string | null;
+      jurisdiction: string | null;
+      sector: string | null;
+      status: string | null;
+    }[];
+    if (list.length === 0) return;
+
+    const { sourceLabel } = await import("@/lib/userFacingText");
+    const lines = list.map((c) => {
+      const bits = [c.score != null ? `${c.score}% match` : null, sourceLabel(c.source), c.jurisdiction, c.sector]
+        .filter(Boolean)
+        .join(" — ");
+      return `${c.name}: ${bits}`;
+    });
+
+    const { buildBrandedCertificatePdf } = await import("@/lib/certificatePdf");
+    const bytes = await buildBrandedCertificatePdf({
+      heading: "Search Results",
+      lines: [`Transaction: ${dealTitle ?? "—"}`, `Counterparties found: ${list.length}`, "", ...lines],
+    });
+
+    // Replace, rather than accumulate — this is a snapshot of the current list, not a log of every
+    // run, so re-searching or AI+ adding a find updates the one filed copy instead of piling up.
+    const { data: existing } = await supabase
+      .from("documents")
+      .select("id")
+      .eq("transaction_id", transactionId)
+      .eq("doc_type", "search_results");
+    if (existing && existing.length > 0) {
+      await supabase.from("documents").delete().in(
+        "id",
+        (existing as { id: string }[]).map((d) => d.id),
+      );
+    }
+
+    const path = `deals/${transactionId}/${Date.now()}-search-results.pdf`;
+    const { error: upErr } = await supabase.storage
+      .from("documents")
+      .upload(path, bytes, { contentType: "application/pdf" });
+    if (upErr) return;
+
+    await supabase.from("documents").insert({
+      transaction_id: transactionId,
+      name: `Search Results — ${dealTitle ?? "deal"}.pdf`,
+      doc_type: "search_results",
+      notes: `${list.length} counterpart${list.length === 1 ? "y" : "ies"}`,
+      storage_path: path,
+    });
+  } catch {
+    // Best-effort only — never blocks the search itself.
+  }
+}
 
 /** Marks/unmarks a discovered counterparty as shortlisted — a non-committal "interested" flag a
  * bidder or responder can toggle from the Record panel. Separate from `status:"chosen"`, which is

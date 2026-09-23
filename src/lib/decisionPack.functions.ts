@@ -882,6 +882,10 @@ export const runDecisionPack = createServerFn({ method: "POST" })
           .select("id");
         if (!candErr) newCandidateCount = (insertedCandidates ?? []).length;
       }
+      if (newCandidateCount > 0) {
+        const { fileSearchResultsDocument } = await import("@/lib/izenzo.functions");
+        await fileSearchResultsDocument(supabase, tx.id, tx.title ?? null);
+      }
     }
 
     return { packId, proposals: inserted ?? [], reused: false, newCandidateCount };
