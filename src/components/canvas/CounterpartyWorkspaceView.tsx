@@ -150,6 +150,10 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
           </div>
         )}
 
+        {/* The counterparty's own side of the two-way checks, its accept / challenge / opt-out
+            decision, and the documents both parties sign on one shared record. */}
+        <MutualEngagementPanel transactionId={tx.id} />
+
         {tx.intent_confirmed_at && (
           <div className="glass-node p-4">
             <span className="label-caps mb-2 inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
