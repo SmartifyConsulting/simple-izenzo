@@ -1001,7 +1001,9 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { loadOpenAiApiKey } = await import("@/lib/openai.server");
     const apiKey = await loadOpenAiApiKey();
-    if (!apiKey) throw new Error("OpenAI is not configured. Add and enable it in Admin → Integrations.");
+    if (!(await aiAvailable(apiKey)))
+      throw new Error("No AI service is available. Add and enable OpenAI in Admin → Integrations.");
+
 
     const counterpart = data.role === "buyer" ? "suppliers/sellers" : "buyers";
     const system =
