@@ -5,17 +5,30 @@
 
 const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 
-/** Codes that mean the account itself is out of money or capped — retrying cannot help. */
+/** Codes that mean the account itself is out of money or capped — retrying cannot help. OpenAI
+ * reports an empty balance under several names, so all of them are treated the same. */
 function isTerminalAccountCode(code: string | undefined): boolean {
-  return code === "insufficient_quota" || code === "billing_hard_limit_reached";
+  return (
+    code === "insufficient_quota" ||
+    code === "billing_hard_limit_reached" ||
+    code === "credit_balance_exhausted" ||
+    code === "billing_not_active"
+  );
 }
 
-async function errorCodeOf(res: Response): Promise<string | undefined> {
+/** A worded balance complaint counts too, in case OpenAI renames the code again. */
+function saysNoCredit(message: string): boolean {
+  const m = message.toLowerCase();
+  return m.includes("no credits remaining") || m.includes("exceeded your current quota") || m.includes("add credits");
+}
+
+async function isTerminalResponse(res: Response): Promise<boolean> {
   const payload = (await res
     .clone()
     .json()
-    .catch(() => null)) as { error?: { code?: string; type?: string }; type?: string } | null;
-  return payload?.error?.code ?? payload?.error?.type ?? payload?.type;
+    .catch(() => null)) as { error?: { code?: string; type?: string; message?: string }; type?: string } | null;
+  const code = payload?.error?.code ?? payload?.error?.type ?? payload?.type;
+  return isTerminalAccountCode(code) || saysNoCredit(payload?.error?.message ?? "");
 }
 
 /** Sends one chat request, retrying only genuinely transient refusals (429 and 5xx) with bounded
@@ -41,7 +54,7 @@ export async function callOpenAiChat(
   let res = await call();
   for (const base of delays) {
     if (res.status !== 429 && res.status < 500) break;
-    if (res.status === 429 && isTerminalAccountCode(await errorCodeOf(res))) break;
+    if (res.status === 429 && (await isTerminalResponse(res))) break;
     const retryAfter = Number(res.headers.get("retry-after"));
     const wait =
       Number.isFinite(retryAfter) && retryAfter > 0
@@ -70,8 +83,8 @@ export async function openAiFailureMessage(res: Response): Promise<string> {
     // Not JSON — the status alone still tells us enough below.
   }
 
-  if (isTerminalAccountCode(code)) {
-    return "The OpenAI account has no credit left, or has reached the spending limit set on it. Add credit to that OpenAI account, then try again.";
+  if (isTerminalAccountCode(code) || saysNoCredit(providerMessage)) {
+    return "The OpenAI account has no credit left, or has reached the spending limit set on it. Add credit to that OpenAI account at platform.openai.com, then try again.";
   }
   if (res.status === 429) {
     return "The OpenAI account has reached how many requests it is allowed right now — this is the free-account limit, not a problem with your documents. Wait a minute and try again; adding credit to that OpenAI account removes the limit.";

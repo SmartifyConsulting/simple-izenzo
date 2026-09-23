@@ -744,23 +744,65 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       ...pipeline.brief.capabilities,
       ...pipeline.brief.sectors,
     ].join(" ");
-    let candidates: CandidateResult[] = pipeline.candidates.filter(
-      (c) =>
-        notOwn(c) &&
-        isRelevant(
-          { name: c.name, sector: c.sector, jurisdiction: c.jurisdiction, rationale: `${c.rationale ?? ""} ${c.evidence ?? ""}` },
-          briefQuery,
-          { loose: true },
-        ),
-    );
+    // Everything the search found but did not keep, with the reason — so "no matches" can be read
+    // as "these were found, here is why each was dropped" instead of silence.
+    const notKept: { name: string; reason: string }[] = pipeline.rejected.map((r) => ({
+      name: r.name,
+      reason: r.reason,
+    }));
+    let candidates: CandidateResult[] = pipeline.candidates.filter((c) => {
+      if (!notOwn(c)) {
+        notKept.push({ name: c.name, reason: "The bidder's own organisation." });
+        return false;
+      }
+      const relevant = isRelevant(
+        { name: c.name, sector: c.sector, jurisdiction: c.jurisdiction, rationale: `${c.rationale ?? ""} ${c.evidence ?? ""}` },
+        briefQuery,
+        { loose: true },
+      );
+      if (!relevant) {
+        notKept.push({ name: c.name, reason: "Nothing on its page matched what this bid is asking for." });
+      }
+      return relevant;
+    });
     if (candidates.length === 0) candidates = (await listingCandidates(relevanceQuery, 6)).filter(notOwn);
     // Registered platform organisations found locally go first, ahead of anything AI or the
     // directory fallback found for the same company — deduped by the same normalised-name rule
     // used everywhere else, so a company already matched locally is never listed a second time.
     candidates = [...localMatches, ...candidates.filter((c) => !localKeys.has(nameKey(c.name) || c.name.toLowerCase()))];
     if (candidates.length === 0) {
+      // Nothing kept: record what was considered and why it was dropped, so an empty result can be
+      // explained afterwards instead of disappearing.
+      try {
+        await supabase.from("transaction_events").insert({
+          transaction_id: tx.id,
+          actor_id: context.userId,
+          stage: "trading",
+          step: "search",
+          action: "counterparty_search_completed",
+          summary: `${data.kind.toUpperCase()} search kept 0 of ${notKept.length} organisation${notKept.length === 1 ? "" : "s"} considered`,
+          payload: {
+            kind: data.kind,
+            candidateCount: 0,
+            consideredCount: notKept.length,
+            notKept: notKept.slice(0, 30),
+            hadDocuments: Boolean(docSummary),
+          },
+        });
+      } catch {
+        // Diagnostics only.
+      }
       // A web search that itself failed is reported as that, not as "nothing relevant exists".
       if (web.webError) throw web.webError;
+      if (notKept.length > 0) {
+        throw new Error(
+          `${notKept.length} organisation${notKept.length === 1 ? " was" : "s were"} found but none were kept. ` +
+            notKept
+              .slice(0, 5)
+              .map((r) => `${r.name}: ${r.reason}`)
+              .join(" "),
+        );
+      }
       throw new Error(
         "No organisations relevant to this search were found. Try rewording it or adding more detail.",
       );
@@ -877,7 +919,16 @@ export const searchCounterparties = createServerFn({ method: "POST" })
         step: "search",
         action: "counterparty_search_completed",
         summary: `${data.kind.toUpperCase()} search found ${(inserted ?? []).length} counterpart${(inserted ?? []).length === 1 ? "y" : "ies"} in ${(totalMs / 1000).toFixed(1)}s`,
-        payload: { kind: data.kind, totalMs, localMs, pipelineMs, candidateCount: (inserted ?? []).length, hadDocuments: Boolean(docSummary) },
+        payload: {
+          kind: data.kind,
+          totalMs,
+          localMs,
+          pipelineMs,
+          candidateCount: (inserted ?? []).length,
+          consideredCount: notKept.length + candidates.length,
+          notKept: notKept.slice(0, 30),
+          hadDocuments: Boolean(docSummary),
+        },
       });
     } catch {
       // Diagnostics only — never blocks returning the result.
@@ -888,6 +939,7 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       model,
       sourcesRead: sources.map((s) => ({ label: s.label, url: s.url })),
       sourcesSkipped: failures.map((f) => ({ label: f.label, reason: f.reason })),
+      notKept: notKept.slice(0, 30),
     };
   });
 

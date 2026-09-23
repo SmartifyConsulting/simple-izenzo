@@ -206,6 +206,18 @@ const hostOf = (u: string): string => {
   }
 };
 
+/** The registrable part of a hostname ("shop.example.co.za" → "example.co.za"), so a sub-page,
+ * sub-domain or redirect of a page the search really read still counts as that same page's site.
+ * Insisting on a letter-for-letter hostname match threw away legitimate finds. */
+const siteOf = (u: string): string => {
+  const host = hostOf(u);
+  if (!host) return "";
+  const parts = host.split(".");
+  if (parts.length <= 2) return host;
+  const twoLevelSuffix = /^(co|com|org|net|gov|edu|ac|co)\.[a-z]{2}$/.test(parts.slice(-2).join("."));
+  return parts.slice(twoLevelSuffix ? -3 : -2).join(".");
+};
+
 function parseArray(raw: string): Record<string, unknown>[] {
   const match = raw.match(/\[[\s\S]*\]/);
   if (!match) return [];
@@ -251,13 +263,13 @@ async function searchWithTavily(input: PipelineInput, brief: Brief, briefText: s
   const queries = (brief.searchQueries.length > 0
     ? brief.searchQueries
     : [`${brief.capabilities.join(" ")} ${brief.role}`.trim()]
-  ).slice(0, input.kind === "ai" ? 3 : 5);
+  ).slice(0, input.kind === "ai" ? 5 : 6);
 
   const settled = await Promise.allSettled(
     queries.map((q) =>
       tavilySearch(input.tavilyKey as string, q, {
         depth: input.kind === "ai" ? "basic" : "advanced",
-        max: 6,
+        max: 8,
       }),
     ),
   );
@@ -347,7 +359,7 @@ export async function findCounterparties(input: PipelineInput): Promise<Pipeline
     });
   }
 
-  const citedHosts = new Set(web.sources.map((s) => hostOf(s.url)).filter(Boolean));
+  const citedSites = new Set(web.sources.map((s) => siteOf(s.url)).filter(Boolean));
   const found = parseArray(web.text)
     .map((c) => ({
       name: String(c["name"] ?? "").trim().slice(0, 200),
@@ -376,7 +388,7 @@ export async function findCounterparties(input: PipelineInput): Promise<Pipeline
       rejected.push({ name: c.name, reason: "No page or evidence was given for it." });
       continue;
     }
-    if (citedHosts.size > 0 && !citedHosts.has(hostOf(c.sourceUrl))) {
+    if (citedSites.size > 0 && !citedSites.has(siteOf(c.sourceUrl))) {
       rejected.push({ name: c.name, reason: "Its page was not among those the search read." });
       continue;
     }
@@ -429,12 +441,14 @@ export async function findCounterparties(input: PipelineInput): Promise<Pipeline
       rejected.push({ name: c.name, reason: String(v["reason"] ?? "Not relevant to what is needed.").slice(0, 300) });
       continue;
     }
-    // The counterparty has to be on the opposite side of the trade — never a competitor.
+    // The counterparty has to be on the opposite side of the trade — never a competitor. Only a
+    // clear reading of the wrong side disqualifies: "unclear" or "both" is not evidence of being a
+    // competitor, and for general goods most supplier pages read that way.
     const operatesAs = String(v["operatesAs"] ?? "").toLowerCase();
     const wrongSide =
       (brief.requiredSide === "buyer" && operatesAs === "seller") ||
       (brief.requiredSide === "supplier" && operatesAs === "buyer");
-    if (v["showsRequiredRole"] === false || wrongSide) {
+    if (wrongSide || (v["showsRequiredRole"] === false && operatesAs !== "both" && operatesAs !== "unclear")) {
       rejected.push({
         name: c.name,
         reason: `Not shown acting as a ${brief.requiredSide} — it is on the same side as the requester.`,
