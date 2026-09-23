@@ -1646,10 +1646,9 @@ export function CounterpartyRecord({
           // Search live in the header above instead, so this stays quiet until results land.
           null
         ) : !editingSearch ? (
-          // The edit form itself (and its own trigger, in the empty case since the header's
-          // title is blank with nothing to show) lives once, in the shared block above the
-          // candidates list — this is just the plain status line.
-          <div className="mt-2 flex flex-wrap items-center gap-2">
+          // Just the status line — Edit Search itself lives once, bold and top-right in the
+          // header above, rather than repeated again down here next to it.
+          <div className="mt-2">
             <p className="text-xs text-slate-500">
               {error
                 ? error.startsWith("No organisations relevant")
@@ -1657,19 +1656,6 @@ export function CounterpartyRecord({
                   : `Search could not finish: ${error}`
                 : "No matches found yet — edit the search and try again."}
             </p>
-            {onSearchAgain && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 gap-1 text-xs"
-                onClick={() => {
-                  setEditedPrompt(searchPrompt ?? "");
-                  setEditingSearch(true);
-                }}
-              >
-                <Pencil className="h-3 w-3" /> Edit Search
-              </Button>
-            )}
           </div>
         ) : null
       ) : mediaResults ? null : (
