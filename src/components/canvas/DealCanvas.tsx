@@ -1505,10 +1505,28 @@ export function CounterpartyRecord({
         </p>
 
         <div className="flex shrink-0 items-center gap-1">
+          {/* Stop and Edit Search sit here in the header now, next to the map's own one-line
+              progress bar under the Search node — the bigger boxed "Searching…" indicator that
+              used to live in the body below is gone, so these are the only way to interrupt or
+              redirect a search while it's still running. */}
+          {searching && !stoppedWatching && onStopSearch && (
+            <button
+              type="button"
+              onClick={() => {
+                setStoppedWatching(true);
+                onStopSearch();
+              }}
+              title="Stop watching this search — it keeps running and will still save whatever it finds"
+              className="flex items-center gap-1 rounded p-1 text-[11px] font-medium text-slate-500 hover:bg-slate-200 hover:text-slate-800"
+            >
+              <StopCircle className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Stop</span>
+            </button>
+          )}
           {/* Available whenever there's still a choice to be made — not just once a search comes
               back empty. A single 45%-match candidate is as much "this needs a better search" as
               zero candidates is. */}
-          {onSearchAgain && !searching && !screeningDone && !continued && !editingSearch && (
+          {onSearchAgain && !screeningDone && !continued && !editingSearch && (
             <button
               type="button"
               onClick={() => {
@@ -1621,30 +1639,10 @@ export function CounterpartyRecord({
 
       {candidates.length === 0 ? (
         searching && !stoppedWatching ? (
-          // Centered in the space this card takes up while nothing else is in it yet, rather
-          // than pinned to the top the moment the heading ends.
-          <div className="flex min-h-[72px] flex-col items-center justify-center gap-1.5 py-2">
-            <p className="text-xs text-slate-500">Searching for counterparties…</p>
-            <div className="h-1 w-1/2 overflow-hidden rounded-full bg-progress-track">
-              <div className="h-full w-1/3 animate-[slide-in-right_1.4s_ease-in-out_infinite] rounded-full bg-success" />
-            </div>
-            {/* AI silently retrying a rate limit can leave this spinner running for 10-20s with no
-                error to show for it — this is the way out, not a cancel of the actual server-side
-                request (it keeps running and will still save whatever it finds). */}
-            {onStopSearch && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="mt-1 h-6 gap-1 text-[11px] text-slate-500 hover:text-slate-900"
-                onClick={() => {
-                  setStoppedWatching(true);
-                  onStopSearch();
-                }}
-              >
-                <StopCircle className="h-3 w-3" /> Stop
-              </Button>
-            )}
-          </div>
+          // The map's own one-line progress bar under the Search node already says a search is
+          // running — this frame doesn't need its own boxed copy of the same thing. Stop and Edit
+          // Search live in the header above instead, so this stays quiet until results land.
+          null
         ) : !editingSearch ? (
           // The edit form itself (and its own trigger, in the empty case since the header's
           // title is blank with nothing to show) lives once, in the shared block above the

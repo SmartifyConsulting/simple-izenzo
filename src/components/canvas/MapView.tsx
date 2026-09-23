@@ -8,6 +8,7 @@ import {
   Gavel,
   ListChecks,
   LogIn,
+  MousePointerClick,
   Search,
   ShieldCheck,
   Share2,
@@ -61,16 +62,17 @@ const BOXES = {
   // down-arrow on the map (20 units — the same span as Online Screening into Express Intent).
   bid: { x: 40, y: 62, w: 160, h: 56 },
   loadDocs: { x: 40, y: 138, w: 160, h: 56 },
-  // Load Deal Documents, Search, Search Results and Online Screening — the row's four visible
-  // tiles (Choice no longer has one of its own) — sit on four equal gaps across the row's full
-  // width instead of leaving Choice's old slot as dead space.
-  search: { x: 279, y: 135, w: 160, h: 62 },
-  steps: { x: 518, y: 134, w: 140, h: 64 },
+  // Load Deal Documents, Search, Search Results, Choice and Online Screening — five tiles across
+  // the row on even gaps. Choice sits between Search Results and Online Screening: pick a
+  // counterparty from what the search found, then screening runs on that pick.
+  search: { x: 225, y: 135, w: 160, h: 62 },
+  steps: { x: 410, y: 134, w: 140, h: 64 },
+  choice: { x: 575, y: 138, w: 150, h: 56 },
   // After Seal Intent: The Offer and its Counter Offer / Challenge loop sit side by side.
   offer: { x: 45, y: 450, w: 170, h: 54 },
   counterOffer: { x: 235, y: 450, w: 120, h: 54 },
-  // Last tile on Search's row.
-  socialMedia: { x: 737, y: 136, w: 170, h: 56 },
+  // Last tile on the row.
+  socialMedia: { x: 750, y: 136, w: 170, h: 56 },
   // Confirm Intent moves up into the row Online Screening used to occupy, now that row is free —
   // Step 1 ends one row earlier than it used to.
   expressIntent: { x: 510, y: 214, w: 280, h: 48 },
@@ -152,11 +154,12 @@ const TRADING_ARROWS: Arrow[] = [
   line(bottomOf(BOXES.bid), topOf(BOXES.loadDocs)),
   line(rightOf(BOXES.loadDocs), leftOf(BOXES.search)),
   // Search Results now sits in line between Search and Choice, all on Search's row — Online
-  // Screening joins the same row now too, as the last tile in it. One arrow carries straight
-  // through from Search Results to Online Screening — Choice no longer has its own tile here, so
-  // it no longer gets its own separate arrow touching Online Screening's edge either.
+  // Screening joins the same row now too, as the last tile in it. Choice sits between Search
+  // Results and Online Screening: pick a counterparty from what the search found, then screening
+  // runs on that pick.
   line(rightOf(BOXES.search), leftOf(BOXES.steps)),
-  line(rightOf(BOXES.steps), leftOf(BOXES.socialMedia)),
+  line(rightOf(BOXES.steps), leftOf(BOXES.choice)),
+  line(rightOf(BOXES.choice), leftOf(BOXES.socialMedia)),
   // Down out of Online Screening, then left to Confirm Intent's centre-line, into the row it moved
   // up into (the one Online Screening vacated).
   path(
@@ -504,6 +507,7 @@ export function MapView({
         {/* Mirrors Search's own state (same overrideKey) — both pulse together while the search is
             running, and once it's done the pulse moves straight on to Choice. */}
         {node("steps", "Search Results", "trading", "search", ListChecks, { overrideKey: "search" })}
+        {node("choice", "Choice", "trading", "choice", MousePointerClick)}
 
         {/* Step 1 — trading. Bid and Load Deal Documents drive the workspace beside the map. */}
 
