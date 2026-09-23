@@ -76,8 +76,10 @@ const BOXES = {
   // Last tile on the row.
   socialMedia: { x: 750, y: 136, w: 170, h: 56 },
   // Confirm Intent moves up into the row Online Screening used to occupy, now that row is free —
-  // Step 1 ends one row earlier than it used to.
-  expressIntent: { x: 510, y: 214, w: 280, h: 48 },
+  // Step 1 ends one row earlier than it used to. Centred on Seal Intent's own centre-line (same x
+  // and width as `poi` below) so its incoming connector sits between Choice and Online Screening,
+  // and its outgoing connector drops straight down into Seal Intent with no jog.
+  expressIntent: { x: 620, y: 214, w: 280, h: 48 },
   // Step 2 (GRC)'s remaining checks, spaced out with the extra height the frame gained now that
   // Step 1 above it is shorter — 40-unit gaps instead of 20, so the column doesn't just end in a
   // block of empty space at the bottom of the taller frame.
@@ -102,9 +104,11 @@ const BOXES = {
   // as Search Results' own tile. Stays centred between the two columns — only which column is
   // Execution and which is Finality changes, not where the connector between them sits.
   entryExit: { x: 424, y: 872, w: 112, h: 37 },
+  // Gaps between these three cut by 60% (64 units → 26) versus Execution's column beside it —
+  // Finality only ever has three short tiles, so it doesn't need the same breathing room.
   payment: { x: 45, y: 780, w: 310, h: 36 },
-  signoff: { x: 45, y: 880, w: 310, h: 36 },
-  handover: { x: 45, y: 980, w: 310, h: 36 },
+  signoff: { x: 45, y: 842, w: 310, h: 36 },
+  handover: { x: 45, y: 904, w: 310, h: 36 },
 
 } as const satisfies Record<string, Box>;
 
@@ -176,14 +180,9 @@ const TRADING_ARROWS: Arrow[] = [
     { x: cx(BOXES.expressIntent), y: BOXES.socialMedia.y + BOXES.socialMedia.h + 10 },
     topOf(BOXES.expressIntent),
   ),
-  // Out of Step 1 and into Step 2's checks: down, then left to Proof of Intent's centre-line,
-  // stopping just short of the GRC frame's edge (matching the Step 2 → Step 3 connector below).
-  path(
-    bottomOf(BOXES.expressIntent),
-    { x: cx(BOXES.expressIntent), y: (TRADE_ENGINE_FRAME.y + TRADE_ENGINE_FRAME.h + COMPLIANCE_FRAME.y) / 2 },
-    { x: cx(BOXES.poi), y: (TRADE_ENGINE_FRAME.y + TRADE_ENGINE_FRAME.h + COMPLIANCE_FRAME.y) / 2 },
-    { x: cx(BOXES.poi), y: COMPLIANCE_FRAME.y - ARROW_GAP },
-  ),
+  // Out of Step 1 and into Step 2's checks: Confirm Intent shares Seal Intent's own centre-line
+  // now, so this is a single straight drop, stopping just short of the GRC frame's edge.
+  line(bottomOf(BOXES.expressIntent), { x: cx(BOXES.poi), y: COMPLIANCE_FRAME.y - ARROW_GAP }),
 ];
 
 const REST_ARROWS: Arrow[] = [
@@ -210,12 +209,12 @@ const REST_ARROWS: Arrow[] = [
   line(bottomOf(BOXES.payment), topOf(BOXES.signoff)),
   line(bottomOf(BOXES.signoff), topOf(BOXES.handover)),
   // Finality, Entry/Exit and Execution sit in a single row (Finality now on the left, Execution on
-  // the right) — connectors still run in process order, Finality → Entry/Exit → Execution, frame
-  // edge to frame edge with a small gap at each end so the tip points at the frame/heading without
-  // touching it.
+  // the right) — both connectors now point outward from Entry/Exit into the frame either side of
+  // it, frame edge to frame edge with a small gap at each end so the tip points at the
+  // frame/heading without touching it.
   line(
-    { x: FINALITY_FRAME.x + FINALITY_FRAME.w + ARROW_GAP, y: cy(ENTRY_EXIT_FRAME) },
     { x: ENTRY_EXIT_FRAME.x - ARROW_GAP, y: cy(ENTRY_EXIT_FRAME) },
+    { x: FINALITY_FRAME.x + FINALITY_FRAME.w + ARROW_GAP, y: cy(ENTRY_EXIT_FRAME) },
   ),
   line(
     { x: ENTRY_EXIT_FRAME.x + ENTRY_EXIT_FRAME.w + ARROW_GAP, y: cy(EXECUTION_FRAME) },
