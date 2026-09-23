@@ -104,10 +104,11 @@ async function chatJson(
       { role: "user", content: user },
     ],
   };
-  const useLovable = kind === "ai_plus" && lovableAiConfigured();
+  const useLovable = (kind === "ai_plus" || !apiKey) && lovableAiConfigured();
   const res = useLovable
     ? await callLovableAiChat(request, { retries: 2 })
-    : await callOpenAiChat(apiKey, request, { retries: 2 });
+    : await callOpenAiChat(apiKey ?? "", request, { retries: 2 });
+
   if (!res.ok) throw new Error(useLovable ? await lovableAiFailureMessage(res) : await openAiFailureMessage(res));
 
   const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
