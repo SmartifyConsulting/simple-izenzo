@@ -1,34 +1,63 @@
-# Make bug report attachments actually save and open
+# Why your search returned nothing — and how to fix it
 
-## What's wrong
+## What I found
 
-Screenshots and files attached to a bug report were never stored, so there is nothing to open.
+Your latest search did run properly. It took 18 seconds, reached the internet
+search, finished without any error, and ended with **zero** companies kept. An
+earlier run on the same bid ("20 000 branded golf balls, corporate gifts, Amrod")
+kept exactly one — Amrod, and that one came from the app's own directory, not
+from the web.
 
-Confirmed by checking the database and file storage:
+So the problem is not the connection, the key or the credits. The search finds
+pages, then the app's own quality filters throw every company away before you
+see them — and it never tells you which filter did it or why. There are four
+filters in a row: no page address given, no evidence given, the evidence page not
+being one of the pages actually read, and the "wrong side of the trade" check.
+Which of those emptied the list is not recorded anywhere, so I cannot yet name
+one with certainty.
 
-- The bug report records have no place to store attachment file names — those two fields do not exist on the table.
-- The storage folder the screen uploads into (`bug-report-images`) does not exist at all, and holds zero files.
-- The screen ignores upload failures silently, so a report looked like it sent successfully while the screenshot was discarded.
+## The plan
 
-So every past submission has lost its attachment. Nothing can recover those — they were never uploaded.
+1. **Make the search explain itself.** Every discarded company and its reason
+   gets recorded with the search and shown under the results, so "no matches"
+   becomes "these 6 were found, here is why each was dropped". This alone tells
+   us exactly which filter is at fault, on your next real search rather than a
+   guess now.
+2. **Run the same golf-ball search with that reporting on** and read the
+   reasons.
+3. **Fix the filter that is wrong**, guided by step 2. The two likeliest are:
+   - the page-address check, which discards a company whenever the address the
+     model quotes is not letter-for-letter one of the pages read (a redirect or
+     a sub-page is enough to fail it);
+   - the side-of-the-trade check, which for a general product like corporate
+     gifts often reads a supplier as "unclear" and drops it.
+   Whichever it is, the fix keeps the rule honest — nothing invented, evidence
+   still required — but stops it discarding legitimate finds.
+4. **Widen the searching slightly for consumer/branded-goods bids**: more search
+   phrasings per run, so there are more pages to judge in the first place.
+5. Verify with a live signed-in search on this same bid and confirm named
+   companies with evidence links come back.
 
-## What gets built
+## Notes
 
-1. **Somewhere to keep the files** — create the private `bug-report-images` storage folder, readable only by the person who filed the report and by administrators.
-2. **Somewhere to record them** — a migration adding `image_path` (text) and `attachment_paths` (text array) to `bug_reports`, which the screen already expects.
-3. **Uploads stop failing quietly** — if a file cannot be uploaded, the report still saves but you get a clear message naming the file, instead of silence.
-4. **Viewing works** — thumbnails and file chips open using short-lived signed links (the folder is private), with a full-size preview for images and open/download for everything else.
-5. **Open a full record** — clicking a report in the list opens it in a window showing who filed it, when, the full text, and every attachment, so long reports are no longer truncated to one line.
-
-## Note for you
-
-Attachments filed before this fix are gone and cannot be restored. Once this is in, ask the people who reported issues to re-attach their screenshots (dropping a file straight onto an existing record already works and will now stick).
+- Nothing about how matches are approved, scored into deals, or governed changes;
+  this is the finding stage only.
+- Separately, your preview tab is currently signed out: the deal's own details
+  came back empty and every server call answered "no authorisation". Reloading
+  the page and signing in again fixes that; it is not the cause of the empty
+  results above.
 
 ## Technical detail
 
-- `supabase--storage_create_bucket` for `bug-report-images` (private, 10MB cap), then a migration with `storage.objects` policies: insert/select for `auth.uid()` matching the report owner via the `<report-id>/` path prefix, plus full select for `public.has_role(auth.uid(), 'admin')`.
-- Migration also: `alter table public.bug_reports add column if not exists image_path text, add column if not exists attachment_paths text[]`. No change to existing RLS on `bug_reports` (own-reports-or-admin select stays as hardened).
-- Regenerate Supabase types afterwards so the `as unknown as never` casts in `BugReportMenu.tsx` can go.
-- `bucketUrl()` in `src/components/BugReportMenu.tsx` is replaced by `createSignedUrl(path, 3600)` resolved through a small `useQuery` keyed on the path; upload loop surfaces `upErr` per file and the `attachment_paths` update checks its error.
-- New detail dialog in the same component, reusing the existing preview dialog for full-size images.
-- No change to trade workflow, governance, POI/WaD/Execution/Finality, or AI+.
+- `src/lib/counterpartyPipeline.server.ts` builds `rejected[]` (lines 362–441)
+  but `findCounterparties` never returns it to callers, and
+  `src/lib/izenzo.functions.ts` (search handlers around lines 737–955) only
+  forwards `failures` and `sources`. Thread `rejected` through the result, store
+  it in the `counterparty_search_completed` event payload, and render it in
+  `src/components/canvas/MatchResultsPanel.tsx` as a collapsed "considered and
+  not kept" list.
+- Relax the host check at line 379 to accept a sub-path/redirect of a cited host
+  (compare registrable domain rather than exact hostname), and treat
+  `operatesAs === "unclear"` as not-wrong-side when `showsRequiredRole` is true.
+- Raise the Tavily query slice for `kind === "ai"` from 3 to 5 and `max` from 6
+  to 8; keep `advanced` depth for AI+ only.
