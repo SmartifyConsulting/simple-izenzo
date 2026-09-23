@@ -1,5 +1,21 @@
 # Why your search returned nothing — and how to fix it
 
+## Where those filters came from
+
+They are rules you asked for earlier, not something added on a whim:
+
+- **Evidence required, no invented names.** From the approved 12 September change
+  "Real web matches… honest empty state": every result must be backed by a page
+  the search actually read, and the search must say nothing rather than fall back
+  on names the model recalled. That is the source of the first three filters.
+- **Must be the other side of the trade.** From the matching work that followed:
+  a buyer's search must return suppliers, never other buyers, because a company
+  on your own side is a competitor, not a counterparty.
+
+Both rules are right and stay. The problem is that they are currently applied too
+strictly and silently, so a legitimate company is dropped on a technicality and
+you are told nothing.
+
 ## What I found
 
 Your latest search did run properly. It took 18 seconds, reached the internet
