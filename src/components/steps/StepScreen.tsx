@@ -1999,10 +1999,18 @@ function WadStep({ tx, reload }: Props) {
 
   const counterpartyRegistered = Boolean(tx.counterparty_org_id);
 
+  // Until the counterparty has approved the offer, only the offer frame shows — Without a Doubt
+  // has nothing to verify against a deal that isn't agreed yet.
+  if (!offerApproved) {
+    return (
+      <div className="space-y-6">
+        <MutualEngagementPanel transactionId={tx.id} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-    {/* The offer is approved (or rejected/challenged) here before anything else — KYC/KYB and Run
-        Verification below only make sense against a deal that's actually been agreed. */}
     <MutualEngagementPanel transactionId={tx.id} />
     <Panel
       title="Without a Doubt"
