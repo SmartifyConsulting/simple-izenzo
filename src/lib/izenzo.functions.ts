@@ -45,15 +45,6 @@ async function chatCompletion(apiKey: string | null, body: unknown): Promise<Res
   return callLovableAiChat(body, { retries: 2 });
 }
 
-/** True when at least one AI service can answer: a saved OpenAI key, or the built-in service. */
-async function aiAvailable(apiKey: string | null): Promise<boolean> {
-  if (apiKey) return true;
-  const { lovableAiConfigured } = await import("@/lib/lovableAi.server");
-  return lovableAiConfigured();
-}
-
-
-
 async function aiFailureMessage(res: Response): Promise<string> {
   const { isLovableAiResponse, lovableAiFailureMessage } = await import("@/lib/lovableAi.server");
   if (isLovableAiResponse(res)) return lovableAiFailureMessage(res);
@@ -657,8 +648,6 @@ export const searchCounterparties = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { loadOpenAiApiKey } = await import("@/lib/openai.server");
     const apiKey = await loadOpenAiApiKey();
-    if (!(await aiAvailable(apiKey)))
-      throw new Error("No AI service is available. Add and enable OpenAI in Admin → Integrations.");
 
 
     const { data: tx } = await supabase
@@ -1141,9 +1130,6 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { loadOpenAiApiKey } = await import("@/lib/openai.server");
     const apiKey = await loadOpenAiApiKey();
-    if (!(await aiAvailable(apiKey)))
-      throw new Error("No AI service is available. Add and enable OpenAI in Admin → Integrations.");
-
 
     const counterpart = data.role === "buyer" ? "suppliers/sellers" : "buyers";
     const system =
@@ -1248,9 +1234,6 @@ export const runAiProposal = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { loadOpenAiApiKey } = await import("@/lib/openai.server");
     const apiKey = await loadOpenAiApiKey();
-    if (!(await aiAvailable(apiKey)))
-      throw new Error("No AI service is available. Add and enable OpenAI in Admin → Integrations.");
-
 
     const { data: tx } = await supabase
       .from("transactions")
