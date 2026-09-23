@@ -1949,6 +1949,7 @@ function WadStep({ tx, reload }: Props) {
 
   if (tx.wad_completed_at) {
     return (
+      <div className="space-y-6">
       <Panel
         title="Without a Doubt — cleared"
         description={`Cleared ${when(tx.wad_completed_at)}`}
@@ -1973,10 +1974,15 @@ function WadStep({ tx, reload }: Props) {
           Without a Doubt has cleared. Execution is open.
         </p>
       </Panel>
+      {/* Two-way checks, the counterparty's decision and dual signing stay available after
+          clearance — they are a separate, mutual record, not part of the WaD gate itself. */}
+      <MutualEngagementPanel transactionId={tx.id} />
+      </div>
     );
   }
 
   return (
+    <div className="space-y-6">
     <Panel
       title="Without a Doubt"
       footer={
