@@ -2321,6 +2321,10 @@ function BusinessDocsStep({ tx, reload }: Props) {
           </ul>
         )}
       </Panel>
+
+      {/* Signing lives with the shared documents: both sides sign the same record, and the signed
+          PDF is filed in Bid Information once both signatures are on it. */}
+      <MutualEngagementPanel transactionId={tx.id} />
     </div>
   );
 }
