@@ -33,14 +33,25 @@ function aiPlusOptions(model: string, kind: "ai" | "ai_plus" = "ai_plus") {
   };
 }
 
-/** Sends one search request to the OpenAI account saved under Admin → Integrations. The ordinary
- * counterparty search runs on that account; AI+ runs on the built-in model (see
- * counterpartyPipeline.server.ts and decisionPack.functions.ts). Transient request limits are
- * retried and failures are worded plainly. */
-async function chatCompletion(apiKey: string, body: unknown): Promise<Response> {
-  const { callOpenAiChat } = await import("@/lib/openaiCall.server");
-  return callOpenAiChat(apiKey, body);
+/** Sends one search request. It uses the OpenAI account saved under Admin → Integrations when one
+ * is saved, and falls back to the built-in AI service when it is not, so a missing OpenAI key never
+ * dead-ends a search. Transient request limits are retried and failures are worded plainly. */
+async function chatCompletion(apiKey: string | null, body: unknown): Promise<Response> {
+  if (apiKey) {
+    const { callOpenAiChat } = await import("@/lib/openaiCall.server");
+    return callOpenAiChat(apiKey, body);
+  }
+  const { callLovableAiChat } = await import("@/lib/lovableAi.server");
+  return callLovableAiChat(body, { retries: 2 });
 }
+
+/** True when at least one AI service can answer: a saved OpenAI key, or the built-in service. */
+async function aiAvailable(apiKey: string | null): Promise<boolean> {
+  if (apiKey) return true;
+  const { lovableAiConfigured } = await import("@/lib/lovableAi.server");
+  return lovableAiConfigured();
+}
+
 
 
 async function aiFailureMessage(res: Response): Promise<string> {
