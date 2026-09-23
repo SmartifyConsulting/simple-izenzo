@@ -1825,8 +1825,10 @@ export function CounterpartyRecord({
 
 
       {/* The final pick (and its Continue button) belongs to the Online Media Screening Results
-          frame in the workspace — a second one here competed with it. */}
-      {screeningDone ? null : (
+          frame in the workspace — a second one here competed with it. Nothing renders here at all
+          until AI+ has actually been run and answered — the AI+ Recommendations panel below is
+          the call to action at that point, not a disabled bar sitting above it. */}
+      {screeningDone || !aiPlusDecided ? null : (
         onContinue &&
         candidates.length > 0 &&
         !searching &&
@@ -1835,16 +1837,14 @@ export function CounterpartyRecord({
             type="button"
             className={cn(
               "mt-3 w-full bg-info text-white hover:bg-info/90",
-              (ticked.length === 0 || !aiPlusDecided) && "bg-slate-300 text-slate-700 hover:bg-slate-300 disabled:opacity-100",
+              ticked.length === 0 && "bg-slate-300 text-slate-700 hover:bg-slate-300 disabled:opacity-100",
             )}
-            disabled={ticked.length === 0 || !aiPlusDecided}
+            disabled={ticked.length === 0}
             onClick={() => onContinue(ticked)}
           >
-            {!aiPlusDecided
-              ? "Review the AI+ recommendations below first"
-              : ticked.length === 0
-                ? "Tick a counterparty to continue"
-                : `Select Counterpart${ticked.length === 1 ? "y" : "ies"}`}
+            {ticked.length === 0
+              ? "Tick a counterparty to continue"
+              : `Select Counterpart${ticked.length === 1 ? "y" : "ies"}`}
           </Button>
         )
       )}

@@ -98,7 +98,7 @@ export function OrganisationsPanel() {
       const { error } = await supabase.from("organisations").update(toRow(form)).eq("id", orgId);
       if (error) throw error;
       const { brief, usedWebsite } = await writeBriefFn({ data: { orgId } });
-      setForm((f) => ({ ...f, ai_brief: brief }));
+      setForm((f) => ({ ...f, offerings: brief }));
       await refresh();
       toast.success(
         usedWebsite ? "Brief written from the company website" : "Brief written from the details captured",
@@ -302,7 +302,7 @@ export function OrganisationsPanel() {
                           <p>Primary contact: {o.primary_contact_name || "Not captured"}</p>
                           <p>Contact email: {o.primary_contact_email || "Not captured"}</p>
                           <p className="pt-1 text-foreground">
-                            {o.ai_brief || "No company brief written yet."}
+                            {o.offerings || o.ai_brief || "No company brief written yet."}
                           </p>
                         </AccordionContent>
                       </AccordionItem>
@@ -432,32 +432,6 @@ export function OrganisationsPanel() {
               />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
-              <div className="flex items-center justify-between gap-2">
-                <Label htmlFor="brief">About this company</Label>
-                {editingId && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={briefBusy}
-                    onClick={() => writeBrief(editingId)}
-                  >
-                    {briefBusy ? "Writing…" : form.ai_brief ? "Rewrite with AI" : "Write with AI"}
-                  </Button>
-                )}
-              </div>
-              <Textarea
-                id="brief"
-                rows={4}
-                placeholder="A short description of the company. Save the website first, then let AI write this for you."
-                value={form.ai_brief}
-                onChange={(e) => setForm({ ...form, ai_brief: e.target.value })}
-              />
-              <p className="text-xs text-muted-foreground">
-                Written from the company website and the details above. You can edit it freely.
-              </p>
-            </div>
-            <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="address">Registered address</Label>
               <Textarea
                 id="address"
@@ -467,16 +441,31 @@ export function OrganisationsPanel() {
               />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="offerings">What does this organisation offer?</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="offerings">About this company &amp; what it offers</Label>
+                {editingId && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={briefBusy}
+                    onClick={() => writeBrief(editingId)}
+                  >
+                    {briefBusy ? "Writing…" : form.offerings ? "Rewrite with AI" : "Write with AI"}
+                  </Button>
+                )}
+              </div>
               <Textarea
                 id="offerings"
-                rows={4}
-                placeholder="Describe the products or services you bid or offer with — commodities traded, capacity, certifications, typical terms…"
+                rows={5}
+                placeholder="Describe the company and what it offers — products or services, commodities traded, capacity, certifications, typical terms… This is what counterparties see, and what search matches on, so the more specific the better."
                 value={form.offerings}
                 onChange={(e) => setForm({ ...form, offerings: e.target.value })}
               />
               <p className="text-xs text-muted-foreground">
-                Shown to counterparties evaluating a bid or offer from this organisation.
+                Shown to counterparties evaluating a bid or offer from this organisation, and used to match this
+                organisation against searches. "Write with AI" drafts it from the company website and the details
+                above — you can edit it freely afterwards.
               </p>
             </div>
           </div>
