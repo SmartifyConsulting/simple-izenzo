@@ -147,9 +147,9 @@ const MEMORY = { cx: 390, cy: 555, r: 147 };
 
 // The otherwise-empty band between Step 1's frame and Memory's own top edge — every uploaded
 // document lands here instead of sitting in a plain list inside Bid Information, so there's one
-// place on the canvas that visibly fills up as the deal collects paperwork. Centred on Memory's
-// own x so it reads as sitting "above" Step 5 rather than floating unrelated to anything.
-const DOCS_BOX: Box = { x: 265, y: 310, w: 250, h: 90 };
+// place on the canvas that visibly fills up as the deal collects paperwork. A small square sitting
+// left of Memory rather than a wide pill centred on it.
+const DOCS_BOX: Box = { x: 90, y: 320, w: 100, h: 100 };
 
 
 
@@ -306,8 +306,10 @@ function DocumentsFolder({
   onDownloadDocument?: ((doc: { name: string; kind?: string; path?: string | null }) => void) | undefined;
 }) {
   const [open, setOpen] = useState(false);
+  const [hovering, setHovering] = useState(false);
   const [justFiled, setJustFiled] = useState(false);
   const prevCount = useRef(documents.length);
+  const showList = (open || hovering) && documents.length > 0;
 
   useEffect(() => {
     if (documents.length > prevCount.current) {
@@ -325,39 +327,50 @@ function DocumentsFolder({
       className="absolute"
       style={{ left: px(DOCS_BOX.x), top: py(DOCS_BOX.y), width: px(DOCS_BOX.w), height: py(DOCS_BOX.h) }}
     >
+      {/* A tight square frame, rounded corners, around the icon alone — the caption sits outside
+          it, below, so the frame itself never stretches to fit the label. */}
       <button
         type="button"
         onClick={() => documents.length > 0 && setOpen((v) => !v)}
         title={documents.length === 0 ? "Documents filed against this deal will appear here" : "See filed documents"}
         className={cn(
-          "flex h-full w-full flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed transition-all",
+          "flex h-full w-full items-center justify-center rounded-2xl border-2 border-dashed transition-all",
           documents.length === 0
             ? "cursor-default border-muted-foreground/30"
             : "border-muted-foreground/50 hover:border-foreground/60 hover:bg-card/60",
           justFiled && "scale-105 border-success bg-success/10",
         )}
       >
-        <span className="relative">
-          <FolderOpen
-            className={cn(
-              "h-10 w-10 transition-colors",
-              documents.length > 0 ? "text-foreground" : "text-muted-foreground/50",
-              justFiled && "animate-bounce text-success",
-            )}
-          />
-          {documents.length > 0 && (
-            <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-foreground px-1 text-[10px] font-bold text-background">
-              {documents.length}
-            </span>
+        <FolderOpen
+          className={cn(
+            "h-10 w-10 transition-colors",
+            documents.length > 0 ? "text-foreground" : "text-muted-foreground/50",
+            justFiled && "animate-bounce text-success",
           )}
-        </span>
-        <span className="label-caps text-[10px] text-muted-foreground">
-          {justFiled ? "Filed!" : "Documents"}
-        </span>
+        />
       </button>
+      {/* The count pill hangs off the square's bottom-right corner — hovering it alone (no click,
+          no entering the folder) previews what's inside via the same list the click view uses. */}
+      {documents.length > 0 && (
+        <span
+          onMouseEnter={() => setHovering(true)}
+          onMouseLeave={() => setHovering(false)}
+          title="Hover to see the files, or open the folder"
+          className="label-caps absolute -bottom-2 -right-2 flex h-5 min-w-[1.6rem] cursor-default items-center justify-center rounded-full bg-foreground px-2 text-[10px] font-bold text-background shadow"
+        >
+          {documents.length}
+        </span>
+      )}
+      <span className="label-caps absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap text-[10px] text-muted-foreground">
+        {justFiled ? "Filed!" : "Documents"}
+      </span>
 
-      {open && documents.length > 0 && (
-        <div className="absolute left-1/2 top-full z-20 mt-1 w-56 -translate-x-1/2 rounded-lg border border-border bg-popover p-2 text-left shadow-lg">
+      {showList && (
+        <div
+          onMouseEnter={() => setHovering(true)}
+          onMouseLeave={() => setHovering(false)}
+          className="absolute left-1/2 top-full z-20 mt-6 w-56 -translate-x-1/2 rounded-lg border border-border bg-popover p-2 text-left shadow-lg"
+        >
           <ul className="max-h-48 space-y-0.5 overflow-y-auto">
             {documents.map((d, i) => (
               <li key={i} className="flex items-center gap-1.5 rounded px-1.5 py-1 text-xs hover:bg-accent">
