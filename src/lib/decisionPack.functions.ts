@@ -636,8 +636,8 @@ export const runDecisionPack = createServerFn({ method: "POST" })
           res = await callOpenAiChat(apiKey, request, { retries: 2 });
         }
         if (!res.ok) {
-          const body = await res.text().catch(() => "");
           if (useLovable) throw new Error(await lovableAiFailureMessage(res));
+          const body = await res.text().catch(() => "");
           const { isOpenAiQuotaExceeded } = await import("@/lib/openai.server");
           if (isOpenAiQuotaExceeded(body)) {
             const { alertLowFunds } = await import("@/lib/opsAlerts.server");
