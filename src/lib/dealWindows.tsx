@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode, type Context } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -128,7 +128,10 @@ type DealWindowsValue = {
   storedOpenIds: string[] | null;
 };
 
-const DealWindowsContext = createContext<DealWindowsValue | null>(null);
+// Kept on globalThis so a hot reload of this file reuses the same context object — otherwise the
+// provider and the pages can end up holding two different contexts and the page crashes blank.
+const g = globalThis as { __izenzoDealWindowsCtx?: Context<DealWindowsValue | null> };
+const DealWindowsContext = (g.__izenzoDealWindowsCtx ??= createContext<DealWindowsValue | null>(null));
 
 /** Tracks every open "deal workspace" (one per transaction) app-wide, backed by localStorage so
  * the taskbar and any popped-out real browser windows for the same deals stay in sync via the
