@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { respondAsCounterparty } from "@/lib/counterpartyClaim.functions";
 import { InlineFrame } from "@/components/canvas/DealCanvas";
+import { MutualEngagementPanel } from "@/components/engagement/MutualEngagementPanel";
 import { money, tradeKindOf, when, type Transaction } from "@/lib/tx";
 
 /**
