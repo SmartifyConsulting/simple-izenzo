@@ -441,12 +441,14 @@ export async function findCounterparties(input: PipelineInput): Promise<Pipeline
       rejected.push({ name: c.name, reason: String(v["reason"] ?? "Not relevant to what is needed.").slice(0, 300) });
       continue;
     }
-    // The counterparty has to be on the opposite side of the trade — never a competitor.
+    // The counterparty has to be on the opposite side of the trade — never a competitor. Only a
+    // clear reading of the wrong side disqualifies: "unclear" or "both" is not evidence of being a
+    // competitor, and for general goods most supplier pages read that way.
     const operatesAs = String(v["operatesAs"] ?? "").toLowerCase();
     const wrongSide =
       (brief.requiredSide === "buyer" && operatesAs === "seller") ||
       (brief.requiredSide === "supplier" && operatesAs === "buyer");
-    if (v["showsRequiredRole"] === false || wrongSide) {
+    if (wrongSide || (v["showsRequiredRole"] === false && operatesAs !== "both" && operatesAs !== "unclear")) {
       rejected.push({
         name: c.name,
         reason: `Not shown acting as a ${brief.requiredSide} — it is on the same side as the requester.`,
