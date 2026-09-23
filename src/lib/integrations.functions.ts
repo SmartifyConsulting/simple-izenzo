@@ -504,3 +504,69 @@ export const getProviderPricing = createServerFn({ method: "POST" })
     }
     return cache;
   });
+
+export type CreditSpendByReason = { reason: string; tokens: number; count: number };
+export type CreditSpendByOrg = { orgId: string; orgName: string; tokens: number; count: number };
+export type CreditSpendReport = {
+  totalTokensSpent: number;
+  totalEvents: number;
+  byReason: CreditSpendByReason[];
+  byOrg: CreditSpendByOrg[];
+};
+
+/** What the org's own credits are actually being spent on — every debit against credit_ledger
+ * (Proof of Intent, WaD verification, and anything else that ever gates on tokens), grouped by
+ * reason and by organisation. This is the platform's own token economy, not a read on what the
+ * admin's external OpenAI/Tavily/Didit/Resend accounts are costing — those providers are billed
+ * directly on the admin's own account and aren't metered anywhere in this app. */
+export const getCreditSpendReport = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<CreditSpendReport> => {
+    await assertAdmin(context as any);
+    const db = await admin();
+
+    const { data: rows, error } = await db
+      .from("credit_ledger")
+      .select("delta, reason, org_id")
+      .lt("delta", 0);
+    if (error) throw new Error(error.message);
+
+    const debits = (rows ?? []) as { delta: number; reason: string; org_id: string }[];
+
+    const orgIds = [...new Set(debits.map((d) => d.org_id))];
+    const { data: orgs } = orgIds.length
+      ? await db.from("organisations").select("id, name").in("id", orgIds)
+      : { data: [] as { id: string; name: string }[] };
+    const orgName = new Map((orgs ?? []).map((o) => [o.id, o.name]));
+
+    const byReasonMap = new Map<string, CreditSpendByReason>();
+    const byOrgMap = new Map<string, CreditSpendByOrg>();
+    let totalTokensSpent = 0;
+
+    for (const d of debits) {
+      const tokens = Math.abs(d.delta);
+      totalTokensSpent += tokens;
+
+      const r = byReasonMap.get(d.reason) ?? { reason: d.reason, tokens: 0, count: 0 };
+      r.tokens += tokens;
+      r.count += 1;
+      byReasonMap.set(d.reason, r);
+
+      const o = byOrgMap.get(d.org_id) ?? {
+        orgId: d.org_id,
+        orgName: orgName.get(d.org_id) ?? "Unknown organisation",
+        tokens: 0,
+        count: 0,
+      };
+      o.tokens += tokens;
+      o.count += 1;
+      byOrgMap.set(d.org_id, o);
+    }
+
+    return {
+      totalTokensSpent,
+      totalEvents: debits.length,
+      byReason: [...byReasonMap.values()].sort((a, b) => b.tokens - a.tokens),
+      byOrg: [...byOrgMap.values()].sort((a, b) => b.tokens - a.tokens),
+    };
+  });

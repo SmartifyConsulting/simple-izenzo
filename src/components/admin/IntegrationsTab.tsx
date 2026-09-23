@@ -12,11 +12,13 @@ import { PasswordInput } from "@/components/PasswordInput";
 import { INTEGRATION_PROVIDERS, type IntegrationProvider } from "@/lib/integrations.catalog";
 import {
   deleteIntegration,
+  getCreditSpendReport,
   getProviderPricing,
   listIntegrations,
   revealIntegrationSecrets,
   saveIntegration,
   testIntegration,
+  type CreditSpendReport,
   type IntegrationRow,
   type ProviderPricingCache,
 } from "@/lib/integrations.functions";
@@ -64,7 +66,8 @@ export function IntegrationsTab() {
     staleTime: 60 * 60 * 1000,
   });
 
-  const [guided, setGuided] = useState(false);
+  const [view, setView] = useState<"services" | "guided" | "report">("services");
+  const guided = view === "guided";
   const [showArchived, setShowArchived] = useState(false);
 
   const byProvider = useMemo(
@@ -103,16 +106,23 @@ export function IntegrationsTab() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" variant={guided ? "outline" : "default"} onClick={() => setGuided(false)}>
+        <Button size="sm" variant={view === "services" ? "default" : "outline"} onClick={() => setView("services")}>
           All services
         </Button>
-        <Button size="sm" variant={guided ? "default" : "outline"} onClick={() => setGuided(true)}>
+        <Button size="sm" variant={view === "guided" ? "default" : "outline"} onClick={() => setView("guided")}>
           Guided setup
         </Button>
+        <Button size="sm" variant={view === "report" ? "default" : "outline"} onClick={() => setView("report")}>
+          Report
+        </Button>
         <span className="text-xs text-muted-foreground">
-          Guided setup takes you through the services one at a time, in the order that matters most.
+          {view === "guided"
+            ? "Guided setup takes you through the services one at a time, in the order that matters most."
+            : view === "report"
+              ? "What the platform's own credits are being spent on."
+              : ""}
         </span>
-        {!guided && archivedCount > 0 && (
+        {view === "services" && archivedCount > 0 && (
           <Button
             size="sm"
             variant="ghost"
@@ -126,7 +136,9 @@ export function IntegrationsTab() {
 
       {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
 
-      {guided ? (
+      {view === "report" ? (
+        <SpendReport />
+      ) : guided ? (
         <GuidedSetup byProvider={byProvider} pricing={pricing} onChanged={refresh} />
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">
@@ -163,6 +175,89 @@ export function IntegrationsTab() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** What the org's own credits (tokens) are being spent on, broken down by what they were spent for
+ * and by which organisation — Proof of Intent and WaD verification are the only two gates that
+ * currently debit credits. This is the platform's internal token economy, not the real external
+ * cost on the admin's own OpenAI/Tavily/Didit/Resend accounts, which those providers bill directly
+ * and this app doesn't meter anywhere. */
+function SpendReport() {
+  const load = useServerFn(getCreditSpendReport);
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["credit-spend-report"],
+    queryFn: () => load({}),
+    retry: false,
+  });
+
+  if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
+  if (error) return <p className="text-sm text-muted-foreground">{(error as Error).message}</p>;
+  if (!data) return null;
+
+  const report = data as CreditSpendReport;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-start gap-3 rounded-md border border-border bg-muted/40 p-4">
+        <CreditCard className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+        <p className="text-xs text-muted-foreground">
+          This tracks the platform's own token economy — every debit against an organisation's
+          credits (Proof of Intent, WaD verification). It does not track real cost on the admin's
+          own OpenAI, Tavily, Didit or Resend accounts — those are billed directly by each provider
+          and aren't metered here.
+        </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="rounded-xl border border-border p-4">
+          <p className="text-xs text-muted-foreground">Total tokens spent</p>
+          <p className="mt-1 text-2xl font-semibold">{report.totalTokensSpent}</p>
+        </div>
+        <div className="rounded-xl border border-border p-4">
+          <p className="text-xs text-muted-foreground">Debit events</p>
+          <p className="mt-1 text-2xl font-semibold">{report.totalEvents}</p>
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold">By what it was spent on</h3>
+          {report.byReason.length === 0 ? (
+            <p className="text-xs text-muted-foreground">No token spend recorded yet.</p>
+          ) : (
+            <ul className="divide-y divide-border rounded-xl border border-border">
+              {report.byReason.map((r) => (
+                <li key={r.reason} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+                  <span>{r.reason}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {r.tokens} token{r.tokens === 1 ? "" : "s"} · {r.count} event{r.count === 1 ? "" : "s"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold">By organisation</h3>
+          {report.byOrg.length === 0 ? (
+            <p className="text-xs text-muted-foreground">No token spend recorded yet.</p>
+          ) : (
+            <ul className="divide-y divide-border rounded-xl border border-border">
+              {report.byOrg.map((o) => (
+                <li key={o.orgId} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+                  <span className="truncate">{o.orgName}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {o.tokens} token{o.tokens === 1 ? "" : "s"} · {o.count} event{o.count === 1 ? "" : "s"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
