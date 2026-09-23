@@ -405,9 +405,8 @@ export const respondToEngagement = createServerFn({ method: "POST" })
       if (side !== "counterparty") {
         throw new Error("Only the counterparty can accept the engagement.");
       }
-      if (!state.bothCleared) {
-        throw new Error("Both sides' KYC and KYB checks have to be settled before you can accept.");
-      }
+      // Accepting the offer comes first now — it's what opens KYC/KYB checks and Without a Doubt,
+      // not the other way around. Checks settling no longer gates acceptance.
     }
     if (data.response === "challenged" && !(data.message && data.message.length >= 3)) {
       throw new Error("A challenge needs a message saying what you're challenging.");

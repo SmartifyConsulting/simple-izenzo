@@ -326,61 +326,19 @@ export function MutualEngagementPanel({ transactionId }: { transactionId: string
     <div className="space-y-4">
       <section className="rounded-xl border border-border">
         <div className="flex items-center gap-2 border-b border-border px-4 py-3">
-          <ShieldCheck className="h-4 w-4 text-primary" />
-          <h2 className="label-caps font-sans">Checks on each other</h2>
-        </div>
-        <div className="space-y-3 p-4">
-          {!state.counterpartyLinked ? (
-            <p className="text-xs text-muted-foreground">
-              The counterparty has not created an account and linked it to this deal yet. Once they do, both
-              sides can run their checks here.
-            </p>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              {otherName} has an account on this deal. Both sides run KYC and KYB on each other. A check can be
-              switched off, but only with a written reason, which is kept on the record.
-            </p>
-          )}
-          <div className="grid gap-3 md:grid-cols-2">
-            {isObserver ? (
-              <>
-                <DiligenceCard heading="Bidder's checks on the counterparty" row={bidderChecks} editable={false} />
-                <DiligenceCard heading="Counterparty's checks on the bidder" row={counterpartyChecks} editable={false} />
-              </>
-            ) : (
-              <>
-                <DiligenceCard
-                  heading={`Your checks on ${otherName}`}
-                  row={mine}
-                  editable={state.counterpartyLinked}
-                  mySide={state.side === "observer" ? undefined : state.side}
-                />
-                <DiligenceCard heading={`${otherName}'s checks on you`} row={theirs} editable={false} />
-              </>
-            )}
-          </div>
-          {state.bothCleared && (
-            <p className="flex items-center gap-1.5 text-xs font-medium text-success">
-              <CheckCircle2 className="h-3.5 w-3.5" /> Both sides' checks are settled.
-            </p>
-          )}
-        </div>
-      </section>
-
-      <section className="rounded-xl border border-border">
-        <div className="flex items-center gap-2 border-b border-border px-4 py-3">
           <MessageSquareWarning className="h-4 w-4 text-primary" />
-          <h2 className="label-caps font-sans">The engagement</h2>
+          <h2 className="label-caps font-sans">The Offer</h2>
         </div>
         <div className="space-y-3 p-4">
           {state.decided === "accepted" && (
             <p className="flex items-center gap-1.5 text-sm font-medium text-success">
-              <CheckCircle2 className="h-4 w-4" /> The counterparty accepted the engagement.
+              <CheckCircle2 className="h-4 w-4" /> The counterparty approved the offer — KYC/KYB checks are open
+              below.
             </p>
           )}
           {state.decided === "opted_out" && (
             <p className="flex items-center gap-1.5 text-sm font-medium text-destructive">
-              <XCircle className="h-4 w-4" /> A party opted out — this engagement is closed.
+              <XCircle className="h-4 w-4" /> A party rejected the offer — this engagement is closed.
             </p>
           )}
 
@@ -391,10 +349,10 @@ export function MutualEngagementPanel({ transactionId }: { transactionId: string
                   <p className="font-medium">
                     {r.responder_name ?? sideWord(r.responder_side)} ({sideWord(r.responder_side)}){" "}
                     {r.response === "accepted"
-                      ? "accepted"
+                      ? "approved the offer"
                       : r.response === "challenged"
                         ? "raised a challenge"
-                        : "opted out"}
+                        : "rejected the offer"}
                   </p>
                   {r.message && <p className="mt-1 text-muted-foreground">{r.message}</p>}
                   <p className="mt-1 text-[11px] text-muted-foreground">{when(r.created_at)}</p>
@@ -406,12 +364,8 @@ export function MutualEngagementPanel({ transactionId }: { transactionId: string
           {state.decided !== "opted_out" && !isObserver && (
             <div className="flex flex-wrap gap-2">
               {state.side === "counterparty" && state.decided !== "accepted" && (
-                <Button
-                  size="sm"
-                  disabled={busy !== null || !state.bothCleared}
-                  onClick={() => void sendResponse("accepted")}
-                >
-                  {busy === "accepted" ? "Accepting…" : "Accept"}
+                <Button size="sm" disabled={busy !== null} onClick={() => void sendResponse("accepted")}>
+                  {busy === "accepted" ? "Approving…" : "Approve"}
                 </Button>
               )}
               <Button size="sm" variant="outline" disabled={busy !== null} onClick={() => setChallengeOpen(true)}>
@@ -425,26 +379,73 @@ export function MutualEngagementPanel({ transactionId }: { transactionId: string
                   disabled={busy !== null}
                   onClick={() => void sendResponse("opted_out")}
                 >
-                  {busy === "opted_out" ? "Opting out…" : "Opt out"}
+                  {busy === "opted_out" ? "Rejecting…" : "Reject"}
                 </Button>
               )}
             </div>
           )}
-          {state.side === "counterparty" && !state.bothCleared && state.decided !== "accepted" && (
-            <p className="text-[11px] text-muted-foreground">
-              Accepting becomes available once both sides' KYC and KYB checks are settled.
-            </p>
-          )}
           {state.side === "bidder" && (
             <p className="text-[11px] text-muted-foreground">
-              Only the counterparty can accept. You can raise a challenge here and both sides keep replying until
-              you reach consensus.
+              Only the counterparty can approve the offer. You can raise a challenge here and both sides keep
+              replying until you reach consensus.
             </p>
           )}
           {isObserver && (
             <p className="text-[11px] text-muted-foreground">
-              Administrator view is read-only. Only the bidder and counterparty can record checks or respond.
+              Administrator view is read-only. Only the bidder and counterparty can respond.
             </p>
+          )}
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-border">
+        <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+          <ShieldCheck className="h-4 w-4 text-primary" />
+          <h2 className="label-caps font-sans">Checks on each other</h2>
+        </div>
+        <div className="space-y-3 p-4">
+          {state.decided !== "accepted" ? (
+            <p className="text-xs text-muted-foreground">
+              Opens once the counterparty approves the offer above — KYC and KYB run on a deal that's actually
+              agreed, not one still being negotiated.
+            </p>
+          ) : !state.counterpartyLinked ? (
+            <p className="text-xs text-muted-foreground">
+              The counterparty has not created an account and linked it to this deal yet. Once they do, both
+              sides can run their checks here.
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              {otherName} has an account on this deal. Both sides run KYC and KYB on each other. A check can be
+              switched off, but only with a written reason, which is kept on the record.
+            </p>
+          )}
+          {state.decided === "accepted" && (
+            <>
+              <div className="grid gap-3 md:grid-cols-2">
+                {isObserver ? (
+                  <>
+                    <DiligenceCard heading="Bidder's checks on the counterparty" row={bidderChecks} editable={false} />
+                    <DiligenceCard heading="Counterparty's checks on the bidder" row={counterpartyChecks} editable={false} />
+                  </>
+                ) : (
+                  <>
+                    <DiligenceCard
+                      heading={`Your checks on ${otherName}`}
+                      row={mine}
+                      editable={state.counterpartyLinked}
+                      mySide={state.side === "observer" ? undefined : state.side}
+                    />
+                    <DiligenceCard heading={`${otherName}'s checks on you`} row={theirs} editable={false} />
+                  </>
+                )}
+              </div>
+              {state.bothCleared && (
+                <p className="flex items-center gap-1.5 text-xs font-medium text-success">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Both sides' checks are settled.
+                </p>
+              )}
+            </>
           )}
         </div>
       </section>

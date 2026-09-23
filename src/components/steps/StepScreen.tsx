@@ -31,7 +31,7 @@ import { useAuth } from "@/lib/auth";
 import { routeIdentityVerification } from "@/lib/identityRouting";
 import { Logo } from "@/components/Logo";
 import { MutualEngagementPanel } from "@/components/engagement/MutualEngagementPanel";
-import { classifySignatureDocuments } from "@/lib/engagement.functions";
+import { classifySignatureDocuments, getEngagement } from "@/lib/engagement.functions";
 import { buildBrandedCertificatePdf } from "@/lib/certificatePdf";
 import { CommoditySearch } from "@/components/CommoditySearch";
 import { COUNTRIES } from "@/lib/countries";
@@ -1779,6 +1779,15 @@ function WadStep({ tx, reload }: Props) {
   const navigate = useNavigate();
   const { org } = useAuth();
   const shortOnTokens = (org?.credits ?? 0) < WAD_COST;
+  const loadEngagement = useServerFn(getEngagement);
+  // The offer has to be approved (see MutualEngagementPanel — "The Offer" section) before Without
+  // a Doubt has anything to run KYC/KYB on: negotiating terms with a party you haven't committed
+  // to yet isn't what WaD is for.
+  const { data: engagement } = useQuery({
+    queryKey: ["engagement", tx.id],
+    queryFn: () => loadEngagement({ data: { transactionId: tx.id } }),
+  });
+  const offerApproved = engagement?.decided === "accepted";
   const [checks, setChecks] = useState<Record<string, boolean>>({});
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
@@ -1992,6 +2001,9 @@ function WadStep({ tx, reload }: Props) {
 
   return (
     <div className="space-y-6">
+    {/* The offer is approved (or rejected/challenged) here before anything else — KYC/KYB and Run
+        Verification below only make sense against a deal that's actually been agreed. */}
+    <MutualEngagementPanel transactionId={tx.id} />
     <Panel
       title="Without a Doubt"
       footer={
@@ -2006,8 +2018,14 @@ function WadStep({ tx, reload }: Props) {
             </Button>
             <Button
               size="sm"
-              disabled={busy || shortOnTokens || !counterpartyRegistered}
-              title={counterpartyRegistered ? undefined : "The counterparty has to register on Izenzo before verification can run."}
+              disabled={busy || shortOnTokens || !counterpartyRegistered || !offerApproved}
+              title={
+                !offerApproved
+                  ? "The counterparty has to approve the offer above before verification can run."
+                  : counterpartyRegistered
+                    ? undefined
+                    : "The counterparty has to register on Izenzo before verification can run."
+              }
               onClick={() => decide("cleared")}
             >
               Run Verification
@@ -2016,13 +2034,19 @@ function WadStep({ tx, reload }: Props) {
         </div>
       }
     >
+      {!offerApproved && (
+        <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
+          <Lock className="h-3.5 w-3.5" /> Waiting on the counterparty to approve the offer above.
+          Run Verification unlocks once they do.
+        </div>
+      )}
       {shortOnTokens && (
         <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
           <Lock className="h-3.5 w-3.5" /> Not enough tokens — this needs {WAD_COST} and the
           organisation has {org?.credits ?? 0}.
         </div>
       )}
-      {!counterpartyRegistered && (
+      {offerApproved && !counterpartyRegistered && (
         <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
           <Lock className="h-3.5 w-3.5" /> {chosenCp?.name ?? "The counterparty"} has not registered
           on Izenzo yet. Run Verification unlocks once they have.
@@ -2142,7 +2166,6 @@ function WadStep({ tx, reload }: Props) {
         })}
       </ul>
     </Panel>
-    <MutualEngagementPanel transactionId={tx.id} />
     </div>
   );
 }
