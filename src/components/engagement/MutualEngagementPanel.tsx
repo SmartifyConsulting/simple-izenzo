@@ -84,11 +84,14 @@ export function MutualEngagementPanel({ transactionId }: { transactionId: string
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading the engagement…</p>;
   if (!state) return null;
 
-  const mine = state.diligence.find((d) => d.reviewer_side === state.side);
-  const theirs = state.diligence.find((d) => d.reviewer_side !== state.side);
-  const otherSide: Side = state.side === "bidder" ? "counterparty" : "bidder";
+  const isObserver = state.side === "observer";
+  const mine = isObserver ? undefined : state.diligence.find((d) => d.reviewer_side === state.side);
+  const theirs = isObserver ? undefined : state.diligence.find((d) => d.reviewer_side !== state.side);
+  const otherSide: Side = state.side === "counterparty" ? "bidder" : "counterparty";
   const otherName =
     (otherSide === "counterparty" ? state.counterpartyName : state.bidderName) ?? sideWord(otherSide);
+  const bidderChecks = state.diligence.find((d) => d.reviewer_side === "bidder");
+  const counterpartyChecks = state.diligence.find((d) => d.reviewer_side === "counterparty");
 
   async function record(check: "kyc" | "kyb", next: CheckState, reason?: string) {
     setBusy(`${check}-${next}`);
@@ -239,8 +242,17 @@ export function MutualEngagementPanel({ transactionId }: { transactionId: string
             </p>
           )}
           <div className="grid gap-3 md:grid-cols-2">
-            <DiligenceCard heading={`Your checks on ${otherName}`} row={mine} editable={state.counterpartyLinked} />
-            <DiligenceCard heading={`${otherName}'s checks on you`} row={theirs} editable={false} />
+            {isObserver ? (
+              <>
+                <DiligenceCard heading="Bidder's checks on the counterparty" row={bidderChecks} editable={false} />
+                <DiligenceCard heading="Counterparty's checks on the bidder" row={counterpartyChecks} editable={false} />
+              </>
+            ) : (
+              <>
+                <DiligenceCard heading={`Your checks on ${otherName}`} row={mine} editable={state.counterpartyLinked} />
+                <DiligenceCard heading={`${otherName}'s checks on you`} row={theirs} editable={false} />
+              </>
+            )}
           </div>
           {state.bothCleared && (
             <p className="flex items-center gap-1.5 text-xs font-medium text-success">
@@ -286,7 +298,7 @@ export function MutualEngagementPanel({ transactionId }: { transactionId: string
             </ul>
           )}
 
-          {state.decided !== "opted_out" && (
+          {state.decided !== "opted_out" && !isObserver && (
             <div className="flex flex-wrap gap-2">
               {state.side === "counterparty" && state.decided !== "accepted" && (
                 <Button
@@ -324,6 +336,11 @@ export function MutualEngagementPanel({ transactionId }: { transactionId: string
               you reach consensus.
             </p>
           )}
+          {isObserver && (
+            <p className="text-[11px] text-muted-foreground">
+              Administrator view is read-only. Only the bidder and counterparty can record checks or respond.
+            </p>
+          )}
         </div>
       </section>
 
@@ -346,7 +363,7 @@ export function MutualEngagementPanel({ transactionId }: { transactionId: string
               {docs.length === 0 && <p className="text-xs text-muted-foreground">No documents shared yet.</p>}
               <ul className="divide-y divide-border">
                 {docs.map((d) => {
-                  const iSigned = d.signatures.some((s) => s.signer_side === state.side);
+                  const iSigned = !isObserver && d.signatures.some((s) => s.signer_side === state.side);
                   return (
                     <li key={d.id} className="space-y-1.5 py-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -361,7 +378,7 @@ export function MutualEngagementPanel({ transactionId }: { transactionId: string
                               {d.signatures.length === 0 ? "Not signed" : "One signature"}
                             </Badge>
                           )}
-                          {!d.fully_signed_at && !iSigned && (
+                          {!isObserver && !d.fully_signed_at && !iSigned && (
                             <Button
                               size="sm"
                               className="h-7 text-[11px]"
