@@ -744,15 +744,27 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       ...pipeline.brief.capabilities,
       ...pipeline.brief.sectors,
     ].join(" ");
-    let candidates: CandidateResult[] = pipeline.candidates.filter(
-      (c) =>
-        notOwn(c) &&
-        isRelevant(
-          { name: c.name, sector: c.sector, jurisdiction: c.jurisdiction, rationale: `${c.rationale ?? ""} ${c.evidence ?? ""}` },
-          briefQuery,
-          { loose: true },
-        ),
-    );
+    // Everything the search found but did not keep, with the reason — so "no matches" can be read
+    // as "these were found, here is why each was dropped" instead of silence.
+    const notKept: { name: string; reason: string }[] = pipeline.rejected.map((r) => ({
+      name: r.name,
+      reason: r.reason,
+    }));
+    let candidates: CandidateResult[] = pipeline.candidates.filter((c) => {
+      if (!notOwn(c)) {
+        notKept.push({ name: c.name, reason: "The bidder's own organisation." });
+        return false;
+      }
+      const relevant = isRelevant(
+        { name: c.name, sector: c.sector, jurisdiction: c.jurisdiction, rationale: `${c.rationale ?? ""} ${c.evidence ?? ""}` },
+        briefQuery,
+        { loose: true },
+      );
+      if (!relevant) {
+        notKept.push({ name: c.name, reason: "Nothing on its page matched what this bid is asking for." });
+      }
+      return relevant;
+    });
     if (candidates.length === 0) candidates = (await listingCandidates(relevanceQuery, 6)).filter(notOwn);
     // Registered platform organisations found locally go first, ahead of anything AI or the
     // directory fallback found for the same company — deduped by the same normalised-name rule
