@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { respondAsCounterparty } from "@/lib/counterpartyClaim.functions";
 import { InlineFrame } from "@/components/canvas/DealCanvas";
+import { MapView } from "@/components/canvas/MapView";
 import { MutualEngagementPanel } from "@/components/engagement/MutualEngagementPanel";
 import { money, tradeKindOf, when, type Transaction } from "@/lib/tx";
 
@@ -90,6 +91,15 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
             Registered {when(tx.created_at)} · {money(tx.price, tx.currency)}
             {Number(tx.quantity) > 0 ? ` · ${tx.quantity} ${tx.unit ?? ""}` : ""}
           </p>
+        </div>
+
+        {/* Read-only — the same workflow map the bidder sees, so where this deal actually stands
+            isn't something the counterparty has to piece together from the frames below. Always
+            blue: this view only ever renders for the counterparty side of a deal. */}
+        <div className="glass-node p-4" style={{ "--throb-accent": "#4169e1" } as CSSProperties}>
+          <div className="relative w-full" style={{ aspectRatio: "960 / 1050" }}>
+            <MapView tx={tx} reload={reload} readOnly reference={tx.reference} />
+          </div>
         </div>
 
         <div className="glass-node space-y-2 p-4">

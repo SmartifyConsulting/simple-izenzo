@@ -61,25 +61,16 @@ const BOXES = {
   // down-arrow on the map (20 units — the same span as Online Screening into Express Intent).
   bid: { x: 40, y: 62, w: 160, h: 56 },
   loadDocs: { x: 40, y: 138, w: 160, h: 56 },
-  // Search sits level with Load Deal Documents (same centre-line, for a straight connector), and
-  // the Search Results card sits directly beneath Search — now a single compact line of results
-  // rather than a tall stacked list, so Choice/Counter Offer/Online Media Screening can all sit
-  // higher, letting the rest of the diagram move up to fit without scrolling.
-  // Load Deal Documents → Search → Search Results → Choice now sit on three equal
-  // horizontal gaps (~23.3 units each) instead of the first gap reading wider than the other two.
-  search: { x: 223.3, y: 135, w: 160, h: 62 },
-  // Search Results now sits in line between Search and Choice, all on the same row.
-  steps: { x: 406.7, y: 134, w: 140, h: 64 },
-  // Offer/Choice/Counter Offer/Online Media Screening move further right to leave room for the
-  // Search Results card between Search and Choice.
-  choice: { x: 570, y: 138, w: 160, h: 56 },
-  // Counter Offer sits at the very right edge of the Trading frame, level with Choice and Search.
+  // Load Deal Documents, Search, Search Results and Online Screening — the row's four visible
+  // tiles (Choice no longer has one of its own) — sit on four equal gaps across the row's full
+  // width instead of leaving Choice's old slot as dead space.
+  search: { x: 279, y: 135, w: 160, h: 62 },
+  steps: { x: 518, y: 134, w: 140, h: 64 },
   // After Seal Intent: The Offer and its Counter Offer / Challenge loop sit side by side.
   offer: { x: 45, y: 450, w: 170, h: 54 },
   counterOffer: { x: 235, y: 450, w: 120, h: 54 },
-  // Online Screening now sits in line with Search Results, Search and Choice — the last tile on
-  // that row — instead of on a row of its own, so Step 1 doesn't need that row's height at all.
-  socialMedia: { x: 750, y: 136, w: 170, h: 56 },
+  // Last tile on Search's row.
+  socialMedia: { x: 737, y: 136, w: 170, h: 56 },
   // Confirm Intent moves up into the row Online Screening used to occupy, now that row is free —
   // Step 1 ends one row earlier than it used to.
   expressIntent: { x: 510, y: 214, w: 280, h: 48 },
