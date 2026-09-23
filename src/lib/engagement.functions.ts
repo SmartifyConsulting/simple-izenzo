@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { sanitizeForPdf } from "@/lib/certificatePdf";
 
 /**
  * Mutual diligence and dual signing between the two sides of a deal.
@@ -663,7 +664,7 @@ async function buildSignedRecordPdf(opts: {
   ];
   for (const [k, v] of rows) {
     page.drawText(k, { x: 50, y, size: 10, font: bold, color: rgb(0.2, 0.2, 0.2) });
-    for (const line of wrap(v, 350, 10, font)) {
+    for (const line of wrap(sanitizeForPdf(v), 350, 10, font)) {
       page.drawText(line, { x: 190, y, size: 10, font, color: rgb(0.1, 0.1, 0.1) });
       y -= 14;
     }
@@ -678,7 +679,7 @@ async function buildSignedRecordPdf(opts: {
 
   for (const sig of opts.signatures) {
     const at = new Date(sig.signed_at);
-    page.drawText(sig.signer_name, { x: 50, y, size: 12, font: bold, color: rgb(0, 0, 0) });
+    page.drawText(sanitizeForPdf(sig.signer_name), { x: 50, y, size: 12, font: bold, color: rgb(0, 0, 0) });
     y -= 14;
     page.drawText(
       `${sig.signer_side === "bidder" ? "Bidder" : "Counterparty"} · signed ${at.toISOString().replace("T", " ").slice(0, 19)} UTC`,

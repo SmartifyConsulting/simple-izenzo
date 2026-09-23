@@ -1,5 +1,28 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
+const ARROW_REPLACEMENTS: Record<string, string> = {
+  "←": "<-",
+  "→": "->",
+  "↔": "<->",
+  "⇐": "<=",
+  "⇒": "=>",
+  "⇔": "<=>",
+};
+
+/** pdf-lib's standard fonts only support the WinAnsi encoding (~Windows-1252) — a Unicode arrow,
+ * emoji or other symbol outside that range throws at render time instead of just looking wrong.
+ * AI-generated text (a rationale, an evidence chain) is the likeliest source of one of these, so
+ * every piece of text handed to this module is sanitised through here first. Characters kept: the
+ * dashes, quotes, ellipsis and bullet the layout below already deliberately uses. */
+export function sanitizeForPdf(text: string): string {
+  return text
+    .replace(/[←→↔⇐⇒⇔]/g, (ch) => ARROW_REPLACEMENTS[ch] ?? "")
+    .replace(/[‘’]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/…/g, "...")
+    .replace(/[^\x00-\x7E -ÿ–—•]/g, "");
+}
+
 function wrap(text: string, max: number, size: number, font: Awaited<ReturnType<PDFDocument["embedFont"]>>): string[] {
   const words = text.split(/\s+/).filter(Boolean);
   const lines: string[] = [];
@@ -38,19 +61,20 @@ export async function buildBrandedCertificatePdf(opts: {
     }
   };
 
-  page.drawText(opts.heading, { x: 50, y, size: 17, font: bold, color: rgb(0.1, 0.1, 0.3) });
+  page.drawText(sanitizeForPdf(opts.heading), { x: 50, y, size: 17, font: bold, color: rgb(0.1, 0.1, 0.3) });
   y -= 15;
   page.drawText("Izenzo Trading Gateway", { x: 50, y, size: 10, font, color: rgb(0.45, 0.45, 0.45) });
   y -= 12;
   page.drawLine({ start: { x: 50, y }, end: { x: 545, y }, thickness: 0.75, color: rgb(0.1, 0.1, 0.3) });
   y -= 26;
 
-  for (const raw of opts.lines) {
+  for (const rawLine of opts.lines) {
     newPageIfNeeded();
-    if (raw === "") {
+    if (rawLine === "") {
       y -= 10;
       continue;
     }
+    const raw = sanitizeForPdf(rawLine);
     const sep = raw.indexOf(": ");
     const looksLikeField = sep > 0 && sep < 28 && !/^\s|^\s*[•\-]/.test(raw);
     const looksIndented = /^\s|^\s*[•\-]/.test(raw);
@@ -83,7 +107,7 @@ export async function buildBrandedCertificatePdf(opts: {
     y -= 20;
     page.drawText("Fingerprint (SHA-256)", { x: 50, y, size: 9, font: bold, color: rgb(0.2, 0.2, 0.2) });
     y -= 13;
-    page.drawText(opts.fingerprint, { x: 50, y, size: 8, font, color: rgb(0.35, 0.35, 0.35) });
+    page.drawText(sanitizeForPdf(opts.fingerprint), { x: 50, y, size: 8, font, color: rgb(0.35, 0.35, 0.35) });
     y -= 16;
   }
 

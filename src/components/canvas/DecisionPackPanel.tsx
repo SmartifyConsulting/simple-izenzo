@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, X, ChevronDown, Loader2, Sparkles } from "lucide-react";
+import { Check, ChevronDown, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -85,7 +85,6 @@ export function DecisionPackPanel({
   const [started, setStarted] = useState(autoRun);
   const [busy, setBusy] = useState(autoRun);
   const [error, setError] = useState<string | null>(null);
-  const [deciding, setDeciding] = useState<string | null>(null);
   const [selectingAll, setSelectingAll] = useState(false);
   // Bumped by the "Try again" button (or the initial press, for a manual-start stage) to re-run
   // the effect below.
@@ -150,7 +149,6 @@ export function DecisionPackPanel({
   }, [allDecided, onAllDecided]);
 
   async function act(id: string, decision: "accepted" | "rejected") {
-    setDeciding(id);
     try {
       const res = await decide({ data: { proposalId: id, decision } });
       setProposals((prev) =>
@@ -159,9 +157,19 @@ export function DecisionPackPanel({
           : prev,
       );
     } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setDeciding(null);
+      // A stale local list (this one was already acknowledged by a previous click, or by this
+      // very "Acknowledge All" run reading proposals from just before a refresh) shouldn't surface
+      // as a failure — the end state ("decided") is exactly what was being asked for either way, so
+      // the local copy is brought in line rather than left stuck showing "Pending" forever.
+      if ((err as Error).message?.toLowerCase().includes("already")) {
+        setProposals((prev) =>
+          prev
+            ? prev.map((p) => (p.id === id && !p.decided_at ? { ...p, decision, decided_at: new Date().toISOString() } : p))
+            : prev,
+        );
+      } else {
+        toast.error((err as Error).message);
+      }
     }
   }
 
@@ -279,55 +287,22 @@ export function DecisionPackPanel({
             <>
               {gating && pending > 0 && (
                 <p className="text-[11px] text-muted-foreground">
-                  Accept or reject each proposal below, then {gatedStepLabel} opens.
+                  Review the recommendations below, then Acknowledge All to open {gatedStepLabel}.
                 </p>
               )}
-              <div className="flex flex-wrap items-center justify-end gap-1.5">
-                {/* Testing shortcut, explicitly requested: does exactly what "Accept all" below
-                    already does, reachable even with only one proposal (Accept all only shows at
-                    2+). */}
-                {gating && pending > 0 && (
+              {pending > 0 && (
+                <div className="flex flex-wrap items-center justify-end gap-1.5">
                   <Button
-                    type="button"
-                    variant="ghost"
                     size="sm"
-                    disabled={selectingAll || deciding !== null}
+                    className="h-7 gap-1 rounded-full px-2.5 text-[11px]"
+                    disabled={selectingAll}
                     onClick={() => void decideAll("accepted")}
-                    className="h-7 gap-1 rounded-full border border-dashed border-muted-foreground/40 px-2.5 text-[10px] font-semibold text-muted-foreground hover:text-foreground"
                   >
                     {selectingAll ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-                    Skip (testing) — accept all
+                    Acknowledge All
                   </Button>
-                )}
-                {pending > 1 && (
-                  <>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 gap-1 rounded-full px-2.5 text-[11px]"
-                      disabled={selectingAll || deciding !== null}
-                      onClick={() => void decideAll("rejected")}
-                    >
-                      <X className="h-3 w-3" />
-                      Reject all
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 gap-1 rounded-full px-2.5 text-[11px]"
-                      disabled={selectingAll || deciding !== null}
-                      onClick={() => void decideAll("accepted")}
-                    >
-                      {selectingAll ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <Check className="h-3 w-3" />
-                      )}
-                      Accept all
-                    </Button>
-                  </>
-                )}
-              </div>
+                </div>
+              )}
             </>
           )}
 
@@ -433,41 +408,13 @@ export function DecisionPackPanel({
                     </div>
 
                     {p.decided_at ? (
-                      <span
-                        className={cn(
-                          "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold",
-                          p.decision === "accepted"
-                            ? "bg-emerald-100 text-emerald-800"
-                            : "bg-muted text-muted-foreground",
-                        )}
-                      >
-                        {p.decision === "accepted" ? "Accepted" : "Rejected"}
+                      <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
+                        Acknowledged
                       </span>
                     ) : (
-                      <div className="flex shrink-0 gap-1.5">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 gap-1 rounded-full px-2.5 text-[11px]"
-                          disabled={deciding === p.id}
-                          onClick={() => void act(p.id, "rejected")}
-                        >
-                          <X className="h-3 w-3" /> Reject
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="h-7 gap-1 rounded-full px-2.5 text-[11px]"
-                          disabled={deciding === p.id}
-                          onClick={() => void act(p.id, "accepted")}
-                        >
-                          {deciding === p.id ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <Check className="h-3 w-3" />
-                          )}
-                          Accept
-                        </Button>
-                      </div>
+                      <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                        Pending
+                      </span>
                     )}
                   </div>
                 </div>
