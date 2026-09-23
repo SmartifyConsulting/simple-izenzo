@@ -83,8 +83,8 @@ export async function openAiFailureMessage(res: Response): Promise<string> {
     // Not JSON — the status alone still tells us enough below.
   }
 
-  if (isTerminalAccountCode(code)) {
-    return "The OpenAI account has no credit left, or has reached the spending limit set on it. Add credit to that OpenAI account, then try again.";
+  if (isTerminalAccountCode(code) || saysNoCredit(providerMessage)) {
+    return "The OpenAI account has no credit left, or has reached the spending limit set on it. Add credit to that OpenAI account at platform.openai.com, then try again.";
   }
   if (res.status === 429) {
     return "The OpenAI account has reached how many requests it is allowed right now — this is the free-account limit, not a problem with your documents. Wait a minute and try again; adding credit to that OpenAI account removes the limit.";
