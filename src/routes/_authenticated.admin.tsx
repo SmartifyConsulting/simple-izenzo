@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { when, type Transaction } from "@/lib/tx";
@@ -324,9 +325,13 @@ function UsersTab() {
       <UserProfileDialog
         user={users.find((u) => u.id === profileId) ?? null}
         orgNames={profileId ? (orgNamesByUser.get(profileId) ?? []) : []}
+        allOrgs={orgs}
         isAdmin={profileId ? adminIds.has(profileId) : false}
         onClose={() => setProfileId(null)}
-        onSaved={() => qc.invalidateQueries({ queryKey: ["admin-users"] })}
+        onSaved={() => {
+          qc.invalidateQueries({ queryKey: ["admin-users"] });
+          qc.invalidateQueries({ queryKey: ["admin-org-directory-members"] });
+        }}
       />
     </div>
   );
@@ -341,24 +346,31 @@ function UsersTab() {
 function UserProfileDialog({
   user,
   orgNames,
+  allOrgs,
   isAdmin,
   onClose,
   onSaved,
 }: {
   user: ProfileRow | null;
   orgNames: string[];
+  /** Every organisation on the platform — not just ones this user already belongs to. Picking one
+   * they aren't a member of yet adds that membership as part of setting it primary, so a real
+   * test scenario (put this seat on a different company) is one action, not two. */
+  allOrgs: { id: string; name: string }[];
   isAdmin: boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const [fullName, setFullName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [orgId, setOrgId] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     setFullName(user?.full_name ?? "");
     setLastName(user?.last_name ?? "");
-  }, [user?.id, user?.full_name, user?.last_name]);
+    setOrgId(user?.org_id ?? "");
+  }, [user?.id, user?.full_name, user?.last_name, user?.org_id]);
 
   async function save() {
     if (!user) return;
@@ -369,6 +381,27 @@ function UserProfileDialog({
         .update({ full_name: fullName.trim() || null, last_name: lastName.trim() || null })
         .eq("id", user.id);
       if (error) throw error;
+
+      if (orgId && orgId !== (user.org_id ?? "")) {
+        // Testing tool: make sure the membership exists before making it primary, the same way
+        // ensureOrg() does for a bidder who never went through it — otherwise the profile points
+        // at an org this seat was never actually added to.
+        const { data: existingMembership } = await supabase
+          .from("org_members")
+          .select("org_id")
+          .eq("org_id", orgId)
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (!existingMembership) {
+          const { error: mErr } = await supabase
+            .from("org_members")
+            .insert({ org_id: orgId, user_id: user.id, role: "member" });
+          if (mErr) throw mErr;
+        }
+        const { error: orgErr } = await supabase.from("profiles").update({ org_id: orgId }).eq("id", user.id);
+        if (orgErr) throw orgErr;
+      }
+
       toast.success("Profile updated");
       onSaved();
       onClose();
@@ -379,7 +412,9 @@ function UserProfileDialog({
     }
   }
 
-  const changed = user !== null && (fullName !== (user.full_name ?? "") || lastName !== (user.last_name ?? ""));
+  const changed =
+    user !== null &&
+    (fullName !== (user.full_name ?? "") || lastName !== (user.last_name ?? "") || orgId !== (user.org_id ?? ""));
 
   return (
     <Dialog open={user !== null} onOpenChange={(open) => !open && onClose()}>
@@ -405,13 +440,34 @@ function UserProfileDialog({
                 </Label>
                 <Input id="admin-user-last-name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
               </div>
+              <div className="col-span-2 space-y-1.5">
+                <Label htmlFor="admin-user-org" className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Primary organisation
+                </Label>
+                <Select {...(orgId ? { value: orgId } : {})} onValueChange={setOrgId}>
+                  <SelectTrigger id="admin-user-org">
+                    <SelectValue placeholder="No organisation" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allOrgs.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>
+                        {o.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  Testing tool: switches which company this seat acts as by default. Adds the
+                  membership first if they aren't already on it.
+                </p>
+              </div>
             </div>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
               {[
                 ["Email", user.email ?? "—"],
                 ["Contact number", user.contact_number ?? "—"],
                 ["Seat", user.seat ?? "—"],
-                ["Organisation(s)", orgNames.length > 0 ? orgNames.join(", ") : "None"],
+                ["All memberships", orgNames.length > 0 ? orgNames.join(", ") : "None"],
                 ["System admin", isAdmin ? "Yes" : "No"],
                 ["Email verified", user.email_verified_at ? new Date(user.email_verified_at).toLocaleString() : "Not verified"],
                 ["Terms accepted", user.terms_accepted_at ? new Date(user.terms_accepted_at).toLocaleString() : "Not yet"],
