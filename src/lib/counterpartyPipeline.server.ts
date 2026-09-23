@@ -256,14 +256,9 @@ const searchInstructions = (maxOrgs: number) =>
 
 /** Step 3 through OpenAI's own web search, which also names the organisations it found. */
 async function searchWithOpenAi(input: PipelineInput, briefText: string, maxOrgs: number) {
-  const { webSearch, gatewayWebSearch } = await import("@/lib/openaiWebSearch.server");
+  const { webSearch } = await import("@/lib/openaiWebSearch.server");
   if (!input.apiKey) {
-    // No OpenAI key saved — search the web through the built-in AI service instead.
-    return gatewayWebSearch({
-      effort: input.kind === "ai" ? "low" : "medium",
-      instructions: searchInstructions(maxOrgs),
-      input: `Required counterparty brief:\n${briefText}`,
-    });
+    throw new Error("Internet search is unavailable: connect Tavily, or add an OpenAI key in Admin → Integrations.");
   }
   return webSearch({
     apiKey: input.apiKey,
