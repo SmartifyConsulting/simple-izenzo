@@ -10,13 +10,14 @@ export type VerificationRow = {
   reason: string | null;
   provider_url: string | null;
   subject_label: string | null;
+  subject_counterparty_id: string | null;
   transaction_id: string | null;
   created_at: string;
   completed_at: string | null;
 };
 
 const SELECT =
-  "id, check_type, status, decision, reason, provider_url, subject_label, transaction_id, created_at, completed_at";
+  "id, check_type, status, decision, reason, provider_url, subject_label, subject_counterparty_id, transaction_id, created_at, completed_at";
 
 /** My own identity verifications (Account settings). */
 export const listMyVerifications = createServerFn({ method: "POST" })
@@ -71,23 +72,51 @@ export const startVerification = createServerFn({ method: "POST" })
       // RLS on the caller's client proves they may see this deal.
       const { data: tx, error } = await context.supabase
         .from("transactions")
-        .select("id, org_id, title")
+        .select("id, org_id, counterparty_org_id, title, created_by")
         .eq("id", data.transactionId)
         .maybeSingle();
       if (error) throw new Error(error.message);
       if (!tx) throw new Error("You don't have access to this deal.");
-      subjectOrgId = tx.org_id as string;
-      subjectLabel = tx.title as string;
 
-      const { data: cp } = await context.supabase
-        .from("counterparties")
-        .select("id, name")
-        .eq("transaction_id", data.transactionId)
-        .eq("status", "chosen")
-        .maybeSingle();
-      if (cp) {
-        subjectCounterpartyId = cp.id as string;
-        subjectLabel = cp.name as string;
+      // Which side of the deal is running this check decides who the subject is: the bidder
+      // verifies the counterparty (the existing, and more common, direction); the counterparty
+      // verifies the bidder's organisation right back — a genuine two-way check, not one side
+      // taking the other's word for it.
+      const [{ data: profile }, { data: memberships }] = await Promise.all([
+        context.supabase.from("profiles").select("org_id").eq("id", context.userId).maybeSingle(),
+        context.supabase.from("org_members").select("org_id").eq("user_id", context.userId),
+      ]);
+      const myOrgs = new Set<string>(
+        [
+          (profile as { org_id?: string | null } | null)?.org_id ?? null,
+          ...((memberships as { org_id: string }[] | null) ?? []).map((m) => m.org_id),
+        ].filter(Boolean) as string[],
+      );
+      const iAmBidder = tx.created_by === context.userId || (tx.org_id && myOrgs.has(tx.org_id as string));
+
+      if (iAmBidder) {
+        subjectOrgId = tx.org_id as string;
+        subjectLabel = tx.title as string;
+        const { data: cp } = await context.supabase
+          .from("counterparties")
+          .select("id, name")
+          .eq("transaction_id", data.transactionId)
+          .eq("status", "chosen")
+          .maybeSingle();
+        if (cp) {
+          subjectCounterpartyId = cp.id as string;
+          subjectLabel = cp.name as string;
+        }
+      } else if (tx.counterparty_org_id && myOrgs.has(tx.counterparty_org_id as string)) {
+        subjectOrgId = tx.org_id as string;
+        const { data: bidderOrg } = await context.supabase
+          .from("organisations")
+          .select("name")
+          .eq("id", tx.org_id as string)
+          .maybeSingle();
+        subjectLabel = (bidderOrg as { name?: string | null } | null)?.name ?? (tx.title as string | null) ?? null;
+      } else {
+        throw new Error("You're not a party to this deal.");
       }
     } else {
       const { data: profile } = await context.supabase
@@ -176,7 +205,7 @@ export const refreshVerification = createServerFn({ method: "POST" })
 
     const { data: row } = await supabaseAdmin
       .from("identity_verifications")
-      .select("provider_session_id, subject_counterparty_id")
+      .select("provider_session_id, subject_counterparty_id, transaction_id, check_type, created_by")
       .eq("id", data.id)
       .maybeSingle();
     const sessionId = row?.provider_session_id as string | null;
@@ -207,6 +236,7 @@ export const refreshVerification = createServerFn({ method: "POST" })
       const { notifyIfFullyMatched } = await import("@/lib/matchNotify.server");
       await notifyIfFullyMatched(counterpartyId);
     }
+    await syncDiditResultToEngagement(row, status);
 
     return updated as VerificationRow;
   });
@@ -224,7 +254,7 @@ export const finaliseVerificationPublic = createServerFn({ method: "POST" })
 
     const { data: row } = await supabaseAdmin
       .from("identity_verifications")
-      .select("id, status, check_type, provider_session_id, subject_counterparty_id")
+      .select("id, status, check_type, provider_session_id, subject_counterparty_id, transaction_id, created_by")
       .eq("id", data.vid)
       .maybeSingle();
     if (!row) throw new Error("We could not find that verification.");
@@ -258,9 +288,29 @@ export const finaliseVerificationPublic = createServerFn({ method: "POST" })
       const { notifyIfFullyMatched } = await import("@/lib/matchNotify.server");
       await notifyIfFullyMatched(counterpartyId);
     }
+    await syncDiditResultToEngagement(row, status);
 
     return { status, checkType };
   });
+
+/** Shared by every path that can be the one to first observe a Didit result (webhook, on-demand
+ * refresh, the public completion page): records it against the two-way engagement gate. Only
+ * id_document (KYC) and kyb map onto that gate — a standalone sanctions/PEP (aml) check doesn't. */
+async function syncDiditResultToEngagement(
+  row: { transaction_id?: string | null; check_type?: string | null; created_by?: string | null } | null | undefined,
+  status: VerificationRow["status"],
+) {
+  if (!row?.transaction_id || !row.created_by) return;
+  if (row.check_type !== "id_document" && row.check_type !== "kyb") return;
+  if (status !== "passed" && status !== "failed") return;
+  const { upsertDiligenceFromVerification } = await import("@/lib/engagement.functions");
+  await upsertDiligenceFromVerification({
+    transactionId: row.transaction_id,
+    reviewerUserId: row.created_by,
+    check: row.check_type === "id_document" ? "kyc" : "kyb",
+    state: status,
+  });
+}
 
 /** Which identity checks are switched on. The KYB workflow already covers UBO and AML, so the
  * separate sanctions / PEP check only appears when an administrator turns it on. */

@@ -244,33 +244,142 @@ export const setDiligenceState = createServerFn({ method: "POST" })
 
     // Once both sides are satisfied, the counterparty is told and gets the decision.
     if (state.bothCleared && !state.decided) {
-      const { notifyTransactionOwner, notifyCounterpartyContact } = await import("@/lib/bidderNotify.server");
-      const ref = tx.reference ? `${tx.reference} — ` : "";
-      await notifyTransactionOwner({
-        orgId: tx.org_id,
-        transactionId: tx.id,
-        title: "KYC and KYB are settled on both sides",
-        body: `${ref}${tx.title ?? "This deal"}: both sides' checks are settled. The counterparty can now accept, challenge or opt out.`,
-      });
-      const { data: cp } = await supabase
-        .from("counterparties")
-        .select("contact_email")
-        .eq("transaction_id", tx.id)
-        .eq("status", "chosen")
-        .maybeSingle();
-      const email = (cp as { contact_email?: string | null } | null)?.contact_email;
-      if (email) {
-        await notifyCounterpartyContact({
-          email,
-          transactionId: tx.id,
-          title: "Your KYC and KYB checks came back clear",
-          body: `${ref}${tx.title ?? "This deal"}: the checks are settled on both sides. Open the deal to accept, challenge or opt out of the engagement.`,
-        });
-      }
+      await notifyBothClearedOnce(supabase, tx);
     }
 
     return state;
   });
+
+/** The "both sides are settled" notification, shared between a manually-recorded check
+ * (setDiligenceState, above) and a real Didit result landing asynchronously (webhook, refresh or
+ * the public completion page — see upsertDiligenceFromVerification, below). */
+async function notifyBothClearedOnce(
+  supabase: any,
+  tx: { id: string; org_id: string; title: string | null; reference: string | null },
+) {
+  const { notifyTransactionOwner, notifyCounterpartyContact } = await import("@/lib/bidderNotify.server");
+  const ref = tx.reference ? `${tx.reference} — ` : "";
+  await notifyTransactionOwner({
+    orgId: tx.org_id,
+    transactionId: tx.id,
+    title: "KYC and KYB are settled on both sides",
+    body: `${ref}${tx.title ?? "This deal"}: both sides' checks are settled. The counterparty can now accept, challenge or opt out.`,
+  });
+  const { data: cp } = await supabase
+    .from("counterparties")
+    .select("contact_email")
+    .eq("transaction_id", tx.id)
+    .eq("status", "chosen")
+    .maybeSingle();
+  const email = (cp as { contact_email?: string | null } | null)?.contact_email;
+  if (email) {
+    await notifyCounterpartyContact({
+      email,
+      transactionId: tx.id,
+      title: "Your KYC and KYB checks came back clear",
+      body: `${ref}${tx.title ?? "This deal"}: the checks are settled on both sides. Open the deal to accept, challenge or opt out of the engagement.`,
+    });
+  }
+}
+
+/** Records a real Didit result (id_document → kyc, kyb → kyb) against the side that requested it,
+ * the same way a manually-recorded check does — so a genuine verification, not just a self-report,
+ * is what actually settles the two-way engagement gate. Called from the Didit webhook, the
+ * refresh-on-demand check and the public completion page: none of those run with a signed-in
+ * caller on a specific side, so this resolves the side itself from who started the check
+ * (`created_by` on the verification row) rather than trusting the current request's identity. */
+export async function upsertDiligenceFromVerification(opts: {
+  transactionId: string;
+  reviewerUserId: string;
+  check: "kyc" | "kyb";
+  state: "passed" | "failed";
+}) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  const { data: txRow } = await supabaseAdmin
+    .from("transactions")
+    .select("id, org_id, counterparty_org_id, title, reference, created_by")
+    .eq("id", opts.transactionId)
+    .maybeSingle();
+  if (!txRow) return;
+  const tx = txRow as {
+    id: string;
+    org_id: string;
+    counterparty_org_id: string | null;
+    title: string | null;
+    reference: string | null;
+    created_by: string;
+  };
+
+  const [{ data: profile }, { data: memberships }] = await Promise.all([
+    supabaseAdmin.from("profiles").select("org_id").eq("id", opts.reviewerUserId).maybeSingle(),
+    supabaseAdmin.from("org_members").select("org_id").eq("user_id", opts.reviewerUserId),
+  ]);
+  const myOrgs = new Set<string>(
+    [
+      (profile as { org_id?: string | null } | null)?.org_id ?? null,
+      ...((memberships as { org_id: string }[] | null) ?? []).map((m) => m.org_id),
+    ].filter(Boolean) as string[],
+  );
+
+  let side: Side | null = null;
+  if (tx.created_by === opts.reviewerUserId || myOrgs.has(tx.org_id)) side = "bidder";
+  else if (tx.counterparty_org_id && myOrgs.has(tx.counterparty_org_id)) side = "counterparty";
+  if (!side) return;
+
+  const patch: Record<string, unknown> = {
+    transaction_id: opts.transactionId,
+    reviewer_side: side,
+    [`${opts.check}_state`]: opts.state,
+    [`${opts.check}_waiver_reason`]: null,
+  };
+
+  const { data: existing } = await supabaseAdmin
+    .from("engagement_diligence")
+    .select("id")
+    .eq("transaction_id", opts.transactionId)
+    .eq("reviewer_side", side)
+    .maybeSingle();
+
+  if (existing) {
+    await supabaseAdmin.from("engagement_diligence").update(patch as never).eq("id", (existing as { id: string }).id);
+  } else {
+    await supabaseAdmin.from("engagement_diligence").insert(patch as never);
+  }
+
+  await supabaseAdmin.from("transaction_events").insert({
+    transaction_id: opts.transactionId,
+    actor_id: opts.reviewerUserId,
+    stage: "compliance",
+    step: "wad",
+    action: "diligence_check_recorded",
+    summary: `${side === "bidder" ? "The bidder" : "The counterparty"} — ${
+      opts.check === "kyc" ? "KYC (people)" : "KYB (company)"
+    } ${opts.state === "passed" ? "verified via Didit" : "did not pass via Didit"}`,
+    payload: { side, check: opts.check, state: opts.state, via: "didit" },
+  });
+
+  const { data: dil } = await supabaseAdmin
+    .from("engagement_diligence")
+    .select("*")
+    .eq("transaction_id", opts.transactionId);
+  const diligence = (dil ?? []) as DiligenceRow[];
+  const failed = diligence.some((d) => d.kyc_state === "failed" || d.kyb_state === "failed");
+  const byBidder = diligence.find((d) => d.reviewer_side === "bidder");
+  const byCounterparty = diligence.find((d) => d.reviewer_side === "counterparty");
+  const bothCleared = !failed && isCleared(byBidder) && isCleared(byCounterparty);
+
+  if (bothCleared) {
+    const { data: responses } = await supabaseAdmin
+      .from("engagement_responses")
+      .select("response")
+      .eq("transaction_id", opts.transactionId);
+    const alreadyDecided = ((responses ?? []) as { response: string }[]).some(
+      (r) => r.response === "accepted" || r.response === "opted_out",
+    );
+    if (!alreadyDecided) await notifyBothClearedOnce(supabaseAdmin, tx);
+  }
+}
 
 /** Accept, challenge or opt out. Only the counterparty may accept — that acceptance is what opens
  * the shared Business Docs frame for both sides. Either side may raise a challenge, and challenges

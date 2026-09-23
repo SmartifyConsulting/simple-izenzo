@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { CheckCircle2, FileSignature, Loader2, MessageSquareWarning, ShieldCheck, XCircle } from "lucide-react";
+import { CheckCircle2, FileSignature, Loader2, MessageSquareWarning, RefreshCw, ShieldCheck, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -19,6 +19,7 @@ import {
   type CheckState,
   type Side,
 } from "@/lib/engagement.functions";
+import { listVerificationsForTx, refreshVerification, startVerification, type VerificationRow } from "@/lib/didit.functions";
 
 const STATE_LABEL: Record<CheckState, string> = {
   pending: "Not done yet",
@@ -55,6 +56,9 @@ export function MutualEngagementPanel({ transactionId }: { transactionId: string
   const listDocs = useServerFn(listSignableDocuments);
   const sign = useServerFn(signDocument);
   const setNeeds = useServerFn(setDocumentNeedsSignature);
+  const listVerifications = useServerFn(listVerificationsForTx);
+  const startVerify = useServerFn(startVerification);
+  const refreshVerify = useServerFn(refreshVerification);
 
   const [busy, setBusy] = useState<string | null>(null);
   const [waive, setWaive] = useState<{ check: "kyc" | "kyb" } | null>(null);
@@ -63,6 +67,7 @@ export function MutualEngagementPanel({ transactionId }: { transactionId: string
   const [challengeMessage, setChallengeMessage] = useState("");
   const [signing, setSigning] = useState<{ id: string; name: string } | null>(null);
   const [signerName, setSignerName] = useState("");
+  const popupRef = useRef<Window | null>(null);
 
   const { data: state, isLoading } = useQuery({
     queryKey: ["engagement", transactionId],
@@ -75,10 +80,69 @@ export function MutualEngagementPanel({ transactionId }: { transactionId: string
     enabled: Boolean(state),
   });
 
+  const { data: verifications = [] } = useQuery({
+    queryKey: ["identity-verifications", transactionId],
+    queryFn: () => listVerifications({ data: { transactionId } }),
+    enabled: Boolean(state),
+  });
+
   async function refresh() {
     await qc.invalidateQueries({ queryKey: ["engagement", transactionId] });
     await qc.invalidateQueries({ queryKey: ["engagement-docs", transactionId] });
     await qc.invalidateQueries({ queryKey: ["documents", transactionId] });
+    await qc.invalidateQueries({ queryKey: ["identity-verifications", transactionId] });
+  }
+
+  /** My own most recent Didit check on the other side, for this check type. "My checks on the
+   * counterparty" carry a subject_counterparty_id; "my checks on the bidder" (run by the
+   * counterparty) don't — that's the whole deal's worth of verifications split cleanly in two,
+   * without needing to know who ran each one. */
+  function verificationFor(mySide: Side, check: "kyc" | "kyb"): VerificationRow | undefined {
+    const checkType = check === "kyc" ? "id_document" : "kyb";
+    return verifications.find((v) =>
+      v.check_type === checkType && (mySide === "bidder" ? Boolean(v.subject_counterparty_id) : !v.subject_counterparty_id),
+    );
+  }
+
+  function openProviderWindow(url: string) {
+    const existing = popupRef.current;
+    if (existing && !existing.closed) {
+      existing.location.href = url;
+      existing.focus();
+      return;
+    }
+    const win = window.open(url, "izenzo-verify", "popup,width=520,height=800");
+    popupRef.current = win;
+    if (win) win.focus();
+  }
+
+  async function runVerification(check: "kyc" | "kyb") {
+    if (isObserver) return;
+    setBusy(`verify-${check}`);
+    try {
+      const res = await startVerify({
+        data: { checkType: check === "kyc" ? "id_document" : "kyb", transactionId },
+      });
+      openProviderWindow(res.url);
+      toast.success("Verification opened in its own window. The result lands here on its own.");
+      await refresh();
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function checkVerificationResult(id: string) {
+    setBusy(`refresh-${id}`);
+    try {
+      await refreshVerify({ data: { id } });
+      await refresh();
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setBusy(null);
+    }
   }
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading the engagement…</p>;
@@ -153,10 +217,13 @@ export function MutualEngagementPanel({ transactionId }: { transactionId: string
     heading,
     row,
     editable,
+    mySide,
   }: {
     heading: string;
     row: typeof mine;
     editable: boolean;
+    /** Only meaningful when editable: which side I'm on, so the right Didit direction is opened. */
+    mySide?: Side | undefined;
   }) {
     return (
       <div className="space-y-3 rounded-xl border border-border p-4">
@@ -164,6 +231,8 @@ export function MutualEngagementPanel({ transactionId }: { transactionId: string
         {(["kyc", "kyb"] as const).map((check) => {
           const value = (row?.[`${check}_state`] ?? "pending") as CheckState;
           const reason = row?.[`${check}_waiver_reason`] ?? null;
+          const verification = mySide ? verificationFor(mySide, check) : undefined;
+          const verifyBusy = busy === `verify-${check}`;
           return (
             <div key={check} className="space-y-1.5 border-t border-border pt-3 first:border-0 first:pt-0">
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -175,26 +244,43 @@ export function MutualEngagementPanel({ transactionId }: { transactionId: string
                 </Badge>
               </div>
               {reason && <p className="text-[11px] text-muted-foreground">Reason given: {reason}</p>}
+              {verification?.status === "in_progress" && (
+                <p className="text-[11px] text-muted-foreground">
+                  Verification in progress — the result lands here on its own once it's done.
+                </p>
+              )}
               {editable && (
-                <div className="flex flex-wrap gap-1.5 pt-1">
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
                   <Button
                     size="sm"
-                    variant="outline"
                     className="h-7 text-[11px]"
                     disabled={busy !== null || value === "passed"}
-                    onClick={() => void record(check, "passed")}
+                    onClick={() => void runVerification(check)}
                   >
-                    Record as passed
+                    {verifyBusy ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : verification ? (
+                      "Run again"
+                    ) : (
+                      "Verify"
+                    )}
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 border-destructive/40 text-[11px] text-destructive hover:bg-destructive/10"
-                    disabled={busy !== null || value === "failed"}
-                    onClick={() => void record(check, "failed")}
-                  >
-                    Not passed
-                  </Button>
+                  {verification && verification.status === "in_progress" && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 w-7 p-0"
+                      disabled={busy !== null}
+                      aria-label="Check for a result"
+                      onClick={() => void checkVerificationResult(verification.id)}
+                    >
+                      {busy === `refresh-${verification.id}` ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="ghost"
@@ -249,7 +335,12 @@ export function MutualEngagementPanel({ transactionId }: { transactionId: string
               </>
             ) : (
               <>
-                <DiligenceCard heading={`Your checks on ${otherName}`} row={mine} editable={state.counterpartyLinked} />
+                <DiligenceCard
+                  heading={`Your checks on ${otherName}`}
+                  row={mine}
+                  editable={state.counterpartyLinked}
+                  mySide={state.side === "observer" ? undefined : state.side}
+                />
                 <DiligenceCard heading={`${otherName}'s checks on you`} row={theirs} editable={false} />
               </>
             )}

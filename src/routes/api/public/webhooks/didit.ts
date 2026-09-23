@@ -61,10 +61,10 @@ export const Route = createFileRoute("/api/public/webhooks/didit")({
         const { data: rows, error } = verificationId
           ? await query
               .eq("id", verificationId)
-              .select("id, transaction_id, check_type, subject_label, subject_counterparty_id")
+              .select("id, transaction_id, check_type, subject_label, subject_counterparty_id, created_by")
           : await query
               .eq("provider_session_id", sessionId!)
-              .select("id, transaction_id, check_type, subject_label, subject_counterparty_id");
+              .select("id, transaction_id, check_type, subject_label, subject_counterparty_id, created_by");
         if (error) return new Response("Write failed", { status: 500 });
 
         const row = rows?.[0];
@@ -84,7 +84,15 @@ export const Route = createFileRoute("/api/public/webhooks/didit")({
           const { notifyIfFullyMatched } = await import("@/lib/matchNotify.server");
           await notifyIfFullyMatched(row.subject_counterparty_id as string);
         }
-
+        if (row?.transaction_id && row?.created_by && (row.check_type === "id_document" || row.check_type === "kyb") && (status === "passed" || status === "failed")) {
+          const { upsertDiligenceFromVerification } = await import("@/lib/engagement.functions");
+          await upsertDiligenceFromVerification({
+            transactionId: row.transaction_id as string,
+            reviewerUserId: row.created_by as string,
+            check: row.check_type === "id_document" ? "kyc" : "kyb",
+            state: status,
+          });
+        }
 
         return new Response("ok");
       },
