@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { isRelevant, type Relatable } from "@/lib/relevance";
+import { type Relatable } from "@/lib/relevance";
 import { bidTermTokens } from "@/lib/bidTerms";
 
 export type BidRelevance = { ownName: string; searchedFor: string; bidTokens: string[] };
@@ -34,10 +34,13 @@ export async function loadBidRelevance(txId: string): Promise<BidRelevance> {
   return { ownName: (ownOrg?.name ?? "").trim().toLowerCase(), searchedFor, bidTokens };
 }
 
-/** With nothing to compare against, nothing is hidden. */
+/** For organisations already saved against a bid, the search has done the judging: it read their
+ * own pages, tested which side of the trade they act on, scored them, and recorded every drop in
+ * the "Considered and not kept" list. Re-judging them here on a few short words hid genuine
+ * matches whose stored sector and note happened not to repeat the bid's wording, so the only rule
+ * left is the bidder's own organisation, which never belongs in its own results. */
 export function keepForBid(ctx: BidRelevance, c: Relatable): boolean {
-  if (ctx.ownName && c.name.trim().toLowerCase() === ctx.ownName) return false;
-  return !ctx.searchedFor || isRelevant(c, ctx.searchedFor);
+  return !(ctx.ownName && c.name.trim().toLowerCase() === ctx.ownName);
 }
 
 type StoredCounterparty = {
@@ -55,7 +58,8 @@ export async function loadRelevantCounterparties(txId: string): Promise<StoredCo
   const { data, error } = await supabase
     .from("counterparties")
     .select("name, sector, jurisdiction, rationale, shortlisted, score")
-    .eq("transaction_id", txId);
+    .eq("transaction_id", txId)
+    .order("score", { ascending: false, nullsFirst: false });
   if (error) throw error;
   const relevance = await loadBidRelevance(txId);
   return ((data ?? []) as unknown as StoredCounterparty[]).filter((c) => keepForBid(relevance, c));
