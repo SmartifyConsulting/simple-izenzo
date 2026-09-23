@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
+import { Badge } from "@/components/ui/badge";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { DocumentsTab } from "@/components/account/DocumentsTab";
 import { NotificationPreferences } from "@/components/account/NotificationPreferences";
@@ -25,7 +26,8 @@ export const Route = createFileRoute("/_authenticated/account/settings")({
 });
 
 function SettingsPage() {
-  const { profile, refresh } = useAuth();
+  const { profile, refresh, user } = useAuth();
+  const emailVerified = Boolean(user?.email_confirmed_at || profile?.email_verified_at);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -110,7 +112,18 @@ function SettingsPage() {
                   </div>
                 )}
                 <div className="space-y-1.5">
-                  <Label htmlFor="email">Email address</Label>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="email">Email address</Label>
+                    {emailVerified ? (
+                      <Badge variant="secondary" className="bg-success/15 text-success font-normal">
+                        Verified
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="font-normal text-muted-foreground">
+                        Not verified
+                      </Badge>
+                    )}
+                  </div>
                   <Input id="email" value={profile?.email ?? ""} disabled />
                   <p className="text-xs text-muted-foreground">
                     Your sign-in identity. Contact support to change.
