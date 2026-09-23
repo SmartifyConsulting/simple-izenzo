@@ -553,14 +553,9 @@ export function MapView({
 
         {/* After Seal Intent the Responder reviews The Offer: Approve, Reject or Challenge — the
             Counter Offer loop can go back and forth until agreement, which opens Without a Doubt. */}
-        {node("offer", "The Offer", "compliance", "wad", Tag, {
-          sub: "Approve · Reject · Challenge",
-          subTone: "muted",
-        })}
+        {node("offer", "The Offer", "compliance", "wad", Tag)}
         {node("counterOffer", "Counter Offer", "compliance", "wad", RefreshCw, {
           state: overrideStates?.["counterOffer"] ?? (lock("compliance", "wad") ? "locked" : "open"),
-          sub: "Challenge loop",
-          subTone: "muted",
         })}
         {node("withoutADoubt", "Without a Doubt", "compliance", "wad", ShieldCheck, {
           overrideKey: "wad",
