@@ -980,36 +980,37 @@ export const decideProposal = createServerFn({ method: "POST" })
         return d?.full_name || d?.email || "A person";
       };
       const stageContext = proposal.stage_context as StageContext;
-      const body = [
-        `IZENZO — AI+ DECISION AUDIT — ${STAGE_LABEL[stageContext]}`,
+      const lines = pack.flatMap((p, i) => [
         "",
-        ...pack
-          .map((p, i) => [
-            `${i + 1}. [${p.proposal_type ?? "option"}] ${p.output}`,
-            p.rationale ? `   Why AI+ recommended this: ${p.rationale}` : null,
-            Array.isArray(p.source_references) && p.source_references.length > 0
-              ? `   Based on: ${parseEvidenceRefs(p.source_references).map((e) => `${e.chain}${e.verified ? "" : " (not verified)"}`).join("; ")}`
-              : null,
-            p.probability != null ? `   Evidence confirmed: ${Math.round(Number(p.probability) * 100)}%` : null,
-            (() => {
-              const names = Array.isArray((p as { related_counterparties?: unknown }).related_counterparties)
-                ? ((p as { related_counterparties?: unknown }).related_counterparties as string[])
-                : p.related_counterparty
-                  ? [p.related_counterparty]
-                  : [];
-              return names.length > 0 ? `   Counterpart${names.length === 1 ? "y" : "ies"}: ${names.join(", ")}` : null;
-            })(),
-            `   Decision: ${(p.id === proposal.id ? data.decision : p.decision) ?? "—"} by ${nameOf(p.id === proposal.id ? userId : p.decided_by)} at ${p.id === proposal.id ? decidedAt : p.decided_at}`,
-          ].filter((line): line is string => Boolean(line)).join("\n")),
-      ].join("\n");
-      const path = `deals/${proposal.transaction_id}/${Date.now()}-ai-plus-audit-${stageContext}.txt`;
+        `${i + 1}. [${p.proposal_type ?? "option"}] ${p.output}`,
+        p.rationale ? `   Why AI+ recommended this: ${p.rationale}` : null,
+        Array.isArray(p.source_references) && p.source_references.length > 0
+          ? `   Based on: ${parseEvidenceRefs(p.source_references).map((e) => `${e.chain}${e.verified ? "" : " (not verified)"}`).join("; ")}`
+          : null,
+        p.probability != null ? `   Evidence confirmed: ${Math.round(Number(p.probability) * 100)}%` : null,
+        (() => {
+          const names = Array.isArray((p as { related_counterparties?: unknown }).related_counterparties)
+            ? ((p as { related_counterparties?: unknown }).related_counterparties as string[])
+            : p.related_counterparty
+              ? [p.related_counterparty]
+              : [];
+          return names.length > 0 ? `   Counterpart${names.length === 1 ? "y" : "ies"}: ${names.join(", ")}` : null;
+        })(),
+        `   Decision: ${(p.id === proposal.id ? data.decision : p.decision) ?? "—"} by ${nameOf(p.id === proposal.id ? userId : p.decided_by)} at ${p.id === proposal.id ? decidedAt : p.decided_at}`,
+      ].filter((line): line is string => line !== null));
+      const { buildBrandedCertificatePdf } = await import("@/lib/certificatePdf");
+      const bytes = await buildBrandedCertificatePdf({
+        heading: `AI+ Decision Audit — ${STAGE_LABEL[stageContext]}`,
+        lines,
+      });
+      const path = `deals/${proposal.transaction_id}/${Date.now()}-ai-plus-audit-${stageContext}.pdf`;
       const { error: upErr } = await supabase.storage
         .from("documents")
-        .upload(path, new Blob([body], { type: "text/plain" }));
+        .upload(path, bytes, { contentType: "application/pdf" });
       if (!upErr) {
         await supabase.from("documents").insert({
           transaction_id: proposal.transaction_id,
-          name: `AI+ Decisions — ${STAGE_LABEL[stageContext]} — ${tx?.title ?? ""}.txt`,
+          name: `AI+ Decisions — ${STAGE_LABEL[stageContext]} — ${tx?.title ?? ""}.pdf`,
           doc_type: "audit",
           notes: "AI+ decision audit",
           storage_path: path,

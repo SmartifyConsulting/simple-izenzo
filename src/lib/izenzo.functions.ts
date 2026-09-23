@@ -228,25 +228,25 @@ export const completeWad = createServerFn({ method: "POST" })
       .eq("id", tx.id);
 
     // File the clearance as a certificate against the deal, the same way Proof of Intent is —
-    // otherwise there was no filed record of the WaD case ever completing.
+    // otherwise there was no filed record of the WaD case ever completing. The step's own WaD
+    // panel files a fuller clearance certificate (with the checks satisfied) once its UI regains
+    // control; this one guarantees a filed record exists even if that never runs.
     if (cleared) {
-      const body = [
-        "IZENZO — WITHOUT A DOUBT (WAD)",
-        "",
-        `Transaction: ${tx.title}`,
-        `Decision: ${data.decision}`,
-        `Cleared: ${now}`,
-        "",
-        `Fingerprint: ${fingerprint}`,
-      ].join("\n");
-      const path = `deals/${tx.id}/${Date.now()}-wad-cleared.txt`;
+      const { buildBrandedCertificatePdf } = await import("@/lib/certificatePdf");
+      const lines = [`Transaction: ${tx.title}`, `Decision: ${data.decision}`, `Cleared: ${now}`];
+      const bytes = await buildBrandedCertificatePdf({
+        heading: "Without a Doubt (WAD)",
+        lines,
+        fingerprint,
+      });
+      const path = `deals/${tx.id}/${Date.now()}-wad-cleared.pdf`;
       const { error: upErr } = await supabase.storage
         .from("documents")
-        .upload(path, new Blob([body], { type: "text/plain" }));
+        .upload(path, bytes, { contentType: "application/pdf" });
       if (!upErr) {
         await supabase.from("documents").insert({
           transaction_id: tx.id,
-          name: `Without a Doubt (WAD) — Cleared — ${tx.title}.txt`,
+          name: `Without a Doubt (WAD) — Cleared — ${tx.title}.pdf`,
           doc_type: "certificate",
           notes: "Certificate",
           sha256: fingerprint,

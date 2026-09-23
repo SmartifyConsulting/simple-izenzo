@@ -32,6 +32,7 @@ import { routeIdentityVerification } from "@/lib/identityRouting";
 import { Logo } from "@/components/Logo";
 import { MutualEngagementPanel } from "@/components/engagement/MutualEngagementPanel";
 import { classifySignatureDocuments } from "@/lib/engagement.functions";
+import { buildBrandedCertificatePdf } from "@/lib/certificatePdf";
 import { CommoditySearch } from "@/components/CommoditySearch";
 import { COUNTRIES } from "@/lib/countries";
 import { UNITS } from "@/lib/units";
@@ -1254,25 +1255,27 @@ function IntentStep({ tx, reload }: Props) {
   });
 
   async function fileIntentCertificate(confirmedAt: string) {
-    const body = [
-      "IZENZO — CONFIRMATION OF INTENT",
-      "",
-      ...materialTerms.map((t) => `${t.label}: ${t.value}`),
-      `Counterparty: ${chosenParty?.name ?? "—"}`,
-      `Signed by: ${signer}`,
-      `Confirmed: ${confirmedAt}`,
-    ].join("\n");
-    const path = `deals/${tx.id}/${Date.now()}-confirmation-of-intent.txt`;
+    const bytes = await buildBrandedCertificatePdf({
+      heading: "Confirmation of Intent",
+      lines: [
+        ...materialTerms.map((t) => `${t.label}: ${t.value}`),
+        "",
+        `Counterparty: ${chosenParty?.name ?? "—"}`,
+        `Signed by: ${signer}`,
+        `Confirmed: ${confirmedAt}`,
+      ],
+    });
+    const path = `deals/${tx.id}/${Date.now()}-confirmation-of-intent.pdf`;
     const { error: upErr } = await supabase.storage
       .from("documents")
-      .upload(path, new Blob([body], { type: "text/plain" }));
+      .upload(path, bytes, { contentType: "application/pdf" });
     if (upErr) {
       toast.warning("Confirmed, but the certificate could not be filed against the deal.");
       return;
     }
     await supabase.from("documents").insert({
       transaction_id: tx.id,
-      name: `Confirmation of Intent — ${tx.title}.txt`,
+      name: `Confirmation of Intent — ${tx.title}.pdf`,
       doc_type: "certificate",
       notes: "Certificate",
       storage_path: path,
@@ -1282,20 +1285,18 @@ function IntentStep({ tx, reload }: Props) {
   /** Files the terms that were put to the chosen counterparty alongside the other deal documents,
    * once intent against them is confirmed — the proposal they viewed before any counter offer. */
   async function fileProposal() {
-    const body = [
-      "IZENZO — PROPOSAL",
-      "",
-      ...materialTerms.map((t) => `${t.label}: ${t.value}`),
-      `Counterparty: ${chosenParty?.name ?? "—"}`,
-    ].join("\n");
-    const path = `deals/${tx.id}/${Date.now()}-proposal.txt`;
+    const bytes = await buildBrandedCertificatePdf({
+      heading: "Proposal",
+      lines: [...materialTerms.map((t) => `${t.label}: ${t.value}`), "", `Counterparty: ${chosenParty?.name ?? "—"}`],
+    });
+    const path = `deals/${tx.id}/${Date.now()}-proposal.pdf`;
     const { error: upErr } = await supabase.storage
       .from("documents")
-      .upload(path, new Blob([body], { type: "text/plain" }));
+      .upload(path, bytes, { contentType: "application/pdf" });
     if (upErr) return;
     await supabase.from("documents").insert({
       transaction_id: tx.id,
-      name: `Proposal — ${chosenParty?.name ?? tx.title}.txt`,
+      name: `Proposal — ${chosenParty?.name ?? tx.title}.pdf`,
       doc_type: "proposal",
       notes: "Proposal",
       storage_path: path,
@@ -1556,22 +1557,19 @@ function PoiStep({ tx, reload }: Props) {
 
 
 
-  /** The certificate text — identical whether it is filed against the deal or downloaded. */
-  function certificateBody(sealedAt: string | null, hash: string | null) {
+  /** The certificate's field lines — identical whether it is filed against the deal or
+   * downloaded. */
+  function certificateLines(sealedAt: string | null): string[] {
     return [
-      "IZENZO — PROOF OF INTENT",
-      "",
       `Transaction: ${tx.title}`,
-      `Commodity:   ${tx.commodity ?? "—"}`,
-      `Quantity:    ${tx.quantity ?? "—"} ${tx.unit ?? ""}`,
-      `Price:       ${tx.price ?? "—"} ${tx.currency}`,
-      `Incoterms:   ${tx.incoterms ?? "—"}`,
-      `Jurisdiction:${tx.jurisdiction ?? "—"}`,
-      `Intent:      ${tx.intent_confirmed_at}`,
-      `Sealed:      ${sealedAt}`,
-      "",
-      `Fingerprint: ${hash}`,
-    ].join("\n");
+      `Commodity: ${tx.commodity ?? "—"}`,
+      `Quantity: ${tx.quantity ?? "—"} ${tx.unit ?? ""}`,
+      `Price: ${tx.price ?? "—"} ${tx.currency}`,
+      `Incoterms: ${tx.incoterms ?? "—"}`,
+      `Jurisdiction: ${tx.jurisdiction ?? "—"}`,
+      `Intent: ${tx.intent_confirmed_at}`,
+      `Sealed: ${sealedAt}`,
+    ];
   }
 
   async function doSeal() {
@@ -1590,12 +1588,16 @@ function PoiStep({ tx, reload }: Props) {
       // tx itself won't reflect the seal until reload() runs — the certificate shown right after
       // sealing needs the just-written values, not the stale prop.
       setSealedSnapshot(sealedTx ?? null);
-      const name = `Seal Intent — ${tx.title}.txt`;
-      const path = `deals/${tx.id}/${Date.now()}-proof-of-intent.txt`;
-      const body = certificateBody(sealedTx?.poi_sealed_at ?? null, sealedTx?.poi_hash ?? null);
+      const name = `Seal Intent — ${tx.title}.pdf`;
+      const path = `deals/${tx.id}/${Date.now()}-proof-of-intent.pdf`;
+      const bytes = await buildBrandedCertificatePdf({
+        heading: "Proof of Intent",
+        lines: certificateLines(sealedTx?.poi_sealed_at ?? null),
+        fingerprint: sealedTx?.poi_hash ?? null,
+      });
       const { error: upErr } = await supabase.storage
         .from("documents")
-        .upload(path, new Blob([body], { type: "text/plain" }));
+        .upload(path, bytes, { contentType: "application/pdf" });
       if (!upErr) {
         await supabase.from("documents").insert({
           transaction_id: tx.id,
@@ -1643,12 +1645,16 @@ function PoiStep({ tx, reload }: Props) {
     }
   }
 
-  function download() {
-    const body = certificateBody(tx.poi_sealed_at, tx.poi_hash);
-    const url = URL.createObjectURL(new Blob([body], { type: "text/plain" }));
+  async function download() {
+    const bytes = await buildBrandedCertificatePdf({
+      heading: "Proof of Intent",
+      lines: certificateLines(tx.poi_sealed_at),
+      fingerprint: tx.poi_hash,
+    });
+    const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/pdf" }));
     const a = document.createElement("a");
     a.href = url;
-    a.download = `izenzo-poi-${tx.id.slice(0, 8)}.txt`;
+    a.download = `izenzo-poi-${tx.id.slice(0, 8)}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -1691,7 +1697,7 @@ function PoiStep({ tx, reload }: Props) {
             <Button size="sm" variant="outline" className="gap-2" onClick={() => setCertOpen(true)}>
               <FileText className="h-3.5 w-3.5" /> View certificate
             </Button>
-            <Button size="sm" variant="outline" className="gap-2" onClick={download}>
+            <Button size="sm" variant="outline" className="gap-2" onClick={() => void download()}>
               <Download className="h-3.5 w-3.5" /> Download
             </Button>
           </div>
@@ -1848,19 +1854,18 @@ function WadStep({ tx, reload }: Props) {
 
   const allChecked = WAD_CHECKS.every((c) => checks[c.key]);
 
-  /** The clearance certificate text — identical whether filed against the deal or downloaded. */
-  function certificateBody(clearedAt: string | null, hash: string | null) {
+  /** The clearance certificate's field lines — identical whether filed against the deal or
+   * downloaded, and hashed as plain text before being laid out as a PDF. */
+  function certificateLines(clearedAt: string | null): string[] {
     return [
-      "IZENZO — WITHOUT A DOUBT CLEARANCE",
-      "",
-      `Transaction:  ${tx.title}`,
-      `Commodity:    ${tx.commodity ?? "—"}`,
-      `Quantity:     ${tx.quantity ?? "—"} ${tx.unit ?? ""}`,
-      `Price:        ${tx.price ?? "—"} ${tx.currency}`,
-      `Incoterms:    ${tx.incoterms ?? "—"}`,
+      `Transaction: ${tx.title}`,
+      `Commodity: ${tx.commodity ?? "—"}`,
+      `Quantity: ${tx.quantity ?? "—"} ${tx.unit ?? ""}`,
+      `Price: ${tx.price ?? "—"} ${tx.currency}`,
+      `Incoterms: ${tx.incoterms ?? "—"}`,
       `Jurisdiction: ${tx.jurisdiction ?? "—"}`,
       `Counterparty: ${chosenCp?.name ?? "—"}`,
-      `Cleared:      ${clearedAt}`,
+      `Cleared: ${clearedAt}`,
       "",
       "Checks satisfied:",
       ...WAD_CHECKS.map((c) => {
@@ -1869,12 +1874,8 @@ function WadStep({ tx, reload }: Props) {
         const detail = s ? `${s.text}; ` : "";
         return `  • ${c.label} — ${detail}cleared by reviewer override`;
       }),
-      "",
-      notes ? `Case notes: ${notes}` : "",
-      `Fingerprint: ${hash ?? "—"}`,
-    ]
-      .filter((l) => l !== "")
-      .join("\n");
+      ...(notes ? ["", `Case notes: ${notes}`] : []),
+    ];
   }
 
   async function fileCertificate() {
@@ -1884,20 +1885,24 @@ function WadStep({ tx, reload }: Props) {
       .eq("id", tx.id)
       .maybeSingle();
     const clearedAt = fresh?.wad_completed_at ?? new Date().toISOString();
-    const unhashed = certificateBody(clearedAt, null);
-    const hash = await sha256Hex(unhashed);
-    const body = certificateBody(clearedAt, hash);
-    const path = `deals/${tx.id}/${Date.now()}-without-a-doubt.txt`;
+    const lines = certificateLines(clearedAt);
+    const hash = await sha256Hex(lines.join("\n"));
+    const bytes = await buildBrandedCertificatePdf({
+      heading: "Without a Doubt — Clearance",
+      lines,
+      fingerprint: hash,
+    });
+    const path = `deals/${tx.id}/${Date.now()}-without-a-doubt.pdf`;
     const { error: upErr } = await supabase.storage
       .from("documents")
-      .upload(path, new Blob([body], { type: "text/plain" }));
+      .upload(path, bytes, { contentType: "application/pdf" });
     if (upErr) {
       toast.warning("Cleared, but the certificate could not be filed against the deal.");
       return;
     }
     await supabase.from("documents").insert({
       transaction_id: tx.id,
-      name: `Without a Doubt — ${tx.title}.txt`,
+      name: `Without a Doubt — ${tx.title}.pdf`,
       doc_type: "certificate",
       notes: "Certificate",
       sha256: hash,
