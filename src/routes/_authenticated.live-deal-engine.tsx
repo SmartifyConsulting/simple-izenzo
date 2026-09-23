@@ -19,6 +19,8 @@ import {
   Paperclip,
   Ban,
   X as XIcon,
+  StopCircle,
+  Pencil,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import {
@@ -311,6 +313,11 @@ function LiveDealEngine() {
   // searched for and let the person refine it instead of implying a search is still running.
   const [noMatchesTx, setNoMatchesTx] = useState<string | null>(null);
   const [refining, setRefining] = useState(false);
+  // Stop/Edit while the search is still running, on the slim progress bar itself — the Search
+  // Results accordion below stays hidden until there's something to show, so these are the only
+  // controls available in the meantime.
+  const [topEditingSearch, setTopEditingSearch] = useState(false);
+  const [topEditedPrompt, setTopEditedPrompt] = useState("");
   const [screening, setScreening] = useState(false);
   const [screeningResults, setScreeningResults] = useState<ScreeningResult[] | null>(null);
   const [mediaRunning, setMediaRunning] = useState(false);
@@ -2550,11 +2557,62 @@ function LiveDealEngine() {
           {activity && dealTx && flowStep === "searching" && (
             <div className="mt-1.5 overflow-hidden rounded-xl border border-border">
               <div className="flex items-center gap-3 bg-[#F1F5F9] px-4 py-3">
-                <p className="text-xs text-foreground">Searching using AI for matching counterparties…</p>
-                {interestCount === 0 ? (
-                  <span className="ml-auto text-[11px] text-muted-foreground">Finding counterparties…</span>
-                ) : null}
+                <p className="text-xs text-slate-700">Searching using AI for matching counterparties…</p>
+                <div className="ml-auto flex shrink-0 items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={stopSearch}
+                    title="Stop watching this search — it keeps running and will still save whatever it finds"
+                    className="flex items-center gap-1 rounded p-1 text-[11px] font-medium text-slate-500 hover:bg-slate-200 hover:text-slate-800"
+                  >
+                    <StopCircle className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Stop</span>
+                  </button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 gap-1 border-slate-300 bg-white text-xs font-medium text-slate-800 hover:bg-slate-100"
+                    onClick={() => {
+                      setTopEditedPrompt(
+                        (dealTx as unknown as { search_prompt?: string | null }).search_prompt ?? "",
+                      );
+                      setTopEditingSearch(true);
+                    }}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Edit Search
+                  </Button>
+                </div>
               </div>
+
+              {topEditingSearch && (
+                <div className="space-y-1.5 border-t border-border bg-white p-2.5">
+                  <Textarea
+                    rows={2}
+                    value={topEditedPrompt}
+                    onChange={(e) => setTopEditedPrompt(e.target.value)}
+                    autoFocus
+                    className="min-h-0 resize-none text-sm"
+                  />
+                  <div className="flex gap-1.5">
+                    <Button
+                      size="sm"
+                      className="flex-1"
+                      disabled={topEditedPrompt.trim().length === 0 || refining}
+                      onClick={() => {
+                        setTopEditingSearch(false);
+                        void refineSearch(dealTx.id, topEditedPrompt.trim());
+                      }}
+                    >
+                      Search
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setTopEditingSearch(false)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               <div className="h-1.5 w-full animate-ribbon-sweep" />
             </div>
@@ -2588,8 +2646,10 @@ function LiveDealEngine() {
 
                 {/* The search record stays on the page for the rest of the deal — folded once the
                     flow has moved on, but never removed. Which step the workspace happens to be
-                    asking about no longer decides whether it exists. */}
-                {dealTx && (flowStep === "searching" || flowStep === "results" || interestCount > 0) && (
+                    asking about no longer decides whether it exists. Hidden while still searching —
+                    the slim progress bar above is the only thing shown until there's something to
+                    open this frame for. */}
+                {dealTx && (flowStep === "results" || interestCount > 0) && (
                   <div className="rounded-2xl border border-border bg-card">
                     <button
                       type="button"

@@ -155,6 +155,8 @@ async function understand(input: PipelineInput): Promise<BriefCore> {
     "First understand the transaction itself: what is being bought, sold or procured, how much, on what terms, and where. " +
     "Then determine the required counterparty: their role, the kinds of organisation that would fit, the capabilities they must have, the sectors and places that matter, the hard requirements, and what would rule an organisation out. " +
     "Then write 3 to 5 web search queries that would find real organisations like that. " +
+    "If the person's own typed text or documents name a specific organisation (not a product, standard or generic term), " +
+    "always include that exact name on its own as one of the queries, so a named target is actually looked up rather than only paraphrased into generic capability terms. " +
     "The counterparty must be on the OPPOSITE side of the trade from this person: if the person is SELLING, the counterparty is a BUYER, importer, off-taker, refiner, processor, manufacturer or trader who takes delivery; if the person is BUYING, the counterparty is a SUPPLIER. " +
     "Organisations on the SAME side as the person (other sellers of the same product when the person sells; other buyers when the person buys) are competitors, not counterparties — list what would identify them in exclude. " +
     "The person's own quantity, price and delivery terms are requirements to match against; they are never facts about any organisation. " +

@@ -1527,18 +1527,20 @@ export function CounterpartyRecord({
               back empty. A single 45%-match candidate is as much "this needs a better search" as
               zero candidates is. */}
           {onSearchAgain && !screeningDone && !continued && !editingSearch && (
-            <button
+            <Button
               type="button"
+              size="sm"
+              variant="outline"
               onClick={() => {
                 setEditedPrompt(searchPrompt ?? "");
                 setEditingSearch(true);
               }}
               title="Edit the search and try again"
-              className="flex items-center gap-1 rounded p-1 text-[11px] font-medium text-slate-500 hover:bg-slate-200 hover:text-slate-800"
+              className="h-7 gap-1 border-slate-300 bg-white text-xs font-medium text-slate-800 hover:bg-slate-100"
             >
               <Pencil className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Edit Search</span>
-            </button>
+            </Button>
           )}
           {CHALLENGES_FEATURE_ENABLED && txId && (
             <>
@@ -1822,7 +1824,7 @@ export function CounterpartyRecord({
             disabled={ticked.length === 0}
             onClick={() => onContinue(ticked)}
           >
-            Select Counterparty(ies) to continue
+            Select to continue
           </Button>
         )
       )}
