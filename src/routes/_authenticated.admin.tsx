@@ -326,6 +326,7 @@ function UsersTab() {
         orgNames={profileId ? (orgNamesByUser.get(profileId) ?? []) : []}
         isAdmin={profileId ? adminIds.has(profileId) : false}
         onClose={() => setProfileId(null)}
+        onSaved={() => qc.invalidateQueries({ queryKey: ["admin-users"] })}
       />
     </div>
   );
@@ -333,19 +334,53 @@ function UsersTab() {
 
 /** The full profile behind one row in the Users list — everything the row itself only had space
  * to summarise (name and org), plus what it had no room for at all (contact number, verification
- * status, sign-in count, terms acceptance). Read-only: changes to a user's own details are made by
- * the user, not overridden here. */
+ * status, sign-in count, terms acceptance). Name is editable — bad data (an email address that
+ * ended up in the name field from an old signup path, for instance) has otherwise had no way to
+ * get fixed short of the affected person doing it themselves. Everything else here stays read-only,
+ * including email, which is the person's own sign-in identity. */
 function UserProfileDialog({
   user,
   orgNames,
   isAdmin,
   onClose,
+  onSaved,
 }: {
   user: ProfileRow | null;
   orgNames: string[];
   isAdmin: boolean;
   onClose: () => void;
+  onSaved: () => void;
 }) {
+  const [fullName, setFullName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setFullName(user?.full_name ?? "");
+    setLastName(user?.last_name ?? "");
+  }, [user?.id, user?.full_name, user?.last_name]);
+
+  async function save() {
+    if (!user) return;
+    setBusy(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ full_name: fullName.trim() || null, last_name: lastName.trim() || null })
+        .eq("id", user.id);
+      if (error) throw error;
+      toast.success("Profile updated");
+      onSaved();
+      onClose();
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const changed = user !== null && (fullName !== (user.full_name ?? "") || lastName !== (user.last_name ?? ""));
+
   return (
     <Dialog open={user !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
@@ -357,10 +392,22 @@ function UserProfileDialog({
                 {[user.email, orgNames.join(", ") || "No organisation"].filter(Boolean).join(" · ")}
               </DialogDescription>
             </DialogHeader>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="admin-user-full-name" className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Full name
+                </Label>
+                <Input id="admin-user-full-name" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="admin-user-last-name" className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Last name
+                </Label>
+                <Input id="admin-user-last-name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+              </div>
+            </div>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
               {[
-                ["First name", user.full_name ?? "—"],
-                ["Last name", user.last_name ?? "—"],
                 ["Email", user.email ?? "—"],
                 ["Contact number", user.contact_number ?? "—"],
                 ["Seat", user.seat ?? "—"],
@@ -378,6 +425,14 @@ function UserProfileDialog({
                 </div>
               ))}
             </dl>
+            <div className="flex justify-end gap-2 border-t border-border pt-3">
+              <Button size="sm" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button size="sm" disabled={!changed || busy} onClick={() => void save()}>
+                {busy ? "Saving…" : "Save changes"}
+              </Button>
+            </div>
           </>
         )}
       </DialogContent>

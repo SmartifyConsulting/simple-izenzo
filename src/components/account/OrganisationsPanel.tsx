@@ -181,7 +181,7 @@ export function OrganisationsPanel() {
   async function makeActive(orgId: string) {
     try {
       await switchOrg(orgId);
-      toast.success("Active organisation switched");
+      toast.success("Primary organisation switched");
     } catch (err) {
       toast.error((err as Error).message);
     }
@@ -267,7 +267,7 @@ export function OrganisationsPanel() {
                       <p className="truncate text-sm font-semibold">{o.name}</p>
                       {org?.id === o.id && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[11px] font-medium text-success">
-                          <Check className="h-3 w-3" /> Active
+                          <Check className="h-3 w-3" /> Primary
                         </span>
                       )}
                     </div>
@@ -313,7 +313,7 @@ export function OrganisationsPanel() {
                 <div className="flex shrink-0 gap-2">
                   {org?.id !== o.id && (
                     <Button size="sm" variant="outline" onClick={() => makeActive(o.id)}>
-                      Set active
+                      Set Primary
                     </Button>
                   )}
                   <Button size="sm" variant="ghost" onClick={() => startEdit(o)}>
