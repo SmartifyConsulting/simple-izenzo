@@ -1982,6 +1982,8 @@ function WadStep({ tx, reload }: Props) {
     );
   }
 
+  const counterpartyRegistered = Boolean(tx.counterparty_org_id);
+
   return (
     <div className="space-y-6">
     <Panel
@@ -1996,8 +1998,13 @@ function WadStep({ tx, reload }: Props) {
             <Button size="sm" variant="outline" disabled={busy || shortOnTokens} onClick={() => decide("blocked")}>
               Block
             </Button>
-            <Button size="sm" disabled={busy || shortOnTokens} onClick={() => decide("cleared")}>
-              Complete Verification
+            <Button
+              size="sm"
+              disabled={busy || shortOnTokens || !counterpartyRegistered}
+              title={counterpartyRegistered ? undefined : "The counterparty has to register on Izenzo before verification can run."}
+              onClick={() => decide("cleared")}
+            >
+              Run Verification
             </Button>
           </div>
         </div>
@@ -2007,6 +2014,12 @@ function WadStep({ tx, reload }: Props) {
         <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
           <Lock className="h-3.5 w-3.5" /> Not enough tokens — this needs {WAD_COST} and the
           organisation has {org?.credits ?? 0}.
+        </div>
+      )}
+      {!counterpartyRegistered && (
+        <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
+          <Lock className="h-3.5 w-3.5" /> {chosenCp?.name ?? "The counterparty"} has not registered
+          on Izenzo yet. Run Verification unlocks once they have.
         </div>
       )}
       {flagged && (

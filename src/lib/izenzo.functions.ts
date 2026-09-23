@@ -255,6 +255,17 @@ export const completeWad = createServerFn({ method: "POST" })
       }
     }
 
+    // A "blocked" WaD decision flags the chosen counterparty itself, not just this one deal — so
+    // if the same company surfaces again in a future search, it's recognisable as one already
+    // blocked rather than re-vetted from a clean slate.
+    if (data.decision === "blocked") {
+      await supabase
+        .from("counterparties")
+        .update({ status: "blocked" })
+        .eq("transaction_id", tx.id)
+        .eq("status", "chosen");
+    }
+
     await supabase.from("transaction_events").insert({
       transaction_id: tx.id,
       actor_id: userId,
@@ -859,11 +870,32 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       // Absent verification data simply scores zero for that component.
     }
 
+    // Names this org has blocked before, on any past deal — so a company that resurfaces here is
+    // recognisable as one already rejected, not re-vetted from a clean slate.
+    const blockedNameKeys = new Map<string, string | null>();
+    try {
+      const { data: orgTxIds } = await supabase.from("transactions").select("id, reference").eq("org_id", tx.org_id);
+      const refById = new Map((orgTxIds ?? []).map((t) => [t.id as string, t.reference as string | null]));
+      if (orgTxIds && orgTxIds.length > 0) {
+        const { data: blocked } = await supabase
+          .from("counterparties")
+          .select("name, transaction_id")
+          .eq("status", "blocked")
+          .in("transaction_id", orgTxIds.map((t) => t.id));
+        for (const b of blocked ?? []) {
+          blockedNameKeys.set(nameKey(b.name as string), refById.get(b.transaction_id as string) ?? null);
+        }
+      }
+    } catch {
+      // Best-effort only — a lookup failure should never block the search itself.
+    }
+
     const scoreRegion = data.region ?? tx.jurisdiction ?? null;
     const rows = candidates.map((c) => {
       const key = nameKey(c.name) || c.name.toLowerCase();
       const isLocal = localKeys.has(key);
       const localEmail = localEmails.get(key) ?? null;
+      const blockedRef = blockedNameKeys.get(key);
       const scored = scoreCandidate(c, {
         subject,
         region: scoreRegion,
@@ -880,6 +912,7 @@ export const searchCounterparties = createServerFn({ method: "POST" })
         source: isLocal ? "platform_registry" : source,
         rationale: c.rationale ?? null,
         status: "surfaced",
+        ...(blockedRef !== undefined ? { rating_override: "flagged" as const } : {}),
         // A local match already has its own recorded email/website — no need to wait for the
         // shortlist-time enrichment lookup that web-found candidates still rely on.
         ...(localEmail ? { contact_email: localEmail, website: c.sourceUrl ?? null } : {}),
@@ -891,6 +924,18 @@ export const searchCounterparties = createServerFn({ method: "POST" })
             : c.sourceUrl
               ? { evidence: [{ url: c.sourceUrl, source: "web_search", ...(c.evidence ? { note: c.evidence } : {}) }] }
               : {}),
+          ...(blockedRef !== undefined
+            ? {
+                compliance: {
+                  flags: [
+                    {
+                      reason: `Previously blocked by your organisation${blockedRef ? ` on ${blockedRef}` : ""}.`,
+                      url: null,
+                    },
+                  ],
+                },
+              }
+            : {}),
           scoring: { total: scored.total, components: scored.components },
         },
       };
