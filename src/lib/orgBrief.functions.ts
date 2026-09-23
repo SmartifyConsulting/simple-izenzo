@@ -54,10 +54,8 @@ export const generateOrgBrief = createServerFn({ method: "POST" })
       .filter(Boolean)
       .join("\n");
 
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const { callAiChat } = await import("@/lib/lovableAi.server");
+    const res = await callAiChat(apiKey, {
         model: "gpt-5-mini",
         messages: [
           {
@@ -67,7 +65,6 @@ export const generateOrgBrief = createServerFn({ method: "POST" })
           },
           { role: "user", content: facts },
         ],
-      }),
     });
     if (res.status === 429) {
       const body = await res.text().catch(() => "");

@@ -127,3 +127,23 @@ export async function lovableAiFailureMessage(res: Response): Promise<string> {
   }
   return providerMessage || "The AI request failed. Please try again later.";
 }
+
+/** The one place every AI request in the app goes through: the built-in service while it is
+ * available, otherwise the saved OpenAI account. Callers pass an ordinary OpenAI-style request and
+ * get an ordinary reply back, so nothing else has to know which service answered. */
+export async function callAiChat(
+  apiKey: string,
+  body: unknown,
+  opts: { retries?: number } = {},
+): Promise<Response> {
+  if (lovableAiConfigured()) return callLovableAiChat(body, opts);
+  const { callOpenAiChat } = await import("@/lib/openaiCall.server");
+  return callOpenAiChat(apiKey, body, opts);
+}
+
+/** Plain wording for a failed request, naming whichever service actually refused it. */
+export async function aiChatFailureMessage(res: Response): Promise<string> {
+  if (isLovableAiResponse(res)) return lovableAiFailureMessage(res);
+  const { openAiFailureMessage } = await import("@/lib/openaiCall.server");
+  return openAiFailureMessage(res);
+}
