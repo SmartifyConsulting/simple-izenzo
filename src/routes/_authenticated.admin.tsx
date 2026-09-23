@@ -268,7 +268,21 @@ function UsersTab() {
             return (
               <li key={u.id} className="space-y-2 p-4 text-sm sm:space-y-0 sm:grid sm:grid-cols-5 sm:items-center sm:gap-x-4">
                 <div className="min-w-0">
-                  <p className="truncate font-medium">{u.full_name ?? u.email}</p>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <p className="truncate font-medium">{u.full_name ?? u.email}</p>
+                    {(() => {
+                      const primary = u.org_id ? orgs.find((o) => o.id === u.org_id) : undefined;
+                      const credits = primary?.credits ?? 0;
+                      return (
+                        <span
+                          title={primary ? `${primary.name} token balance` : "No organisation"}
+                          className="shrink-0 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-foreground"
+                        >
+                          {credits.toLocaleString()} token{credits === 1 ? "" : "s"}
+                        </span>
+                      );
+                    })()}
+                  </div>
                   <p className="truncate text-xs text-muted-foreground">{u.email}</p>
                 </div>
                 <p
