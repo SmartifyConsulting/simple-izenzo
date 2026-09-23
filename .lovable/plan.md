@@ -28,12 +28,14 @@ Tabs become something your account remembers, not something the browser guesses.
 ## Part 2 — Searching works again, temporarily on Lovable's AI
 
 The OpenAI account attached to the app has no credit left, so every search and document
-read is refused. Until credit is added there, Find Counterparties switches back to
-Lovable's built-in AI so searching works today.
+read is refused. Until credit is added there, searching switches back to Lovable's
+built-in AI so it works today.
 
 - Find Counterparties (the normal search) moves to Lovable's built-in AI now.
-- AI+ Search stays on the OpenAI account for now and moves across in a second step,
-  once the normal search is confirmed working.
+- AI+ Search moves across in a second step, once the normal search is confirmed working.
+- On the model for AI+: Sonnet (Anthropic) is not one of the models Lovable's built-in
+  AI offers, so it cannot be selected. AI+ will use the strongest available model at
+  medium reasoning depth, which is the closest match to what you asked for.
 - This is a temporary arrangement and reversible: the saved OpenAI credential stays in
   place, and switching back is a single change once that account has credit.
 - Worth knowing: while this is in force, AI usage draws on your Lovable credits rather
@@ -57,9 +59,10 @@ Tabs
 Search provider
 - `src/lib/izenzo.functions.ts` / `src/lib/counterpartyPipeline.server.ts`: the AI
   provider becomes a single switch rather than a hardcoded OpenAI call. The `ai` search
-  path routes to the Lovable AI Gateway (`openai/gpt-6-astra` with reasoning, streamed,
-  `LOVABLE_API_KEY` server-side only); the `ai_plus` path keeps its current OpenAI call
-  until the follow-up step.
+  path routes to the Lovable AI Gateway Responses API with `openai/gpt-6-astra`,
+  reasoning on and streamed, `LOVABLE_API_KEY` server-side only.
+- Step two moves the `ai_plus` path the same way, with reasoning effort `medium`
+  (Anthropic Sonnet is not available on the gateway).
 - Web page fetching stays on Tavily, which is unaffected — only the reading and scoring
   of those pages changes provider.
 - Failure wording keeps both cases distinct: no credit on the OpenAI account, and the
