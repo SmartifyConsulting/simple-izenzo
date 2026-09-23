@@ -44,13 +44,34 @@ function InboxPage() {
     queryKey: ["notifications", org?.id],
     enabled: Boolean(org?.id),
     queryFn: async () => {
+      // Scoped to the organisation actually being viewed — without this, RLS alone decides what
+      // comes back, and an account that belongs to more than one organisation (a bidder account
+      // that's also a member of a counterparty org, say) saw every one of those orgs' notifications
+      // combined into a single list: a "Smartify has been emailed" row addressed to the bidder
+      // sitting right next to a "you've been matched" row addressed to Smartify itself, as if one
+      // company had received both.
       const { data, error } = await supabase
         .from("notifications")
         .select("id, title, body, read, created_at, transaction_id")
+        .eq("org_id", org!.id)
         .order("created_at", { ascending: false })
         .limit(50);
       if (error) throw error;
       return (data ?? []) as NotificationRow[];
+    },
+  });
+
+  // The Bid/Offer reference (e.g. "BID1655539"), so it can be shown as a clickable link on each
+  // notification instead of a separate "Open" button — fetched separately from `notifications`
+  // itself since there's no declared foreign-key relationship to embed it on that select.
+  const txIds = [...new Set(notifications.map((n) => n.transaction_id).filter((id): id is string => Boolean(id)))];
+  const { data: referenceById = {} } = useQuery({
+    queryKey: ["notification-tx-references", txIds.join(",")],
+    enabled: txIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("transactions").select("id, reference").in("id", txIds);
+      if (error) throw error;
+      return Object.fromEntries((data ?? []).map((t) => [t.id, t.reference as string | null]));
     },
   });
 
@@ -81,7 +102,9 @@ function InboxPage() {
             Notifications
           </p>
           <ul className="divide-y divide-border">
-            {notifications.map((n) => (
+            {notifications.map((n) => {
+              const reference = n.transaction_id ? referenceById[n.transaction_id] : null;
+              return (
               <li
                 key={n.id}
                 className={cn(
@@ -89,24 +112,37 @@ function InboxPage() {
                   !n.read && "bg-primary/5",
                 )}
               >
-                <div className="min-w-0">
-                  <p className={cn("text-sm", n.read ? "font-medium" : "font-semibold")}>
-                    {n.title}
-                  </p>
-                  {n.body && <p className="mt-0.5 text-xs text-muted-foreground">{n.body}</p>}
-                  <p className="mt-0.5 text-xs text-muted-foreground">{when(n.created_at)}</p>
+                <div className="flex min-w-0 items-start gap-2">
+                  {/* A plain dot instead of a "New" badge — the word next to a title that already
+                      says what happened read as a second, confusing label rather than a status. */}
+                  <span
+                    aria-label={n.read ? undefined : "Unread"}
+                    className={cn(
+                      "mt-1.5 h-2 w-2 shrink-0 rounded-full",
+                      n.read ? "bg-transparent" : "bg-foreground",
+                    )}
+                  />
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {reference && n.transaction_id && (
+                        <Link
+                          to="/live-deal-engine"
+                          search={{ tx: n.transaction_id }}
+                          onClick={() => void markRead(n.id)}
+                          className="shrink-0 font-mono text-xs font-bold text-primary underline-offset-2 hover:underline"
+                        >
+                          {reference}
+                        </Link>
+                      )}
+                      <p className={cn("text-sm", n.read ? "font-medium" : "font-semibold")}>
+                        {n.title}
+                      </p>
+                    </div>
+                    {n.body && <p className="mt-0.5 text-xs text-muted-foreground">{n.body}</p>}
+                    <p className="mt-0.5 text-xs text-muted-foreground">{when(n.created_at)}</p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {!n.read && <Badge className="font-normal">New</Badge>}
-                  {n.transaction_id && (
-                    <Link
-                      to="/live-deal-engine"
-                      search={{ tx: n.transaction_id }}
-                      onClick={() => void markRead(n.id)}
-                    >
-                      <Button size="sm">Open</Button>
-                    </Link>
-                  )}
                   {!n.read && (
                     <Button size="sm" variant="outline" onClick={() => void markRead(n.id)}>
                       Mark read
@@ -114,7 +150,8 @@ function InboxPage() {
                   )}
                 </div>
               </li>
-            ))}
+              );
+            })}
           </ul>
         </div>
       )}
