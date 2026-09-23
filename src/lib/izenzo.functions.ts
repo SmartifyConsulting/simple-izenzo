@@ -33,14 +33,25 @@ function aiPlusOptions(model: string, kind: "ai" | "ai_plus" = "ai_plus") {
   };
 }
 
-/** Sends one search request to the OpenAI account saved under Admin → Integrations. The ordinary
- * counterparty search runs on that account; AI+ runs on the built-in model (see
- * counterpartyPipeline.server.ts and decisionPack.functions.ts). Transient request limits are
- * retried and failures are worded plainly. */
-async function chatCompletion(apiKey: string, body: unknown): Promise<Response> {
-  const { callOpenAiChat } = await import("@/lib/openaiCall.server");
-  return callOpenAiChat(apiKey, body);
+/** Sends one search request. It uses the OpenAI account saved under Admin → Integrations when one
+ * is saved, and falls back to the built-in AI service when it is not, so a missing OpenAI key never
+ * dead-ends a search. Transient request limits are retried and failures are worded plainly. */
+async function chatCompletion(apiKey: string | null, body: unknown): Promise<Response> {
+  if (apiKey) {
+    const { callOpenAiChat } = await import("@/lib/openaiCall.server");
+    return callOpenAiChat(apiKey, body);
+  }
+  const { callLovableAiChat } = await import("@/lib/lovableAi.server");
+  return callLovableAiChat(body, { retries: 2 });
 }
+
+/** True when at least one AI service can answer: a saved OpenAI key, or the built-in service. */
+async function aiAvailable(apiKey: string | null): Promise<boolean> {
+  if (apiKey) return true;
+  const { lovableAiConfigured } = await import("@/lib/lovableAi.server");
+  return lovableAiConfigured();
+}
+
 
 
 async function aiFailureMessage(res: Response): Promise<string> {
@@ -359,7 +370,8 @@ const webModelsFor = (_kind: "ai" | "ai_plus") => [AI_MODEL, "gpt-5"];
 /** Finds real organisations on the live web with OpenAI's web search. A failure is returned, not
  * thrown, so the caller can still fall back to the published directory. */
 async function findOnWeb(
-  apiKey: string,
+  apiKey: string | null,
+
   kind: "ai" | "ai_plus",
   instructions: string,
   input: string,
@@ -413,9 +425,23 @@ async function findOnWeb(
       };
     }
   }
+  if (!apiKey) {
+    // Without a saved OpenAI key there is no internet search of its own to fall back on — the
+    // reasoning still ran on the built-in service above, so report only the missing search.
+    const reason =
+      "Internet search is unavailable: connect Tavily, or add an OpenAI key in Admin → Integrations.";
+    return {
+      output: "",
+      model: AI_MODEL,
+      sources: [] as { label: string; url: string }[],
+      failures: [{ label: "Internet search", reason }],
+      webError: new Error(reason) as Error | null,
+    };
+  }
   try {
     const r = await webSearch({
       apiKey,
+
       instructions,
       input,
       models: webModelsFor(kind),
@@ -620,7 +646,9 @@ export const searchCounterparties = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { loadOpenAiApiKey } = await import("@/lib/openai.server");
     const apiKey = await loadOpenAiApiKey();
-    if (!apiKey) throw new Error("OpenAI is not configured. Add and enable it in Admin → Integrations.");
+    if (!(await aiAvailable(apiKey)))
+      throw new Error("No AI service is available. Add and enable OpenAI in Admin → Integrations.");
+
 
     const { data: tx } = await supabase
       .from("transactions")
@@ -988,7 +1016,9 @@ export const discoverCounterpartiesByQuery = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { loadOpenAiApiKey } = await import("@/lib/openai.server");
     const apiKey = await loadOpenAiApiKey();
-    if (!apiKey) throw new Error("OpenAI is not configured. Add and enable it in Admin → Integrations.");
+    if (!(await aiAvailable(apiKey)))
+      throw new Error("No AI service is available. Add and enable OpenAI in Admin → Integrations.");
+
 
     const counterpart = data.role === "buyer" ? "suppliers/sellers" : "buyers";
     const system =
@@ -1093,7 +1123,9 @@ export const runAiProposal = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { loadOpenAiApiKey } = await import("@/lib/openai.server");
     const apiKey = await loadOpenAiApiKey();
-    if (!apiKey) throw new Error("OpenAI is not configured. Add and enable it in Admin → Integrations.");
+    if (!(await aiAvailable(apiKey)))
+      throw new Error("No AI service is available. Add and enable OpenAI in Admin → Integrations.");
+
 
     const { data: tx } = await supabase
       .from("transactions")

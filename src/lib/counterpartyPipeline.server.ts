@@ -39,7 +39,7 @@ export type PipelineCandidate = {
 };
 
 export type PipelineInput = {
-  apiKey: string;
+  apiKey: string | null;
   kind: "ai" | "ai_plus";
   chatModel: string;
   webModels: string[];
@@ -84,7 +84,8 @@ const list = (v: unknown, max = 8): string[] =>
  * Which service answers depends on the search: the ordinary search runs on the OpenAI account saved
  * under Admin → Integrations, and AI+ runs on the built-in model. */
 async function chatJson(
-  apiKey: string,
+  apiKey: string | null,
+
   model: string,
   effort: "low" | "medium" | "high",
   system: string,
@@ -103,10 +104,11 @@ async function chatJson(
       { role: "user", content: user },
     ],
   };
-  const useLovable = kind === "ai_plus" && lovableAiConfigured();
+  const useLovable = (kind === "ai_plus" || !apiKey) && lovableAiConfigured();
   const res = useLovable
     ? await callLovableAiChat(request, { retries: 2 })
-    : await callOpenAiChat(apiKey, request, { retries: 2 });
+    : await callOpenAiChat(apiKey ?? "", request, { retries: 2 });
+
   if (!res.ok) throw new Error(useLovable ? await lovableAiFailureMessage(res) : await openAiFailureMessage(res));
 
   const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
@@ -245,8 +247,14 @@ const SIDE_AND_PROVENANCE_RULES =
 /** Step 3 through OpenAI's own web search, which also names the organisations it found. */
 async function searchWithOpenAi(input: PipelineInput, briefText: string, maxOrgs: number) {
   const { webSearch } = await import("@/lib/openaiWebSearch.server");
+  if (!input.apiKey) {
+    throw new Error(
+      "Internet search is unavailable: connect Tavily, or add an OpenAI key in Admin → Integrations.",
+    );
+  }
   return webSearch({
     apiKey: input.apiKey,
+
     models: input.webModels,
     effort: input.kind === "ai" ? "low" : "medium",
     instructions:
