@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { routeIdentityVerification } from "@/lib/identityRouting";
 import { Logo } from "@/components/Logo";
+import { MutualEngagementPanel } from "@/components/engagement/MutualEngagementPanel";
 import { CommoditySearch } from "@/components/CommoditySearch";
 import { COUNTRIES } from "@/lib/countries";
 import { UNITS } from "@/lib/units";
