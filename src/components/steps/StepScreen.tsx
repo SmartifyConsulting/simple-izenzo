@@ -2158,7 +2158,7 @@ function WadStep({ tx, reload, onContinue }: Props) {
         transactionId={tx.id}
         checks={["id_document", "kyb"]}
         title="Verify each other"
-        description="Each side runs the other's identity (KYC) and company (KYB) check via Didit. Without a Doubt clears itself the moment both come back verified."
+        description="You and the counterparty each complete your own identity (KYC) and company (KYB) verification through Didit — no one needs the other party's documents. Both results post here on the deal, so you're each looking at the same assurance. Without a Doubt clears itself the moment both come back verified."
       />
 
       {priorChecks.length > 0 && (
