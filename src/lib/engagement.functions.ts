@@ -57,6 +57,10 @@ function isCleared(row: DiligenceRow | undefined) {
   return Boolean(row && SETTLED.includes(row.kyc_state) && SETTLED.includes(row.kyb_state));
 }
 
+function sideWord(side: Side | "observer") {
+  return side === "bidder" ? "the bidder" : side === "counterparty" ? "the counterparty" : "an observer";
+}
+
 /** Which side of this deal the caller is on — refuses anyone who is on neither. */
 async function sideOf(
   supabase: any,
@@ -829,4 +833,73 @@ export const signDocument = createServerFn({ method: "POST" })
     }
 
     return { bothSigned };
+  });
+
+/** Records a legal agreement either side attached (the file itself is already uploaded to storage
+ * by the caller, using their own session) and tells the other party it's there — both sides see
+ * everything added by either of them, and both are notified per their own preferences, the same
+ * as every other notification in the app. Always requires both signatures: everything filed in
+ * this step is a legal agreement by virtue of being filed here, not something picked from a list
+ * of document types first. */
+export const attachLegalDocument = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        transactionId: z.string().uuid(),
+        name: z.string().trim().min(1).max(200),
+        storagePath: z.string().trim().min(1),
+        sha256: z.string().trim().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { side, tx, myName } = await sideOf(supabase, userId, data.transactionId);
+
+    const { data: row, error } = await supabase
+      .from("documents")
+      .insert({
+        transaction_id: data.transactionId,
+        name: data.name,
+        doc_type: "other",
+        notes: "Legal Agreement",
+        version: 1,
+        sha256: data.sha256 ?? null,
+        storage_path: data.storagePath,
+        requires_signature: true,
+      } as never)
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+
+    await supabase.from("transaction_events").insert({
+      transaction_id: data.transactionId,
+      actor_id: userId,
+      stage: "execution",
+      step: "business-docs",
+      action: "document_attached",
+      summary: `${myName ?? sideWord(side)} attached ${data.name} — awaiting both signatures`,
+      payload: { document_id: (row as { id: string }).id, side, name: data.name },
+    });
+
+    // Tell whichever side didn't attach it — they have something new to see and sign.
+    const ref = tx.reference ? `${tx.reference} — ` : "";
+    const title = `${data.name} was added to Legal Agreements`;
+    const body = `${ref}${tx.title ?? "This deal"}: ${myName ?? sideWord(side)} attached a document that needs both parties' signature.`;
+    const { notifyTransactionOwner, notifyCounterpartyContact } = await import("@/lib/bidderNotify.server");
+    if (side === "counterparty") {
+      await notifyTransactionOwner({ orgId: tx.org_id, transactionId: tx.id, title, body });
+    } else {
+      const { data: cp } = await supabase
+        .from("counterparties")
+        .select("contact_email")
+        .eq("transaction_id", data.transactionId)
+        .eq("status", "chosen")
+        .maybeSingle();
+      const email = (cp as { contact_email?: string | null } | null)?.contact_email;
+      if (email) await notifyCounterpartyContact({ email, transactionId: data.transactionId, title, body });
+    }
+
+    return { id: (row as { id: string }).id };
   });

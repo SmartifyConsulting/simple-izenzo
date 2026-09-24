@@ -71,7 +71,6 @@ import { advance, money, recordEvent, when, type Transaction, type TxEvent } fro
 import { setCounterpartyShortlist, searchCounterparties } from "@/lib/izenzo.functions";
 import { enrichCounterparty } from "@/lib/counterpartyOutreach.functions";
 import { dedupeOrgs } from "@/lib/dedupeOrgs";
-import { getEngagement } from "@/lib/engagement.functions";
 import { keepForBid, loadBidRelevance } from "@/lib/bidRelevance";
 import type { ScreeningCheck, ScreeningResult } from "@/lib/screening.functions";
 import type { MediaCheckResult, MediaFinding } from "@/lib/onlineMedia.functions";
@@ -801,25 +800,10 @@ export function InlineFrame({
    * snapshot rather than the live, editable step, since its data can't be changed anymore. */
   viewOnly?: boolean | undefined;
 }) {
-  const baseDef = stepDef(stage, step);
-  const loadEngagement = useServerFn(getEngagement);
-  const isWad = stage === "compliance" && step === "wad" && !tx.wad_completed_at;
-  const { data: engagement } = useQuery({
-    queryKey: ["engagement", tx.id],
-    queryFn: () => loadEngagement({ data: { transactionId: tx.id } }),
-    enabled: isWad,
-  });
-  // Before the counterparty approves the offer, this frame is the Offer alone — Without a Doubt
-  // appears only once agreement is reached. The offer's own status line lives in the Offer frame's
-  // panel (MutualEngagementPanel), so this outer heading carries the label only.
-  // Defaults to the Offer heading while the engagement query is still loading (rather than only
-  // switching to it once `engagement` has actually arrived) — entering this step almost always
-  // means the offer isn't accepted yet, so waiting on the query first flashed "Without a Doubt"
-  // for a moment before correcting to "Offer".
-  const def =
-    isWad && engagement?.decided !== "accepted"
-      ? { key: "offer", label: "Offer", blurb: "" }
-      : baseDef;
+  // The Offer has its own frame now, above Without a Doubt (see live-deal-engine.tsx) — this
+  // frame always reads as "Without a Doubt", never borrows the "Offer" label pre-approval the
+  // way it used to.
+  const def = stepDef(stage, step);
   const locked = lockReason(stage, step, tx);
   const canChangeParty =
     !viewOnly && Boolean(onChangeParty) && !tx.poi_sealed_at && (step === "intent" || step === "poi");

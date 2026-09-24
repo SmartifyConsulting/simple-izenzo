@@ -30,6 +30,7 @@ import {
 } from "@/components/canvas/DealCanvas";
 import { CounterpartyWorkspaceView } from "@/components/canvas/CounterpartyWorkspaceView";
 import { DocumentSummaryList } from "@/components/canvas/DocumentSummaryList";
+import { MutualEngagementPanel } from "@/components/engagement/MutualEngagementPanel";
 import { TradeSummary } from "@/components/canvas/TradeSummary";
 // Performance only: the map and the classic stepper are each large and only one of them is on
 // screen at a time, so they load as their own chunks instead of inside the first workspace
@@ -655,6 +656,9 @@ function LiveDealEngine() {
 
   // The sealed Proof of Intent folds the same way — closed until the certificate is wanted.
   const [sealedPoiOpen, setSealedPoiOpen] = useState(false);
+  // The Offer has its own frame, open by default — it's the thing actually current until it's
+  // approved, not a record to dig for the way the others are.
+  const [offerFrameOpen, setOfferFrameOpen] = useState(true);
   // Cleared WaD case — same folded-record treatment, closed until wanted.
   const [sealedWadOpen, setSealedWadOpen] = useState(false);
 
@@ -2951,6 +2955,32 @@ function LiveDealEngine() {
                           onClose={() => setStagePanel(null)}
                           onChangeParty={() => void reopenChoice()}
                         />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* The Offer gets its own frame here, above Without a Doubt — not nested inside
+                    it. Open by default: it's current until it's approved, and stays available as
+                    its own record (the full exchange, who said what) after. */}
+                {dealTx?.poi_sealed_at && (
+                  <div className="rounded-2xl border border-border bg-card">
+                    <button
+                      type="button"
+                      onClick={() => setOfferFrameOpen((v) => !v)}
+                      className="flex w-full items-center justify-between gap-2 px-3.5 py-2 text-left"
+                      aria-expanded={offerFrameOpen}
+                    >
+                      <span className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+                        Offer
+                      </span>
+                      <ChevronDown
+                        className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", offerFrameOpen && "rotate-180")}
+                      />
+                    </button>
+                    {offerFrameOpen && (
+                      <div className="px-3.5 pb-3">
+                        <MutualEngagementPanel transactionId={dealTx.id} offerOnly />
                       </div>
                     )}
                   </div>

@@ -2070,21 +2070,18 @@ function WadStep({ tx, reload }: Props) {
           Without a Doubt has cleared. Execution is open.
         </p>
       </Panel>
-      {/* Two-way checks, the counterparty's decision and dual signing stay available after
-          clearance — they are a separate, mutual record, not part of the WaD gate itself. */}
-      <MutualEngagementPanel transactionId={tx.id} />
       </div>
     );
   }
 
   const counterpartyRegistered = Boolean(tx.counterparty_org_id);
 
-  // Until the counterparty has approved the offer, only the offer frame shows — Without a Doubt
-  // has nothing to verify against a deal that isn't agreed yet.
+  // The Offer itself now has its own frame above this one (see live-deal-engine.tsx) — this step
+  // has nothing to verify against a deal that isn't agreed yet, so it just waits.
   if (!offerApproved) {
     return (
-      <div className="space-y-6">
-        <MutualEngagementPanel transactionId={tx.id} offerOnly />
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <Lock className="h-3.5 w-3.5" /> Waiting on the counterparty to approve the offer above.
       </div>
     );
   }
