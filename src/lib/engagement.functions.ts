@@ -264,11 +264,16 @@ async function notifyBothClearedOnce(
 ) {
   const { notifyTransactionOwner, notifyCounterpartyContact } = await import("@/lib/bidderNotify.server");
   const ref = tx.reference ? `${tx.reference} — ` : "";
+  // Both sides only ever reach this notification once the OTHER party's checks have also come
+  // back clear — so the badge that confirms "the opposing party is verified" belongs on both
+  // copies of this email, not just one.
+  const verifiedBadge =
+    '<img src="https://api.trade.izenzo.co.za/verified-badge.png" alt="Verified" width="96" style="display:block;margin:4px 0 12px;" />';
   await notifyTransactionOwner({
     orgId: tx.org_id,
     transactionId: tx.id,
     title: "KYC and KYB are settled on both sides",
-    body: `${ref}${tx.title ?? "This deal"}: both sides' checks are settled. The counterparty can now accept, challenge or opt out.`,
+    body: `${verifiedBadge}${ref}${tx.title ?? "This deal"}: both sides' checks are settled. The counterparty can now accept, challenge or opt out.`,
   });
   const { data: cp } = await supabase
     .from("counterparties")
@@ -282,7 +287,7 @@ async function notifyBothClearedOnce(
       email,
       transactionId: tx.id,
       title: "Your KYC and KYB checks came back clear",
-      body: `${ref}${tx.title ?? "This deal"}: the checks are settled on both sides. Open the deal to accept, challenge or opt out of the engagement.`,
+      body: `${verifiedBadge}${ref}${tx.title ?? "This deal"}: the checks are settled on both sides. Open the deal to accept, challenge or opt out of the engagement.`,
     });
   }
 }

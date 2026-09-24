@@ -2730,7 +2730,7 @@ function LiveDealEngine() {
                       onMediaContinue={startScreening}
                       onFinalize={finalizeChoice}
                       finalizing={finalizing}
-                      locked={Boolean(dealTx.intent_confirmed_at)}
+                      locked={Boolean(dealTx.intent_confirmed_at || dealTx.poi_sealed_at)}
                       searchPrompt={(dealTx as unknown as { search_prompt?: string | null }).search_prompt ?? null}
                       onSearchAgain={(text) => void refineSearch(dealTx.id, text)}
                       onStopSearch={stopSearch}

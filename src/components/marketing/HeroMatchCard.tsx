@@ -185,8 +185,39 @@ export function HeroMatchCard({ className }: { className?: string }) {
         <>
           <p className="mb-4 text-center text-lg font-medium text-foreground">Ready when you are.</p>
 
-          <div className="flex items-stretch gap-2 rounded-2xl border-2 border-border bg-background p-2 shadow-sm transition-colors focus-within:border-primary">
-            {/* Left half: the typed description. */}
+          {/* Same pill format as the Live Workspace's own search bar: a "+" on the left to attach
+              files, one text field, submit on the right — rather than a two-column strip. */}
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
+            }}
+            className={cn(
+              "flex items-center gap-1.5 rounded-full border-2 bg-background py-1.5 pl-1.5 pr-2 shadow-sm transition-colors focus-within:border-primary",
+              dragOver ? "border-primary bg-primary/5" : "border-border",
+            )}
+          >
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              aria-label={fileNames.length > 0 ? `${fileNames.length} file(s) attached — add more` : "Attach files"}
+              title="Attach files"
+              className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <UploadCloud className="h-4 w-4" />
+              {fileNames.length > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-semibold text-primary-foreground">
+                  {fileNames.length}
+                </span>
+              )}
+            </button>
+
             <input
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
@@ -194,38 +225,8 @@ export function HeroMatchCard({ className }: { className?: string }) {
                 if (e.key === "Enter" && canSearch) onFindMatches();
               }}
               placeholder="Describe what you're looking to buy or sell…"
-              className="min-w-0 flex-1 basis-1/2 bg-transparent px-2 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+              className="min-w-0 flex-1 bg-transparent px-1 text-sm text-foreground outline-none placeholder:text-muted-foreground"
             />
-
-            {/* Right half: the same strip doubles as the drop zone, so no + button is needed. */}
-            <button
-              type="button"
-              onClick={() => inputRef.current?.click()}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragOver(true);
-              }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={(e) => {
-                e.preventDefault();
-                setDragOver(false);
-                if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
-              }}
-              aria-label="Drop deal documents here or click to browse"
-              className={cn(
-                "flex min-w-0 flex-1 basis-1/2 items-center justify-center gap-2 rounded-xl border border-dashed px-2 text-xs transition-colors",
-                dragOver
-                  ? "border-primary bg-primary/5 text-foreground"
-                  : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground",
-              )}
-            >
-              <UploadCloud className="h-4 w-4 shrink-0" />
-              <span className="truncate">
-                {fileNames.length > 0
-                  ? `${fileNames.length} file${fileNames.length === 1 ? "" : "s"} attached`
-                  : "Drop deal documents here or click to browse"}
-              </span>
-            </button>
 
             <input
               ref={inputRef}
@@ -243,7 +244,7 @@ export function HeroMatchCard({ className }: { className?: string }) {
               onClick={onFindMatches}
               disabled={!canSearch}
               aria-label="Find matches"
-              className="flex h-10 w-10 shrink-0 items-center justify-center self-center rounded-full bg-primary text-primary-foreground transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
             >
               <ArrowUp className="h-4 w-4" />
             </button>

@@ -1,10 +1,14 @@
 import { useEffect } from "react";
-import { createFileRoute, useCanGoBack, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { Banknote, Database, Hammer, ShieldCheck, Sparkles, Target } from "lucide-react";
 import { HeroMatchCard } from "@/components/marketing/HeroMatchCard";
 import { SubmitBidButton } from "@/components/marketing/SubmitBidButton";
 import { AuthTabs } from "@/components/auth/AuthTabs";
 import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
+import { fallbackReference } from "@/lib/tx";
+import { cn } from "@/lib/utils";
 
 type Search = { next?: string | undefined };
 
@@ -68,12 +72,62 @@ const STAGES = [
   },
 ];
 
+/** A signed-in visitor's still-open bids/offers — shown beside the search bar on the home screen
+ * so relaunching the app (a new tab, a bookmark) surfaces what's already in flight instead of
+ * only offering to start something new. Linkable straight into the Live Workspace. */
+function ActiveDealsPanel() {
+  const { org } = useAuth();
+
+  const { data: deals = [], isLoading } = useQuery({
+    queryKey: ["home-active-deals", org?.id],
+    enabled: Boolean(org?.id),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("id, title, reference, commodity, stage")
+        .or(`org_id.eq.${org!.id},counterparty_org_id.eq.${org!.id}`)
+        .not("stage", "in", "(finality,memory)")
+        .order("updated_at", { ascending: false })
+        .limit(6);
+      if (error) throw error;
+      return (data ?? []) as { id: string; title: string | null; reference: string | null; commodity: string | null; stage: string }[];
+    },
+  });
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-3.5 shadow-sm">
+      <p className="label-caps text-muted-foreground">Active bids &amp; offers</p>
+      <div className="mt-2.5 space-y-1.5">
+        {isLoading ? (
+          <p className="text-xs text-muted-foreground">Loading…</p>
+        ) : deals.length === 0 ? (
+          <p className="text-xs text-muted-foreground">Nothing open right now.</p>
+        ) : (
+          deals.map((d) => (
+            <Link
+              key={d.id}
+              to="/live-deal-engine"
+              search={{ tx: d.id }}
+              className="flex items-center justify-between gap-2 rounded-lg border border-success/30 bg-success/5 px-2.5 py-1.5 text-xs transition-colors hover:border-success/60 hover:bg-success/10"
+            >
+              <span className="min-w-0 flex-1 truncate font-medium text-foreground">
+                {d.reference ?? d.commodity ?? d.title ?? fallbackReference(d.id, "bid")}
+              </span>
+              <span className="shrink-0 rounded-full bg-success/15 px-1.5 py-0.5 text-[10px] font-medium text-success">
+                {d.stage}
+              </span>
+            </Link>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
 function AlphaBravoHome() {
   const { user, loading } = useAuth();
   const { next } = Route.useSearch();
   const navigate = useNavigate();
-  // True once the person has moved around inside the app, i.e. they chose to come here.
-  const cameFromInsideApp = useCanGoBack();
 
   // A signed-in visitor arriving here for the first time goes straight to the workspace (or the
   // page they were heading to); one who clicked Home from inside the app stays. A signed-out
@@ -81,9 +135,10 @@ function AlphaBravoHome() {
   useEffect(() => {
     if (loading) return;
     if (user) {
-      if (next || !cameFromInsideApp) {
-        navigate({ to: safeNext(next), replace: true });
-      }
+      // Only an explicit destination (a deep link that required sign-in) still bounces a
+      // signed-in visitor onward — arriving fresh (a new tab, a bookmark, relaunching the app)
+      // now lands here, on the home screen, instead of skipping straight past it.
+      if (next) navigate({ to: safeNext(next), replace: true });
       return;
     }
     if (next) navigate({ to: "/auth", search: { next }, replace: true });
@@ -106,8 +161,8 @@ function AlphaBravoHome() {
         </div>
 
         {/* Sign in / sign up sits top-right of the hero, level with the badge above the
-            headline — a signed-in visitor never sees this page anyway (the root route sends
-            them straight to the workspace), so this space would otherwise go empty. */}
+            headline. A signed-in visitor sees their active bids/offers here instead — see
+            ActiveDealsPanel below. */}
         {!user && (
           <div className="rounded-2xl border border-border bg-card p-3.5 shadow-sm">
             <AuthTabs compact />
@@ -115,8 +170,12 @@ function AlphaBravoHome() {
         )}
       </div>
 
-      <div className="mt-5 w-full">
+      {/* The search bar gives up a quarter of its width once a signed-in visitor's active deals
+          have somewhere to go — full width for a signed-out visitor, who has nothing to show
+          there. */}
+      <div className={cn("mt-5 grid gap-4", user ? "lg:grid-cols-[3fr_1fr]" : "grid-cols-1")}>
         <HeroMatchCard />
+        {user && <ActiveDealsPanel />}
       </div>
 
       <p className="mt-8 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">

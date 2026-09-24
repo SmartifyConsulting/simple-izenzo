@@ -907,6 +907,7 @@ type CounterpartyCandidate = {
   score: number | null;
   source: string | null;
   shortlisted?: boolean;
+  status?: string | null;
   contact_email?: string | null;
   website?: string | null;
   phone?: string | null;
@@ -1667,14 +1668,24 @@ export function CounterpartyRecord({
       {candidates.length > 0 && mediaResults && mediaResults.length > 0 && (
         <ul className="mt-3 space-y-1.5 border-t border-slate-300 pt-3">
           {[...candidates]
-            .sort((a, b) => Number(Boolean(b.shortlisted)) - Number(Boolean(a.shortlisted)))
+            .sort((a, b) => {
+              const chosen = Number(b.status === "chosen") - Number(a.status === "chosen");
+              if (chosen !== 0) return chosen;
+              return Number(Boolean(b.shortlisted)) - Number(Boolean(a.shortlisted));
+            })
             .map((c) => (
               <li key={`sr-${c.id}`} className="flex items-center gap-2">
                 <span className="min-w-0 flex-1 truncate text-xs text-slate-800">{c.name}</span>
-                {c.shortlisted && (
-                  <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
-                    Selected
+                {c.status === "chosen" ? (
+                  <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                    Chosen to trade with
                   </span>
+                ) : (
+                  c.shortlisted && (
+                    <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
+                      Selected
+                    </span>
+                  )
                 )}
                 {c.score != null && (
                   <span className="shrink-0 rounded-full border border-foreground bg-foreground px-2 py-0.5 text-[10px] font-semibold text-background">
