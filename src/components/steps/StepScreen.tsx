@@ -2200,7 +2200,7 @@ function WadStep({ tx, reload, onContinue }: Props) {
       />
 
       {priorChecks.length > 0 && (
-        <div className="mb-4 rounded-lg border border-border p-3">
+        <div className="mb-4 mt-4 rounded-lg border border-border p-3">
           <p className="label-caps font-sans">Already screened in Step 1</p>
           <ul className="mt-2 space-y-1.5">
             {priorChecks.map((r) => (

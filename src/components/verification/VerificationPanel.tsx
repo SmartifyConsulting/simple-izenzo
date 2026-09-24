@@ -197,10 +197,35 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
             <div key={type} className="rounded-lg border border-border p-4">
               <p className="label-caps font-sans">{CHECK_LABEL[type]}</p>
 
-              {/* My own check, always shown first — the only one with a Start/Refresh button or a
-                  QR code, since nobody can act on someone else's identity check. */}
-              <div className="mt-3 flex flex-wrap items-start gap-4">
-                <div className="min-w-0 flex-1 space-y-2">
+              {/* Two columns, same side each convention appears everywhere else in this app: the
+                  other party on the left in blue, "you" on the right in green. Only the right
+                  column ever gets a Start/Refresh button or a QR code — nobody can act on someone
+                  else's identity check. */}
+              <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2 rounded-lg border border-[#4169e1]/25 bg-[#4169e1]/5 p-3 sm:border-r-2">
+                  {otherSubjects.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No check on file yet for the other party.</p>
+                  ) : (
+                    otherSubjects.map((r) => (
+                      <div key={r.id} className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="secondary" className="bg-[#4169e1]/15 font-normal text-[#1c2f6b]">
+                            {r.subject_label ?? "Counterparty"}
+                          </Badge>
+                          <Badge
+                            variant="outline"
+                            className={cn(STATUS_TONE[r.status] ?? "border-border bg-muted text-muted-foreground")}
+                          >
+                            {STATUS_LABEL[r.status] ?? r.status}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{fmt(r.completed_at) ?? fmt(r.created_at) ?? ""}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="space-y-2 rounded-lg border border-emerald-600/25 bg-emerald-600/5 p-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="secondary" className="bg-emerald-600/15 font-normal text-emerald-700">
                       You
@@ -238,38 +263,15 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
                       {busy === type ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : myRow ? "Run again" : "Start"}
                     </Button>
                   )}
-                </div>
 
-                {/* Left-aligned next to the status, not below it — scanning it is the entire next
-                    step, so it belongs beside the thing it's for. */}
-                {myRow?.status === "in_progress" && myRow.provider_url && (
-                  <div className="space-y-1">
-                    <VerificationQr value={myRow.provider_url} />
-                    <p className="max-w-[10rem] text-center text-[10px] text-muted-foreground">
-                      Scan with your phone
-                    </p>
-                  </div>
-                )}
+                  {myRow?.status === "in_progress" && myRow.provider_url && (
+                    <div className="space-y-1 pt-1">
+                      <VerificationQr value={myRow.provider_url} />
+                      <p className="max-w-[10rem] text-[10px] text-muted-foreground">Scan with your phone</p>
+                    </div>
+                  )}
+                </div>
               </div>
-
-              {/* The other side's own check on themselves — read-only, so it never gets a Start,
-                  Refresh or QR of its own, only a name and a status. */}
-              {otherSubjects.map((r) => (
-                <div key={r.id} className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
-                  <Badge variant="secondary" className="bg-[#4169e1]/15 font-normal text-[#1c2f6b]">
-                    {r.subject_label ?? "Counterparty"}
-                  </Badge>
-                  <Badge
-                    variant="outline"
-                    className={cn(STATUS_TONE[r.status] ?? "border-border bg-muted text-muted-foreground")}
-                  >
-                    {STATUS_LABEL[r.status] ?? r.status}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {fmt(r.completed_at) ?? fmt(r.created_at) ?? ""}
-                  </span>
-                </div>
-              ))}
             </div>
           );
         })}
