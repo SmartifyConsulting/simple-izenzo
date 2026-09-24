@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AuthorityDocumentCard } from "@/components/verification/AuthorityDocumentCard";
+import { ProofOfResidenceCard } from "@/components/verification/ProofOfResidenceCard";
 import { supabase } from "@/integrations/supabase/client";
 import { readDocument } from "@/lib/documents.functions";
 import { useAuth } from "@/lib/auth";
@@ -31,7 +32,9 @@ type DealLite = { id: string; reference: string | null; title: string | null };
 export function DocumentsTab() {
   const { org, profile } = useAuth();
   const [search, setSearch] = useState("");
-  const [openMonths, setOpenMonths] = useState<Set<string>>(new Set([new Date().toISOString().slice(0, 7)]));
+  const [openMonths, setOpenMonths] = useState<Set<string>>(
+    new Set([new Date().toISOString().slice(0, 7)]),
+  );
   const [openBids, setOpenBids] = useState<Set<string>>(new Set());
   const [opening, setOpening] = useState<string | null>(null);
   const readDoc = useServerFn(readDocument);
@@ -144,7 +147,10 @@ export function DocumentsTab() {
       const blob = new Blob([bytes], { type: contentType });
       const url = URL.createObjectURL(blob);
       if (tab) tab.location.href = url;
-      else toast.error("Your browser blocked the new tab — allow pop-ups for this site and try again.");
+      else
+        toast.error(
+          "Your browser blocked the new tab — allow pop-ups for this site and try again.",
+        );
     } catch (err) {
       tab?.close();
       toast.error((err as Error).message || `Could not open ${d.name}`);
@@ -155,7 +161,14 @@ export function DocumentsTab() {
 
   return (
     <div className="space-y-6">
-      {profile && <AuthorityDocumentCard />}
+      {/* Whichever document this seat registered with — individuals prove where they live, companies
+          prove authority to act. Showing the wrong one here would read as a missing document. */}
+      {profile &&
+        (profile.account_type === "individual" ? (
+          <ProofOfResidenceCard />
+        ) : (
+          <AuthorityDocumentCard />
+        ))}
 
       <div className="rounded-md border border-border p-5">
         <div className="mb-3 flex items-center justify-between gap-2">
@@ -173,7 +186,9 @@ export function DocumentsTab() {
 
         <div className="space-y-2">
           {isLoading ? (
-            <p className="rounded-md border border-border p-6 text-sm text-muted-foreground">Loading…</p>
+            <p className="rounded-md border border-border p-6 text-sm text-muted-foreground">
+              Loading…
+            </p>
           ) : monthGroups.length === 0 ? (
             <p className="rounded-md border border-border p-6 text-sm text-muted-foreground">
               {q ? "Nothing matches that search." : "No documents uploaded yet."}
@@ -193,9 +208,15 @@ export function DocumentsTab() {
                     <span className="text-sm font-semibold">{mg.label}</span>
                     <span className="flex items-center gap-2">
                       <Badge variant="outline" className="font-normal">
-                        {mg.bids.length} bid{mg.bids.length === 1 ? "" : "s"} · {docCount} doc{docCount === 1 ? "" : "s"}
+                        {mg.bids.length} bid{mg.bids.length === 1 ? "" : "s"} · {docCount} doc
+                        {docCount === 1 ? "" : "s"}
                       </Badge>
-                      <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", monthOpen && "rotate-180")} />
+                      <ChevronDown
+                        className={cn(
+                          "h-4 w-4 text-muted-foreground transition-transform",
+                          monthOpen && "rotate-180",
+                        )}
+                      />
                     </span>
                   </button>
                   {monthOpen && (
@@ -216,23 +237,35 @@ export function DocumentsTab() {
                                   {bg.deal?.reference ?? bg.transactionId.slice(0, 8)}
                                 </span>
                                 {bg.deal?.title && (
-                                  <span className="min-w-0 truncate text-xs text-muted-foreground">{bg.deal.title}</span>
+                                  <span className="min-w-0 truncate text-xs text-muted-foreground">
+                                    {bg.deal.title}
+                                  </span>
                                 )}
                               </span>
                               <span className="flex shrink-0 items-center gap-2">
                                 <span className="text-xs text-muted-foreground">
                                   {bg.rows.length} doc{bg.rows.length === 1 ? "" : "s"}
                                 </span>
-                                <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform", bidOpen && "rotate-180")} />
+                                <ChevronDown
+                                  className={cn(
+                                    "h-3.5 w-3.5 text-muted-foreground transition-transform",
+                                    bidOpen && "rotate-180",
+                                  )}
+                                />
                               </span>
                             </button>
                             {bidOpen && (
                               <ul className="divide-y divide-border border-t border-border">
                                 {bg.rows.map((d) => (
-                                  <li key={d.id} className="flex items-center justify-between gap-3 px-4 py-2">
+                                  <li
+                                    key={d.id}
+                                    className="flex items-center justify-between gap-3 px-4 py-2"
+                                  >
                                     <span className="flex min-w-0 items-center gap-2">
                                       <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                                      <span className="min-w-0 truncate text-xs font-medium">{d.name}</span>
+                                      <span className="min-w-0 truncate text-xs font-medium">
+                                        {d.name}
+                                      </span>
                                       {d.doc_type && (
                                         <Badge variant="outline" className="shrink-0 font-normal">
                                           {d.doc_type}
