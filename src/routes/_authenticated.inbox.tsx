@@ -249,7 +249,7 @@ function InboxPage() {
                                                   className={cn(
                                                     "shrink-0 font-mono text-xs font-bold underline-offset-2 hover:underline",
                                                     tradeKindOf(reference) === "bid"
-                                                      ? "text-[#00e676]"
+                                                      ? "theme-light:text-success text-[#00e676]"
                                                       : tradeKindOf(reference) === "offer"
                                                         ? "text-[#4169e1]"
                                                         : "text-primary",
@@ -268,7 +268,7 @@ function InboxPage() {
                                                     // workspace taskbar and registration pill, so a
                                                     // reference reads the same way everywhere.
                                                     tradeKindOf(reference) === "bid"
-                                                      ? "text-[#00e676]"
+                                                      ? "theme-light:text-success text-[#00e676]"
                                                       : tradeKindOf(reference) === "offer"
                                                         ? "text-[#4169e1]"
                                                         : "text-primary",
@@ -296,7 +296,7 @@ function InboxPage() {
                                                   "text-sm hover:underline",
                                                   n.read ? "font-medium" : "font-semibold",
                                                   reference && tradeKindOf(reference) === "bid"
-                                                    ? "text-[#00e676]"
+                                                    ? "theme-light:text-success text-[#00e676]"
                                                     : reference && tradeKindOf(reference) === "offer"
                                                       ? "text-[#4169e1]"
                                                       : "text-foreground",
@@ -313,7 +313,7 @@ function InboxPage() {
                                                   "text-sm hover:underline",
                                                   n.read ? "font-medium" : "font-semibold",
                                                   reference && tradeKindOf(reference) === "bid"
-                                                    ? "text-[#00e676]"
+                                                    ? "theme-light:text-success text-[#00e676]"
                                                     : reference && tradeKindOf(reference) === "offer"
                                                       ? "text-[#4169e1]"
                                                       : "text-foreground",

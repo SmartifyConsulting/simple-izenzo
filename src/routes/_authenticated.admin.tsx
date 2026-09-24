@@ -513,6 +513,7 @@ function UserProfileDialog({
 function TokensTab() {
   const qc = useQueryClient();
   const [issue, setIssue] = useState({ orgId: "", amount: "1" });
+  const [issueKind, setIssueKind] = useState<"organisation" | "individual">("organisation");
   const [countryFilter, setCountryFilter] = useState("");
   const [orgSearch, setOrgSearch] = useState("");
 
@@ -525,17 +526,62 @@ function TokensTab() {
     },
   });
 
+  // An org is "an individual" when the one person trading through it registered that way — read
+  // off their own account_type rather than guessed from the org row (e.g. whether it has a
+  // registration number), since that field is optional for a real company too.
+  const { data: accountTypeByOrg = {} } = useQuery({
+    queryKey: ["admin-orgs-account-type"],
+    queryFn: async () => {
+      // No declared foreign-key relationship to embed profiles on this select, so read the two
+      // tables separately and join them here instead.
+      const { data: members, error: memErr } = await supabase.from("org_members").select("org_id, user_id");
+      if (memErr) throw memErr;
+      const userIds = [...new Set((members ?? []).map((m) => m.user_id))];
+      if (userIds.length === 0) return {};
+      const { data: profs, error: profErr } = await supabase
+        .from("profiles")
+        .select("id, account_type")
+        .in("id", userIds);
+      if (profErr) throw profErr;
+      const accountTypeByUser = new Map((profs ?? []).map((p) => [p.id, p.account_type as string | null]));
+      const map: Record<string, "individual" | "organisation"> = {};
+      for (const m of members ?? []) {
+        if (accountTypeByUser.get(m.user_id) === "individual") map[m.org_id] = "individual";
+      }
+      return map;
+    },
+  });
+
+  // The same organisation can end up with more than one row (duplicate test signups, mainly) —
+  // issuing against the wrong copy silently under-funds the one actually in use. Collapse to one
+  // entry per distinct name, keeping whichever copy already has members/credits (the real one)
+  // over an empty duplicate.
+  const dedupedOrgs = Object.values(
+    orgs.reduce<Record<string, (typeof orgs)[number]>>((acc, o) => {
+      const key = o.name.trim().toLowerCase();
+      const existing = acc[key];
+      if (!existing || o.credits > existing.credits) acc[key] = o;
+      return acc;
+    }, {}),
+  );
+
+  const kindFilteredOrgs = dedupedOrgs.filter((o) =>
+    issueKind === "individual"
+      ? accountTypeByOrg[o.id] === "individual"
+      : accountTypeByOrg[o.id] !== "individual",
+  );
+
   const countries = Array.from(new Set(orgs.map((o) => o.country).filter(Boolean))) as string[];
   const orgQ = orgSearch.trim().toLowerCase();
-  const filteredOrgs = orgs
+  const filteredOrgs = dedupedOrgs
     .filter((o) => !countryFilter || o.country === countryFilter)
     .filter((o) => !orgQ || o.name.toLowerCase().includes(orgQ));
 
   async function issueTokens(e: React.FormEvent) {
     e.preventDefault();
     try {
-      const org = orgs.find((o) => o.id === issue.orgId);
-      if (!org) throw new Error("Choose an organisation");
+      const org = dedupedOrgs.find((o) => o.id === issue.orgId);
+      if (!org) throw new Error(`Choose ${issueKind === "individual" ? "an individual" : "an organisation"}`);
       const n = Number(issue.amount);
       const { error } = await supabase.rpc("atomic_token_adjust", {
         p_org_id: org.id,
@@ -556,14 +602,43 @@ function TokensTab() {
         <h2 className="text-sm font-semibold">Issue tokens</h2>
         <div className="mt-4 space-y-3">
           <div className="space-y-1.5">
-            <Label>Organisation</Label>
+            <Label>Assign to</Label>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-1.5 text-sm">
+                <input
+                  type="radio"
+                  name="issue-kind"
+                  checked={issueKind === "organisation"}
+                  onChange={() => {
+                    setIssueKind("organisation");
+                    setIssue({ ...issue, orgId: "" });
+                  }}
+                />
+                Organisation
+              </label>
+              <label className="flex items-center gap-1.5 text-sm">
+                <input
+                  type="radio"
+                  name="issue-kind"
+                  checked={issueKind === "individual"}
+                  onChange={() => {
+                    setIssueKind("individual");
+                    setIssue({ ...issue, orgId: "" });
+                  }}
+                />
+                Individual
+              </label>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>{issueKind === "individual" ? "Individual" : "Organisation"}</Label>
             <select
               className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
               value={issue.orgId}
               onChange={(e) => setIssue({ ...issue, orgId: e.target.value })}
             >
               <option value="">Choose…</option>
-              {orgs.map((o) => (
+              {kindFilteredOrgs.map((o) => (
                 <option key={o.id} value={o.id}>
                   {o.name} — {o.credits} tokens
                 </option>
