@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -319,26 +319,6 @@ function LiveDealEngine() {
   // controls available in the meantime.
   const [topEditingSearch, setTopEditingSearch] = useState(false);
   const [topEditedPrompt, setTopEditedPrompt] = useState("");
-  // True while the deeper AI+ pass is running — it starts itself right after the regular search
-  // finishes (see CounterpartyRecord), reported back up here just to drive this progress bar.
-  const [aiPlusRunning, setAiPlusRunning] = useState(false);
-  // True when that pass was stopped by hand rather than finishing, so the bar keeps saying so
-  // instead of vanishing as though it had completed.
-  const [aiPlusStopped, setAiPlusStopped] = useState(false);
-  // Bumped by the Stop button on that bar. The request lives in CounterpartyRecord, so stopping it
-  // is a signal down rather than a call from here.
-  const [aiPlusStopSignal, setAiPlusStopSignal] = useState(0);
-  function stopAiPlus() {
-    setAiPlusStopSignal((n) => n + 1);
-    setAiPlusRunning(false);
-    setAiPlusStopped(true);
-  }
-  // Stable, so the child's reporting effect can list it as a dependency without re-firing on every
-  // render of this page.
-  const reportAiPlusState = useCallback((running: boolean, stopped: boolean) => {
-    setAiPlusRunning(running);
-    setAiPlusStopped(stopped);
-  }, []);
   const [screening, setScreening] = useState(false);
   const [screeningResults, setScreeningResults] = useState<ScreeningResult[] | null>(null);
   const [mediaRunning, setMediaRunning] = useState(false);
@@ -2742,48 +2722,15 @@ function LiveDealEngine() {
                       searchPrompt={(dealTx as unknown as { search_prompt?: string | null }).search_prompt ?? null}
                       onSearchAgain={(text) => void refineSearch(dealTx.id, text)}
                       onStopSearch={stopSearch}
-                      onAiPlusRunningChange={reportAiPlusState}
-                      stopAiPlusSignal={aiPlusStopSignal}
                     />
                     </div>
                     )}
                   </div>
                 )}
 
-                {/* Same slim progress bar treatment as the search above — the deeper AI+ pass
-                    starts itself the moment the regular search's results are on screen, and any
-                    extra candidates it finds land back in Search Results (marked "AI+") once it's
-                    done, rather than a separate frame of their own. */}
-                {aiPlusRunning && (
-                  <div className="mt-1.5 overflow-hidden rounded-xl border border-border">
-                    <div className="flex items-center gap-3 bg-[#F1F5F9] px-4 py-3">
-                      <p className="text-xs text-slate-700">Searching using AI+ for further counterparties…</p>
-                      <button
-                        type="button"
-                        onClick={stopAiPlus}
-                        title="Stop the AI+ pass — it keeps running server-side and will still save whatever it finds"
-                        className="ml-auto flex shrink-0 items-center gap-1 rounded p-1 text-[11px] font-medium text-slate-500 hover:bg-slate-200 hover:text-slate-800"
-                      >
-                        <StopCircle className="h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">Stop</span>
-                      </button>
-                    </div>
-                    <div className="h-1.5 w-full animate-ribbon-sweep" />
-                  </div>
-                )}
-
-                {/* A stopped pass keeps a line of its own rather than vanishing the way a finished
-                    one does — otherwise Stop looked like it had silently done nothing. */}
-                {!aiPlusRunning && aiPlusStopped && (
-                  <div className="mt-1.5 overflow-hidden rounded-xl border border-border">
-                    <div className="flex items-center gap-3 bg-[#F1F5F9] px-4 py-3">
-                      <p className="text-xs text-slate-700">
-                        AI+ stopped — you can select counterparties now. It may still add a few of its
-                        own finds here for a moment.
-                      </p>
-                    </div>
-                  </div>
-                )}
+                {/* The AI+ progress bar (and its Stop button) now renders inside Search Results
+                    itself, in place of "Select to continue" — see CounterpartyRecord — rather
+                    than as a second copy out here. */}
 
                 {/* Same slim progress bar treatment as the search above — shown only while
                     screening is actually running, then replaced by the results frame below once

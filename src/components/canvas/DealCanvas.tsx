@@ -1383,13 +1383,10 @@ export function CounterpartyRecord({
     onAiPlusRunningChange?.(aiPlusRunning, aiPlusStopped);
   }, [aiPlusRunning, aiPlusStopped, onAiPlusRunningChange]);
 
-  // The caller's Stop button on the AI+ bar reports down here, where the request actually lives.
-  // One shot per press: the signal is a counter, so re-running a search (which resets nothing
-  // above) can't re-fire this against a later pass.
-  const handledStopSignal = useRef(stopAiPlusSignal);
-  useEffect(() => {
-    if (stopAiPlusSignal === handledStopSignal.current) return;
-    handledStopSignal.current = stopAiPlusSignal;
+  // Shared by both ways of stopping AI+: the caller's own Stop button (via stopAiPlusSignal, a
+  // counter bumped from outside) and the local one rendered right here, in place of "Select to
+  // continue" while the pass is running.
+  function stopAiPlusNow() {
     if (!aiPlusAbortRef.current) return;
     aiPlusAbortRef.current.abort();
     aiPlusAbortRef.current = null;
@@ -1398,7 +1395,17 @@ export function CounterpartyRecord({
     // The server keeps working after the abort, so pull whatever it has already written — and the
     // bar above says the list may still fill in, so it must actually be able to.
     void qc.invalidateQueries({ queryKey: ["counterparties", txId] });
-  }, [stopAiPlusSignal, qc, txId]);
+  }
+
+  // One shot per press: the signal is a counter, so re-running a search (which resets nothing
+  // above) can't re-fire this against a later pass.
+  const handledStopSignal = useRef(stopAiPlusSignal);
+  useEffect(() => {
+    if (stopAiPlusSignal === handledStopSignal.current) return;
+    handledStopSignal.current = stopAiPlusSignal;
+    stopAiPlusNow();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stopAiPlusSignal]);
 
   // Follow the stored verification rows for this deal so a check that finishes (or a webhook that
   // lands minutes later) updates the line in place, without re-running the screening.
@@ -1868,26 +1875,45 @@ export function CounterpartyRecord({
 
 
       {/* The final pick (and its Continue button) belongs to the Online Media Screening Results
-          frame in the workspace — a second one here competed with it. */}
-      {screeningDone ? null : (
-        onContinue &&
-        candidates.length > 0 &&
-        !searching &&
-        !continued && (
-          <Button
-            type="button"
-            className={cn(
-              "mt-3 w-full bg-info text-white hover:bg-info/90",
-              (aiPlusRunning || ticked.length === 0) &&
-                "bg-slate-300 text-slate-700 hover:bg-slate-300 disabled:opacity-100",
-            )}
-            disabled={aiPlusRunning || ticked.length === 0}
-            onClick={() => onContinue(ticked)}
-          >
-            Select to continue
-          </Button>
-        )
-      )}
+          frame in the workspace — a second one here competed with it. While AI+ is still running,
+          its own progress bar takes this exact spot instead of a disabled button — the button
+          itself only appears once AI+ is done (or stopped) and there's actually something final
+          to continue with. */}
+      {screeningDone
+        ? null
+        : onContinue &&
+          candidates.length > 0 &&
+          !searching &&
+          !continued &&
+          (aiPlusRunning ? (
+            <div className="mt-3 overflow-hidden rounded-xl border border-slate-300">
+              <div className="flex items-center gap-3 bg-white px-4 py-3">
+                <p className="text-xs text-slate-700">Searching using AI+ for further counterparties…</p>
+                <button
+                  type="button"
+                  onClick={stopAiPlusNow}
+                  title="Stop the AI+ pass — it keeps running server-side and will still save whatever it finds"
+                  className="ml-auto flex shrink-0 items-center gap-1 rounded p-1 text-[11px] font-medium text-slate-500 hover:bg-slate-200 hover:text-slate-800"
+                >
+                  <StopCircle className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Stop</span>
+                </button>
+              </div>
+              <div className="h-1.5 w-full animate-ribbon-sweep" />
+            </div>
+          ) : (
+            <Button
+              type="button"
+              className={cn(
+                "mt-3 w-full bg-info text-white hover:bg-info/90",
+                ticked.length === 0 && "bg-slate-300 text-slate-700 hover:bg-slate-300 disabled:opacity-100",
+              )}
+              disabled={ticked.length === 0}
+              onClick={() => onContinue(ticked)}
+            >
+              Select to continue
+            </Button>
+          ))}
 
       <Dialog open={challengeOpen} onOpenChange={setChallengeOpen}>
         <DialogContent className="glass max-w-md">
