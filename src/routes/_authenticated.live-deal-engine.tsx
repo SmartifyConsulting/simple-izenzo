@@ -997,10 +997,17 @@ function LiveDealEngine() {
         // pulses (it's the response everyone's watching for). "counteroffer" means the
         // counterparty just answered and it's the bidder's turn — the pulse moves to Offer. It
         // keeps bouncing between the two, whichever, until someone actually accepts.
-        if (!dealTx.wad_completed_at && negotiationTurn && negotiationTurn !== "opted_out") {
+        // Explicitly set even while `negotiationTurn` is still loading (or once accepted, when
+        // neither should pulse) — leaving either key unset here let it fall through to the
+        // node's own default state, which reads "active" by coincidence (Offer shares its
+        // stage/step with Without a Doubt), pulsing Offer long after it was actually settled.
+        if (!dealTx.wad_completed_at) {
           const awaitingCounterparty = negotiationTurn === "counterparty" || negotiationTurn === "offer";
           o["counterOffer"] = awaitingCounterparty ? "active" : "open";
           o["offer"] = negotiationTurn === "counteroffer" ? "active" : "open";
+        } else {
+          o["offer"] = "open";
+          o["counterOffer"] = "open";
         }
         // The KYC/KYB/PEP/AML checks now run before Without a Doubt: the pulse sits on the
         // checks row while they are outstanding, and the gate row only turns green with them.

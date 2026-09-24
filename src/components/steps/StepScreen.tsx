@@ -2070,9 +2070,10 @@ function WadStep({ tx, reload }: Props) {
   return (
     <div className="space-y-6">
     {/* The Offer frame collapses the moment it's approved — Without a Doubt is what's current
-        from here on, not a boxed record of a decision that's already made. */}
+        from here on, not a boxed record of a decision that's already made. No title here — the
+        outer frame this sits inside already carries the "Without a Doubt" heading, so repeating
+        it as this panel's own title doubled it up. */}
     <Panel
-      title="Without a Doubt"
       footer={
         <div className="flex flex-wrap items-center justify-between gap-3">
           <TokenGateFooter cost={WAD_COST} />
