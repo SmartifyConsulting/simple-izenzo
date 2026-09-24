@@ -2561,7 +2561,7 @@ function LiveDealEngine() {
               </div>
 
               {topEditingSearch && (
-                <div className="space-y-1.5 border-t border-border bg-white p-2.5">
+                <div className="space-y-1.5 bg-white p-2.5">
                   <Textarea
                     rows={2}
                     value={topEditedPrompt}

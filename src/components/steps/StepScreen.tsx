@@ -118,7 +118,7 @@ function CertificateBlock({
       >
         Draft
       </span>
-      <div className="relative flex items-center justify-between gap-3 border-b border-border pb-3">
+      <div className="relative flex items-center justify-between gap-3 pb-3">
         <Logo />
       </div>
       <p className="mt-4 text-center font-sans text-sm font-bold uppercase tracking-[0.14em] text-foreground">
@@ -133,7 +133,7 @@ function CertificateBlock({
         ))}
       </dl>
       {sealId && (
-        <p className="mt-4 truncate border-t border-border pt-2 text-center font-mono text-[10px] text-muted-foreground">
+        <p className="mt-4 truncate pt-2 text-center font-mono text-[10px] text-muted-foreground">
           Seal {sealId}
         </p>
       )}
@@ -172,7 +172,7 @@ function Panel({
           blank frames stacked above the actual footer content. Both are skipped when there is
           nothing in them. */}
       {(title || description) && (
-        <div className={cn("border-b px-4 py-3", light ? "border-slate-200" : "border-border")}>
+        <div className="px-4 py-3">
           {/* Same heading treatment as the Bid Registration frame: small caps, muted. */}
           {/* font-sans is explicit: headings otherwise inherit the display face, which made this
               read in a different font from the LIVE WORKSPACE / BID INFORMATION labels. */}
@@ -194,9 +194,7 @@ function Panel({
         </div>
       )}
       {children != null && <div className="p-4 text-xs leading-relaxed">{children}</div>}
-      {footer && (
-        <div className={cn("border-t px-4 py-3 text-xs", light ? "border-slate-200" : "border-border")}>{footer}</div>
-      )}
+      {footer && <div className="px-4 py-3 text-xs">{footer}</div>}
     </div>
   );
 }
@@ -2151,7 +2149,7 @@ function WadStep({ tx, reload }: Props) {
         </div>
       )}
       {!allChecked && (
-        <div className="mb-4 rounded-md border border-[#F97316]/30 bg-[#F97316]/10 p-3 text-xs text-[#F97316]">
+        <div className="mb-4 rounded-md border border-[#14B8A6]/30 bg-[#14B8A6]/10 p-3 text-xs text-[#14B8A6]">
           Still outstanding:{" "}
           {WAD_CHECKS.filter((c) => !checks[c.key])
             .map((c) => c.label)

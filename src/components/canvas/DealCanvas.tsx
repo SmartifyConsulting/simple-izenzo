@@ -1042,7 +1042,7 @@ function ProposalDialog({
         {profile && (
           <div className="space-y-3">
             <div className="rounded-md border border-border">
-              <div className="border-b border-border px-4 py-3">
+              <div className="px-4 py-3">
                 <h3 className="label-caps font-sans font-bold text-muted-foreground">About them</h3>
               </div>
               <div className="p-4 text-xs leading-relaxed text-foreground">
@@ -1059,7 +1059,7 @@ function ProposalDialog({
 
             {details.length > 0 && (
               <div className="rounded-md border border-border">
-                <div className="border-b border-border px-4 py-3">
+                <div className="px-4 py-3">
                   <h3 className="label-caps font-sans font-bold text-muted-foreground">Company details</h3>
                 </div>
                 <dl className="grid gap-x-4 gap-y-2 p-4 text-xs sm:grid-cols-2">
@@ -1089,7 +1089,7 @@ function ProposalDialog({
 
             {profile.portfolio.length > 0 && (
               <div className="rounded-md border border-border">
-                <div className="border-b border-border px-4 py-3">
+                <div className="px-4 py-3">
                   <h3 className="label-caps font-sans font-bold text-muted-foreground">
                     Attachments and portfolio
                   </h3>

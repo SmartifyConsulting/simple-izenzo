@@ -169,14 +169,14 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
               {/* Same scannable, section-headed formatting the bidder's own Bid Information gets —
                   not a plain paragraph dump of the AI summary. */}
               {(tx as unknown as { document_summary?: string | null }).document_summary && (
-                <div className="mt-2 border-t border-border pt-2">
+                <div className="mt-2">
                   <DocumentSummaryList
                     summary={(tx as unknown as { document_summary: string }).document_summary}
                   />
                 </div>
               )}
               {docs.length > 0 && (
-                <ul className="mt-2 space-y-1 border-t border-border pt-2 text-xs text-muted-foreground">
+                <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
                   {docs.map((d) => (
                     <li key={d.id}>{d.name}</li>
                   ))}
