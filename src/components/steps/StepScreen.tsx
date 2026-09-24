@@ -1819,13 +1819,13 @@ const WAD_CHECK_SOURCE: Record<string, ScreeningCheck["kind"] | null> = {
 };
 
 const CHECK_TYPE_LABEL: Record<string, string> = {
-  id_document: "ID document + selfie",
-  kyb: "Company (KYB) — entity, UBO & AML",
+  id_document: "KYC",
+  kyb: "KYB",
   aml: "Sanctions / PEP",
 };
 
 const PRIOR_STATUS_LABEL: Record<string, string> = {
-  passed: "Cleared",
+  passed: "Verified",
   failed: "Declined",
   review: "Needs review",
   in_progress: "In progress",
@@ -1927,6 +1927,10 @@ function WadStep({ tx, reload, onContinue }: Props) {
    * type, per distinct subject, rather than one row per check type regardless of whose it was. */
   const priorBySubject = new Map<string, (typeof priorRows)[number]>();
   for (const r of priorRows) {
+    // KYB never belongs in Pre-Screening — Step 1's own background screening only ever covers
+    // identity (id_document), never a full company KYB, so a kyb row here is always test/override
+    // data rather than something that genuinely happened at Step 1.
+    if (r.check_type === "kyb") continue;
     const key = `${r.check_type}:${r.subject_user_id ?? r.subject_org_id ?? r.subject_label ?? "unknown"}`;
     if (!priorBySubject.has(key)) priorBySubject.set(key, r);
   }
