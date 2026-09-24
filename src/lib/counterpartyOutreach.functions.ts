@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { nameKey } from "@/lib/dedupeOrgs";
+import { ADMIN_EMAIL } from "@/lib/bidderNotify.server";
 
 const CONTACT_MODELS = ["gpt-5-mini", "gpt-5"];
 
@@ -529,35 +530,63 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
 
     if (guessedEmails.length > 0) {
       // Tier 2: no confirmed address — bidder is the visible recipient, guesses are bcc'd so they
-      // never see each other.
+      // never see each other. Admin is bcc'd too, and every address tried is written into the
+      // email body (not just a count) and onto the deal's own event log — the bidder and admin
+      // team both need to know exactly which addresses were guessed, since none of them is
+      // confirmed to be real and any of them could be why the counterparty never actually
+      // received anything.
+      const guessedList = guessedEmails.map((e) => `<li style="font-family:monospace;">${e}</li>`).join("");
       await sendEmail(creds, {
         to: bidderEmail,
-        bcc: guessedEmails,
+        bcc: [...guessedEmails, ADMIN_EMAIL],
         subject: `Reaching out to ${cp.name} on your behalf`,
         html: renderBrandedEmail(
           `<p>Hello,</p>` +
             `<p>We couldn't confirm a published contact address for <strong>${cp.name}</strong>, so — to ` +
             `give this the best chance of reaching them — we've sent a best-effort outreach for ` +
-            `${dealName} to ${guessedEmails.length} likely address${guessedEmails.length === 1 ? "" : "es"} ` +
-            `at their domain, blind copied on this message so you can see exactly what went out.</p>` +
-            `<p>These are educated guesses, not confirmed contacts — delivery isn't guaranteed, so it's ` +
-            `worth following up directly if you know another way to reach them.</p>`,
+            `${dealName} to the following likely address${guessedEmails.length === 1 ? "" : "es"} ` +
+            `at their domain, blind copied on this message so you can see exactly what went out:</p>` +
+            `<ul style="margin:8px 0;padding-left:20px;">${guessedList}</ul>` +
+            `<p>These are educated guesses, not confirmed contacts — delivery isn't guaranteed (one or more may ` +
+            `bounce or simply go unread), so it's worth following up directly if you know another way to reach ` +
+            `them.</p>`,
         ),
       });
+      await supabase.from("transaction_events").insert({
+        transaction_id: cp.transaction_id,
+        actor_id: userId,
+        stage: "trading",
+        step: "choice",
+        action: "counterparty_email_guessed",
+        summary: `No confirmed address for ${cp.name} — guessed ${guessedEmails.length} address${guessedEmails.length === 1 ? "" : "es"} at their domain`,
+        payload: { counterpartyId: cp.id, guessed: guessedEmails },
+      } as never);
       return { sent: true, method: "guessed" as const, guessed: guessedEmails };
     }
 
-    // Tier 3: nothing at all to go on — the bidder is told rather than silence.
+    // Tier 3: nothing at all to go on — the bidder is told rather than silence, and it's on the
+    // deal's own record too so it isn't just a one-off email easy to lose track of.
     await sendEmail(creds, {
       to: bidderEmail,
+      bcc: [ADMIN_EMAIL],
       subject: `We couldn't find contact details for ${cp.name}`,
       html: renderBrandedEmail(
         `<p>Hello,</p>` +
           `<p>You've chosen <strong>${cp.name}</strong> as the counterparty for ${dealName}, but we ` +
-          `couldn't find a registered account, a website, or a published contact address for them.</p>` +
+          `couldn't find a registered account, a website, or a published contact address for them — no email ` +
+          `has gone out to them at all.</p>` +
           `<p>You'll need to reach out to them directly through another channel.</p>`,
       ),
     });
+    await supabase.from("transaction_events").insert({
+      transaction_id: cp.transaction_id,
+      actor_id: userId,
+      stage: "trading",
+      step: "choice",
+      action: "counterparty_email_not_found",
+      summary: `No registered account, website or contact address found for ${cp.name} — nothing was emailed to them`,
+      payload: { counterpartyId: cp.id },
+    } as never);
     return { sent: true, method: "bidder-only" as const };
   });
 

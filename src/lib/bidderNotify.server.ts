@@ -3,7 +3,7 @@
  * Never throws: a notification failing must never break the real action (sending an email,
  * recording a match) that triggered it. */
 
-const ADMIN_EMAIL = "support@izenzo.co.za";
+export const ADMIN_EMAIL = "support@izenzo.co.za";
 
 export type NotifyChannel = "email" | "in_app" | "both";
 
