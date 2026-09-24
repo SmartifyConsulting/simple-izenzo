@@ -43,6 +43,7 @@ import { VerificationPanel } from "@/components/verification/VerificationPanel";
 import { Logo } from "@/components/Logo";
 import { MutualEngagementPanel } from "@/components/engagement/MutualEngagementPanel";
 import { attachLegalDocument, getEngagement, setDiligenceState, signDocument, type Side } from "@/lib/engagement.functions";
+import { getPartyRegistrationInfo } from "@/lib/partyRegistration.functions";
 import { generateConceptBrief } from "@/lib/conceptBrief.functions";
 import { DocumentSummaryList } from "@/components/canvas/DocumentSummaryList";
 import { buildBrandedCertificatePdf } from "@/lib/certificatePdf";
@@ -1853,6 +1854,14 @@ function WadStep({ tx, reload, onContinue }: Props) {
     queryFn: () => loadEngagement({ data: { transactionId: tx.id } }),
   });
   const offerApproved = engagement?.decided === "accepted";
+  const loadPartyRegistration = useServerFn(getPartyRegistrationInfo);
+  const { data: partyRegistration = [] } = useQuery({
+    queryKey: ["party-registration", tx.id],
+    queryFn: () => loadPartyRegistration({ data: { transactionId: tx.id } }),
+    enabled: offerApproved,
+  });
+  const myRegistration = partyRegistration.find((p) => p.side === engagement?.side) ?? null;
+  const otherRegistration = partyRegistration.find((p) => p.side !== engagement?.side) ?? null;
   // The real result of the two-way Didit checks — not a local checkbox — decides what happens
   // next: both sides cleared moves straight to completion, either one failing needs a person to
   // actually choose whether to continue or walk away, rather than either being decided silently.
@@ -2188,6 +2197,64 @@ function WadStep({ tx, reload, onContinue }: Props) {
           A Didit check below did not come back favourable. Choose whether to continue anyway
           (recorded on the deal and on the clearance certificate as an override) or exit —
           nothing clears automatically while this is unresolved.
+        </div>
+      )}
+
+      {/* What each side put on file at registration — same two-column, other-party-left-in-blue,
+          you-right-in-green layout as the KYC/KYB checks below, so both frames read the same way.
+          Never the checks themselves (that's what KYC/KYB verify) — just what each side already
+          told the platform they are. */}
+      {(myRegistration || otherRegistration) && (
+        <div className="mb-4 rounded-lg border border-border p-3">
+          <p className="label-caps font-sans">ID Number + AtA / Proof of Address</p>
+          <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5 rounded-lg border border-[#4169e1]/25 bg-[#4169e1]/5 p-3 sm:border-r-2">
+              {otherRegistration ? (
+                <>
+                  <Badge variant="secondary" className="bg-[#4169e1]/15 font-normal text-[#1c2f6b]">
+                    {otherRegistration.fullName ?? "Counterparty"}
+                  </Badge>
+                  <p className="text-xs text-muted-foreground">
+                    {otherRegistration.idNumberType === "passport" ? "Passport" : "ID"}:{" "}
+                    {otherRegistration.idNumberMasked ?? "—"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {otherRegistration.documentLabel}: {otherRegistration.documentName ?? "Not on file"}
+                  </p>
+                  {otherRegistration.identityVerified && (
+                    <Badge variant="outline" className="border-success/40 bg-success/10 font-normal text-success">
+                      Verified
+                    </Badge>
+                  )}
+                </>
+              ) : (
+                <p className="text-xs text-muted-foreground">Not on file yet for the other party.</p>
+              )}
+            </div>
+            <div className="space-y-1.5 rounded-lg border border-emerald-600/25 bg-emerald-600/5 p-3">
+              {myRegistration ? (
+                <>
+                  <Badge variant="secondary" className="bg-emerald-600/15 font-normal text-emerald-700">
+                    You
+                  </Badge>
+                  <p className="text-xs text-muted-foreground">
+                    {myRegistration.idNumberType === "passport" ? "Passport" : "ID"}:{" "}
+                    {myRegistration.idNumberMasked ?? "—"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {myRegistration.documentLabel}: {myRegistration.documentName ?? "Not on file"}
+                  </p>
+                  {myRegistration.identityVerified && (
+                    <Badge variant="outline" className="border-success/40 bg-success/10 font-normal text-success">
+                      Verified
+                    </Badge>
+                  )}
+                </>
+              ) : (
+                <p className="text-xs text-muted-foreground">Not on file yet.</p>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

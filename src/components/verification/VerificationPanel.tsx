@@ -265,9 +265,11 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
                   )}
 
                   {myRow?.status === "in_progress" && myRow.provider_url && (
-                    <div className="space-y-1 pt-1">
+                    <div className="flex flex-col items-center space-y-1 pt-1 text-center">
                       <VerificationQr value={myRow.provider_url} />
-                      <p className="max-w-[10rem] text-[10px] text-muted-foreground">Scan with your phone</p>
+                      <p className="max-w-[10rem] text-[10px] text-muted-foreground">
+                        Scan to continue to the verification app
+                      </p>
                     </div>
                   )}
                 </div>
