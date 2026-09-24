@@ -42,7 +42,7 @@ import { useAuth } from "@/lib/auth";
 import { VerificationPanel } from "@/components/verification/VerificationPanel";
 import { Logo } from "@/components/Logo";
 import { MutualEngagementPanel } from "@/components/engagement/MutualEngagementPanel";
-import { attachLegalDocument, getEngagement, signDocument, type Side } from "@/lib/engagement.functions";
+import { attachLegalDocument, getEngagement, setDiligenceState, signDocument, type Side } from "@/lib/engagement.functions";
 import { generateConceptBrief } from "@/lib/conceptBrief.functions";
 import { DocumentSummaryList } from "@/components/canvas/DocumentSummaryList";
 import { buildBrandedCertificatePdf } from "@/lib/certificatePdf";
@@ -1863,6 +1863,11 @@ function WadStep({ tx, reload, onContinue }: Props) {
   const [checks, setChecks] = useState<Record<string, boolean>>({});
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
+  const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
+  const [skipDialogOpen, setSkipDialogOpen] = useState(false);
+  const [skipReason, setSkipReason] = useState("");
+  const [skipBusy, setSkipBusy] = useState(false);
+  const waiveDiligence = useServerFn(setDiligenceState);
   const { data: chosenCp } = useQuery({
     queryKey: ["chosen-counterparty-rating", tx.id],
     queryFn: async () => {
@@ -2019,6 +2024,28 @@ function WadStep({ tx, reload, onContinue }: Props) {
     }
   }
 
+  // Skips KYC and KYB outright rather than waiting on either check — genuinely risky (this is the
+  // one hard gate meant to catch a fraudulent or sanctioned counterparty), so it's behind its own
+  // warning dialog and a mandatory written reason. Recorded exactly like any other diligence
+  // override: setDiligenceState's own "waived" state writes a transaction_event with that reason,
+  // so this leaves the same audit trail a real reviewer decision would.
+  async function skipVerification() {
+    if (skipReason.trim().length < 5) return;
+    setSkipBusy(true);
+    try {
+      await waiveDiligence({ data: { transactionId: tx.id, check: "kyc", state: "waived", reason: skipReason.trim() } });
+      await waiveDiligence({ data: { transactionId: tx.id, check: "kyb", state: "waived", reason: skipReason.trim() } });
+      await decide("cleared", { kyc: true, kyb: true });
+      setSkipDialogOpen(false);
+      setSkipReason("");
+      toast.warning("KYC/KYB skipped — recorded on the deal for audit purposes.");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setSkipBusy(false);
+    }
+  }
+
   // Once both sides' Didit checks have genuinely cleared, Without a Doubt completes itself —
   // there is no separate manual "Run Verification" step to fake past any more; the real result
   // is what decides it.
@@ -2079,7 +2106,16 @@ function WadStep({ tx, reload, onContinue }: Props) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <TokenGateFooter cost={WAD_COST} />
           <div className="flex flex-wrap justify-end gap-2">
-            <Button size="sm" variant="outline" disabled={busy || shortOnTokens} onClick={() => decide("blocked")}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-destructive/40 text-destructive hover:bg-destructive/10"
+              disabled={busy || shortOnTokens}
+              onClick={() => setSkipDialogOpen(true)}
+            >
+              Skip
+            </Button>
+            <Button size="sm" variant="outline" disabled={busy || shortOnTokens} onClick={() => setExitConfirmOpen(true)}>
               Exit
             </Button>
             {/* Shown only once a check has actually come back unfavourable — proceeding past that
@@ -2192,6 +2228,69 @@ function WadStep({ tx, reload, onContinue }: Props) {
       )}
 
     </Panel>
+
+    <Dialog open={exitConfirmOpen} onOpenChange={setExitConfirmOpen}>
+      <DialogContent>
+        <DialogTitle>Exit this trade?</DialogTitle>
+        <DialogDescription>
+          Are you sure you want to exit this trade? Without a Doubt will not clear, and this deal
+          closes without proceeding — this can't be undone.
+        </DialogDescription>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={() => setExitConfirmOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            disabled={busy}
+            onClick={() => {
+              setExitConfirmOpen(false);
+              void decide("blocked");
+            }}
+          >
+            Exit trade
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog
+      open={skipDialogOpen}
+      onOpenChange={(v) => {
+        setSkipDialogOpen(v);
+        if (!v) setSkipReason("");
+      }}
+    >
+      <DialogContent>
+        <DialogTitle>Skip KYC and KYB?</DialogTitle>
+        <DialogDescription>
+          This is risky — skipping identity and company verification means neither of you has
+          independent assurance the other side is who they say they are. Proceed at your own risk.
+          It will be recorded on this deal and its clearance certificate for audit purposes, with
+          the reason you give below.
+        </DialogDescription>
+        <Textarea
+          value={skipReason}
+          onChange={(e) => setSkipReason(e.target.value)}
+          rows={3}
+          placeholder="Why are you skipping verification? (required)"
+        />
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={() => setSkipDialogOpen(false)}>
+            Undo Skip
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            disabled={skipBusy || skipReason.trim().length < 5}
+            onClick={() => void skipVerification()}
+          >
+            {skipBusy ? "Skipping…" : "Continue"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
     </div>
   );
 }

@@ -38,6 +38,8 @@ export function MutualEngagementPanel({
   const [busy, setBusy] = useState<string | null>(null);
   const [challengeOpen, setChallengeOpen] = useState(false);
   const [challengeMessage, setChallengeMessage] = useState("");
+  const [rejectConfirmOpen, setRejectConfirmOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
 
   const { data: state, isLoading } = useQuery({
     queryKey: ["engagement", transactionId],
@@ -59,6 +61,8 @@ export function MutualEngagementPanel({
       await refresh();
       setChallengeOpen(false);
       setChallengeMessage("");
+      setRejectConfirmOpen(false);
+      setRejectReason("");
       toast.success(
         response === "accepted"
           ? "Accepted — Without a Doubt is open for both of you."
@@ -197,7 +201,7 @@ export function MutualEngagementPanel({
               variant="outline"
               disabled={busy !== null || !isMyTurn}
               className="border-destructive/40 text-destructive hover:bg-destructive/10"
-              onClick={() => isMyTurn && void sendResponse("opted_out")}
+              onClick={() => isMyTurn && setRejectConfirmOpen(true)}
             >
               {busy === "opted_out" ? "Rejecting…" : "Reject"}
             </Button>
@@ -256,6 +260,48 @@ export function MutualEngagementPanel({
               onClick={() => void sendResponse("challenged", challengeMessage.trim())}
             >
               {busy === "challenged" ? "Sending…" : "Send counter"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* A reason is asked of the counterparty specifically, not the bidder — it's the counterparty
+          walking away from a deal someone else put together, so the bidder is owed why; a bidder
+          rejecting their own offer needs no such explanation. */}
+      <Dialog
+        open={rejectConfirmOpen}
+        onOpenChange={(v) => {
+          setRejectConfirmOpen(v);
+          if (!v) setRejectReason("");
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Exit this trade?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to exit this trade? Rejecting closes this offer for good — this
+              can't be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {state.side === "counterparty" && (
+            <Textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows={3}
+              placeholder="Why are you exiting this trade? (required)"
+            />
+          )}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => setRejectConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={busy !== null || (state.side === "counterparty" && rejectReason.trim().length < 5)}
+              onClick={() => void sendResponse("opted_out", state.side === "counterparty" ? rejectReason.trim() : undefined)}
+            >
+              {busy === "opted_out" ? "Exiting…" : "Exit trade"}
             </Button>
           </div>
         </DialogContent>
