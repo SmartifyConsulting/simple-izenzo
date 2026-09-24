@@ -69,24 +69,24 @@ function wrap(text: string, max: number, size: number, font: Awaited<ReturnType<
 
 const PAGE_W = 595;
 const PAGE_H = 842;
-// Double border: two concentric hairline rectangles a few points apart, matching the on-screen
-// certificate card's `border-double`.
+// A single hairline grey border — matches the app's own frames (one rounded-corner outline), not
+// the certificate card's border-double treatment this used to copy literally.
 const OUTER_MARGIN = 36;
-const INNER_MARGIN = 41;
-// Content sits with its own breathing room inside the double border.
+// Content sits with its own breathing room inside the border.
 const CONTENT_X = 64;
 const CONTENT_W = PAGE_W - CONTENT_X * 2;
 const CONTENT_TOP = PAGE_H - 60;
 const CONTENT_BOTTOM = 70;
+const FRAME_RADIUS = 14;
 
 /** A neatly laid-out, Izenzo-branded PDF for the certificates and records the app files against a
  * deal (Confirmation of Intent, Proposal, Proof of Intent, Without a Doubt) — styled to match the
- * same double-bordered certificate card shown on screen (logo, centred heading, a two-column field
- * grid, a seal line at the foot) rather than a plain top-to-bottom text dump. `lines` are
- * pre-formatted body lines: an empty string adds a blank line, and a line shaped "Label: value" is
- * laid into the field grid — consecutive field lines share rows, two to a row, the same way the
- * on-screen card's own grid does; anything else (a section header, an indented bullet) breaks the
- * grid and prints full width. */
+ * on-screen certificate card (logo, centred heading, a two-column field grid, a seal line at the
+ * foot) inside a single rounded grey frame, the same as every other frame in the app, rather than
+ * a plain top-to-bottom text dump. `lines` are pre-formatted body lines: an empty string adds a
+ * blank line, and a line shaped "Label: value" is laid into the field grid — consecutive field
+ * lines share rows, two to a row, the same way the on-screen card's own grid does; anything else
+ * (a section header, an indented bullet) breaks the grid and prints full width. */
 export async function buildBrandedCertificatePdf(opts: {
   heading: string;
   lines: string[];
@@ -99,22 +99,20 @@ export async function buildBrandedCertificatePdf(opts: {
   let y = CONTENT_TOP;
   let pageStarted = false;
 
+  // A single rounded-rect border via an SVG path — pdf-lib's plain drawRectangle has no corner-
+  // radius option, so the rounded corners the app's own frames use are drawn by hand here instead.
+  const roundedRectPath = (w: number, h: number, r: number) =>
+    `M ${r},0 L ${w - r},0 Q ${w},0 ${w},${r} L ${w},${h - r} Q ${w},${h} ${w - r},${h} ` +
+    `L ${r},${h} Q 0,${h} 0,${h - r} L 0,${r} Q 0,0 ${r},0 Z`;
+
   const drawFrame = () => {
-    page.drawRectangle({
+    const w = PAGE_W - OUTER_MARGIN * 2;
+    const h = PAGE_H - OUTER_MARGIN * 2;
+    page.drawSvgPath(roundedRectPath(w, h, FRAME_RADIUS), {
       x: OUTER_MARGIN,
-      y: OUTER_MARGIN,
-      width: PAGE_W - OUTER_MARGIN * 2,
-      height: PAGE_H - OUTER_MARGIN * 2,
-      borderColor: rgb(0.1, 0.1, 0.3),
-      borderWidth: 1.25,
-    });
-    page.drawRectangle({
-      x: INNER_MARGIN,
-      y: INNER_MARGIN,
-      width: PAGE_W - INNER_MARGIN * 2,
-      height: PAGE_H - INNER_MARGIN * 2,
-      borderColor: rgb(0.1, 0.1, 0.3),
-      borderWidth: 0.5,
+      y: PAGE_H - OUTER_MARGIN,
+      borderColor: rgb(0.75, 0.75, 0.75),
+      borderWidth: 1,
     });
   };
 

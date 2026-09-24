@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { getEngagement, respondToEngagement, type Side } from "@/lib/engagement.functions";
+import { cn } from "@/lib/utils";
 
 function sideWord(side: Side) {
   return side === "bidder" ? "the bidder" : "the counterparty";
@@ -101,22 +102,40 @@ export function MutualEngagementPanel({
         </p>
       )}
 
+      {/* Reads as a conversation, not a log — each reply sits on its own side (bidder left and
+          green, counterparty right and blue), the same way every chat interface does, since
+          that's genuinely what a back-and-forth negotiation is. */}
       {state.responses.length > 0 && (
         <ul className="space-y-2">
-          {state.responses.map((r) => (
-            <li key={r.id} className="rounded-lg border border-border p-3 text-xs">
-              <p className="font-medium">
-                {r.responder_name ?? sideWord(r.responder_side)} ({sideWord(r.responder_side)}){" "}
-                {r.response === "accepted"
-                  ? "accepted the offer"
-                  : r.response === "challenged"
-                    ? "raised a counter"
-                    : "rejected the offer"}
-              </p>
-              {r.message && <p className="mt-1 text-muted-foreground">{r.message}</p>}
-              <p className="mt-1 text-[11px] text-muted-foreground">{when(r.created_at)}</p>
-            </li>
-          ))}
+          {state.responses.map((r) => {
+            const isBidder = r.responder_side === "bidder";
+            return (
+              <li key={r.id} className={cn("flex", isBidder ? "justify-start" : "justify-end")}>
+                <div
+                  className={cn(
+                    "max-w-[85%] rounded-2xl px-3 py-2 text-xs",
+                    isBidder
+                      ? "rounded-bl-sm bg-emerald-600/15 text-emerald-950 dark:text-emerald-100"
+                      : "rounded-br-sm bg-[#4169e1]/15 text-[#1c2f6b] dark:text-blue-100",
+                  )}
+                >
+                  <p className="font-semibold">
+                    {r.responder_name ?? sideWord(r.responder_side)}{" "}
+                    <span className="font-normal opacity-70">({sideWord(r.responder_side)})</span>
+                  </p>
+                  <p className="mt-0.5">
+                    {r.response === "accepted"
+                      ? "Accepted the offer"
+                      : r.response === "challenged"
+                        ? "Raised a counter"
+                        : "Rejected the offer"}
+                  </p>
+                  {r.message && <p className="mt-1">{r.message}</p>}
+                  <p className="mt-1 text-[10px] opacity-70">{when(r.created_at)}</p>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
 
