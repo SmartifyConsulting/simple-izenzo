@@ -93,9 +93,9 @@ export function SubmitterIdentity({
         )}
       >
         {isBusiness ? (
-          <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" aria-label="Business" />
+          <Building2 className="h-4 w-4 shrink-0 text-emerald-600" aria-label="Business" />
         ) : (
-          <User className="h-4 w-4 shrink-0 text-muted-foreground" aria-label="Individual" />
+          <User className="h-4 w-4 shrink-0 text-emerald-600" aria-label="Individual" />
         )}
         <span className="min-w-0 truncate text-sm font-semibold text-foreground">{name}</span>
         {verified ? (

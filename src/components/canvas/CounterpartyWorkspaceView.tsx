@@ -12,6 +12,8 @@ import { MapView } from "@/components/canvas/MapView";
 import { MutualEngagementPanel } from "@/components/engagement/MutualEngagementPanel";
 import { getEngagement } from "@/lib/engagement.functions";
 import { DocumentSummaryList } from "@/components/canvas/DocumentSummaryList";
+import { Confetti } from "@/components/effects/Confetti";
+import { hasSeenOfferCelebration, markOfferCelebrationSeen } from "@/lib/celebrationSeen";
 import { money, tradeKindOf, when, type Transaction } from "@/lib/tx";
 import { cn } from "@/lib/utils";
 
@@ -132,6 +134,27 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
     wad: !tx.wad_completed_at ? (phase === "wad" ? "active" : "open") : "active",
   } as const;
 
+  // Same one-time confetti moment as the bidder's Live Workspace — fires the first time this
+  // browser sees the offer as approved, whether that's live or the next time the counterparty
+  // opens this screen having been away when the bidder approved it.
+  const [celebrateApproval, setCelebrateApproval] = useState(false);
+  useEffect(() => {
+    if (!offerApproved) return;
+    if (hasSeenOfferCelebration(tx.id)) return;
+    markOfferCelebrationSeen(tx.id);
+    setCelebrateApproval(true);
+  }, [offerApproved, tx.id]);
+
+  // The Offer stays visible as its own record after approval too — same collapsed-frame treatment
+  // as the bidder's own Live Workspace — rather than vanishing the moment it's decided.
+  const [offerFrameOpen, setOfferFrameOpen] = useState(true);
+  const offerFrameAutoCollapsed = useRef(false);
+  useEffect(() => {
+    if (!offerApproved || offerFrameAutoCollapsed.current) return;
+    offerFrameAutoCollapsed.current = true;
+    setOfferFrameOpen(false);
+  }, [offerApproved]);
+
   // Bid Information is only useful reading before the negotiation gets going — once a counter has
   // gone back and forth, or the offer's been accepted or rejected, it's just noise sitting above
   // the Offer thread that actually matters now. Collapses itself the first time that happens, but
@@ -167,6 +190,9 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
 
   return (
     <AppShell wide title={tx.title} description={`You're viewing this deal as its counterparty — read-only, shared for transparency.`}>
+      {celebrateApproval && (
+        <Confetti message="The offer has been approved." onDone={() => setCelebrateApproval(false)} />
+      )}
       <div className="mx-auto max-w-6xl space-y-4">
         {/* The registration line spans both columns — who this deal is, and its BID/OFF number. */}
         <div className="glass-node space-y-1.5 p-4">
@@ -199,6 +225,25 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
 
           <div className="space-y-3">
             <p className="label-caps text-muted-foreground">Live Workspace</p>
+
+            {/* Same "settled record" gold look as the bidder's own Step 1 accordion — plain grey
+                until the offer is actually approved (and the confetti above has fired), gold once
+                it is. Look-alike only here: the counterparty's record beneath it isn't collapsed
+                behind this the way the bidder's Step 1 bundles everything, since this view is
+                already a short, flat list. */}
+            <div
+              className={cn(
+                "flex items-center gap-2 rounded-full border-2 px-3 py-1.5",
+                offerApproved ? "border-black bg-amber-400/35" : "border-border bg-muted",
+              )}
+            >
+              <span className="label-caps rounded-full bg-[var(--step-pill-bg)] px-2.5 py-0.5 text-[var(--step-pill-fg)]">
+                Step 1 · Trading
+              </span>
+              <span className="ml-auto shrink-0 font-mono text-sm font-bold tracking-wide text-foreground">
+                {tx.reference}
+              </span>
+            </div>
 
             {/* The documents this deal is running on — the counterparty reads them, but the bidder's
                 own Choice and AI+ recommendation output are never part of this view. */}
@@ -248,12 +293,38 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
               </CollapsibleFrame>
             )}
 
-            {/* The Offer sits after Seal Intent — it only exists once the intent is sealed — and is
-                always open: it's the counterparty's own move (Approve, Counter or Reject). It
-                collapses the instant it's approved — Without a Doubt takes over as the current
-                step below, for both parties, rather than leaving a decided Offer still boxed up
-                here. */}
-            {!offerApproved && <MutualEngagementPanel transactionId={tx.id} />}
+            {/* The Offer sits after Seal Intent — it only exists once the intent is sealed. Stays
+                visible as its own record after approval too (same folded-frame treatment the
+                bidder's Live Workspace uses) rather than vanishing the moment it's decided —
+                collapses itself the first time it's approved, but can still be reopened by hand. */}
+            {tx.poi_sealed_at && (
+              <div className="rounded-2xl border border-border bg-card">
+                <button
+                  type="button"
+                  onClick={() => setOfferFrameOpen((v) => !v)}
+                  className="flex w-full items-center justify-between gap-2 px-3.5 py-2 text-left"
+                  aria-expanded={offerFrameOpen}
+                >
+                  <span>
+                    <span className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+                      Offer
+                    </span>
+                    <span className="mt-1 block text-[11px] text-muted-foreground">
+                      Accept, counter or reject the terms — a back-and-forth exchange between the two
+                      of you until you reach agreement.
+                    </span>
+                  </span>
+                  <ChevronDown
+                    className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", offerFrameOpen && "rotate-180")}
+                  />
+                </button>
+                {offerFrameOpen && (
+                  <div className="px-3.5 pb-3">
+                    <MutualEngagementPanel transactionId={tx.id} offerOnly />
+                  </div>
+                )}
+              </div>
+            )}
 
             {offerApproved && !tx.wad_completed_at && (
               <div className="glass-node p-4">

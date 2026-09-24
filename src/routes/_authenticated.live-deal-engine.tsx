@@ -35,6 +35,8 @@ import {
 import { CounterpartyWorkspaceView } from "@/components/canvas/CounterpartyWorkspaceView";
 import { DocumentSummaryList } from "@/components/canvas/DocumentSummaryList";
 import { MutualEngagementPanel } from "@/components/engagement/MutualEngagementPanel";
+import { Confetti } from "@/components/effects/Confetti";
+import { hasSeenOfferCelebration, markOfferCelebrationSeen } from "@/lib/celebrationSeen";
 import { TradeSummary } from "@/components/canvas/TradeSummary";
 // Performance only: the map and the classic stepper are each large and only one of them is on
 // screen at a time, so they load as their own chunks instead of inside the first workspace
@@ -1022,6 +1024,18 @@ function LiveDealEngine() {
     if (negotiationTurn !== "accepted" || !dealTx || dealTx.wad_completed_at) return;
     setOfferFrameOpen(false);
     setStagePanel((prev) => (prev === "wad" ? prev : "wad"));
+  }, [negotiationTurn, dealTx?.id, dealTx?.wad_completed_at]);
+
+  // A brief confetti moment the first time this browser sees an approved offer on this deal —
+  // whether that's live, right after clicking Accept, or the next time the bidder opens this
+  // screen having been away when the counterparty approved it. Never repeats after that first
+  // sighting (see celebrationSeen.ts).
+  const [celebrateApproval, setCelebrateApproval] = useState(false);
+  useEffect(() => {
+    if (!dealTx || (negotiationTurn !== "accepted" && !dealTx.wad_completed_at)) return;
+    if (hasSeenOfferCelebration(dealTx.id)) return;
+    markOfferCelebrationSeen(dealTx.id);
+    setCelebrateApproval(true);
   }, [negotiationTurn, dealTx?.id, dealTx?.wad_completed_at]);
 
   // Step 1 opens itself the moment there's genuinely live work in it that needs attention — a
@@ -2241,6 +2255,9 @@ function LiveDealEngine() {
 
   const workspaceContent = (
     <>
+      {celebrateApproval && (
+        <Confetti message="The offer has been approved." onDone={() => setCelebrateApproval(false)} />
+      )}
       {/* A `?tx=` link that couldn't be opened says so, instead of quietly leaving an empty canvas
           that reads as a brand-new workspace. */}
       {dealLoadError && (
@@ -2584,17 +2601,18 @@ function LiveDealEngine() {
                     </p>
                   )}
                   {/* The counterparty's own identity, once the offer has actually been accepted by
-                      either party — in blue, the counterparty's colour everywhere else in this
-                      workspace, with the same verified/pending badge style as the bidder's own
-                      above it. Gated on acceptance (negotiationTurn === "accepted"), not merely on
-                      POI being sealed, so the KYC/KYB pending badge never appears while the offer
-                      is still being negotiated. */}
+                      either party. Same black name/size as the bidder's own identity above it —
+                      only the person icon carries the counterparty's colour (royal blue, vs. the
+                      bidder's green) — with the same verified/pending badge style. Gated on
+                      acceptance (negotiationTurn === "accepted"), not merely on POI being sealed, so
+                      the KYC/KYB pending badge never appears while the offer is still being
+                      negotiated. */}
                   {dealTx.poi_sealed_at &&
                     (negotiationTurn === "accepted" || dealTx.wad_completed_at) &&
                     counterpartyIdentity?.name && (
                     <div className="mt-1.5 flex flex-wrap items-center gap-2 border-t border-border pt-1.5">
                       <User className="h-4 w-4 shrink-0 text-[#4169e1]" aria-label="Counterparty" />
-                      <span className="min-w-0 truncate rounded-full bg-[#4169e1] px-2.5 py-1 text-sm font-bold text-white">
+                      <span className="min-w-0 truncate text-sm font-semibold text-foreground">
                         {counterpartyIdentity.name}
                       </span>
                       {counterpartyIdentity.verified ? (
@@ -2613,7 +2631,7 @@ function LiveDealEngine() {
                         </span>
                       )}
                       {counterpartyIdentity.activeSince && (
-                        <p className="w-full pl-6 text-[11px] text-[#4169e1]/80">
+                        <p className="w-full pl-6 text-[11px] text-muted-foreground">
                           Active Since:{" "}
                           {new Date(counterpartyIdentity.activeSince).toLocaleDateString(undefined, {
                             year: "numeric",
@@ -3366,8 +3384,14 @@ function LiveDealEngine() {
                       className="flex w-full items-center justify-between gap-2 px-3.5 py-2 text-left"
                       aria-expanded={offerFrameOpen}
                     >
-                      <span className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
-                        Offer
+                      <span>
+                        <span className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+                          Offer
+                        </span>
+                        <span className="mt-1 block text-[11px] text-muted-foreground">
+                          Accept, counter or reject the terms — a back-and-forth exchange between the
+                          two of you until you reach agreement.
+                        </span>
                       </span>
                       <ChevronDown
                         className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", offerFrameOpen && "rotate-180")}
