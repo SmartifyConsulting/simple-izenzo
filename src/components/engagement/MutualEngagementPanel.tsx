@@ -114,13 +114,15 @@ export function MutualEngagementPanel({
           {state.responses.map((r) => {
             const isBidder = r.responder_side === "bidder";
             return (
-              <li key={r.id} className={cn("flex", isBidder ? "justify-start" : "justify-end")}>
+              <li className={cn("flex items-end gap-1.5", isBidder ? "justify-start" : "justify-end")} key={r.id}>
                 <div
                   className={cn(
                     "max-w-[85%] rounded-2xl px-3 py-2 text-xs",
-                    isBidder
-                      ? "rounded-bl-sm bg-emerald-600/15 text-emerald-950 dark:text-emerald-100"
-                      : "rounded-br-sm bg-[#4169e1]/15 text-[#1c2f6b] dark:text-blue-100",
+                    // Fixed light text on both bubbles rather than a `dark:` variant — this app
+                    // sets `data-theme="dark"`, not a `.dark` class, so `dark:*` utilities never
+                    // actually apply here and the darker fallback shade was left unreadable
+                    // against the workspace's near-black background.
+                    isBidder ? "rounded-bl-sm bg-emerald-600/20 text-emerald-100" : "rounded-br-sm bg-[#4169e1]/25 text-blue-100",
                   )}
                 >
                   <p className="font-semibold">
@@ -135,8 +137,9 @@ export function MutualEngagementPanel({
                         : "Rejected the offer"}
                   </p>
                   {r.message && <p className="mt-1">{r.message}</p>}
-                  <p className="mt-1 text-[10px] opacity-70">{when(r.created_at)}</p>
                 </div>
+                {/* Outside the bubble, to its right, rather than as a trailing line inside it. */}
+                <span className="shrink-0 whitespace-nowrap text-[10px] text-muted-foreground">{when(r.created_at)}</span>
               </li>
             );
           })}
@@ -144,9 +147,9 @@ export function MutualEngagementPanel({
       )}
 
       {/* Both sides now see the same three buttons — whoever's turn it isn't gets them plainly
-          disabled (greyed out), whoever's turn it is gets them live. Accept stays the
-          counterparty's alone even on the bidder's own turn (the server enforces this too: only
-          the counterparty ever finalises the deal). */}
+          disabled (greyed out), whoever's turn it is gets them live — including Accept, which
+          belongs to whichever side the offer is currently with, not locked to the counterparty
+          (the server enforces the same turn-based rule). */}
       {!resolved && !isObserver && (
         <>
           {waitingOnOther && (
@@ -160,9 +163,8 @@ export function MutualEngagementPanel({
           <div className="flex flex-wrap gap-2">
             <Button
               size="sm"
-              disabled={busy !== null || !isMyTurn || state.side !== "counterparty"}
-              title={state.side !== "counterparty" ? "Only the counterparty can accept" : undefined}
-              onClick={() => isMyTurn && state.side === "counterparty" && void sendResponse("accepted")}
+              disabled={busy !== null || !isMyTurn}
+              onClick={() => isMyTurn && void sendResponse("accepted")}
             >
               {busy === "accepted" ? "Accepting…" : "Accept"}
             </Button>

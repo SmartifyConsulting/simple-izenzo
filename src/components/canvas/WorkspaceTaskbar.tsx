@@ -30,6 +30,7 @@ import { useDealWindows } from "@/lib/dealWindows";
 import { fallbackReference, tradeKindOf } from "@/lib/tx";
 import { cancelBid } from "@/lib/cancelBid.functions";
 import { cn } from "@/lib/utils";
+import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
 
 // The bid tab strip belongs to the signed-in workspace only, so it is opt-in per screen rather
 // than "everywhere except the pages we happened to list" — that older exclusion list let the tabs
@@ -360,10 +361,19 @@ export function WorkspaceTaskbar() {
           onClick={() => setClearAllConfirm(true)}
           title="Close all tabs"
           aria-label="Close all tabs"
-          className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-t-md border border-border border-b-transparent bg-transparent text-muted-foreground hover:bg-card/50 hover:text-destructive"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-t-md border border-border border-b-transparent bg-transparent text-muted-foreground hover:bg-card/50 hover:text-destructive"
         >
           <XCircle className="h-3.5 w-3.5" />
         </button>
+      )}
+
+      {/* Account menu (Settings, sign out, the test-user switcher) — this taskbar is the one
+          piece of chrome every signed-in page shares, so it's the only place this is guaranteed
+          reachable no matter which workspace page someone is on. */}
+      {user && (
+        <div className={cn("shrink-0 pb-1", deals.length === 0 && "ml-auto")}>
+          <ProfileAvatarMenu />
+        </div>
       )}
 
       <AlertDialog open={clearAllConfirm} onOpenChange={setClearAllConfirm}>

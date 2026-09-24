@@ -391,9 +391,11 @@ export async function upsertDiligenceFromVerification(opts: {
   }
 }
 
-/** Accept, challenge or opt out. Only the counterparty may accept — that acceptance is what opens
- * the shared Business Docs frame for both sides. Either side may raise a challenge, and challenges
- * are a running, attributed thread until consensus is reached. */
+/** Accept, challenge or opt out. Accept is only open to whichever side the offer is currently
+ * with — the bidder's own opening offer starts with the counterparty, and it flips to whoever
+ * didn't just raise the last counter, the same "whose turn" rule the UI shows. That acceptance is
+ * what opens the shared Business Docs frame for both sides. Either side may raise a challenge, and
+ * challenges are a running, attributed thread until consensus is reached. */
 export const respondToEngagement = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
@@ -411,8 +413,14 @@ export const respondToEngagement = createServerFn({ method: "POST" })
     const state = await loadState(supabase, userId, data.transactionId);
 
     if (data.response === "accepted") {
-      if (side !== "counterparty") {
-        throw new Error("Only the counterparty can accept the engagement.");
+      const last = state.responses[state.responses.length - 1];
+      const turnSide: Side = !last
+        ? "counterparty"
+        : last.responder_side === "counterparty"
+          ? "bidder"
+          : "counterparty";
+      if (side !== turnSide) {
+        throw new Error(`Only ${sideWord(turnSide)} can accept right now — it's their turn to respond.`);
       }
       // Accepting the offer comes first now — it's what opens KYC/KYB checks and Without a Doubt,
       // not the other way around. Checks settling no longer gates acceptance.

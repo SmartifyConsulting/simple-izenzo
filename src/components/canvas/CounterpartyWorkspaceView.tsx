@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -100,6 +100,19 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
   });
   const offerApproved = engagement?.decided === "accepted";
 
+  // Bid Information is only useful reading before the negotiation gets going — once a counter has
+  // gone back and forth, or the offer's been accepted or rejected, it's just noise sitting above
+  // the Offer thread that actually matters now. Collapses itself the first time that happens, but
+  // stays a normal toggle afterward (re-opening it by hand doesn't get fought back closed).
+  const negotiationStarted = (engagement?.responses.length ?? 0) > 0;
+  const [bidInfoOpen, setBidInfoOpen] = useState(true);
+  const autoCollapsedBidInfo = useRef(false);
+  useEffect(() => {
+    if (!negotiationStarted || autoCollapsedBidInfo.current) return;
+    autoCollapsedBidInfo.current = true;
+    setBidInfoOpen(false);
+  }, [negotiationStarted]);
+
   async function respondTo(response: "accepted" | "declined") {
     setResponding(response);
     try {
@@ -157,10 +170,7 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
 
             {/* The documents this deal is running on — the counterparty reads them, but the bidder's
                 own Choice and AI+ recommendation output are never part of this view. */}
-            <div className="glass-node space-y-2 p-4">
-              <span className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
-                {kindWord} Information
-              </span>
+            <CollapsibleFrame label={`${kindWord} Information`} open={bidInfoOpen} onToggle={() => setBidInfoOpen((v) => !v)}>
               <div className="grid gap-2 text-sm sm:grid-cols-2">
                 <p><span className="text-muted-foreground">Commodity:</span> {tx.commodity ?? "—"}</p>
                 <p><span className="text-muted-foreground">Jurisdiction:</span> {tx.jurisdiction ?? "—"}</p>
@@ -182,7 +192,7 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
                   ))}
                 </ul>
               )}
-            </div>
+            </CollapsibleFrame>
 
             {/* The steps leading up to the negotiation stay on the record, folded away — they come
                 before the Offer, so they read in the order the deal actually ran. */}
