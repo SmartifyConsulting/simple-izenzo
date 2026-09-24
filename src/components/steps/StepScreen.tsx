@@ -2071,7 +2071,8 @@ function WadStep({ tx, reload }: Props) {
 
   return (
     <div className="space-y-6">
-    <MutualEngagementPanel transactionId={tx.id} />
+    {/* The Offer frame collapses the moment it's approved — Without a Doubt is what's current
+        from here on, not a boxed record of a decision that's already made. */}
     <Panel
       title="Without a Doubt"
       footer={

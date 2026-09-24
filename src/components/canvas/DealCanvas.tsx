@@ -812,8 +812,12 @@ export function InlineFrame({
   // Before the counterparty approves the offer, this frame is the Offer alone — Without a Doubt
   // appears only once agreement is reached. The offer's own status line lives in the Offer frame's
   // panel (MutualEngagementPanel), so this outer heading carries the label only.
+  // Defaults to the Offer heading while the engagement query is still loading (rather than only
+  // switching to it once `engagement` has actually arrived) — entering this step almost always
+  // means the offer isn't accepted yet, so waiting on the query first flashed "Without a Doubt"
+  // for a moment before correcting to "Offer".
   const def =
-    isWad && engagement && engagement.decided !== "accepted"
+    isWad && engagement?.decided !== "accepted"
       ? { key: "offer", label: "Offer", blurb: "" }
       : baseDef;
   const locked = lockReason(stage, step, tx);

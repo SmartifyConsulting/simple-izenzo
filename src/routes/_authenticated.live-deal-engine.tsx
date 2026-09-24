@@ -940,9 +940,10 @@ function LiveDealEngine() {
   }, [dealTx?.id, dealTx?.stage, dealTx?.step]);
 
   /** Whose move the Offer ⇄ Counter Offer loop is waiting on, read from the engagement responses
-   * both sides already record. "counterparty" = the bidder's offer is with them; "counteroffer" =
-   * they countered and the bidder needs to answer; "offer" = the bidder has re-submitted and it's
-   * the counterparty's turn again. Null once the offer is settled. */
+   * both sides already record. "counterparty" = the bidder's offer is with them and nobody has
+   * answered yet; "counteroffer" = they countered and the bidder needs to answer; "offer" = the
+   * bidder has re-submitted and it's the counterparty's turn again. "accepted"/"opted_out" once
+   * the offer is settled either way. */
   const { data: negotiationTurn } = useQuery({
     queryKey: ["negotiation-turn", dealTx?.id],
     enabled: Boolean(dealTx?.id && dealTx?.poi_sealed_at && !dealTx?.wad_completed_at),
@@ -958,7 +959,7 @@ function LiveDealEngine() {
       if (last.response === "challenged") {
         return last.responder_side === "counterparty" ? ("counteroffer" as const) : ("offer" as const);
       }
-      return null;
+      return last.response === "accepted" ? ("accepted" as const) : ("opted_out" as const);
     },
   });
 
@@ -1012,16 +1013,22 @@ function LiveDealEngine() {
       o["poi"] = dealTx.poi_sealed_at ? "done" : "active";
       if (dealTx.poi_sealed_at) {
         // The Offer ⇄ Counter Offer loop is its own turn-taking exchange, so the pulse follows
-        // whose move it is rather than sitting on the checks row: the counterparty's turn shows on
-        // the Offer, the bidder's turn shows on Counter Offer.
-        if (!dealTx.wad_completed_at && negotiationTurn) {
-          o["offer"] = negotiationTurn === "offer" ? "active" : "open";
-          o["counterOffer"] = negotiationTurn === "counteroffer" ? "active" : "open";
+        // whose move it is rather than sitting on the checks row. "counterparty" and "offer" both
+        // mean the counterparty still has to answer — the bidder is waiting, so Counter Offer
+        // pulses (it's the response everyone's watching for). "counteroffer" means the
+        // counterparty just answered and it's the bidder's turn — the pulse moves to Offer. It
+        // keeps bouncing between the two, whichever, until someone actually accepts.
+        if (!dealTx.wad_completed_at && negotiationTurn && negotiationTurn !== "opted_out") {
+          const awaitingCounterparty = negotiationTurn === "counterparty" || negotiationTurn === "offer";
+          o["counterOffer"] = awaitingCounterparty ? "active" : "open";
+          o["offer"] = negotiationTurn === "counteroffer" ? "active" : "open";
         }
         // The KYC/KYB/PEP/AML checks now run before Without a Doubt: the pulse sits on the
         // checks row while they are outstanding, and the gate row only turns green with them.
         o["kycKyb"] = dealTx.wad_completed_at ? "done" : "active";
-        o["wad"] = dealTx.wad_completed_at ? "done" : "open";
+        // Green pulse moves to WaD itself the moment the offer is accepted — not just once WaD
+        // is fully cleared.
+        o["wad"] = dealTx.wad_completed_at ? "done" : negotiationTurn === "accepted" ? "active" : "open";
         if (dealTx.wad_completed_at) {
           o["businessDocs"] = dealTx.step === "business-docs" ? "active" : "done";
           // Business documents in: Execution is what's next, so that's where the pulse goes.

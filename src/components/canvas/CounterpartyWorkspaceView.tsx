@@ -10,6 +10,7 @@ import { respondAsCounterparty } from "@/lib/counterpartyClaim.functions";
 import { InlineFrame } from "@/components/canvas/DealCanvas";
 import { MapView } from "@/components/canvas/MapView";
 import { MutualEngagementPanel } from "@/components/engagement/MutualEngagementPanel";
+import { getEngagement } from "@/lib/engagement.functions";
 import { money, tradeKindOf, when, type Transaction } from "@/lib/tx";
 import { cn } from "@/lib/utils";
 
@@ -89,6 +90,14 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
       return data ?? [];
     },
   });
+
+  const loadEngagement = useServerFn(getEngagement);
+  const { data: engagement } = useQuery({
+    queryKey: ["engagement", tx.id],
+    queryFn: () => loadEngagement({ data: { transactionId: tx.id } }),
+    enabled: Boolean(tx.poi_sealed_at),
+  });
+  const offerApproved = engagement?.decided === "accepted";
 
   async function respondTo(response: "accepted" | "declined") {
     setResponding(response);
@@ -193,8 +202,20 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
             )}
 
             {/* The Offer sits after Seal Intent — it only exists once the intent is sealed — and is
-                always open: it's the counterparty's own move (Approve, Counter or Reject). */}
-            <MutualEngagementPanel transactionId={tx.id} />
+                always open: it's the counterparty's own move (Approve, Counter or Reject). It
+                collapses the instant it's approved — Without a Doubt takes over as the current
+                step below, for both parties, rather than leaving a decided Offer still boxed up
+                here. */}
+            {!offerApproved && <MutualEngagementPanel transactionId={tx.id} />}
+
+            {offerApproved && !tx.wad_completed_at && (
+              <div className="glass-node p-4">
+                <span className="label-caps mb-2 inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+                  Without a Doubt
+                </span>
+                <InlineFrame bare viewOnly tx={tx} stage="compliance" step="wad" reload={reload} onClose={() => {}} />
+              </div>
+            )}
 
             {canRespond && (
               <div className="glass-node space-y-2 p-4">
