@@ -48,6 +48,7 @@ export function SignUpForm({
   hideHeader = false,
   hideFooterLink = false,
   compact = false,
+  initialStep = 1,
 }: {
   next?: string | undefined;
   className?: string | undefined;
@@ -56,9 +57,13 @@ export function SignUpForm({
   /** Tighter spacing and a shorter min-height — used when this form sits in a small space (the
    * home page hero) rather than the standalone /auth page. */
   compact?: boolean;
+  /** 2 when returning from the email confirmation link. */
+  initialStep?: 1 | 2 | 3 | undefined;
 }) {
   const navigate = useNavigate();
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(initialStep);
+  const [checkEmail, setCheckEmail] = useState(false);
+  const [resendIn, setResendIn] = useState(0);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -86,14 +91,69 @@ export function SignUpForm({
     },
   ];
 
-  function onContinue(e: React.FormEvent) {
+  const confirmRedirect = () => `${window.location.origin}/?signup=2`;
+
+  function startCooldown() {
+    setResendIn(60);
+    const t = window.setInterval(() => {
+      setResendIn((n) => {
+        if (n <= 1) window.clearInterval(t);
+        return n - 1;
+      });
+    }, 1000);
+  }
+
+  // Step 1 creates the account and sends the confirmation email. The organisation details (step 2)
+  // are only saved once the person has confirmed and is signed in — the database refuses them
+  // before that.
+  async function onContinue(e: React.FormEvent) {
     e.preventDefault();
     setMessage("");
     if (rules.some((r) => !r.ok)) {
       setMessage("Please meet all the password requirements.");
       return;
     }
-    setStep(2);
+    setBusy(true);
+    beginRegistration();
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: confirmRedirect(), data: { full_name: fullName } },
+      });
+      if (error) throw error;
+      if (data.session) {
+        setStep(2);
+      } else {
+        endRegistration();
+        setCheckEmail(true);
+        startCooldown();
+      }
+    } catch (err) {
+      endRegistration();
+      const msg = mapAuthError((err as Error).message);
+      setMessage(msg);
+      toast.error(msg);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resend() {
+    setMessage("");
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: { emailRedirectTo: confirmRedirect() },
+    });
+    if (error) {
+      const msg = mapAuthError(error.message);
+      setMessage(msg);
+      toast.error(msg);
+      return;
+    }
+    toast.success("Confirmation email sent again");
+    startCooldown();
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -115,17 +175,15 @@ export function SignUpForm({
     // and this function reaching that line, tearing the form down before step 3 ever renders.
     beginRegistration();
     try {
-      const { data: signUpData, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}${safeNext(next)}`,
-          data: { full_name: fullName },
-        },
-      });
-      if (error) throw error;
+      const { data: userData } = await supabase.auth.getUser();
+      const authUser = userData.user;
+      if (!authUser) throw new Error("Please open the confirmation link in your email first.");
+      const email = authUser.email ?? "";
+      const fullName =
+        [firstName.trim(), lastName.trim()].filter(Boolean).join(" ") ||
+        String(authUser.user_metadata?.["full_name"] ?? "");
 
-      const userId = signUpData.user?.id;
+      const userId = authUser.id;
       if (userId) {
         // Individuals still get an organisation record behind the scenes — every deal is tied to
         // an org_id, so this is what keeps the rest of the app (e.g. "Record and continue") from
@@ -155,8 +213,9 @@ export function SignUpForm({
 
         const { error: pErr } = await supabase
           .from("profiles")
-          .update({ org_id: org.id, account_type: accountType } as never)
-          .eq("id", userId);
+          .upsert({ id: userId, org_id: org.id, account_type: accountType, full_name: fullName } as never, {
+            onConflict: "id",
+          });
         if (pErr) throw pErr;
 
         // Best effort: write the company profile from their website in the background. A failure
@@ -166,7 +225,7 @@ export function SignUpForm({
         }
       }
 
-      toast.success("Account created");
+      toast.success("Organisation details saved");
       // One last step before heading in: an ID/passport number and the document that suits the
       // account — an Authority to Act for a company, proof of residential address for an
       // individual. The authenticated layout still catches anyone who closes the tab here.
@@ -238,7 +297,19 @@ export function SignUpForm({
       </div>
 
       <div className={compact ? "min-h-[260px]" : "min-h-[420px]"}>
-        {step === 1 ? (
+        {step === 1 && checkEmail ? (
+          <div className="space-y-4" aria-live="polite">
+            <h3 className="text-lg font-semibold">Check your email</h3>
+            <p className="text-sm text-muted-foreground">
+              We sent a confirmation link to <span className="font-medium text-foreground">{email}</span>.
+              Open it to continue with step 2 — your organisation details.
+            </p>
+            {message && <p className="text-sm text-destructive">{message}</p>}
+            <Button type="button" variant="outline" className="w-full" onClick={resend} disabled={resendIn > 0}>
+              {resendIn > 0 ? `Resend in ${resendIn}s` : "Resend confirmation email"}
+            </Button>
+          </div>
+        ) : step === 1 ? (
           <form onSubmit={onContinue} className={compact ? "space-y-1.5" : "space-y-4"}>
             <div className={cn("grid grid-cols-2", compact ? "gap-2" : "gap-3")}>
               <div className={compact ? "space-y-1" : "space-y-1.5"}>
@@ -314,8 +385,8 @@ export function SignUpForm({
               </p>
             )}
 
-            <Button type="submit" size={compact ? "sm" : "default"} className="w-full">
-              Continue
+            <Button type="submit" size={compact ? "sm" : "default"} className="w-full" disabled={busy}>
+              Create account
             </Button>
 
             <div className={cn("flex items-center gap-3", compact ? "my-2" : "my-5")}>
@@ -485,17 +556,8 @@ export function SignUpForm({
             )}
 
             <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1"
-                onClick={() => setStep(1)}
-                disabled={busy}
-              >
-                Back
-              </Button>
               <Button type="submit" className="flex-1" disabled={busy}>
-                Create account
+                Continue
               </Button>
             </div>
           </form>

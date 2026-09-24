@@ -1,4 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { beginRegistration, endRegistration } from "@/lib/registrationFlow";
 import { useQuery } from "@tanstack/react-query";
 import { Coins, Mail, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -38,6 +40,19 @@ export function MainHeader() {
   const { user, org } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isHome = pathname === "/";
+  // Returning from the sign-up confirmation email (/?signup=2): open the large sign-up window at
+  // step 2 (organisation details). Registration is flagged so nothing redirects mid-wizard.
+  const [resumeSignup, setResumeSignup] = useState(false);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("signup") === "2") {
+      beginRegistration();
+      setResumeSignup(true);
+      params.delete("signup");
+      const q = params.toString();
+      window.history.replaceState(null, "", window.location.pathname + (q ? `?${q}` : "") + window.location.hash);
+    }
+  }, []);
   // Whatever was typed into the homepage search bar, so signing in carries it into the workspace.
   const { prompt } = useHeroSearchOptional();
   const next = isHome ? seedNext(prompt) : undefined;
@@ -173,6 +188,15 @@ export function MainHeader() {
           )}
         </div>
       </div>
+      <SignInModal
+        open={resumeSignup}
+        onOpenChange={(o) => {
+          if (!o) endRegistration();
+          setResumeSignup(o);
+        }}
+        defaultTab="signup"
+        initialSignupStep={2}
+      />
     </header>
   );
 }

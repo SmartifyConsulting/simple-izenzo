@@ -10,19 +10,27 @@ export function SignInModal({
   children,
   next,
   defaultTab = "signin",
+  open: openProp,
+  onOpenChange,
+  initialSignupStep,
 }: {
-  children: ReactNode;
+  children?: ReactNode;
+  open?: boolean | undefined;
+  onOpenChange?: ((open: boolean) => void) | undefined;
+  initialSignupStep?: 1 | 2 | 3 | undefined;
   next?: string | undefined;
   defaultTab?: "signin" | "signup";
 }) {
-  const [open, setOpen] = useState(false);
+  const [openState, setOpenState] = useState(false);
+  const open = openProp ?? openState;
+  const setOpen = onOpenChange ?? setOpenState;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent className="sm:max-w-xl">
         <DialogTitle className="sr-only">{defaultTab === "signup" ? "Create account" : "Sign in"}</DialogTitle>
-        <AuthTabs next={next} defaultTab={defaultTab} />
+        <AuthTabs next={next} defaultTab={defaultTab} initialSignupStep={initialSignupStep} />
       </DialogContent>
     </Dialog>
   );
