@@ -21,6 +21,7 @@ import {
   StopCircle,
   Pencil,
   User,
+  RefreshCw,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import {
@@ -997,6 +998,10 @@ function LiveDealEngine() {
   const { data: negotiationTurn } = useQuery({
     queryKey: ["negotiation-turn", dealTx?.id],
     enabled: Boolean(dealTx?.id && dealTx?.poi_sealed_at && !dealTx?.wad_completed_at),
+    // The other party accepting/countering while this tab sits open and idle has nothing to
+    // invalidate this specific query on this browser otherwise (their action only invalidates it
+    // on their own client) — polling is what keeps a stale "whose turn" reading from lingering.
+    refetchInterval: 15_000,
     queryFn: async () => {
       const { data } = await supabase
         .from("engagement_responses")
@@ -1092,24 +1097,29 @@ function LiveDealEngine() {
         // pulses (it's the response everyone's watching for). "counteroffer" means the
         // counterparty just answered and it's the bidder's turn — the pulse moves to Offer. It
         // keeps bouncing between the two, whichever, until someone actually accepts.
-        // Explicitly set even while `negotiationTurn` is still loading (or once accepted, when
-        // neither should pulse) — leaving either key unset here let it fall through to the
-        // node's own default state, which reads "active" by coincidence (Offer shares its
-        // stage/step with Without a Doubt), pulsing Offer long after it was actually settled.
-        if (!dealTx.wad_completed_at) {
-          const awaitingCounterparty = negotiationTurn === "counterparty" || negotiationTurn === "offer";
-          o["counterOffer"] = awaitingCounterparty ? "active" : "open";
-          o["offer"] = negotiationTurn === "counteroffer" ? "active" : "open";
-        } else {
-          o["offer"] = "open";
-          o["counterOffer"] = "open";
-        }
+        // Built as one mutually-exclusive "whose turn" phase rather than three independent
+        // ternaries — Offer, Counter Offer and Without a Doubt all share the same stage/step, so
+        // three separate conditions that individually happened to agree (or a stale/loading
+        // negotiationTurn value) could previously leave more than one reading "active" at once.
+        // Computing a single phase up front and deriving all three from it makes that structurally
+        // impossible: exactly one of them (or none, once WaD is cleared) is ever "active".
+        const phase: "counterOffer" | "offer" | "wad" | "none" = dealTx.wad_completed_at
+          ? "none"
+          : negotiationTurn === "accepted"
+            ? "wad"
+            : negotiationTurn === "counteroffer"
+              ? "offer"
+              : negotiationTurn === "counterparty" || negotiationTurn === "offer"
+                ? "counterOffer"
+                : "none";
+        o["counterOffer"] = phase === "counterOffer" ? "active" : "open";
+        o["offer"] = phase === "offer" ? "active" : "open";
         // The KYC/KYB/PEP/AML checks now run before Without a Doubt: the pulse sits on the
         // checks row while they are outstanding, and the gate row only turns green with them.
         o["kycKyb"] = dealTx.wad_completed_at ? "done" : "active";
         // Green pulse moves to WaD itself the moment the offer is accepted — not just once WaD
         // is fully cleared.
-        o["wad"] = dealTx.wad_completed_at ? "done" : negotiationTurn === "accepted" ? "active" : "open";
+        o["wad"] = dealTx.wad_completed_at ? "done" : phase === "wad" ? "active" : "open";
         if (dealTx.wad_completed_at) {
           o["businessDocs"] = dealTx.step === "business-docs" ? "active" : "done";
           // Business documents in: Execution is what's next, so that's where the pulse goes.
@@ -2299,6 +2309,19 @@ function LiveDealEngine() {
           <div className="sticky -top-3 z-20 -mx-3 -mt-3 mb-1.5 bg-card px-3 pb-3 pt-3 sm:-top-5 sm:-mx-5 sm:-mt-5 sm:px-5 sm:pt-5">
           <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
             <p className="label-caps text-muted-foreground">Live Workspace</p>
+            <div className="flex shrink-0 items-center gap-1">
+            {/* A second Refresh, right here at the Live Workspace frame itself — the taskbar's own
+                one (bottom of the screen) is easy to miss when the frame this affects is what's
+                actually in view. Same real page reload either way. */}
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              title="Refresh this page"
+              aria-label="Refresh this page"
+              className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
             {dealTx && (
               <AlertDialog>
                 <DropdownMenu>
@@ -2344,12 +2367,15 @@ function LiveDealEngine() {
                 </AlertDialogContent>
               </AlertDialog>
             )}
+            </div>
           </div>
 
           {/* Once Proof of Intent is sealed, the record up to that point is immutable at the
               database level (see protect_sealed_transaction) — this banner says so in the UI
-              instead of letting someone try to edit something that will just be rejected. */}
-          {dealTx?.poi_sealed_at && (
+              instead of letting someone try to edit something that will just be rejected. Hidden
+              again once Step 1 itself is behind us (the deal has moved past Trading) — by then
+              the Step 1 accordion below already says the same thing more usefully. */}
+          {dealTx?.poi_sealed_at && dealTx.stage === "trading" && (
             <div className="mb-1.5 flex items-center gap-1.5 rounded-full border border-success/30 bg-success/10 px-3 py-1.5 text-[11px] font-medium text-success">
               <Lock className="h-3 w-3 shrink-0" />
               Intent sealed — everything above is now read-only.
@@ -2359,17 +2385,26 @@ function LiveDealEngine() {
           {/* The single toggle for every completed Trading-stage record below — always visible
               itself (that's the point: it's the way back in once the group is collapsed), and
               collapsed by default so a deal that's moved on doesn't open with its whole history
-              already taking up the screen. */}
+              already taking up the screen. Styled like Memory's own tile on the map (gold, black
+              outline) since this accordion plays the same "settled record" role Step 1 plays
+              there, with the same black "STEP" pill the map itself uses for section labels. */}
           {activity && dealTx && (
             <button
               type="button"
               onClick={() => setStep1Open((v) => !v)}
               aria-expanded={step1Open}
-              className="mb-1.5 flex w-full items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-left text-xs font-semibold text-foreground hover:bg-accent"
+              className="mb-1.5 flex w-full items-center gap-2 rounded-full border-2 border-black bg-amber-400/35 px-3 py-1.5 text-left text-xs font-semibold text-foreground hover:bg-amber-400/50"
             >
               {step1Open ? <Minus className="h-3.5 w-3.5 shrink-0" /> : <Plus className="h-3.5 w-3.5 shrink-0" />}
-              Step 1 · Trading
-              <ChevronDown className={cn("ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform", step1Open && "rotate-180")} />
+              <span className="label-caps rounded-full bg-[var(--step-pill-bg)] px-2.5 py-0.5 text-[var(--step-pill-fg)]">
+                Step 1 · Trading
+              </span>
+              {(((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference) && (
+                <span className="ml-auto shrink-0 font-mono text-base font-bold tracking-wide text-foreground">
+                  {((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference}
+                </span>
+              )}
+              <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform", step1Open && "rotate-180")} />
             </button>
           )}
 
@@ -3221,8 +3256,9 @@ function LiveDealEngine() {
                   </div>
                 )}
 
-                {/* Cleared WaD case — same folded-record treatment as Seal Intent above. */}
-                {dealTx?.wad_completed_at && (
+                {/* Cleared WaD case — same folded-record treatment as Seal Intent above. Grouped
+                    into Step 1 · Trading too, alongside Trade Summary below it. */}
+                {step1Open && dealTx?.wad_completed_at && (
                   <div className="rounded-2xl border border-border bg-card">
                     <button
                       type="button"
@@ -3293,7 +3329,7 @@ function LiveDealEngine() {
                 {/* Only once Step 2's own documents (Business Docs) are in — not the moment the
                     compliance checks clear. Collapsed by default: it's a record to check back on,
                     and Execution is what needs attention by then. */}
-                {dealTx?.wad_completed_at && stepOverrides["businessDocs"] === "done" && (
+                {step1Open && dealTx?.wad_completed_at && stepOverrides["businessDocs"] === "done" && (
                   <div className="mt-1.5 rounded-2xl border border-border bg-card">
                     <button
                       type="button"
