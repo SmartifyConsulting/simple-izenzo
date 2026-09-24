@@ -1873,6 +1873,7 @@ function WadStep({ tx, reload, onContinue }: Props) {
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [preScreenOpenOverride, setPreScreenOpenOverride] = useState<boolean | null>(null);
+  const [revealCertificate, setRevealCertificate] = useState(false);
   const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
   const [skipDialogOpen, setSkipDialogOpen] = useState(false);
   const [skipReason, setSkipReason] = useState("");
@@ -2082,7 +2083,7 @@ function WadStep({ tx, reload, onContinue }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bothCleared, tx.wad_completed_at, busy]);
 
-  if (tx.wad_completed_at) {
+  if (tx.wad_completed_at && revealCertificate) {
     // No outer Panel/title here — the frame this sits inside already reads "Without a Doubt", so
     // wrapping the certificate in a second "Without a Doubt" panel just nested the same heading
     // inside itself. The certificate (already filed in Bid Information, previewable and
@@ -2143,6 +2144,21 @@ function WadStep({ tx, reload, onContinue }: Props) {
             <Button size="sm" variant="outline" disabled={busy || shortOnTokens} onClick={() => setExitConfirmOpen(true)}>
               Exit
             </Button>
+            {/* Both sides clear themselves (see the effect above), but moving on to Legal
+                Agreements is still a person's own click — collapsing this frame and opening the
+                next one isn't something that should happen out from under someone still reading
+                the result. */}
+            {tx.wad_completed_at && (
+              <Button
+                size="sm"
+                onClick={() => {
+                  setRevealCertificate(true);
+                  onContinue?.();
+                }}
+              >
+                Continue
+              </Button>
+            )}
             {/* Shown only once a check has actually come back unfavourable — proceeding past that
                 is a person's own explicit choice, not something a passing check needs a button
                 for (that clears itself, see the effect above). */}
@@ -2369,7 +2385,7 @@ function WadStep({ tx, reload, onContinue }: Props) {
                   })}
                 </div>
                 <p className="mt-3 text-xs text-muted-foreground">
-                  These results carry through from the background screening on {chosenCp?.name ?? "the chosen party"} — they are not run again here.
+                  These results carry through from the background screening conducted upon registration.
                 </p>
               </>
             )}
