@@ -11,6 +11,7 @@ import { InlineFrame } from "@/components/canvas/DealCanvas";
 import { MapView } from "@/components/canvas/MapView";
 import { MutualEngagementPanel } from "@/components/engagement/MutualEngagementPanel";
 import { getEngagement } from "@/lib/engagement.functions";
+import { readDocument } from "@/lib/documents.functions";
 import { DocumentSummaryList } from "@/components/canvas/DocumentSummaryList";
 import { Confetti } from "@/components/effects/Confetti";
 import { hasSeenOfferCelebration, markOfferCelebrationSeen } from "@/lib/celebrationSeen";
@@ -87,12 +88,67 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
     queryFn: async () => {
       const { data } = await supabase
         .from("documents")
-        .select("id, name, doc_type, created_at")
+        .select("id, name, doc_type, notes, storage_path, created_at")
         .eq("transaction_id", tx.id)
         .order("created_at", { ascending: true });
       return data ?? [];
     },
   });
+
+  // The counterparty gets the same document folder the bidder sees on the map — every file filed
+  // against this deal, previewable and downloadable — just never the bidder's own working steps
+  // (Search, AI/AI+, Choice, Online Media) or anything from the Decision Pack, none of which render
+  // in this view at all.
+  const mapDocuments = docs
+    .filter((d) => Boolean(d.storage_path))
+    .map((d) => ({ name: d.name, kind: (d.notes as string | null) ?? d.doc_type ?? "Document", path: d.storage_path }));
+
+  const readDoc = useServerFn(readDocument);
+  async function loadDocBlob(d: { name: string; path?: string | null }): Promise<Blob | null> {
+    if (!d.path) return null;
+    try {
+      const { base64, contentType } = await readDoc({ data: { path: d.path } });
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+      return new Blob([bytes], { type: contentType });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : `Could not read ${d.name}`);
+      return null;
+    }
+  }
+  async function openDoc(d: { name: string; path?: string | null }) {
+    const tab = window.open("", "_blank");
+    if (tab) {
+      tab.document.title = d.name;
+      tab.document.body.innerText = "Opening document…";
+    }
+    const blob = await loadDocBlob(d);
+    if (!blob) {
+      tab?.close();
+      return;
+    }
+    const url = URL.createObjectURL(blob);
+    if (tab) {
+      tab.location.href = url;
+    } else {
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = d.name;
+      link.click();
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  }
+  async function downloadDoc(d: { name: string; path?: string | null }) {
+    const blob = await loadDocBlob(d);
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = d.name;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  }
 
   const loadEngagement = useServerFn(getEngagement);
   const { data: engagement } = useQuery({
@@ -219,7 +275,16 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
         <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <div className="glass-node p-4" style={{ "--throb-accent": "#4169e1" } as CSSProperties}>
             <div className="relative w-full" style={{ aspectRatio: "960 / 1050" }}>
-              <MapView tx={tx} reload={reload} readOnly reference={tx.reference} overrideStates={mapOverrides} />
+              <MapView
+                tx={tx}
+                reload={reload}
+                readOnly
+                reference={tx.reference}
+                overrideStates={mapOverrides}
+                documents={mapDocuments}
+                onOpenDocument={(d) => void openDoc(d)}
+                onDownloadDocument={(d) => void downloadDoc(d)}
+              />
             </div>
           </div>
 
