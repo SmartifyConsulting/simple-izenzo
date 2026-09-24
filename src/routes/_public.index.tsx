@@ -191,7 +191,9 @@ function AlphaBravoHome() {
         {/* Sign in / sign up sits top-right of the hero, level with the badge above the
             headline. A signed-in visitor sees their active bids/offers here instead — see
             ActiveDealsPanel below. */}
-        {!user && (
+        {/* Kept mounted while a sign-up is mid-wizard: the account is signed in already, and
+            unmounting here would drop step 3 (ID number + document) before it renders. */}
+        {(!user || registrationInProgress()) && (
           <div className="rounded-2xl border border-border bg-card p-3.5 shadow-sm">
             <AuthTabs compact />
           </div>
