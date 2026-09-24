@@ -296,6 +296,33 @@ function MemoryArcLabel() {
  * list inside Bid Information. Briefly bounces and turns success-green the moment a new file is
  * filed, then settles back to its normal state; click it to see and open/download what's inside.
  */
+/** A single filed document's flight from Upload Files to the Documents folder — mounted for one
+ * uploaded file, animates itself from the Upload Files tile to the folder, then the parent removes
+ * it once the flight is done. Pure animation; carries no data of its own. */
+function FlyingDocument() {
+  const [arrived, setArrived] = useState(false);
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setArrived(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  const start = { x: cx(BOXES.loadDocs), y: cy(BOXES.loadDocs) };
+  const end = { x: DOCS_BOX.x + DOCS_BOX.w / 2, y: DOCS_BOX.y + DOCS_BOX.h / 2 };
+  const pos = arrived ? end : start;
+  return (
+    <div
+      className="pointer-events-none absolute z-30 transition-all duration-[700ms] ease-in"
+      style={{
+        left: px(pos.x),
+        top: py(pos.y),
+        transform: "translate(-50%, -50%)",
+        opacity: arrived ? 0 : 1,
+      }}
+    >
+      <FileText className="h-5 w-5 text-success drop-shadow" />
+    </div>
+  );
+}
+
 function DocumentsFolder({
   documents,
   onOpenDocument,
@@ -308,25 +335,39 @@ function DocumentsFolder({
   const [open, setOpen] = useState(false);
   const [hovering, setHovering] = useState(false);
   const [justFiled, setJustFiled] = useState(false);
+  const [flights, setFlights] = useState<number[]>([]);
+  const flightId = useRef(0);
   const prevCount = useRef(documents.length);
   const showList = (open || hovering) && documents.length > 0;
 
   useEffect(() => {
     if (documents.length > prevCount.current) {
-      setJustFiled(true);
-      const t = setTimeout(() => setJustFiled(false), 1000);
+      const id = ++flightId.current;
+      setFlights((f) => [...f, id]);
+      // The folder itself only reacts once the flight actually lands, so the bounce/"Filed!"
+      // moment feels like the document arriving rather than firing the instant it's uploaded.
+      const land = setTimeout(() => {
+        setFlights((f) => f.filter((x) => x !== id));
+        setJustFiled(true);
+        const t = setTimeout(() => setJustFiled(false), 1000);
+        return () => clearTimeout(t);
+      }, 750);
       prevCount.current = documents.length;
-      return () => clearTimeout(t);
+      return () => clearTimeout(land);
     }
     prevCount.current = documents.length;
     return undefined;
   }, [documents.length]);
 
   return (
-    <div
-      className="absolute"
-      style={{ left: px(DOCS_BOX.x), top: py(DOCS_BOX.y), width: px(DOCS_BOX.w), height: py(DOCS_BOX.h) }}
-    >
+    <>
+      {flights.map((id) => (
+        <FlyingDocument key={id} />
+      ))}
+      <div
+        className="absolute"
+        style={{ left: px(DOCS_BOX.x), top: py(DOCS_BOX.y), width: px(DOCS_BOX.w), height: py(DOCS_BOX.h) }}
+      >
       {/* A tight square frame, rounded corners, around the icon alone — the caption sits outside
           it, below, so the frame itself never stretches to fit the label. */}
       <button
@@ -400,7 +441,8 @@ function DocumentsFolder({
           </ul>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
 
