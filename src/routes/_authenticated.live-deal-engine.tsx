@@ -2495,14 +2495,20 @@ function LiveDealEngine() {
               itself (that's the point: it's the way back in once the group is collapsed), and
               collapsed by default so a deal that's moved on doesn't open with its whole history
               already taking up the screen. Styled like Memory's own tile on the map (gold, black
-              outline) since this accordion plays the same "settled record" role Step 1 plays
-              there, with the same black "STEP" pill the map itself uses for section labels. */}
+              outline) only once the deal has actually moved past the Trading stage — the same
+              "settled record" look Step 1 plays there. While Trading is still in progress this
+              stays a plain light-grey pill instead, since nothing in it has actually settled yet. */}
           {activity && dealTx && (
             <button
               type="button"
               onClick={() => setStep1Open((v) => !v)}
               aria-expanded={step1Open}
-              className="mb-1.5 flex w-full items-center gap-2 rounded-full border-2 border-black bg-amber-400/35 px-3 py-1.5 text-left text-xs font-semibold text-foreground hover:bg-amber-400/50"
+              className={cn(
+                "mb-1.5 flex w-full items-center gap-2 rounded-full border-2 px-3 py-1.5 text-left text-xs font-semibold text-foreground",
+                dealTx.stage !== "trading"
+                  ? "border-black bg-amber-400/35 hover:bg-amber-400/50"
+                  : "border-border bg-muted hover:bg-muted/70",
+              )}
             >
               {step1Open ? <Minus className="h-3.5 w-3.5 shrink-0" /> : <Plus className="h-3.5 w-3.5 shrink-0" />}
               <span className="label-caps rounded-full bg-[var(--step-pill-bg)] px-2.5 py-0.5 text-[var(--step-pill-fg)]">
@@ -2575,11 +2581,15 @@ function LiveDealEngine() {
                       {org?.country ?? dealTx.jurisdiction}
                     </p>
                   )}
-                  {/* The counterparty's own identity, once there's a sealed deal to show it
-                      against — in blue, the counterparty's colour everywhere else in this
+                  {/* The counterparty's own identity, once the offer has actually been accepted by
+                      either party — in blue, the counterparty's colour everywhere else in this
                       workspace, with the same verified/pending badge style as the bidder's own
-                      above it. */}
-                  {dealTx.poi_sealed_at && counterpartyIdentity?.name && (
+                      above it. Gated on acceptance (negotiationTurn === "accepted"), not merely on
+                      POI being sealed, so the KYC/KYB pending badge never appears while the offer
+                      is still being negotiated. */}
+                  {dealTx.poi_sealed_at &&
+                    (negotiationTurn === "accepted" || dealTx.wad_completed_at) &&
+                    counterpartyIdentity?.name && (
                     <div className="mt-1.5 flex flex-wrap items-center gap-2 border-t border-border pt-1.5">
                       <User className="h-4 w-4 shrink-0 text-[#3457e6]" aria-label="Counterparty" />
                       <span className="min-w-0 truncate text-sm font-bold text-[#3457e6]">
