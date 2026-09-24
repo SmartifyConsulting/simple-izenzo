@@ -1,4 +1,4 @@
-import { FileBadge2 } from "lucide-react";
+import { FileText } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 /** Which document artefacts a step actually produces, keyed by the step's own spine key. Shown as
@@ -29,7 +29,7 @@ export function ArtefactHint({ step, className }: { step: string; className?: st
             className={className ?? "inline-flex shrink-0 cursor-help items-center text-primary/70 hover:text-primary"}
             aria-label={`Artefacts: ${artefacts.join(", ")}`}
           >
-            <FileBadge2 className="h-3 w-3" />
+            <FileText className="h-3 w-3" />
           </span>
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-[220px]">
