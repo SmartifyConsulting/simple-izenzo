@@ -39,7 +39,7 @@ import { advance, fingerprintOf, money, recordEvent, shortHash, when, type Trans
 import { POI_COST, WAD_COST, type StageKey } from "@/lib/spine";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
-import { routeIdentityVerification } from "@/lib/identityRouting";
+import { VerificationPanel } from "@/components/verification/VerificationPanel";
 import { Logo } from "@/components/Logo";
 import { MutualEngagementPanel } from "@/components/engagement/MutualEngagementPanel";
 import { classifySignatureDocuments, getEngagement } from "@/lib/engagement.functions";
@@ -1846,6 +1846,13 @@ function WadStep({ tx, reload }: Props) {
     queryFn: () => loadEngagement({ data: { transactionId: tx.id } }),
   });
   const offerApproved = engagement?.decided === "accepted";
+  // The real result of the two-way Didit checks — not a local checkbox — decides what happens
+  // next: both sides cleared moves straight to completion, either one failing needs a person to
+  // actually choose whether to continue or walk away, rather than either being decided silently.
+  const diligenceFailed = (engagement?.diligence ?? []).some(
+    (d) => d.kyc_state === "failed" || d.kyb_state === "failed",
+  );
+  const bothCleared = Boolean(engagement?.bothCleared);
   const [checks, setChecks] = useState<Record<string, boolean>>({});
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
@@ -1863,7 +1870,6 @@ function WadStep({ tx, reload }: Props) {
   });
   const effectiveRating = chosenCp && (chosenCp.rating_override ?? chosenCp.rating_band);
   const flagged = effectiveRating === "flagged";
-  const trusted = effectiveRating === "trusted";
   const complianceFlags =
     (chosenCp?.media_flags as { compliance?: { flags?: { reason: string; url: string | null }[] } } | null)
       ?.compliance?.flags ?? [];
@@ -1918,8 +1924,6 @@ function WadStep({ tx, reload }: Props) {
       return { tone: "warn", text: `Needs review — ${hit.reason ?? "a person must look at this result"}` } as const;
     return { tone: "muted", text: "Opened in Step 1 — no result yet" } as const;
   }
-
-  const allChecked = WAD_CHECKS.every((c) => checks[c.key]);
 
   /** The clearance certificate's field lines — identical whether filed against the deal or
    * downloaded, and hashed as plain text before being laid out as a PDF. */
@@ -1997,15 +2001,16 @@ function WadStep({ tx, reload }: Props) {
     if (signed?.signedUrl) window.open(signed.signedUrl, "_blank");
   }
 
-  async function decide(decision: "cleared" | "referred" | "blocked") {
+  async function decide(decision: "cleared" | "referred" | "blocked", overrideChecks?: Record<string, boolean>) {
     setBusy(true);
     try {
+      const effectiveChecks = overrideChecks ?? checks;
       await complete({
         data: {
           transactionId: tx.id,
           decision,
           checks: Object.fromEntries(
-            WAD_CHECKS.map((c) => [c.key, { passed: Boolean(checks[c.key]), notes }]),
+            WAD_CHECKS.map((c) => [c.key, { passed: Boolean(effectiveChecks[c.key]), notes }]),
           ),
         },
       });
@@ -2013,13 +2018,30 @@ function WadStep({ tx, reload }: Props) {
       if (decision === "cleared") await fileCertificate();
       reload();
 
-      toast.success(`WaD ${decision}`);
+      toast.success(
+        decision === "cleared"
+          ? "Both sides verified via Didit — Without a Doubt is cleared."
+          : decision === "blocked"
+            ? "Exited — Without a Doubt did not clear."
+            : `WaD ${decision}`,
+      );
     } catch (err) {
       reportGateError(err, navigate, tx);
     } finally {
       setBusy(false);
     }
   }
+
+  // Once both sides' Didit checks have genuinely cleared, Without a Doubt completes itself —
+  // there is no separate manual "Run Verification" step to fake past any more; the real result
+  // is what decides it.
+  const autoClearedRef = useRef(false);
+  useEffect(() => {
+    if (!bothCleared || tx.wad_completed_at || autoClearedRef.current || busy) return;
+    autoClearedRef.current = true;
+    void decide("cleared", { kyc: true, kyb: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bothCleared, tx.wad_completed_at, busy]);
 
   if (tx.wad_completed_at) {
     return (
@@ -2081,20 +2103,23 @@ function WadStep({ tx, reload }: Props) {
             <Button size="sm" variant="outline" disabled={busy || shortOnTokens} onClick={() => decide("blocked")}>
               Exit
             </Button>
-            <Button
-              size="sm"
-              disabled={busy || shortOnTokens || !counterpartyRegistered || !offerApproved}
-              title={
-                !offerApproved
-                  ? "The counterparty has to approve the offer above before verification can run."
-                  : counterpartyRegistered
-                    ? undefined
-                    : "The counterparty has to register on Izenzo before verification can run."
-              }
-              onClick={() => decide("cleared")}
-            >
-              Run Verification
-            </Button>
+            {/* Shown only once a check has actually come back unfavourable — proceeding past that
+                is a person's own explicit choice, not something a passing check needs a button
+                for (that clears itself, see the effect above). */}
+            {diligenceFailed && (
+              <Button
+                size="sm"
+                disabled={busy || shortOnTokens}
+                onClick={() =>
+                  decide("cleared", {
+                    kyc: (engagement?.diligence ?? []).every((d) => d.kyc_state !== "failed"),
+                    kyb: (engagement?.diligence ?? []).every((d) => d.kyb_state !== "failed"),
+                  })
+                }
+              >
+                Continue anyway
+              </Button>
+            )}
           </div>
         </div>
       }
@@ -2102,7 +2127,7 @@ function WadStep({ tx, reload }: Props) {
       {!offerApproved && (
         <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
           <Lock className="h-3.5 w-3.5" /> Waiting on the counterparty to approve the offer above.
-          Run Verification unlocks once they do.
+          Verification unlocks once they do.
         </div>
       )}
       {shortOnTokens && (
@@ -2114,7 +2139,7 @@ function WadStep({ tx, reload }: Props) {
       {offerApproved && !counterpartyRegistered && (
         <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
           <Lock className="h-3.5 w-3.5" /> {chosenCp?.name ?? "The counterparty"} has not registered
-          on Izenzo yet. Run Verification unlocks once they have.
+          on Izenzo yet. Verification unlocks once they have.
         </div>
       )}
       {flagged && (
@@ -2143,22 +2168,20 @@ function WadStep({ tx, reload }: Props) {
           )}
         </div>
       )}
-      {trusted && (
-        <div className="mb-4 rounded-md border border-success/40 bg-success/10 p-3 text-xs text-success">
-          <strong>{chosenCp?.name}</strong>: no sanctions, fraud or legal concerns found by the
-          automated compliance check. This is a screening signal, not a substitute for WaD.
+      {diligenceFailed && !tx.wad_completed_at && (
+        <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
+          A Didit check below did not come back favourable. Choose whether to continue anyway
+          (recorded on the deal and on the clearance certificate as an override) or exit —
+          nothing clears automatically while this is unresolved.
         </div>
       )}
-      {!allChecked && (
-        <div className="mb-4 rounded-md border border-[#14B8A6]/30 bg-[#14B8A6]/10 p-3 text-xs text-[#14B8A6]">
-          Still outstanding:{" "}
-          {WAD_CHECKS.filter((c) => !checks[c.key])
-            .map((c) => c.label)
-            .join("; ")}
-          . Clearing now is recorded against this deal as a reviewer override and appears on the
-          clearance certificate.
-        </div>
-      )}
+
+      <VerificationPanel
+        transactionId={tx.id}
+        checks={["id_document", "kyb"]}
+        title="Verify each other"
+        description="Each side runs the other's identity (KYC) and company (KYB) check via Didit. Without a Doubt clears itself the moment both come back verified."
+      />
 
       {priorChecks.length > 0 && (
         <div className="mb-4 rounded-lg border border-border p-3">
@@ -2188,48 +2211,6 @@ function WadStep({ tx, reload }: Props) {
         </div>
       )}
 
-      <ul className="space-y-2.5">
-        {WAD_CHECKS.map((c) => {
-          const route = c.key === "kyc" ? routeIdentityVerification(tx.jurisdiction) : null;
-          const status = statusFor(c.key);
-          const passed = Boolean(checks[c.key]);
-          return (
-            <li key={c.key} className="text-xs">
-              {/* Already verified when the parties registered — this reads as a result, not
-                  another checklist for a person to tick off again. */}
-              <div className="flex items-center gap-2.5">
-                {passed ? (
-                  <Check className="h-4 w-4 shrink-0 text-emerald-500" />
-                ) : (
-                  <span className="h-2 w-2 shrink-0 rounded-full bg-muted-foreground/40" />
-                )}
-                {c.label}
-              </div>
-              {status && (
-                <p
-                  className={cn(
-                    "ml-6 mt-1 whitespace-pre-line text-xs",
-                    status.tone === "ok"
-                      ? "text-emerald-500"
-                      : status.tone === "warn"
-                        ? "text-[#F97316]"
-                        : "text-muted-foreground",
-                  )}
-                >
-                  {status.text}
-                </p>
-              )}
-              {route && (
-                <p className="ml-6 mt-1 text-xs text-muted-foreground">
-                  Identity verification route: <span className="font-medium">{route.provider}</span>
-                  {" — "}
-                  {route.note}
-                </p>
-              )}
-            </li>
-          );
-        })}
-      </ul>
     </Panel>
     </div>
   );
