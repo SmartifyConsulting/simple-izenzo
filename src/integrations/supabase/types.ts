@@ -205,56 +205,6 @@ export type Database = {
         }
         Relationships: []
       }
-      ai_usage_events: {
-        Row: {
-          cost_usd: number | null
-          created_at: string
-          id: string
-          input_tokens: number | null
-          model: string | null
-          operation: string
-          org_id: string | null
-          output_tokens: number | null
-          provider: string
-          total_tokens: number | null
-          transaction_id: string | null
-        }
-        Insert: {
-          cost_usd?: number | null
-          created_at?: string
-          id?: string
-          input_tokens?: number | null
-          model?: string | null
-          operation: string
-          org_id?: string | null
-          output_tokens?: number | null
-          provider: string
-          total_tokens?: number | null
-          transaction_id?: string | null
-        }
-        Update: {
-          cost_usd?: number | null
-          created_at?: string
-          id?: string
-          input_tokens?: number | null
-          model?: string | null
-          operation?: string
-          org_id?: string | null
-          output_tokens?: number | null
-          provider?: string
-          total_tokens?: number | null
-          transaction_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ai_usage_events_transaction_id_fkey"
-            columns: ["transaction_id"]
-            isOneToOne: false
-            referencedRelation: "transactions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       ai_suggestion_events: {
         Row: {
           actor_id: string
@@ -386,6 +336,56 @@ export type Database = {
           {
             foreignKeyName: "ai_suggestions_related_transaction_id_fkey"
             columns: ["related_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_usage_events: {
+        Row: {
+          cost_usd: number | null
+          created_at: string
+          id: string
+          input_tokens: number | null
+          model: string | null
+          operation: string
+          org_id: string | null
+          output_tokens: number | null
+          provider: string
+          total_tokens: number | null
+          transaction_id: string | null
+        }
+        Insert: {
+          cost_usd?: number | null
+          created_at?: string
+          id?: string
+          input_tokens?: number | null
+          model?: string | null
+          operation: string
+          org_id?: string | null
+          output_tokens?: number | null
+          provider: string
+          total_tokens?: number | null
+          transaction_id?: string | null
+        }
+        Update: {
+          cost_usd?: number | null
+          created_at?: string
+          id?: string
+          input_tokens?: number | null
+          model?: string | null
+          operation?: string
+          org_id?: string | null
+          output_tokens?: number | null
+          provider?: string
+          total_tokens?: number | null
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_usage_events_transaction_id_fkey"
+            columns: ["transaction_id"]
             isOneToOne: false
             referencedRelation: "transactions"
             referencedColumns: ["id"]
@@ -2605,6 +2605,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_type: string | null
           authority_to_act_name: string | null
           authority_to_act_path: string | null
           authority_to_act_uploaded_at: string | null
@@ -2617,17 +2618,24 @@ export type Database = {
           id: string
           id_number: string | null
           id_number_type: string | null
+          identity_verified: boolean
+          identity_verified_reason: string | null
           last_accessed_at: string | null
           last_name: string | null
           login_count: number
           notification_channel: string
           notification_subscriptions: Json
+          onboarding_required: boolean
           org_id: string | null
+          residential_address_name: string | null
+          residential_address_path: string | null
+          residential_address_uploaded_at: string | null
           seat: string
           terms_accepted_at: string | null
           updated_at: string
         }
         Insert: {
+          account_type?: string | null
           authority_to_act_name?: string | null
           authority_to_act_path?: string | null
           authority_to_act_uploaded_at?: string | null
@@ -2640,17 +2648,24 @@ export type Database = {
           id: string
           id_number?: string | null
           id_number_type?: string | null
+          identity_verified?: boolean
+          identity_verified_reason?: string | null
           last_accessed_at?: string | null
           last_name?: string | null
           login_count?: number
           notification_channel?: string
           notification_subscriptions?: Json
+          onboarding_required?: boolean
           org_id?: string | null
+          residential_address_name?: string | null
+          residential_address_path?: string | null
+          residential_address_uploaded_at?: string | null
           seat?: string
           terms_accepted_at?: string | null
           updated_at?: string
         }
         Update: {
+          account_type?: string | null
           authority_to_act_name?: string | null
           authority_to_act_path?: string | null
           authority_to_act_uploaded_at?: string | null
@@ -2663,12 +2678,18 @@ export type Database = {
           id?: string
           id_number?: string | null
           id_number_type?: string | null
+          identity_verified?: boolean
+          identity_verified_reason?: string | null
           last_accessed_at?: string | null
           last_name?: string | null
           login_count?: number
           notification_channel?: string
           notification_subscriptions?: Json
+          onboarding_required?: boolean
           org_id?: string | null
+          residential_address_name?: string | null
+          residential_address_path?: string | null
+          residential_address_uploaded_at?: string | null
           seat?: string
           terms_accepted_at?: string | null
           updated_at?: string
@@ -3315,6 +3336,9 @@ export type Database = {
       transactions: {
         Row: {
           commodity: string | null
+          concept_brief: string | null
+          concept_brief_error: string | null
+          concept_brief_generated_at: string | null
           counterparty_org_id: string | null
           created_at: string
           created_by: string
@@ -3345,9 +3369,13 @@ export type Database = {
           unit: string | null
           updated_at: string
           wad_completed_at: string | null
+          wad_continued_at: string | null
         }
         Insert: {
           commodity?: string | null
+          concept_brief?: string | null
+          concept_brief_error?: string | null
+          concept_brief_generated_at?: string | null
           counterparty_org_id?: string | null
           created_at?: string
           created_by?: string
@@ -3378,9 +3406,13 @@ export type Database = {
           unit?: string | null
           updated_at?: string
           wad_completed_at?: string | null
+          wad_continued_at?: string | null
         }
         Update: {
           commodity?: string | null
+          concept_brief?: string | null
+          concept_brief_error?: string | null
+          concept_brief_generated_at?: string | null
           counterparty_org_id?: string | null
           created_at?: string
           created_by?: string
@@ -3411,6 +3443,7 @@ export type Database = {
           unit?: string | null
           updated_at?: string
           wad_completed_at?: string | null
+          wad_continued_at?: string | null
         }
         Relationships: [
           {
