@@ -82,6 +82,11 @@ export async function notifyTransactionOwner(args: {
   /** One of the checkbox types in Notification Preferences — omit for events that aren't
    * individually switchable there (everything before per-type opt-outs existed). */
   kind?: NotificationTypeKey;
+  /** Writes the Inbox/on-screen notification regardless of the recipient's channel preference —
+   * for the handful of events (an offer being accepted) that are governance milestones someone
+   * should never miss just because they set their preference to email-only. Email still follows
+   * their own preference either way. */
+  force?: boolean;
 }): Promise<void> {
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -90,7 +95,7 @@ export async function notifyTransactionOwner(args: {
     if (args.kind && recipient?.subscriptions[args.kind] === false) return;
     const channel = recipient?.channel ?? "both";
 
-    if (channel === "in_app" || channel === "both") {
+    if (args.force || channel === "in_app" || channel === "both") {
       try {
         await supabaseAdmin.from("notifications").insert({
           org_id: args.orgId,
@@ -160,6 +165,9 @@ export async function notifyCounterpartyContact(args: {
   transactionId: string;
   title: string;
   body: string;
+  /** Writes the Inbox/on-screen notification even if this person's preference is email-only —
+   * see notifyTransactionOwner's own `force` for why. */
+  force?: boolean;
 }): Promise<void> {
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -171,7 +179,7 @@ export async function notifyCounterpartyContact(args: {
     const row = profile as { id?: string | null; org_id?: string | null } | null;
     if (!row?.id) return;
     const channel = await getNotificationChannel(supabaseAdmin, row.id);
-    if (channel === "email") return; // They asked for email only, which they have already had.
+    if (channel === "email" && !args.force) return; // They asked for email only, which they have already had.
     const { error } = await supabaseAdmin.from("notifications").insert({
       user_id: row.id,
       ...(row.org_id ? { org_id: row.org_id } : {}),

@@ -467,8 +467,12 @@ export const respondToEngagement = createServerFn({ method: "POST" })
       data.message ? ` “${data.message}”` : ""
     }`;
 
+    // Acceptance is a governance milestone, not an ordinary update — the other party gets an
+    // on-screen Inbox notification no matter what their email/in-app preference is set to; email
+    // still follows their own preference either way.
+    const force = data.response === "accepted";
     if (side === "counterparty") {
-      await notifyTransactionOwner({ orgId: tx.org_id, transactionId: tx.id, title, body });
+      await notifyTransactionOwner({ orgId: tx.org_id, transactionId: tx.id, title, body, force });
     } else {
       const { data: cp } = await supabase
         .from("counterparties")
@@ -477,7 +481,7 @@ export const respondToEngagement = createServerFn({ method: "POST" })
         .eq("status", "chosen")
         .maybeSingle();
       const email = (cp as { contact_email?: string | null } | null)?.contact_email;
-      if (email) await notifyCounterpartyContact({ email, transactionId: tx.id, title, body });
+      if (email) await notifyCounterpartyContact({ email, transactionId: tx.id, title, body, force });
     }
 
     return loadState(supabase, userId, data.transactionId);

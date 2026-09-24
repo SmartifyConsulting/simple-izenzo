@@ -2154,6 +2154,7 @@ function WadStep({ tx, reload, onContinue }: Props) {
       )}
 
       <VerificationPanel
+        bare
         transactionId={tx.id}
         checks={["id_document", "kyb"]}
         title="Verify each other"

@@ -50,9 +50,12 @@ type Props = {
   checks: CheckType[];
   title?: string;
   description?: string;
+  /** Drops the outer bordered card and its header divider — for a caller (the WaD gate) that
+   * already renders this inside another frame of its own, so the two borders don't nest. */
+  bare?: boolean;
 };
 
-export function VerificationPanel({ transactionId, checks: requested, title, description }: Props) {
+export function VerificationPanel({ transactionId, checks: requested, title, description, bare }: Props) {
   const listEnabled = useServerFn(listEnabledCheckTypes);
   const start = useServerFn(startVerification);
   const refresh = useServerFn(refreshVerification);
@@ -193,9 +196,10 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
     }
   }
 
+  const Wrapper = bare ? "div" : "section";
   return (
-    <section className="rounded-xl border border-border">
-      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+    <Wrapper className={bare ? undefined : "rounded-xl border border-border"}>
+      <div className={cn("flex items-center justify-between gap-3", bare ? "pb-3" : "border-b border-border px-4 py-3")}>
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-4 w-4 text-primary" />
           <h2 className="label-caps font-sans">{title ?? "Identity verification"}</h2>
@@ -217,10 +221,10 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
       </div>
 
       {description && (
-        <p className="px-4 pt-4 text-xs text-muted-foreground">{description}</p>
+        <p className={cn("text-xs text-muted-foreground", bare ? "pb-3" : "px-4 pt-4")}>{description}</p>
       )}
 
-      <div className="space-y-3 p-4">
+      <div className={cn("space-y-3", bare ? undefined : "p-4")}>
         {isLoading && <p className="text-xs text-muted-foreground">Loading…</p>}
 
 
@@ -324,6 +328,6 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
           on its own.
         </p>
       </div>
-    </section>
+    </Wrapper>
   );
 }
