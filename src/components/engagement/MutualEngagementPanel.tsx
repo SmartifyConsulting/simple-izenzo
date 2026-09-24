@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { getEngagement, respondToEngagement, type Side } from "@/lib/engagement.functions";
+import { cn } from "@/lib/utils";
 
 function sideWord(side: Side) {
   return side === "bidder" ? "the bidder" : "the counterparty";
@@ -37,6 +38,9 @@ export function MutualEngagementPanel({
   const [busy, setBusy] = useState<string | null>(null);
   const [challengeOpen, setChallengeOpen] = useState(false);
   const [challengeMessage, setChallengeMessage] = useState("");
+  // Cycles 0/1/2 across Accept/Counter/Reject for whichever side is waiting on the other, so their
+  // buttons read as "still in play" (like a game-show light chase) rather than just greyed out.
+  const [litIndex, setLitIndex] = useState(0);
 
   const { data: state, isLoading } = useQuery({
     queryKey: ["engagement", transactionId],
@@ -67,6 +71,28 @@ export function MutualEngagementPanel({
       setBusy(null);
     }
   }
+
+  // Whose move it is: no responses yet means the bidder's own offer is with the counterparty;
+  // otherwise it flips to whichever side didn't just raise the last counter. Accepted/rejected
+  // is a resolved state, not a turn, so nothing here applies to it.
+  const resolved = state?.decided === "accepted" || state?.decided === "opted_out";
+  const responses = state?.responses ?? [];
+  const lastResponse = responses[responses.length - 1];
+  const turnSide: "bidder" | "counterparty" = !lastResponse
+    ? "counterparty"
+    : lastResponse.responder_side === "counterparty"
+      ? "bidder"
+      : "counterparty";
+  const isMyTurn = state?.side === turnSide;
+  const waitingOnOther = Boolean(state) && !resolved && state!.side !== "observer" && !isMyTurn;
+
+  // The light-chase only runs while someone is actually waiting — no point animating a resolved
+  // deal or a turn that's genuinely yours to act on.
+  useEffect(() => {
+    if (!waitingOnOther) return;
+    const id = setInterval(() => setLitIndex((i) => (i + 1) % 3), 500);
+    return () => clearInterval(id);
+  }, [waitingOnOther]);
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading the engagement…</p>;
   if (!state) return null;
@@ -106,38 +132,51 @@ export function MutualEngagementPanel({
         </ul>
       )}
 
-      {/* Once the bidder has put the offer to the counterparty, it's the counterparty's move —
-          the bidder can only wait and read the thread below, not counter or reject their own
-          offer. */}
-      {state.decided !== "opted_out" && !isObserver && state.side === "counterparty" && (
-        <div className="flex flex-wrap gap-2">
-          {state.decided !== "accepted" && (
-            <Button size="sm" disabled={busy !== null} onClick={() => void sendResponse("accepted")}>
+      {/* Both sides now see the same three buttons — whoever's turn it isn't gets them disabled
+          and light-chasing across Accept → Counter → Reject, game-show style, instead of a plain
+          greyed-out row or a text-only "please wait". Whoever's turn it is gets them live — except
+          Accept, which stays the counterparty's alone even on the bidder's own turn (the server
+          enforces this too: only the counterparty ever finalises the deal). */}
+      {!resolved && !isObserver && (
+        <>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              disabled={busy !== null || !isMyTurn || state.side !== "counterparty"}
+              title={state.side !== "counterparty" ? "Only the counterparty can accept" : undefined}
+              className={cn(waitingOnOther && litIndex === 0 && "ring-2 ring-primary ring-offset-2")}
+              onClick={() => isMyTurn && state.side === "counterparty" && void sendResponse("accepted")}
+            >
               {busy === "accepted" ? "Accepting…" : "Accept"}
             </Button>
-          )}
-          <Button size="sm" variant="outline" disabled={busy !== null} onClick={() => setChallengeOpen(true)}>
-            Counter
-          </Button>
-          {state.decided !== "accepted" && (
             <Button
               size="sm"
               variant="outline"
-              className="border-destructive/40 text-destructive hover:bg-destructive/10"
-              disabled={busy !== null}
-              onClick={() => void sendResponse("opted_out")}
+              disabled={busy !== null || !isMyTurn}
+              className={cn(waitingOnOther && litIndex === 1 && "ring-2 ring-primary ring-offset-2")}
+              onClick={() => isMyTurn && setChallengeOpen(true)}
+            >
+              Counter
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy !== null || !isMyTurn}
+              className={cn(
+                "border-destructive/40 text-destructive hover:bg-destructive/10",
+                waitingOnOther && litIndex === 2 && "ring-2 ring-destructive ring-offset-2",
+              )}
+              onClick={() => isMyTurn && void sendResponse("opted_out")}
             >
               {busy === "opted_out" ? "Rejecting…" : "Reject"}
             </Button>
+          </div>
+          {waitingOnOther && (
+            <p className="text-[11px] text-muted-foreground">
+              Waiting for {sideWord(turnSide)} to decide — accept, counter or reject.
+            </p>
           )}
-        </div>
-      )}
-      {state.side === "bidder" && (
-        <p className="text-[11px] text-muted-foreground">
-          {state.decided === "accepted"
-            ? "The counterparty accepted the offer."
-            : "The counterparty is evaluating your offer. They have an option to approve, counter or reject. Without a Doubt opens once they approve."}
-        </p>
+        </>
       )}
       {isObserver && (
         <p className="text-[11px] text-muted-foreground">

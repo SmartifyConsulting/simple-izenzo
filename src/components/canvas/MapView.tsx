@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   Building2,
   CheckCircle2,
@@ -450,6 +450,7 @@ function MapNode({
   plain,
   subSize,
   step,
+  accentColor,
 }: {
   box: Box;
   label: string;
@@ -469,6 +470,10 @@ function MapNode({
   /** The spine step this tile represents — drives the hoverable artefact icon, when this step
    * actually produces one. */
   step?: string | undefined;
+  /** Overrides `--throb-accent` for this tile's own pulse only, regardless of which side (bidder
+   * or counterparty) is viewing — used on Offer/Counter Offer so they always pulse blue for both
+   * parties, since that's the negotiation's own colour everywhere else in the app. */
+  accentColor?: string | undefined;
 }) {
   const locked = state === "locked";
   return (
@@ -482,7 +487,13 @@ function MapNode({
       // locked), without swallowing hover events from its children.
       aria-disabled={locked || !onClick}
       title={locked ? (lock ?? undefined) : undefined}
-      style={{ left: px(box.x), top: py(box.y), width: px(box.w), height: py(box.h) }}
+      style={{
+        left: px(box.x),
+        top: py(box.y),
+        width: px(box.w),
+        height: py(box.h),
+        ...(accentColor ? ({ "--throb-accent": accentColor } as CSSProperties) : {}),
+      }}
       className={cn(
         "absolute flex flex-col items-center justify-center gap-0.5 overflow-hidden px-2 text-center font-sans text-[11px] font-semibold leading-tight transition-colors",
         // Border always stays a steady, visible border-border — like every group Frame — rather
@@ -603,6 +614,8 @@ export function MapView({
        * with another tile that already shows it (The Offer and Counter Offer both gate on "wad",
        * but the KYC/KYB/AML/PEP artefacts it lists belong to the Without a Doubt tile itself). */
       noArtefact?: boolean;
+      /** Overrides this tile's own pulse color, for both bidder and counterparty. */
+      accentColor?: string;
     },
   ) => (
     <MapNode
@@ -614,6 +627,7 @@ export function MapView({
       {...(opts?.subTone ? { subTone: opts.subTone } : {})}
       {...(opts?.plain ? { plain: true } : {})}
       {...(opts?.subSize ? { subSize: opts.subSize } : {})}
+      {...(opts?.accentColor ? { accentColor: opts.accentColor } : {})}
       state={opts?.state ?? st(stage, step, opts?.overrideKey)}
       lock={lock(stage, step)}
       onClick={
@@ -702,10 +716,15 @@ export function MapView({
             Counter Offer loop can go back and forth until agreement, which opens Without a Doubt.
             Its state comes from the page's own "offer" override, so the pulse follows whose move
             it is (see stepOverrides in the live deal engine). */}
-        {node("offer", "Offer", "compliance", "wad", Tag, { overrideKey: "offer", noArtefact: true })}
+        {node("offer", "Offer", "compliance", "wad", Tag, {
+          overrideKey: "offer",
+          noArtefact: true,
+          accentColor: "#4169e1",
+        })}
         {node("counterOffer", "Counter Offer", "compliance", "wad", undefined, {
           state: overrideStates?.["counterOffer"] ?? (lock("compliance", "wad") ? "locked" : "open"),
           noArtefact: true,
+          accentColor: "#4169e1",
         })}
         {node("withoutADoubt", "Without a Doubt", "compliance", "wad", ShieldCheck, {
           overrideKey: "wad",

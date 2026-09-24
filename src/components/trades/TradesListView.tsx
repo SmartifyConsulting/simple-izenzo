@@ -194,8 +194,6 @@ export function TradesListView() {
     });
   }
   const [view, setView] = useState<"list" | "card">("list");
-  // Age ascending = youngest trade first. The Age header flips it.
-  const [ageAscending, setAgeAscending] = useState(true);
 
   const { data: txs = [], isLoading } = useQuery({
     queryKey: ["my-trades", org?.id],
@@ -274,12 +272,10 @@ export function TradesListView() {
           (t.reference ?? fallbackReference(t.id, t.direction)).toLowerCase().includes(q),
       );
     }
-    return [...rows].sort((a, b) =>
-      ageAscending
-        ? +new Date(b.created_at) - +new Date(a.created_at)
-        : +new Date(a.created_at) - +new Date(b.created_at),
-    );
-  }, [txs, scope, stages, query, org?.id, ageAscending]);
+    // Youngest first — the Age column (and its sort toggle) was removed, but the list still reads
+    // most-recent-first by default.
+    return [...rows].sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
+  }, [txs, scope, stages, query, org?.id]);
 
   function exportCsv() {
     const blob = new Blob([toCsv(filtered)], { type: "text/csv;charset=utf-8" });
@@ -407,16 +403,6 @@ export function TradesListView() {
                 </th>
                 <th className="px-4 py-2 font-medium">WaD</th>
                 <th className="px-4 py-2 font-medium">Execution</th>
-                <th className="px-4 py-2 text-right font-medium">
-                  <button
-                    type="button"
-                    onClick={() => setAgeAscending((v) => !v)}
-                    className="inline-flex items-center gap-1 hover:text-foreground"
-                    title={ageAscending ? "Youngest first — click for oldest first" : "Oldest first — click for youngest first"}
-                  >
-                    Age {ageAscending ? "▲" : "▼"}
-                  </button>
-                </th>
                 <th className="w-8" />
               </tr>
             </thead>
@@ -446,7 +432,6 @@ export function TradesListView() {
                     )}
                   </td>
                   <GateColumns t={t} />
-                  <td className="px-4 py-3 text-right text-xs text-muted-foreground">{ageLabel(t.created_at)}</td>
                   <td className="w-8 px-2">
                     <Link to="/live-deal-engine" search={{ tx: t.id }} title="Open">
                       <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
