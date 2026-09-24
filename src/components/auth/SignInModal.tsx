@@ -15,9 +15,9 @@ export function SignInModal({
   initialSignupStep,
 }: {
   children?: ReactNode;
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
-  initialSignupStep?: 1 | 2 | 3;
+  open?: boolean | undefined;
+  onOpenChange?: ((open: boolean) => void) | undefined;
+  initialSignupStep?: 1 | 2 | 3 | undefined;
   next?: string | undefined;
   defaultTab?: "signin" | "signup";
 }) {

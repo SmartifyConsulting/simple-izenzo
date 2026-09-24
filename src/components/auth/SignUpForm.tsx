@@ -58,7 +58,7 @@ export function SignUpForm({
    * home page hero) rather than the standalone /auth page. */
   compact?: boolean;
   /** 2 when returning from the email confirmation link. */
-  initialStep?: 1 | 2 | 3;
+  initialStep?: 1 | 2 | 3 | undefined;
 }) {
   const navigate = useNavigate();
   const [step, setStep] = useState<1 | 2 | 3>(initialStep);

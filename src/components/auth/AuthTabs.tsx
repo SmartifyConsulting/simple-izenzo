@@ -17,7 +17,7 @@ export function AuthTabs({
   /** Tighter spacing throughout — used when this sits in a small space (the home page hero)
    * rather than the standalone /auth page. */
   compact?: boolean;
-  initialSignupStep?: 1 | 2 | 3;
+  initialSignupStep?: 1 | 2 | 3 | undefined;
 }) {
   return (
     <div className={className}>
