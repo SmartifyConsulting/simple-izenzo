@@ -306,6 +306,10 @@ function LiveDealEngine() {
   const [flowStep, setFlowStep] = useState<FlowStep>("documents");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
+  // Set when a `?tx=` link could not be opened. Without this the loader returned silently and the
+  // page fell through to an empty canvas, which looked like a brand-new workspace with a fresh ID
+  // rather than a deal that failed to load.
+  const [dealLoadError, setDealLoadError] = useState<string | null>(null);
   // Set when a search finished and found nothing relevant, so Bid Information can show what was
   // searched for and let the person refine it instead of implying a search is still running.
   const [noMatchesTx, setNoMatchesTx] = useState<string | null>(null);
@@ -1519,6 +1523,7 @@ function LiveDealEngine() {
   // of whatever was last worked on in this browser.
   useEffect(() => {
     if (!txParam) return;
+    setDealLoadError(null);
     (async () => {
       try {
         const { data: txRow } = await supabase
@@ -1526,7 +1531,14 @@ function LiveDealEngine() {
           .select("*")
           .eq("id", txParam)
           .maybeSingle();
-        if (!txRow) return;
+        if (!txRow) {
+          // Either the deal doesn't exist or this account can't see it. Saying so is the point: a
+          // silent return here left the visitor on an empty canvas that looked like a new workspace.
+          setDealLoadError(
+            "That deal couldn't be opened on this account. If you were invited to it as the counterparty, use the link from your invitation email so it can be linked to your company first.",
+          );
+          return;
+        }
         const tx = txRow as Transaction;
         const { data: bidOffer } = await supabase
           .from("bid_offers")
@@ -2017,6 +2029,13 @@ function LiveDealEngine() {
 
   const workspaceContent = (
     <>
+      {/* A `?tx=` link that couldn't be opened says so, instead of quietly leaving an empty canvas
+          that reads as a brand-new workspace. */}
+      {dealLoadError && (
+        <div className="mb-2 flex items-start gap-2 rounded-xl border border-destructive/40 bg-destructive/5 px-3 py-2">
+          <p className="text-xs text-destructive">{dealLoadError}</p>
+        </div>
+      )}
       {!popout && !soloWorkspace && (
         <div
           onPointerDown={windowMode === "maximized" ? undefined : startDrag}

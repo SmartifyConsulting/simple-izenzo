@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { decideClaimOrg } from "@/lib/claimOrg";
 
 /** Links the signed-in person's own organisation to a transaction as its counterparty —
  * "creating an account and linking it to the deal", the thing the counterparty workspace has
@@ -24,19 +25,68 @@ export const claimCounterparty = createServerFn({ method: "POST" })
       throw new Error("This counterparty has not been chosen on this deal yet — the link isn't active.");
     }
 
-    const { data: membership } = await supabase
+    // Read the deal through the admin client, not the caller's: the counterparty-org policies only
+    // grant a select once transactions.counterparty_org_id already names one of their companies,
+    // which is exactly what this handler is about to write. Through the caller's client the row
+    // read back as absent, so every claim-link click failed with "This deal is no longer available."
+    // Nothing is returned from here beyond what the caller already holds a link to.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: tx, error: txErr } = await supabaseAdmin
+      .from("transactions")
+      .select("id, org_id, counterparty_org_id, title, reference")
+      .eq("id", cp.transaction_id)
+      .maybeSingle();
+    if (txErr) throw new Error(txErr.message);
+    if (!tx) throw new Error("This deal is no longer available.");
+
+    // Every company this person trades through, plus the one their profile currently points at.
+    // Deliberately a list, not `.maybeSingle()`: that errors once someone is in two companies, and
+    // the caller below used to read the resulting null as "has no company" and create another one on
+    // every click.
+    const { data: memberships, error: memErr } = await supabase
       .from("org_members")
       .select("org_id")
-      .eq("user_id", userId)
+      .eq("user_id", userId);
+    if (memErr) throw new Error(memErr.message);
+
+    const { data: profile, error: profErr } = await supabase
+      .from("profiles")
+      .select("org_id, full_name, email")
+      .eq("id", userId)
       .maybeSingle();
-    let myOrgId = membership?.org_id as string | undefined;
-    if (!myOrgId) {
-      // A brand-new counterparty following this link from an email has just signed up for the
-      // first time — they haven't been through (and shouldn't have to go through) a separate
-      // "create your company" step before they can even see the opportunity they were invited to.
-      // Give them the same lightweight personal organisation ensureOrg() creates for a bidder in
-      // the same situation, named after them, rather than dead-ending here.
-      const { data: profile } = await supabase.from("profiles").select("full_name, email").eq("id", userId).maybeSingle();
+    if (profErr) throw new Error(profErr.message);
+
+    const decision = decideClaimOrg({
+      myOrgIds: (memberships ?? []).map((m) => m.org_id as string),
+      profileOrgId: (profile as { org_id?: string | null } | null)?.org_id ?? null,
+      dealOrgId: tx.org_id as string,
+      dealCounterpartyOrgId: tx.counterparty_org_id as string | null,
+    });
+
+    if (decision.action === "refuse") {
+      throw new Error(
+        decision.reason === "self"
+          ? "You can't accept your own bid as its counterparty."
+          : "Another organisation has already linked itself to this deal as the counterparty. Contact the bidder if this is unexpected.",
+      );
+    }
+
+    if (decision.action === "already-linked") {
+      // Idempotent by contract: the deal already names this person's company, so there is nothing to
+      // change and no event to append. Re-clicking the same link must not look like a new link.
+      return { transactionId: tx.id as string };
+    }
+
+    let myOrgId: string;
+    if (decision.action === "create") {
+      // A brand-new counterparty following this link from an email has just signed up for the first
+      // time — they haven't been through (and shouldn't have to go through) a separate "create your
+      // company" step before they can even see the opportunity they were invited to. Give them the
+      // same lightweight personal organisation ensureOrg() creates for a bidder in the same
+      // situation, named after them, rather than dead-ending here.
+      //
+      // Only reached now when the person genuinely belongs to no company: the refusals above are
+      // decided first, so a click that was going to be rejected can no longer leave a company behind.
       const displayName =
         (profile as { full_name?: string | null; email?: string | null } | null)?.full_name ||
         (profile as { full_name?: string | null; email?: string | null } | null)?.email ||
@@ -48,53 +98,43 @@ export const claimCounterparty = createServerFn({ method: "POST" })
         .single();
       if (orgErr) throw new Error(orgErr.message);
       myOrgId = newOrg.id as string;
-      const { error: mErr } = await supabase.from("org_members").insert({ org_id: myOrgId, user_id: userId, role: "owner" });
+      const { error: mErr } = await supabase
+        .from("org_members")
+        .insert({ org_id: myOrgId, user_id: userId, role: "owner" });
       if (mErr) throw new Error(mErr.message);
       await supabase.from("profiles").update({ org_id: myOrgId }).eq("id", userId);
+    } else {
+      myOrgId = decision.orgId;
+      // The company is already a membership; this only re-points the profile if it had gone stale,
+      // so the counterparty workspace and the bidder side agree on which company is active.
+      if ((profile as { org_id?: string | null } | null)?.org_id !== myOrgId) {
+        await supabase.from("profiles").update({ org_id: myOrgId }).eq("id", userId);
+      }
     }
 
-    const { data: tx, error: txErr } = await supabase
+    const { error: upErr } = await supabaseAdmin
       .from("transactions")
-      .select("id, org_id, counterparty_org_id, title, reference")
-      .eq("id", cp.transaction_id)
-      .maybeSingle();
-    if (txErr) throw new Error(txErr.message);
-    if (!tx) throw new Error("This deal is no longer available.");
-    if (tx.org_id === myOrgId) {
-      throw new Error("You can't accept your own bid as its counterparty.");
-    }
-    if (tx.counterparty_org_id && tx.counterparty_org_id !== myOrgId) {
-      throw new Error(
-        "Another organisation has already linked itself to this deal as the counterparty. Contact the bidder if this is unexpected.",
-      );
-    }
+      .update({ counterparty_org_id: myOrgId })
+      .eq("id", tx.id);
+    if (upErr) throw new Error(upErr.message);
 
-    if (tx.counterparty_org_id !== myOrgId) {
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const { error: upErr } = await supabaseAdmin
-        .from("transactions")
-        .update({ counterparty_org_id: myOrgId })
-        .eq("id", tx.id);
-      if (upErr) throw new Error(upErr.message);
+    await supabaseAdmin.from("transaction_events").insert({
+      transaction_id: tx.id,
+      actor_id: userId,
+      stage: "trading",
+      step: "choice",
+      action: "counterparty_account_linked",
+      summary: `${cp.name} created an Izenzo account and linked it to this deal`,
+    });
 
-      await supabaseAdmin.from("transaction_events").insert({
-        transaction_id: tx.id,
-        actor_id: userId,
-        stage: "trading",
-        step: "choice",
-        action: "counterparty_account_linked",
-        summary: `${cp.name} created an Izenzo account and linked it to this deal`,
-      });
-
-      const { notifyBidder } = await import("@/lib/bidderNotify.server");
-      await notifyBidder({
-        orgId: tx.org_id as string,
-        transactionId: tx.id,
-        title: `${cp.name} is verified and linked to your deal`,
-        body: `${tx.reference ? `${tx.reference} — ` : ""}${tx.title ?? "Your deal"}: ${cp.name} created and verified their Izenzo account. You can now run KYC/KYB verification on them at the Without a Doubt gate, and they can do the same on you.`,
-        kind: "counterparty_verified",
-      });
-    }
+    const { notifyBidder } = await import("@/lib/bidderNotify.server");
+    await notifyBidder({
+      orgId: tx.org_id as string,
+      transactionId: tx.id,
+      title: `${cp.name} is verified and linked to your deal`,
+      body: `${tx.reference ? `${tx.reference} — ` : ""}${tx.title ?? "Your deal"}: ${cp.name} created and verified their Izenzo account. You can now run KYC/KYB verification on them at the Without a Doubt gate, and they can do the same on you.`,
+      kind: "counterparty_verified",
+    });
 
     return { transactionId: tx.id as string };
   });
@@ -119,12 +159,15 @@ export const respondAsCounterparty = createServerFn({ method: "POST" })
     if (!tx) throw new Error("This deal is no longer available.");
     if (tx.poi_sealed_at) throw new Error("Intent is already sealed — this can no longer be changed.");
 
-    const { data: membership } = await supabase
+    // Membership as a list: `.maybeSingle()` errors once the person trades through more than one
+    // company, which would have locked them out of accepting or declining this deal entirely.
+    const { data: memberships, error: memErr } = await supabase
       .from("org_members")
       .select("org_id")
-      .eq("user_id", userId)
-      .maybeSingle();
-    if (!membership?.org_id || membership.org_id !== tx.counterparty_org_id) {
+      .eq("user_id", userId);
+    if (memErr) throw new Error(memErr.message);
+    const isLinkedCounterparty = (memberships ?? []).some((m) => m.org_id === tx.counterparty_org_id);
+    if (!tx.counterparty_org_id || !isLinkedCounterparty) {
       throw new Error("You're not linked to this deal as its counterparty.");
     }
 
