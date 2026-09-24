@@ -2758,43 +2758,13 @@ function LiveDealEngine() {
                     itself, in place of "Select to continue" — see CounterpartyRecord — rather
                     than as a second copy out here. */}
 
-                {/* Same slim progress bar treatment as the search above — shown only while
-                    screening is actually running, then replaced by the results frame below once
-                    it's done. */}
-                {mediaRunning && (
-                  <div className="mt-1.5 overflow-hidden rounded-xl border border-border">
-                    <div className="flex items-center gap-3 bg-[#F1F5F9] px-4 py-3">
-                      <p className="text-xs text-slate-700">
-                        Scanning LinkedIn, Facebook, TikTok, marketplaces and news…
-                      </p>
-                      <div className="ml-auto flex shrink-0 items-center gap-1.5">
-                        {mediaProgress && mediaProgress.total > 0 && (
-                          <span className="text-[11px] text-slate-500">
-                            {mediaProgress.failed
-                              ? "Could not finish"
-                              : `${mediaProgress.done} of ${mediaProgress.total} sources`}
-                          </span>
-                        )}
-                        <button
-                          type="button"
-                          onClick={stopMediaScreening}
-                          title="Stop the online screening — the counterparty currently being checked keeps running and will still save whatever it finds"
-                          className="flex items-center gap-1 rounded p-1 text-[11px] font-medium text-slate-500 hover:bg-slate-200 hover:text-slate-800"
-                        >
-                          <StopCircle className="h-3.5 w-3.5" />
-                          <span className="hidden sm:inline">Stop</span>
-                        </button>
-                      </div>
-                    </div>
-                    <div className="h-1.5 w-full animate-ribbon-sweep" />
-                  </div>
-                )}
-
-                {/* Online Media Screening results, once screening has actually finished — its own
-                    collapsed frame right under Search Results, closed by default since this is a
-                    record to check back on rather than something needing attention the moment it's
-                    ready. */}
-                {dealTx && mediaResults && mediaResults.length > 0 && (
+                {/* Online Media Screening results, folded right under Search Results — closed by
+                    default once done since it's then a record to check back on, but forced open
+                    (see below) while still running so the progress bar inside it is visible. The
+                    frame itself now shows the moment screening starts, not just once the first
+                    counterparty's results are in, so the progress bar always has this frame to
+                    live inside instead of floating above it on its own. */}
+                {dealTx && (mediaRunning || (mediaResults && mediaResults.length > 0)) && (
                   <div className="rounded-2xl border border-border bg-card p-3">
                     <div className="flex items-center gap-2">
                       <button
@@ -2815,15 +2785,49 @@ function LiveDealEngine() {
                         </span>
 
                         <span className="flex shrink-0 items-center gap-1.5">
-                          <span className="text-[10px] font-semibold text-muted-foreground">
-                            {mediaResults.length} counterpart{mediaResults.length === 1 ? "y" : "ies"}
-                          </span>
-                          <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform", mediaResultsOpen && "rotate-180")} />
+                          {mediaResults && mediaResults.length > 0 && (
+                            <span className="text-[10px] font-semibold text-muted-foreground">
+                              {mediaResults.length} counterpart{mediaResults.length === 1 ? "y" : "ies"}
+                            </span>
+                          )}
+                          <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform", (mediaResultsOpen || mediaRunning) && "rotate-180")} />
                         </span>
                       </button>
                       {/* The choice action lives at the bottom of the records below. */}
 
                     </div>
+
+                    {/* Same slim progress bar treatment as the search above — inside this frame
+                        now, rather than as its own separate box floating above it. */}
+                    {mediaRunning && (
+                      <div className="mt-2 overflow-hidden rounded-xl border border-border">
+                        <div className="flex items-center gap-3 bg-[#F1F5F9] px-4 py-3">
+                          <p className="text-xs text-slate-700">
+                            Scanning LinkedIn, Facebook, TikTok, marketplaces and news…
+                          </p>
+                          <div className="ml-auto flex shrink-0 items-center gap-1.5">
+                            {mediaProgress && mediaProgress.total > 0 && (
+                              <span className="text-[11px] text-slate-500">
+                                {mediaProgress.failed
+                                  ? "Could not finish"
+                                  : `${mediaProgress.done} of ${mediaProgress.total} sources`}
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={stopMediaScreening}
+                              title="Stop the online screening — the counterparty currently being checked keeps running and will still save whatever it finds"
+                              className="flex items-center gap-1 rounded p-1 text-[11px] font-medium text-slate-500 hover:bg-slate-200 hover:text-slate-800"
+                            >
+                              <StopCircle className="h-3.5 w-3.5" />
+                              <span className="hidden sm:inline">Stop</span>
+                            </button>
+                          </div>
+                        </div>
+                        <div className="h-1.5 w-full animate-ribbon-sweep" />
+                      </div>
+                    )}
+
                     {!dbHasChosenParty && !mediaPick && !finalizing && (
                       <p className="mt-1.5 text-[11px] text-muted-foreground">
                         Select who you want to trade with
@@ -2838,7 +2842,7 @@ function LiveDealEngine() {
                         asChild
                       >
                       <ul className="mt-2 space-y-2">
-                        {mediaResults.map((m) => (
+                        {(mediaResults ?? []).map((m) => (
                           <li key={m.counterpartyId} className="rounded-lg border border-border p-2.5">
                             <div className="flex items-start gap-2">
                               {!dbHasChosenParty && (
