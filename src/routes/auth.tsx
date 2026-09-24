@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { AuthTabs } from "@/components/auth/AuthTabs";
 import { useAuth } from "@/lib/auth";
 import { applyCurrentStylePreset } from "@/lib/stylePreset";
+import { registrationInProgress } from "@/lib/registrationFlow";
 
 type Search = {
   mode?: "signin" | "signup" | undefined;
@@ -42,7 +43,12 @@ function AuthPage() {
   }, []);
 
   useEffect(() => {
-    if (!loading && session) navigate({ to: safeNext(next), replace: true });
+    if (!loading && session) {
+      // A sign-up in progress is signed in by definition, but must not be bounced off step 3 —
+      // the form has to stay mounted until the ID number and document are captured.
+      if (registrationInProgress()) return;
+      navigate({ to: safeNext(next), replace: true });
+    }
   }, [loading, session, next, navigate]);
 
   // A counterparty following the "View this opportunity" link from an email lands here first
@@ -62,7 +68,11 @@ function AuthPage() {
           Your session expired — please sign in again to continue.
         </p>
       )}
-      <AuthTabs next={next} defaultTab="signin" className="w-full max-w-sm rounded-2xl border border-border bg-background p-8 shadow-sm" />
+      <AuthTabs
+        next={next}
+        defaultTab="signin"
+        className="w-full max-w-sm rounded-2xl border border-border bg-background p-8 shadow-sm"
+      />
     </div>
   );
 }
