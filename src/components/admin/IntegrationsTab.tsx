@@ -113,13 +113,13 @@ export function IntegrationsTab() {
           Guided setup
         </Button>
         <Button size="sm" variant={view === "report" ? "default" : "outline"} onClick={() => setView("report")}>
-          Report
+          Expense report
         </Button>
         <span className="text-xs text-muted-foreground">
           {view === "guided"
             ? "Guided setup takes you through the services one at a time, in the order that matters most."
             : view === "report"
-              ? "What the platform's own credits are being spent on."
+              ? "What the platform's own credits are being spent on, per transaction."
               : ""}
         </span>
         {view === "services" && archivedCount > 0 && (
@@ -258,6 +258,72 @@ function SpendReport() {
           )}
         </div>
       </div>
+
+      <TransactionSpendReport transactions={report.byTransaction} />
+    </div>
+  );
+}
+
+/** Per-transaction token spend, each event down to the minute it was charged — every debit
+ * (Proof of Intent, WaD verification…) expands to show exactly when it happened, so a spike in
+ * spend on a specific deal can actually be traced. */
+function TransactionSpendReport({ transactions }: { transactions: CreditSpendReport["byTransaction"] }) {
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  return (
+    <div className="space-y-2">
+      <h3 className="text-sm font-semibold">By transaction</h3>
+      {transactions.length === 0 ? (
+        <p className="text-xs text-muted-foreground">No token spend recorded against a transaction yet.</p>
+      ) : (
+        <ul className="divide-y divide-border rounded-xl border border-border">
+          {transactions.map((t) => {
+            const open = openId === t.transactionId;
+            return (
+              <li key={t.transactionId}>
+                <button
+                  type="button"
+                  onClick={() => setOpenId(open ? null : t.transactionId)}
+                  aria-expanded={open}
+                  className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm hover:bg-muted/30"
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    {open ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+                    <span className="truncate font-mono text-xs font-semibold">{t.reference ?? t.transactionId}</span>
+                    {t.title && <span className="truncate text-xs text-muted-foreground">{t.title}</span>}
+                  </span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {t.tokens} token{t.tokens === 1 ? "" : "s"} · {t.count} event{t.count === 1 ? "" : "s"}
+                  </span>
+                </button>
+                {open && (
+                  <ul className="divide-y divide-border bg-muted/20 px-4">
+                    {t.events.map((e, i) => (
+                      <li key={i} className="flex items-center justify-between gap-3 py-2 pl-6 text-xs">
+                        <span className="text-muted-foreground">{e.reason}</span>
+                        <span className="flex shrink-0 items-center gap-3">
+                          <span className="font-medium">
+                            {e.tokens} token{e.tokens === 1 ? "" : "s"}
+                          </span>
+                          <span className="text-muted-foreground">
+                            {new Date(e.createdAt).toLocaleString(undefined, {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }

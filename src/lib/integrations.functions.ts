@@ -513,18 +513,30 @@ export const getProviderPricing = createServerFn({ method: "POST" })
 
 export type CreditSpendByReason = { reason: string; tokens: number; count: number };
 export type CreditSpendByOrg = { orgId: string; orgName: string; tokens: number; count: number };
+export type CreditSpendEvent = { reason: string; tokens: number; createdAt: string };
+export type CreditSpendByTransaction = {
+  transactionId: string;
+  reference: string | null;
+  title: string | null;
+  tokens: number;
+  count: number;
+  events: CreditSpendEvent[];
+};
 export type CreditSpendReport = {
   totalTokensSpent: number;
   totalEvents: number;
   byReason: CreditSpendByReason[];
   byOrg: CreditSpendByOrg[];
+  byTransaction: CreditSpendByTransaction[];
 };
 
 /** What the org's own credits are actually being spent on — every debit against credit_ledger
  * (Proof of Intent, WaD verification, and anything else that ever gates on tokens), grouped by
- * reason and by organisation. This is the platform's own token economy, not a read on what the
- * admin's external OpenAI/Tavily/Didit/Resend accounts are costing — those providers are billed
- * directly on the admin's own account and aren't metered anywhere in this app. */
+ * reason, by organisation, and by the specific transaction each debit was charged against (with
+ * each individual event's own timestamp, so spend within a transaction can be read minute by
+ * minute). This is the platform's own token economy, not a read on what the admin's external
+ * OpenAI/Tavily/Didit/Resend accounts are costing — those providers are billed directly on the
+ * admin's own account and aren't metered anywhere in this app. */
 export const getCreditSpendReport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<CreditSpendReport> => {
@@ -533,11 +545,18 @@ export const getCreditSpendReport = createServerFn({ method: "POST" })
 
     const { data: rows, error } = await db
       .from("credit_ledger")
-      .select("delta, reason, org_id")
-      .lt("delta", 0);
+      .select("delta, reason, org_id, transaction_id, created_at")
+      .lt("delta", 0)
+      .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
 
-    const debits = (rows ?? []) as { delta: number; reason: string; org_id: string }[];
+    const debits = (rows ?? []) as {
+      delta: number;
+      reason: string;
+      org_id: string;
+      transaction_id: string | null;
+      created_at: string;
+    }[];
 
     const orgIds = [...new Set(debits.map((d) => d.org_id))];
     const { data: orgs } = orgIds.length
@@ -545,8 +564,15 @@ export const getCreditSpendReport = createServerFn({ method: "POST" })
       : { data: [] as { id: string; name: string }[] };
     const orgName = new Map((orgs ?? []).map((o) => [o.id, o.name]));
 
+    const txIds = [...new Set(debits.map((d) => d.transaction_id).filter((id): id is string => Boolean(id)))];
+    const { data: txs } = txIds.length
+      ? await db.from("transactions").select("id, reference, title").in("id", txIds)
+      : { data: [] as { id: string; reference: string | null; title: string | null }[] };
+    const txInfo = new Map((txs ?? []).map((t) => [t.id, t]));
+
     const byReasonMap = new Map<string, CreditSpendByReason>();
     const byOrgMap = new Map<string, CreditSpendByOrg>();
+    const byTxMap = new Map<string, CreditSpendByTransaction>();
     let totalTokensSpent = 0;
 
     for (const d of debits) {
@@ -567,6 +593,22 @@ export const getCreditSpendReport = createServerFn({ method: "POST" })
       o.tokens += tokens;
       o.count += 1;
       byOrgMap.set(d.org_id, o);
+
+      if (d.transaction_id) {
+        const info = txInfo.get(d.transaction_id);
+        const t = byTxMap.get(d.transaction_id) ?? {
+          transactionId: d.transaction_id,
+          reference: info?.reference ?? null,
+          title: info?.title ?? null,
+          tokens: 0,
+          count: 0,
+          events: [],
+        };
+        t.tokens += tokens;
+        t.count += 1;
+        t.events.push({ reason: d.reason, tokens, createdAt: d.created_at });
+        byTxMap.set(d.transaction_id, t);
+      }
     }
 
     return {
@@ -574,5 +616,6 @@ export const getCreditSpendReport = createServerFn({ method: "POST" })
       totalEvents: debits.length,
       byReason: [...byReasonMap.values()].sort((a, b) => b.tokens - a.tokens),
       byOrg: [...byOrgMap.values()].sort((a, b) => b.tokens - a.tokens),
+      byTransaction: [...byTxMap.values()].sort((a, b) => b.tokens - a.tokens),
     };
   });
