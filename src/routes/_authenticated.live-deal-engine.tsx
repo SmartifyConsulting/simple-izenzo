@@ -70,6 +70,7 @@ import { loadRelevantCounterparties } from "@/lib/bidRelevance";
 import { nameKey } from "@/lib/dedupeOrgs";
 import { advance, fallbackReference, recordEvent, swapReferencePrefix, tradeKindOf, type TradeKind, type Transaction } from "@/lib/tx";
 import type { StageKey } from "@/lib/spine";
+import { openingFrameFor } from "@/lib/openingFrame";
 import { useAuth } from "@/lib/auth";
 import { classifyTradeSide, searchCounterparties } from "@/lib/izenzo.functions";
 
@@ -1771,20 +1772,24 @@ function LiveDealEngine() {
         // step the deal is actually up to, with that frame already expanded — otherwise the
         // workspace opens on a column of collapsed headings and there's no sign of what to do next.
         // Only the one current frame is opened; the rest stay folded away as records.
-        const wadDone = Boolean(tx.wad_completed_at);
-        const continued = Boolean((tx as unknown as { wad_continued_at?: string | null }).wad_continued_at);
-        if (wadDone && continued) {
-          setSealedWadOpen(false);
-          if (tx.step === "business-docs") setStagePanel("business-docs");
-        } else if (wadDone) {
-          setSealedWadOpen(true);
-        } else if (tx.poi_sealed_at) {
-          // Negotiation is live — the Offer frame is the thing waiting on someone.
-          setOfferFrameOpen(true);
-        } else if (tx.intent_confirmed_at) {
-          setSealedPoiOpen(true);
-        } else {
-          setConfirmedIntentOpen(true);
+        switch (openingFrameFor(tx).kind) {
+          case "businessDocs":
+            setSealedWadOpen(false);
+            if (tx.step === "business-docs") setStagePanel("business-docs");
+            break;
+          case "sealedWad":
+            setSealedWadOpen(true);
+            break;
+          case "offer":
+            // Negotiation is live — the Offer frame is the thing waiting on someone.
+            setOfferFrameOpen(true);
+            break;
+          case "sealedPoi":
+            setSealedPoiOpen(true);
+            break;
+          case "confirmedIntent":
+            setConfirmedIntentOpen(true);
+            break;
         }
         // Step 1 holds the record of how the deal got here; it only needs to be open while its own
         // work is still live, which the stepOverrides-driven effect above already handles.
