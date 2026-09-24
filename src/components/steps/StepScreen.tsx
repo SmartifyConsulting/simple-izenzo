@@ -2262,7 +2262,7 @@ function WadStep({ tx, reload, onContinue }: Props) {
         bare
         transactionId={tx.id}
         checks={["id_document", "kyb"]}
-        title="Verify each other"
+        title="Due Diligence"
         description="Complete your own identity (KYC) and company (KYB) verification, with both results posted to the deal so you each have the same independent assurance that the other party has been verified. “Without a Doubt” clears automatically once both parties are verified."
       />
 
@@ -2332,10 +2332,10 @@ function WadStep({ tx, reload, onContinue }: Props) {
       <DialogContent>
         <DialogTitle>Skip KYC and KYB?</DialogTitle>
         <DialogDescription>
-          This is risky — skipping identity and company verification means neither of you has
-          independent assurance the other side is who they say they are. Proceed at your own risk.
-          It will be recorded on this deal and its clearance certificate for audit purposes, with
-          the reason you give below.
+          KYC and KYB verification allows the other party to independently confirm who you are and
+          the company you represent. If you choose to skip verification, they will not have this
+          assurance. Your decision to proceed without KYC and KYB will be recorded on this deal and
+          its clearance certificate for audit purposes, together with the reason you provide below.
         </DialogDescription>
         <Textarea
           value={skipReason}
