@@ -42,8 +42,9 @@ import { useAuth } from "@/lib/auth";
 import { VerificationPanel } from "@/components/verification/VerificationPanel";
 import { Logo } from "@/components/Logo";
 import { MutualEngagementPanel } from "@/components/engagement/MutualEngagementPanel";
-import { classifySignatureDocuments, getEngagement } from "@/lib/engagement.functions";
+import { attachLegalDocument, getEngagement, signDocument, type Side } from "@/lib/engagement.functions";
 import { buildBrandedCertificatePdf } from "@/lib/certificatePdf";
+import { Confetti } from "@/components/effects/Confetti";
 import { CommoditySearch } from "@/components/CommoditySearch";
 import { COUNTRIES } from "@/lib/countries";
 import { UNITS } from "@/lib/units";
@@ -2196,110 +2197,78 @@ function WadStep({ tx, reload, onContinue }: Props) {
 
 const PREP_STAGES = ["Concept", "Pre-Feasibility", "Feasibility", "Bankability", "Implementation"];
 
-const BUSINESS_DOC_TYPES: { value: string; label: string }[] = [
-  { value: "nda", label: "NDA" },
-  { value: "mou", label: "MOU" },
-  { value: "contract", label: "Contract" },
-  { value: "other", label: "Other" },
-];
-
-const BUSINESS_DOC_LABEL: Record<string, string> = Object.fromEntries(
-  BUSINESS_DOC_TYPES.map((t) => [t.value, t.label]),
-);
-
 /** Drag-and-drop (or browse) upload for the NDA, MOU and any other contracts a deal needs —
  * separate from the Trading Gate's own document upload, since these belong to Execution and
  * aren't part of what gets searched/matched on. Every file lands in the same `documents` table
  * (and the same "documents" storage bucket) as everything else on the deal, so it shows up
  * automatically in the Bid Information paperclip archive on the Live Workspace. */
-function BusinessDocsStep({ tx, reload }: Props) {
+function BusinessDocsStep({ tx, reload, onContinue }: Props) {
   const qc = useQueryClient();
-  const classifySignatures = useServerFn(classifySignatureDocuments);
+  const { profile } = useAuth();
+  const attach = useServerFn(attachLegalDocument);
+  const sign = useServerFn(signDocument);
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [skipping, setSkipping] = useState(false);
-  // Starts on Other, so a file can be dropped without picking a type first.
-  const [docType, setDocType] = useState("other");
-
-  async function skip() {
-    setSkipping(true);
-    try {
-      await advance(tx.id, "execution", "entry");
-      reload();
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setSkipping(false);
-    }
-  }
-
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [docName, setDocName] = useState("");
+  const [signingId, setSigningId] = useState<string | null>(null);
+  const [celebrate, setCelebrate] = useState(false);
+  const allSignedHandled = useRef(false);
 
   const { data: docs = [] } = useQuery({
-    queryKey: ["business-docs", tx.id],
+    queryKey: ["legal-agreements", tx.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("documents")
         .select("*")
         .eq("transaction_id", tx.id)
-        .in(
-          "doc_type",
-          BUSINESS_DOC_TYPES.map((t) => t.value),
-        )
+        .eq("notes", "Legal Agreement")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
     },
   });
 
-  async function handleFiles(files: FileList | File[]) {
-    const list = Array.from(files);
-    if (list.length === 0) return;
+  const { data: signatures = [] } = useQuery({
+    queryKey: ["legal-agreement-signatures", tx.id, docs.map((d) => d.id).join(",")],
+    enabled: docs.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("document_signatures")
+        .select("document_id, signer_side, signer_name, signed_at")
+        .in(
+          "document_id",
+          docs.map((d) => d.id),
+        );
+      if (error) throw error;
+      return (data ?? []) as { document_id: string; signer_side: Side; signer_name: string; signed_at: string }[];
+    },
+  });
+
+  function pickFile(file: File) {
+    setPendingFile(file);
+    if (!docName) setDocName(file.name.replace(/\.[^.]+$/, ""));
+  }
+
+  async function addDocument() {
+    if (!pendingFile) return;
     setUploading(true);
     try {
-      for (const file of list) {
-        const path = `deals/${tx.id}/business/${Date.now()}-${file.name}`;
-        const { error: upErr } = await supabase.storage.from("documents").upload(path, file);
-        const sha = await fingerprintOf({ name: file.name, size: file.size, at: Date.now() });
-        const { error } = await supabase.from("documents").insert({
-          transaction_id: tx.id,
-          name: file.name,
-          doc_type: docType,
-          notes: BUSINESS_DOC_LABEL[docType] ?? null,
-          version: 1,
-          sha256: sha,
-          storage_path: upErr ? null : path,
-        });
-        if (error) throw error;
-        await recordEvent({
-          transactionId: tx.id,
-          stage: "execution",
-          step: "business-docs",
-          action: "document_attached",
-          summary: `${file.name} — ${BUSINESS_DOC_LABEL[docType] ?? docType}`,
-          payload: { name: file.name, doc_type: docType, sha256: sha },
-        });
-      }
-      await advance(tx.id, "execution", "entry");
-      await qc.invalidateQueries({ queryKey: ["business-docs", tx.id] });
+      const file = pendingFile;
+      const path = `deals/${tx.id}/business/${Date.now()}-${file.name}`;
+      const { error: upErr } = await supabase.storage.from("documents").upload(path, file);
+      if (upErr) throw upErr;
+      const sha = await fingerprintOf({ name: file.name, size: file.size, at: Date.now() });
+      await attach({
+        data: { transactionId: tx.id, name: docName.trim() || file.name, storagePath: path, sha256: sha },
+      });
+      setPendingFile(null);
+      setDocName("");
+      await qc.invalidateQueries({ queryKey: ["legal-agreements", tx.id] });
       await qc.invalidateQueries({ queryKey: ["documents", tx.id] });
       reload();
-      toast.success(list.length === 1 ? "Document uploaded" : `${list.length} documents uploaded`);
-
-      // Once uploads finish, work out which of them need both parties' signature — the Digital
-      // Signatures frame further down (inside the engagement panel) opens on these automatically,
-      // rather than the bidder having to mark each file for signing by hand.
-      try {
-        const { flagged } = await classifySignatures({ data: { transactionId: tx.id } });
-        if (flagged.length > 0) {
-          await qc.invalidateQueries({ queryKey: ["engagement-docs", tx.id] });
-          toast.success(
-            `Identified for digital signature: ${flagged.join(", ")}`,
-          );
-        }
-      } catch {
-        // Best-effort — the manual "Mark for signing" toggle still works if this doesn't run.
-      }
+      toast.success("Document added — both parties need to sign it.");
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -2307,33 +2276,61 @@ function BusinessDocsStep({ tx, reload }: Props) {
     }
   }
 
+  async function signOne(documentId: string) {
+    setSigningId(documentId);
+    try {
+      await sign({
+        data: { documentId, transactionId: tx.id, signerName: profile?.full_name ?? profile?.email ?? "—" },
+      });
+      await qc.invalidateQueries({ queryKey: ["legal-agreement-signatures", tx.id] });
+      await qc.invalidateQueries({ queryKey: ["legal-agreements", tx.id] });
+      toast.success("Signed");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setSigningId(null);
+    }
+  }
+
+  const sigsByDoc = new Map<string, typeof signatures>();
+  for (const s of signatures) {
+    const list = sigsByDoc.get(s.document_id) ?? [];
+    list.push(s);
+    sigsByDoc.set(s.document_id, list);
+  }
+
+  const allSigned = docs.length > 0 && docs.every((d) => Boolean((d as { fully_signed_at?: string | null }).fully_signed_at));
+
+  // Once every legal agreement is signed by both parties, the deal is genuinely settled — a
+  // confetti moment, then straight on to Execution's own first step (Concept).
+  useEffect(() => {
+    if (!allSigned || allSignedHandled.current) return;
+    allSignedHandled.current = true;
+    setCelebrate(true);
+    void (async () => {
+      await advance(tx.id, "execution", "preparation");
+      reload();
+      onContinue?.();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allSigned]);
+
   return (
     <div className="space-y-6">
+      {celebrate && (
+        <Confetti message="Both parties signed — the trade is settled." onDone={() => setCelebrate(false)} />
+      )}
       <Panel
         title="Legal Agreements"
-        description="Upload the NDA, MOU and any other contracts for this deal — each one is added to the Bid Information archive automatically."
-        footer={
-          <div className="flex justify-end">
-            <Button size="sm" variant="outline" disabled={skipping} onClick={() => void skip()}>
-              {skipping ? "Skipping…" : "Skip"}
-            </Button>
-          </div>
-        }
+        description="Add the NDA, MOU and any other contracts for this deal — either party can attach one, both of you see everything added, and each needs both signatures to take effect."
       >
         <div className="space-y-3">
-          <Field label="Document type (applied to the next upload)">
-            <Select value={docType} onValueChange={setDocType}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {BUSINESS_DOC_TYPES.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>
-                    {t.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <Field label="Document name">
+            <Input
+              value={docName}
+              onChange={(e) => setDocName(e.target.value)}
+              placeholder="e.g. Non-Disclosure Agreement"
+            />
           </Field>
 
           <button
@@ -2347,63 +2344,84 @@ function BusinessDocsStep({ tx, reload }: Props) {
             onDrop={(e) => {
               e.preventDefault();
               setDragOver(false);
-              if (e.dataTransfer.files.length) void handleFiles(e.dataTransfer.files);
+              if (e.dataTransfer.files[0]) pickFile(e.dataTransfer.files[0]);
             }}
-            aria-label="Drop files here or click to browse"
+            aria-label="Drop a file here or click to browse"
             className={cn(
               "flex w-full flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed p-6 text-center transition-colors",
               dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
             )}
           >
-            {uploading ? (
-              <Loader2 className="h-5 w-5 animate-spin text-primary" />
-            ) : (
-              <UploadCloud className="h-5 w-5 text-muted-foreground" />
-            )}
+            <UploadCloud className="h-5 w-5 text-muted-foreground" />
             <span className="text-xs font-medium">
-              {uploading ? "Uploading…" : "Drop files here or click to browse"}
-            </span>
-            <span className="text-[11px] text-muted-foreground">
-              NDA, MOU, signed contracts — any format
+              {pendingFile ? pendingFile.name : "Drop a file here or click to browse"}
             </span>
           </button>
           <input
             ref={inputRef}
             type="file"
-            multiple
             className="hidden"
             onChange={(e) => {
-              if (e.target.files) void handleFiles(e.target.files);
+              if (e.target.files?.[0]) pickFile(e.target.files[0]);
               e.target.value = "";
             }}
           />
+
+          <div className="flex justify-end">
+            <Button size="sm" disabled={!pendingFile || uploading} onClick={() => void addDocument()}>
+              {uploading ? "Adding…" : "Add document"}
+            </Button>
+          </div>
         </div>
       </Panel>
 
       <Panel title="Uploaded">
         {docs.length === 0 ? (
-          <Empty text="No business documents attached yet." />
+          <Empty text="No legal agreements attached yet." />
         ) : (
           <ul className="divide-y divide-border">
-            {docs.map((d) => (
-              <li key={d.id} className="flex items-center gap-3 py-2.5 text-sm">
-                <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{d.name}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {BUSINESS_DOC_LABEL[d.doc_type] ?? d.doc_type} · {shortHash(d.sha256)}
-                  </p>
-                </div>
-                <span className="shrink-0 text-xs text-muted-foreground">{when(d.created_at)}</span>
-              </li>
-            ))}
+            {docs.map((d) => {
+              const sigs = sigsByDoc.get(d.id) ?? [];
+              const bidderSigned = sigs.some((s) => s.signer_side === "bidder");
+              const counterpartySigned = sigs.some((s) => s.signer_side === "counterparty");
+              const fullySigned = Boolean((d as { fully_signed_at?: string | null }).fully_signed_at);
+              return (
+                <li key={d.id} className="space-y-1.5 py-2.5 text-sm">
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">{d.name}</p>
+                      <p className="truncate text-xs text-muted-foreground">{when(d.created_at)}</p>
+                    </div>
+                    {fullySigned ? (
+                      <Badge variant="outline" className="shrink-0 border-success/40 bg-success/10 text-success">
+                        Signed by both
+                      </Badge>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={signingId === d.id}
+                        onClick={() => void signOne(d.id)}
+                      >
+                        {signingId === d.id ? "Signing…" : "Sign"}
+                      </Button>
+                    )}
+                  </div>
+                  <div className="ml-7 flex flex-wrap gap-3 text-[11px]">
+                    <span className={bidderSigned ? "font-medium text-emerald-600" : "text-muted-foreground"}>
+                      Bidder {bidderSigned ? "signed" : "not yet signed"}
+                    </span>
+                    <span className={counterpartySigned ? "font-medium text-[#4169e1]" : "text-muted-foreground"}>
+                      Counterparty {counterpartySigned ? "signed" : "not yet signed"}
+                    </span>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </Panel>
-
-      {/* Signing lives with the shared documents: both sides sign the same record, and the signed
-          PDF is filed in Bid Information once both signatures are on it. */}
-      <MutualEngagementPanel transactionId={tx.id} />
     </div>
   );
 }
