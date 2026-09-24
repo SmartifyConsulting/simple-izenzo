@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { CheckCircle2, MessageSquareWarning, XCircle } from "lucide-react";
+import { CheckCircle2, MessageSquareWarning, Repeat, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -117,7 +117,7 @@ export function MutualEngagementPanel({
               <li className={cn("flex flex-col", isBidder ? "items-start" : "items-end")} key={r.id}>
                 <div
                   className={cn(
-                    "max-w-[85%] rounded-2xl px-3 py-2 text-xs",
+                    "relative max-w-[85%] rounded-2xl px-3 py-2 pr-7 text-xs",
                     // A dark-default color with a theme-light: override, not a `dark:` variant —
                     // this app sets [data-theme] on <html>, not a `.dark` class, so `dark:*`
                     // utilities never actually apply here (see the theme-light custom variant in
@@ -127,16 +127,30 @@ export function MutualEngagementPanel({
                       : "rounded-br-sm bg-[#4169e1]/25 text-blue-100 theme-light:text-[#1c2f6b]",
                   )}
                 >
+                  {/* What happened is a small corner icon, not a repeated line of text — the bubble
+                      itself (side, colour) already carries most of that, and the words "Raised a
+                      counter" on every single reply added noise without adding information. */}
+                  <span
+                    className="absolute right-2 top-2"
+                    title={
+                      r.response === "accepted"
+                        ? "Accepted the offer"
+                        : r.response === "challenged"
+                          ? "Raised a counter"
+                          : "Rejected the offer"
+                    }
+                  >
+                    {r.response === "accepted" ? (
+                      <CheckCircle2 className="h-3.5 w-3.5 opacity-80" />
+                    ) : r.response === "challenged" ? (
+                      <Repeat className="h-3.5 w-3.5 opacity-80" />
+                    ) : (
+                      <XCircle className="h-3.5 w-3.5 opacity-80" />
+                    )}
+                  </span>
                   <p className="font-semibold">
                     {r.responder_name ?? sideWord(r.responder_side)}{" "}
                     <span className="font-normal opacity-70">({sideWord(r.responder_side)})</span>
-                  </p>
-                  <p className="mt-0.5">
-                    {r.response === "accepted"
-                      ? "Accepted the offer"
-                      : r.response === "challenged"
-                        ? "Raised a counter"
-                        : "Rejected the offer"}
                   </p>
                   {r.message && <p className="mt-1">{r.message}</p>}
                 </div>
@@ -209,7 +223,9 @@ export function MutualEngagementPanel({
         <section className="rounded-xl border border-border">
           <div className="flex items-center gap-2 px-4 py-3">
             <MessageSquareWarning className="h-4 w-4 text-primary" />
-            <h2 className="label-caps font-sans">Offer</h2>
+            <h2 className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 font-sans text-[var(--lw-pill-fg)]">
+              Offer
+            </h2>
           </div>
           {offerBody}
         </section>

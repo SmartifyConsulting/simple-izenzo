@@ -100,6 +100,38 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
   });
   const offerApproved = engagement?.decided === "accepted";
 
+  // Same single-phase mutual exclusion as the bidder's own Live Workspace map (see
+  // live-deal-engine.tsx) — Offer, Counter Offer and Without a Doubt all share the same
+  // stage/step, so MapView's default per-node state read more than one of them as "active" at
+  // once here, since this view never passed overrideStates at all. Computed the same way: whose
+  // turn it is is the only thing that can be "active"; everything else is "open" (or, once WaD is
+  // done, "active" itself, its own separate step).
+  const responses = engagement?.responses ?? [];
+  const lastResponse = responses[responses.length - 1];
+  const negotiationTurn = !lastResponse
+    ? ("counterparty" as const)
+    : lastResponse.response === "challenged"
+      ? lastResponse.responder_side === "counterparty"
+        ? ("counteroffer" as const)
+        : ("offer" as const)
+      : lastResponse.response === "accepted"
+        ? ("accepted" as const)
+        : ("opted_out" as const);
+  const phase: "counterOffer" | "offer" | "wad" | "none" = tx.wad_completed_at
+    ? "none"
+    : negotiationTurn === "accepted"
+      ? "wad"
+      : negotiationTurn === "counteroffer"
+        ? "offer"
+        : negotiationTurn === "counterparty" || negotiationTurn === "offer"
+          ? "counterOffer"
+          : "none";
+  const mapOverrides = {
+    offer: phase === "offer" ? "active" : "open",
+    counterOffer: phase === "counterOffer" ? "active" : "open",
+    wad: !tx.wad_completed_at ? (phase === "wad" ? "active" : "open") : "active",
+  } as const;
+
   // Bid Information is only useful reading before the negotiation gets going — once a counter has
   // gone back and forth, or the offer's been accepted or rejected, it's just noise sitting above
   // the Offer thread that actually matters now. Collapses itself the first time that happens, but
@@ -161,7 +193,7 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
         <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <div className="glass-node p-4" style={{ "--throb-accent": "#4169e1" } as CSSProperties}>
             <div className="relative w-full" style={{ aspectRatio: "960 / 1050" }}>
-              <MapView tx={tx} reload={reload} readOnly reference={tx.reference} />
+              <MapView tx={tx} reload={reload} readOnly reference={tx.reference} overrideStates={mapOverrides} />
             </div>
           </div>
 
