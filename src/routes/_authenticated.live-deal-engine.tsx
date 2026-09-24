@@ -2802,7 +2802,7 @@ function LiveDealEngine() {
                               title="Not happy with the online screening findings? Pick someone else."
                               className="shrink-0 text-[11px] font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"
                             >
-                              Choose a different party
+                              Change Party
                             </button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
