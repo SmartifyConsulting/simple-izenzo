@@ -1175,7 +1175,7 @@ function CounterpartyList({ tx, reload }: Props) {
   );
 }
 
-function ChoiceStep({ tx, reload }: Props) {
+function ChoiceStep({ tx, reload, onContinue }: Props) {
   const { data: cps = [] } = useCounterparties(tx.id);
   const qc = useQueryClient();
 
@@ -1196,6 +1196,7 @@ function ChoiceStep({ tx, reload }: Props) {
     await advance(tx.id, "trading", "intent");
     await qc.invalidateQueries({ queryKey: ["counterparties", tx.id] });
     reload();
+    onContinue?.();
     toast.success("Choice recorded — confirm the intent to continue");
   }
 
@@ -2395,7 +2396,7 @@ function BusinessDocsStep({ tx, reload, onContinue }: Props) {
                     </div>
                     {fullySigned ? (
                       <Badge variant="outline" className="shrink-0 border-success/40 bg-success/10 text-success">
-                        Signed by both
+                        signed by both
                       </Badge>
                     ) : (
                       <Button

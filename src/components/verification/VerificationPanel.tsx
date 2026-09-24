@@ -24,12 +24,12 @@ const CHECK_LABEL: Record<CheckType, string> = {
 };
 
 const STATUS_LABEL: Record<string, string> = {
-  pending: "Not started",
-  in_progress: "In progress",
-  passed: "Verified",
-  review: "Needs review",
-  failed: "Declined",
-  expired: "Expired",
+  pending: "not started",
+  in_progress: "in progress",
+  passed: "verified",
+  review: "needs review",
+  failed: "declined",
+  expired: "expired",
 };
 
 const STATUS_TONE: Record<string, string> = {

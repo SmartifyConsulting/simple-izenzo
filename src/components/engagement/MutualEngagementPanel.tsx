@@ -46,6 +46,10 @@ export function MutualEngagementPanel({
 
   async function refresh() {
     await qc.invalidateQueries({ queryKey: ["engagement", transactionId] });
+    // The Live Workspace's own "whose turn" read and its Without-a-Doubt gate both key off this
+    // same transaction — without refreshing it here too, accepting an offer here wouldn't open WaD
+    // until the page was reloaded by hand.
+    await qc.invalidateQueries({ queryKey: ["negotiation-turn", transactionId] });
   }
 
   async function sendResponse(response: "accepted" | "challenged" | "opted_out", message?: string) {
@@ -146,9 +150,12 @@ export function MutualEngagementPanel({
       {!resolved && !isObserver && (
         <>
           {waitingOnOther && (
-            <p className="text-[11px] text-muted-foreground">
-              Waiting for {sideWord(turnSide)} to decide — accept, counter or reject.
-            </p>
+            <div className="overflow-hidden rounded-lg border border-border">
+              <p className="px-2.5 py-1.5 text-[11px] text-muted-foreground">
+                Waiting for {sideWord(turnSide)} to decide — accept, counter or reject.
+              </p>
+              <div className="h-1 w-full animate-ribbon-sweep" />
+            </div>
           )}
           <div className="flex flex-wrap gap-2">
             <Button

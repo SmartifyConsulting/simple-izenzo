@@ -30,8 +30,8 @@ function negGap(poiSealedAt: string | null, wadCompletedAt: string | null) {
   const days = Math.max(0, Math.floor((to - from) / 86_400_000));
   const span = days === 0 ? "same day" : `${days} day${days === 1 ? "" : "s"}`;
   return {
-    label: wadCompletedAt ? span : `${span} so far`,
-    tone: (wadCompletedAt ? "neutral" : "progress") as GateTone,
+    label: wadCompletedAt ? "completed" : "in progress",
+    tone: (wadCompletedAt ? "success" : "progress") as GateTone,
     title: wadCompletedAt
       ? `Negotiation window — ${span} between Seal Intent and WaD`
       : `Negotiation in progress — ${span} since Seal Intent, WaD still open`,
@@ -90,29 +90,29 @@ function GateDash() {
 function gateStates(t: TxRow) {
   const ageDays = (iso: string) => (Date.now() - new Date(iso).getTime()) / 86_400_000;
   const search: { label: string; tone: GateTone } | null =
-    t.stage === "trading" && !t.counterpartyName && t.step === "documents" ? null : { label: "Direct", tone: "success" };
+    t.stage === "trading" && !t.counterpartyName && t.step === "documents" ? null : { label: "direct", tone: "success" };
   const match: { label: string; tone: GateTone } | null = t.counterpartyName
     ? { label: "committed", tone: "success" }
     : t.stage === "trading"
       ? { label: "discovery", tone: "progress" }
       : null;
   const poi = t.poi_sealed_at
-    ? { label: "COMPLETED", tone: "success" as GateTone }
+    ? { label: "completed", tone: "success" as GateTone }
     : t.stage === "trading" && (t.step === "poi" || t.step === "intent")
       ? ageDays(t.created_at) > 21
-        ? { label: "EXPIRED", tone: "danger" as GateTone }
-        : { label: "DRAFT", tone: "warning" as GateTone }
+        ? { label: "expired", tone: "danger" as GateTone }
+        : { label: "draft", tone: "warning" as GateTone }
       : null;
   const wad = t.wad_completed_at
-    ? { label: "COMPLETED", tone: "success" as GateTone }
+    ? { label: "completed", tone: "success" as GateTone }
     : t.poi_sealed_at
       ? ageDays(t.poi_sealed_at) > 21
-        ? { label: "EXPIRED", tone: "danger" as GateTone }
-        : { label: "DRAFT", tone: "warning" as GateTone }
+        ? { label: "expired", tone: "danger" as GateTone }
+        : { label: "draft", tone: "warning" as GateTone }
       : null;
   const execution =
     t.stage === "execution" || t.stage === "finality" || t.stage === "memory"
-      ? { label: t.stage === "execution" ? "In progress" : "Done", tone: (t.stage === "execution" ? "progress" : "success") as GateTone }
+      ? { label: t.stage === "execution" ? "in progress" : "done", tone: (t.stage === "execution" ? "progress" : "success") as GateTone }
       : null;
   return { search, match, poi, wad, execution };
 }

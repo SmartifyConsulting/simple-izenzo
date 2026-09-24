@@ -302,6 +302,9 @@ function LiveDealEngine() {
   const [screening, setScreening] = useState(false);
   const [screeningResults, setScreeningResults] = useState<ScreeningResult[] | null>(null);
   const [mediaRunning, setMediaRunning] = useState(false);
+  // Checked between counterparties in the screening loop — the in-flight request for the current
+  // counterparty is left to finish naturally, but no further ones are started once this is set.
+  const mediaStopRequested = useRef(false);
   const [mediaResults, setMediaResults] = useState<MediaCheckResult[] | null>(null);
   const [mediaProgress, setMediaProgress] = useState<
     { done: number; total: number; failed?: boolean } | null
@@ -946,6 +949,14 @@ function LiveDealEngine() {
     },
   });
 
+  // The moment the offer is accepted, the Offer frame collapses and Without a Doubt takes over —
+  // it doesn't appear alongside a still-open Offer.
+  useEffect(() => {
+    if (negotiationTurn !== "accepted" || !dealTx || dealTx.wad_completed_at) return;
+    setOfferFrameOpen(false);
+    setStagePanel((prev) => (prev === "wad" ? prev : "wad"));
+  }, [negotiationTurn, dealTx?.id, dealTx?.wad_completed_at]);
+
   /** Which workflow item is genuinely current right now — the stored stage/step can't tell
    * "searching" apart from "results are in", so the page says it outright. Search AI + AI+ and
    * Online Media Screening are two separate, independently-timed operations — each pulses only
@@ -1162,10 +1173,16 @@ function LiveDealEngine() {
     // This frame is the current step now — it opens itself rather than waiting to be clicked
     // open; finalizeChoice already folds it away again the moment the workspace moves on.
     setMediaResultsOpen(dealTx.id, true);
+    mediaStopRequested.current = false;
     const collected: MediaCheckResult[] = [];
     let scanned = 0;
+    let stopped = false;
     try {
       for (const counterpartyId of counterpartyIds) {
+        if (mediaStopRequested.current) {
+          stopped = true;
+          break;
+        }
         const results = await runMediaChecks({
           data: { transactionId: dealTx.id, counterpartyIds: [counterpartyId] },
         });
@@ -1177,14 +1194,18 @@ function LiveDealEngine() {
           total: Math.max(scanned, counterpartyIds.length * SOURCES_PER_COUNTERPARTY),
         });
       }
-      await recordEvent({
-        transactionId: dealTx.id,
-        stage: "trading",
-        step: "online-media",
-        action: "online_media_checked",
-        summary: `Online media checked for ${collected.length} counterpart${collected.length === 1 ? "y" : "ies"}`,
-      });
-      toast.success("Online media screening complete");
+      if (stopped) {
+        toast("Online media screening stopped — showing what was found so far.");
+      } else {
+        await recordEvent({
+          transactionId: dealTx.id,
+          stage: "trading",
+          step: "online-media",
+          action: "online_media_checked",
+          summary: `Online media checked for ${collected.length} counterpart${collected.length === 1 ? "y" : "ies"}`,
+        });
+        toast.success("Online media screening complete");
+      }
     } catch (err) {
       toast.error((err as Error).message);
       setMediaProgress((p) => (p ? { ...p, failed: true } : p));
@@ -1251,16 +1272,25 @@ function LiveDealEngine() {
     if (tx) {
       const fresh = tx as Transaction;
       setDealTx(fresh);
-      // Intent signed → Proof of Intent; sealed → Without a Doubt; cleared → fold it away.
-      setStagePanel(
-        fresh.wad_completed_at
-          ? null
-          : fresh.poi_sealed_at
-            ? "wad"
-            : fresh.intent_confirmed_at
-              ? "poi"
-              : "intent",
-      );
+      // Intent signed → Proof of Intent; sealed → the Offer takes over (its own frame, above);
+      // Without a Doubt only opens once the offer is actually accepted — it waits its turn rather
+      // than appearing alongside the still-open Offer; cleared → fold it away.
+      if (fresh.wad_completed_at) {
+        setStagePanel(null);
+      } else if (fresh.poi_sealed_at) {
+        const { data: lastResponse } = await supabase
+          .from("engagement_responses")
+          .select("response")
+          .eq("transaction_id", fresh.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        setStagePanel((lastResponse as { response?: string } | null)?.response === "accepted" ? "wad" : null);
+      } else if (fresh.intent_confirmed_at) {
+        setStagePanel("poi");
+      } else {
+        setStagePanel("intent");
+      }
     }
 
     const { data: docs } = await supabase
@@ -1318,11 +1348,13 @@ function LiveDealEngine() {
         .then((res) => {
           if (res.verdict === "red") {
             toast.warning(
-              `Compliance check raised ${res.flags.length} concern${res.flags.length === 1 ? "" : "s"} on this counterparty: ${res.flags.map((f) => f.reason).join(" · ")}`,
+              `Cursory web compliance check raised ${res.flags.length} concern${res.flags.length === 1 ? "" : "s"} on this counterparty: ${res.flags.map((f) => f.reason).join(" · ")}. This isn't the formal check — that runs at Without a Doubt.`,
               { duration: 12000 },
             );
           } else if (res.verdict === "green") {
-            toast.success("Compliance check: no sanctions, fraud or legal concerns found for this counterparty.");
+            toast.success(
+              "Cursory web compliance check: no sanctions, fraud or legal concerns found. The formal KYC/KYB check still runs at Without a Doubt.",
+            );
           }
           // "unknown" (nothing configured, or the search failed) stays quiet here — it's recorded
           // as Neutral rather than presented as either a pass or a failure.
@@ -1774,6 +1806,13 @@ function LiveDealEngine() {
    * state so editing is available straight away instead of leaving no way out of the spinner. */
   function stopSearch() {
     setFlowStep("results");
+  }
+
+  /** Stops the online media screening loop before its next counterparty starts — the counterparty
+   * currently mid-check is left to finish server-side, matching how Stop already behaves on the
+   * AI+ search. */
+  function stopMediaScreening() {
+    mediaStopRequested.current = true;
   }
 
   /** "Find Counterparties" — runs the AI/AI+ search. Online media screening comes later, only once
@@ -2620,6 +2659,14 @@ function LiveDealEngine() {
                 reload={() => void reloadDeal()}
                 onClose={() => setMapPanel(null)}
                 viewOnly={mapPanel.viewOnly}
+                onContinue={
+                  mapPanel.step === "choice"
+                    ? () => {
+                        setMapPanel(null);
+                        setSearchResultsOpen(dealTx.id, true);
+                      }
+                    : undefined
+                }
               />
             </div>
           )}
@@ -2706,13 +2753,24 @@ function LiveDealEngine() {
                       <p className="text-xs text-slate-700">
                         Scanning LinkedIn, Facebook, TikTok, marketplaces and news…
                       </p>
-                      {mediaProgress && mediaProgress.total > 0 && (
-                        <span className="ml-auto shrink-0 text-[11px] text-slate-500">
-                          {mediaProgress.failed
-                            ? "Could not finish"
-                            : `${mediaProgress.done} of ${mediaProgress.total} sources`}
-                        </span>
-                      )}
+                      <div className="ml-auto flex shrink-0 items-center gap-1.5">
+                        {mediaProgress && mediaProgress.total > 0 && (
+                          <span className="text-[11px] text-slate-500">
+                            {mediaProgress.failed
+                              ? "Could not finish"
+                              : `${mediaProgress.done} of ${mediaProgress.total} sources`}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={stopMediaScreening}
+                          title="Stop the online screening — the counterparty currently being checked keeps running and will still save whatever it finds"
+                          className="flex items-center gap-1 rounded p-1 text-[11px] font-medium text-slate-500 hover:bg-slate-200 hover:text-slate-800"
+                        >
+                          <StopCircle className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">Stop</span>
+                        </button>
+                      </div>
                     </div>
                     <div className="h-1.5 w-full animate-ribbon-sweep" />
                   </div>
@@ -3037,7 +3095,10 @@ function LiveDealEngine() {
                   stagePanel &&
                   !(stagePanel === "intent" && dealTx.intent_confirmed_at) &&
                   !(stagePanel === "poi" && dealTx.poi_sealed_at) &&
-                  !(stagePanel === "wad" && dealTx.wad_completed_at) && (
+                  !(stagePanel === "wad" && dealTx.wad_completed_at) &&
+                  // The Offer frame above has to be accepted first — Without a Doubt waits its
+                  // turn instead of appearing alongside a still-open Offer.
+                  !(stagePanel === "wad" && negotiationTurn !== "accepted") && (
                     <InlineFrame
                       tx={dealTx}
                       stage={stagePanel === "wad" ? "compliance" : stagePanel === "business-docs" ? "execution" : "trading"}
