@@ -854,9 +854,9 @@ export function InlineFrame({
     ) : (
       <>
         <StepScreen tx={tx} stage={stage} step={step} reload={reload} onChangeParty={onChangeParty} />
-        {/* Intent now has its own "Change Party" button in its footer, left of Confirm Intent —
-            this standalone link is only still needed for Seal Intent (poi). */}
-        {step !== "intent" && changePartyLink}
+        {/* Intent and Seal Intent now each have their own "Change Party" button in their own
+            footer — this standalone link is no longer needed for either. */}
+        {step !== "intent" && step !== "poi" && changePartyLink}
       </>
     );
   }
@@ -899,9 +899,9 @@ export function InlineFrame({
       ) : (
         <StepScreen tx={tx} stage={stage} step={step} reload={reload} onChangeParty={onChangeParty} />
       )}
-      {/* Intent now has its own "Change Party" button in its footer, left of Confirm Intent —
-          this standalone link is only still needed for Seal Intent (poi). */}
-      {step !== "intent" && changePartyLink}
+      {/* Intent and Seal Intent now each have their own "Change Party" button in their own
+          footer — this standalone link is no longer needed for either. */}
+      {step !== "intent" && step !== "poi" && changePartyLink}
     </div>
   );
 }

@@ -1560,7 +1560,7 @@ function CertificateOfIntentDialog({
   );
 }
 
-function PoiStep({ tx, reload }: Props) {
+function PoiStep({ tx, reload, onChangeParty }: Props) {
   const seal = useServerFn(sealProofOfIntent);
   const notifyChosen = useServerFn(notifyChosenCounterparty);
   const navigate = useNavigate();
@@ -1754,9 +1754,33 @@ function PoiStep({ tx, reload }: Props) {
       footer={
         <div className="flex items-center justify-between gap-3">
           <TokenGateFooter cost={POI_COST} />
-          <Button size="sm" onClick={doSeal} disabled={busy || !tx.intent_confirmed_at || shortOnTokens}>
-            {busy ? "Sealing…" : "Seal Intent"}
-          </Button>
+          <div className="flex items-center gap-2">
+            {onChangeParty && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button type="button" size="sm" variant="outline">
+                    Change Party
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Choose a different party?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      The party you picked is released and the counterparty list opens again. Nothing that
+                      has already been screened is lost.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep this party</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => onChangeParty()}>Reopen the list</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            <Button size="sm" onClick={doSeal} disabled={busy || !tx.intent_confirmed_at || shortOnTokens}>
+              {busy ? "Sealing…" : "Seal Intent"}
+            </Button>
+          </div>
         </div>
       }
     >
