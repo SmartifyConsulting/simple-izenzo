@@ -146,7 +146,9 @@ function InboxPage() {
                       {/* The title's own BID/OFF id is baked into its text server-side, so it needs
                           to be clickable even when the reference lookup above comes back empty
                           (older rows, or the reference column not yet on this row) — the whole
-                          title links through whenever the notification has a transaction at all. */}
+                          title links through whenever the notification has a transaction at all.
+                          Coloured on the same Bid=green / Offer=blue convention as the reference
+                          above it, so a notification about a bid or an offer reads at a glance. */}
                       {n.transaction_id ? (
                         <Link
                           to="/live-deal-engine"
@@ -155,6 +157,11 @@ function InboxPage() {
                           className={cn(
                             "text-sm hover:underline",
                             n.read ? "font-medium" : "font-semibold",
+                            reference && tradeKindOf(reference) === "bid"
+                              ? "text-emerald-600"
+                              : reference && tradeKindOf(reference) === "offer"
+                                ? "text-[#4169e1]"
+                                : "text-foreground",
                           )}
                         >
                           {n.title}

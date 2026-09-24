@@ -809,14 +809,11 @@ export function InlineFrame({
     enabled: isWad,
   });
   // Before the counterparty approves the offer, this frame is the Offer alone — Without a Doubt
-  // appears only once agreement is reached.
+  // appears only once agreement is reached. The offer's own status line lives in the Offer frame's
+  // panel (MutualEngagementPanel), so this outer heading carries the label only.
   const def =
     isWad && engagement && engagement.decided !== "accepted"
-      ? {
-          key: "offer",
-          label: "Offer",
-          blurb: "The counterparty is evaluating your offer. They have an option to approve, counter or reject. Without a Doubt opens once they approve.",
-        }
+      ? { key: "offer", label: "Offer", blurb: "" }
       : baseDef;
   const locked = lockReason(stage, step, tx);
   const canChangeParty =

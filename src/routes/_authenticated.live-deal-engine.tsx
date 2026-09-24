@@ -938,6 +938,29 @@ function LiveDealEngine() {
     lastChimedStep.current = key;
   }, [dealTx?.id, dealTx?.stage, dealTx?.step]);
 
+  /** Whose move the Offer ⇄ Counter Offer loop is waiting on, read from the engagement responses
+   * both sides already record. "counterparty" = the bidder's offer is with them; "counteroffer" =
+   * they countered and the bidder needs to answer; "offer" = the bidder has re-submitted and it's
+   * the counterparty's turn again. Null once the offer is settled. */
+  const { data: negotiationTurn } = useQuery({
+    queryKey: ["negotiation-turn", dealTx?.id],
+    enabled: Boolean(dealTx?.id && dealTx?.poi_sealed_at && !dealTx?.wad_completed_at),
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("engagement_responses")
+        .select("responder_side, response, created_at")
+        .eq("transaction_id", dealTx!.id)
+        .order("created_at", { ascending: true });
+      const rows = (data ?? []) as { responder_side: string; response: string }[];
+      const last = rows[rows.length - 1];
+      if (!last) return "counterparty" as const;
+      if (last.response === "challenged") {
+        return last.responder_side === "counterparty" ? ("counteroffer" as const) : ("offer" as const);
+      }
+      return null;
+    },
+  });
+
   /** Which workflow item is genuinely current right now — the stored stage/step can't tell
    * "searching" apart from "results are in", so the page says it outright. Search AI + AI+ and
    * Online Media Screening are two separate, independently-timed operations — each pulses only
@@ -987,6 +1010,13 @@ function LiveDealEngine() {
       o["intent"] = "done";
       o["poi"] = dealTx.poi_sealed_at ? "done" : "active";
       if (dealTx.poi_sealed_at) {
+        // The Offer ⇄ Counter Offer loop is its own turn-taking exchange, so the pulse follows
+        // whose move it is rather than sitting on the checks row: the counterparty's turn shows on
+        // the Offer, the bidder's turn shows on Counter Offer.
+        if (!dealTx.wad_completed_at && negotiationTurn) {
+          o["offer"] = negotiationTurn === "offer" ? "active" : "open";
+          o["counterOffer"] = negotiationTurn === "counteroffer" ? "active" : "open";
+        }
         // The KYC/KYB/PEP/AML checks now run before Without a Doubt: the pulse sits on the
         // checks row while they are outstanding, and the gate row only turns green with them.
         o["kycKyb"] = dealTx.wad_completed_at ? "done" : "active";
@@ -1064,6 +1094,7 @@ function LiveDealEngine() {
     screeningResults,
     hasChosen,
     intentDismissed,
+    negotiationTurn,
     workspaceDocs.length,
   ]);
 

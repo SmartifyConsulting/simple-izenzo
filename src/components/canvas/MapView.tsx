@@ -349,14 +349,14 @@ function DocumentsFolder({
           )}
         />
       </button>
-      {/* The count pill hangs off the square's bottom-right corner — hovering it alone (no click,
-          no entering the folder) previews what's inside via the same list the click view uses. */}
+      {/* The count pill sits on the square's top-left corner — hovering it alone (no click, no
+          entering the folder) previews what's inside via the same list the click view uses. */}
       {documents.length > 0 && (
         <span
           onMouseEnter={() => setHovering(true)}
           onMouseLeave={() => setHovering(false)}
           title="Hover to see the files, or open the folder"
-          className="label-caps absolute -bottom-2 -right-2 flex h-5 min-w-[1.6rem] cursor-default items-center justify-center rounded-full bg-foreground px-2 text-[10px] font-bold text-background shadow"
+          className="label-caps absolute -left-2 -top-2 flex h-5 min-w-[1.6rem] cursor-default items-center justify-center rounded-full bg-foreground px-2 text-[10px] font-bold text-background shadow"
         >
           {documents.length}
         </span>
@@ -698,9 +698,11 @@ export function MapView({
         {/* Step 2 — compliance & governance */}
         {node("poi", "Seal Intent", "trading", "poi", Building2, { overrideKey: "poi" })}
 
-        {/* After Seal Intent the Responder reviews the Offer: Approve, Reject or Challenge — the
-            Counter Offer loop can go back and forth until agreement, which opens Without a Doubt. */}
-        {node("offer", "Offer", "compliance", "wad", Tag, { noArtefact: true })}
+        {/* After Seal Intent the Responder reviews the Offer: Approve, Counter or Reject — the
+            Counter Offer loop can go back and forth until agreement, which opens Without a Doubt.
+            Its state comes from the page's own "offer" override, so the pulse follows whose move
+            it is (see stepOverrides in the live deal engine). */}
+        {node("offer", "Offer", "compliance", "wad", Tag, { overrideKey: "offer", noArtefact: true })}
         {node("counterOffer", "Counter Offer", "compliance", "wad", undefined, {
           state: overrideStates?.["counterOffer"] ?? (lock("compliance", "wad") ? "locked" : "open"),
           noArtefact: true,
