@@ -108,6 +108,12 @@ export function SignUpForm({
       return;
     }
     setBusy(true);
+    // Signing up creates a session immediately, and the /auth page redirects away the instant it
+    // sees one — unless registration is already flagged as in progress. That flag has to be set
+    // before the sign-up call, not after it: setting it once the org/profile writes below have
+    // finished is too late, since the redirect can fire in the gap between the session appearing
+    // and this function reaching that line, tearing the form down before step 3 ever renders.
+    beginRegistration();
     try {
       const { data: signUpData, error } = await supabase.auth.signUp({
         email,
@@ -161,16 +167,15 @@ export function SignUpForm({
       }
 
       toast.success("Account created");
-      // Sign-up signs the person in immediately, which the home page and the sign-in page both
-      // treat as "they're done — send them into the app". That would fire right now and unmount
-      // this form before step 3 renders, so the wizard marks itself in progress first; the screens
-      // that would otherwise redirect stand down until it finishes or the person leaves.
-      beginRegistration();
       // One last step before heading in: an ID/passport number and the document that suits the
       // account — an Authority to Act for a company, proof of residential address for an
       // individual. The authenticated layout still catches anyone who closes the tab here.
       setStep(3);
     } catch (err) {
+      // Sign-up itself may still have partially succeeded (a session can exist even if an org/
+      // profile write below failed) — clear the in-progress flag either way so a real failure
+      // doesn't leave /auth's redirect permanently stood down for this browser tab.
+      endRegistration();
       const msg = mapAuthError((err as Error).message);
       setMessage(msg);
       toast.error(msg);
