@@ -19,6 +19,25 @@ type TxRow = Transaction & {
   bidderCompany: string | null;
 };
 
+/** The negotiation (NEG) window: the time a deal actually spends between the Proof of Intent
+ * being sealed and WaD clearing. NEG is not a spine stage of its own — the database spine is
+ * unchanged (trading → compliance → execution → finality → memory) — it is only surfaced here, in
+ * the trades report, so the gap that negotiation opens up is visible at a glance. */
+function negGap(poiSealedAt: string | null, wadCompletedAt: string | null) {
+  if (!poiSealedAt) return null;
+  const from = new Date(poiSealedAt).getTime();
+  const to = wadCompletedAt ? new Date(wadCompletedAt).getTime() : Date.now();
+  const days = Math.max(0, Math.floor((to - from) / 86_400_000));
+  const span = days === 0 ? "same day" : `${days} day${days === 1 ? "" : "s"}`;
+  return {
+    label: wadCompletedAt ? span : `${span} so far`,
+    tone: (wadCompletedAt ? "neutral" : "progress") as GateTone,
+    title: wadCompletedAt
+      ? `Negotiation window — ${span} between Seal Intent and WaD`
+      : `Negotiation in progress — ${span} since Seal Intent, WaD still open`,
+  };
+}
+
 /** Coarse relative age ("5 days ago", "2 months ago") — the report reads at a glance, not to the
  * exact minute. */
 function ageLabel(iso: string) {
@@ -116,9 +135,21 @@ function MatchIcon() {
 }
 
 function toCsv(rows: TxRow[]) {
-  const header = ["Reference", "Title", "Commodity", "Bidder", "Company", "Counterparty", "Stage", "Step", "Created"];
-  const lines = rows.map((t) =>
-    [
+  const header = [
+    "Reference",
+    "Title",
+    "Commodity",
+    "Bidder",
+    "Company",
+    "Counterparty",
+    "Stage",
+    "Step",
+    "NEG (Seal Intent → WaD)",
+    "Created",
+  ];
+  const lines = rows.map((t) => {
+    const neg = negGap(t.poi_sealed_at, t.wad_completed_at);
+    return [
       t.reference ?? fallbackReference(t.id, t.direction),
       t.title,
       t.commodity ?? "",
@@ -127,11 +158,12 @@ function toCsv(rows: TxRow[]) {
       t.counterpartyName ?? "",
       t.stage,
       t.step,
+      neg ? neg.label : "",
       t.created_at,
     ]
       .map((v) => `"${String(v).replace(/"/g, '""')}"`)
-      .join(","),
-  );
+      .join(",");
+  });
   return [header.join(","), ...lines].join("\n");
 }
 
@@ -370,6 +402,9 @@ export function TradesListView() {
                 <th className="px-4 py-2 font-medium">Search</th>
                 <th className="px-4 py-2 font-medium">Match</th>
                 <th className="px-4 py-2 font-medium">POI</th>
+                <th className="px-4 py-2 font-medium" title="Negotiation — the time between Seal Intent and WaD">
+                  NEG
+                </th>
                 <th className="px-4 py-2 font-medium">WaD</th>
                 <th className="px-4 py-2 font-medium">Execution</th>
                 <th className="px-4 py-2 text-right font-medium">
@@ -460,27 +495,37 @@ export function TradesListView() {
   );
 }
 
-/** The five gate columns as separate `<td>`s, one per header column, for the list/table layout. */
+/** The gate columns as separate `<td>`s, one per header column, for the list/table layout. NEG has
+ * its own column between POI and WaD — a duration, not a gate. */
 function GateColumns({ t }: { t: TxRow }) {
   const g = gateStates(t);
+  const neg = negGap(t.poi_sealed_at, t.wad_completed_at);
   return (
     <>
       <td className="px-4 py-3">{g.search ? <GatePill {...g.search} /> : <GateDash />}</td>
       <td className="px-4 py-3">{g.match ? <GatePill {...g.match} /> : <GateDash />}</td>
       <td className="px-4 py-3">{g.poi ? <GatePill {...g.poi} /> : <GateDash />}</td>
+      {/* NEG sits between POI and WaD — the negotiation window's own duration, not a gate of its
+          own. It only reads once the intent is sealed (there is no negotiation before that). */}
+      <td className="px-4 py-3" title={neg?.title}>
+        {neg ? <GatePill label={neg.label} tone={neg.tone} /> : <GateDash />}
+      </td>
       <td className="px-4 py-3">{g.wad ? <GatePill {...g.wad} /> : <GateDash />}</td>
       <td className="px-4 py-3">{g.execution ? <GatePill {...g.execution} /> : <GateDash />}</td>
     </>
   );
 }
 
-/** The same five gates as a wrapping row of pills, for the card layout. */
+/** The same gates as a wrapping row of pills, for the card layout — with NEG (the negotiation
+ * window) between POI and WaD. */
 function GateStack({ t }: { t: TxRow }) {
   const g = gateStates(t);
+  const neg = negGap(t.poi_sealed_at, t.wad_completed_at);
   const entries: { key: string; cell: { label: string; tone: GateTone } | null }[] = [
     { key: "Search", cell: g.search },
     { key: "Match", cell: g.match },
     { key: "POI", cell: g.poi },
+    { key: "NEG", cell: neg },
     { key: "WaD", cell: g.wad },
     { key: "Execution", cell: g.execution },
   ];

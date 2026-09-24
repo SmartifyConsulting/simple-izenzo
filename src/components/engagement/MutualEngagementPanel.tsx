@@ -17,7 +17,7 @@ function when(value: string | null | undefined) {
 }
 
 /**
- * The Offer: the counterparty's accept / challenge / reject decision on the terms the bidder put
+ * The Offer: the counterparty's accept / counter / reject decision on the terms the bidder put
  * to them. Nothing here decides anything on its own — every state change is a person's own
  * recorded action.
  */
@@ -58,7 +58,7 @@ export function MutualEngagementPanel({
         response === "accepted"
           ? "Accepted — Without a Doubt is open for both of you."
           : response === "challenged"
-            ? "Your challenge has been sent to the other party."
+            ? "Your counter has been sent to the other party."
             : "You've rejected the offer.",
       );
     } catch (err) {
@@ -96,7 +96,7 @@ export function MutualEngagementPanel({
                 {r.response === "accepted"
                   ? "accepted the offer"
                   : r.response === "challenged"
-                    ? "raised a challenge"
+                    ? "raised a counter"
                     : "rejected the offer"}
               </p>
               {r.message && <p className="mt-1 text-muted-foreground">{r.message}</p>}
@@ -107,7 +107,7 @@ export function MutualEngagementPanel({
       )}
 
       {/* Once the bidder has put the offer to the counterparty, it's the counterparty's move —
-          the bidder can only wait and read the thread below, not challenge or reject their own
+          the bidder can only wait and read the thread below, not counter or reject their own
           offer. */}
       {state.decided !== "opted_out" && !isObserver && state.side === "counterparty" && (
         <div className="flex flex-wrap gap-2">
@@ -117,7 +117,7 @@ export function MutualEngagementPanel({
             </Button>
           )}
           <Button size="sm" variant="outline" disabled={busy !== null} onClick={() => setChallengeOpen(true)}>
-            Challenge
+            Counter
           </Button>
           {state.decided !== "accepted" && (
             <Button
@@ -164,9 +164,9 @@ export function MutualEngagementPanel({
       <Dialog open={challengeOpen} onOpenChange={setChallengeOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Raise a challenge</DialogTitle>
+            <DialogTitle>Make a counter</DialogTitle>
             <DialogDescription>
-              Your message goes to the other party, who can reply here. Both of you keep replying until you reach
+              Your counter goes to the other party, who can reply here. Both of you keep replying until you reach
               consensus.
             </DialogDescription>
           </DialogHeader>
@@ -185,7 +185,7 @@ export function MutualEngagementPanel({
               disabled={challengeMessage.trim().length < 3 || busy !== null}
               onClick={() => void sendResponse("challenged", challengeMessage.trim())}
             >
-              {busy === "challenged" ? "Sending…" : "Send challenge"}
+              {busy === "challenged" ? "Sending…" : "Send counter"}
             </Button>
           </div>
         </DialogContent>

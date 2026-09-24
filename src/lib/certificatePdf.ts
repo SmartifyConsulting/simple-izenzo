@@ -23,6 +23,33 @@ export function sanitizeForPdf(text: string): string {
     .replace(/[^\x00-\x7E -ÿ–—•]/g, "");
 }
 
+/** The Izenzo mark that heads every certificate this module produces. Resolved from the same
+ * `public/izenzo-logo.png` the app serves, whether this runs on the client (bundler URL) or on the
+ * server (read off disk) — and never fatal: a certificate without its logo is still a valid
+ * certificate, so a load failure just leaves the heading as plain text. */
+const CERTIFICATE_LOGO_URL = "/izenzo-logo.png";
+let logoBytesPromise: Promise<Uint8Array | null> | null = null;
+
+async function loadCertificateLogoBytes(): Promise<Uint8Array | null> {
+  if (!logoBytesPromise) {
+    logoBytesPromise = (async () => {
+      try {
+        if (typeof window === "undefined") {
+          const { readFile } = await import("node:fs/promises");
+          const { join } = await import("node:path");
+          return new Uint8Array(await readFile(join(process.cwd(), "public", "izenzo-logo.png")));
+        }
+        const res = await fetch(CERTIFICATE_LOGO_URL);
+        if (!res.ok) return null;
+        return new Uint8Array(await res.arrayBuffer());
+      } catch {
+        return null;
+      }
+    })();
+  }
+  return logoBytesPromise;
+}
+
 function wrap(text: string, max: number, size: number, font: Awaited<ReturnType<PDFDocument["embedFont"]>>): string[] {
   const words = text.split(/\s+/).filter(Boolean);
   const lines: string[] = [];
@@ -63,7 +90,24 @@ export async function buildBrandedCertificatePdf(opts: {
 
   page.drawText(sanitizeForPdf(opts.heading), { x: 50, y, size: 17, font: bold, color: rgb(0.1, 0.1, 0.3) });
   y -= 15;
-  page.drawText("Izenzo Trading Gateway", { x: 50, y, size: 10, font, color: rgb(0.45, 0.45, 0.45) });
+  // The Izenzo mark heads the page where the plain-text wordmark used to sit — scaled to a
+  // 22pt-tall lockup so it reads as a letterhead without crowding the heading above it.
+  const logoBytes = await loadCertificateLogoBytes();
+  let drewLogo = false;
+  if (logoBytes) {
+    try {
+      const logo = await pdf.embedPng(logoBytes);
+      const logoHeight = 22;
+      const logoWidth = (logo.width / logo.height) * logoHeight;
+      page.drawImage(logo, { x: 50, y: y - 4, width: logoWidth, height: logoHeight });
+      drewLogo = true;
+    } catch {
+      drewLogo = false;
+    }
+  }
+  if (!drewLogo) {
+    page.drawText("Izenzo Trading Gateway", { x: 50, y, size: 10, font, color: rgb(0.45, 0.45, 0.45) });
+  }
   y -= 12;
   page.drawLine({ start: { x: 50, y }, end: { x: 545, y }, thickness: 0.75, color: rgb(0.1, 0.1, 0.3) });
   y -= 26;
