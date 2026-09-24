@@ -2514,11 +2514,25 @@ function LiveDealEngine() {
                   with the BID number on the heading row, around the description/upload bar. */}
               <div className="flex items-center justify-between gap-2">
                 <p className={cn("label-caps rounded-full px-2.5 py-1", registrationPill)}>{registrationLabel}</p>
-                {draftReference && (
-                  <span className="shrink-0 font-mono text-base font-bold tracking-wide text-foreground">
-                    {draftReference}
-                  </span>
-                )}
+                <div className="flex shrink-0 items-center gap-2">
+                  {draftReference && (
+                    <span className="font-mono text-base font-bold tracking-wide text-foreground">
+                      {draftReference}
+                    </span>
+                  )}
+                  {/* Nothing has been saved yet at this point — no transaction row, no taskbar tab
+                      to close it from — so backing out needs its own button rather than relying on
+                      a tab that doesn't exist for a workspace this new. */}
+                  <button
+                    type="button"
+                    onClick={() => void navigate({ to: "/live-deal-engine", search: { fresh: true, n: Date.now() } })}
+                    title="Cancel — discard this draft"
+                    aria-label="Cancel — discard this draft"
+                    className="rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-destructive"
+                  >
+                    <XIcon className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
               <div className="grid grid-cols-2 items-start gap-3">
                 <div className="min-w-0 space-y-1">
