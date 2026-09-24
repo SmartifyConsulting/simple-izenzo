@@ -10,7 +10,7 @@ declare
   v_counterparty_org_id uuid;
   v_bidder_user_id uuid;
   v_counterparty_user_id uuid;
-  v_check text;
+  v_check identity_check_type;
 begin
   select id, org_id, counterparty_org_id into v_tx_id, v_bidder_org_id, v_counterparty_org_id
   from public.transactions where reference = 'BID9938656';
@@ -28,7 +28,7 @@ begin
   select user_id into v_counterparty_user_id from public.org_members
     where org_id = v_counterparty_org_id order by created_at asc limit 1;
 
-  foreach v_check in array array['id_document', 'kyb'] loop
+  foreach v_check in array array['id_document', 'kyb']::identity_check_type[] loop
     if v_bidder_user_id is not null then
       if exists (
         select 1 from public.identity_verifications
