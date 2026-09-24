@@ -2337,7 +2337,7 @@ function WadStep({ tx, reload, onContinue }: Props) {
                     const others = rowsForType.filter((r) => !isMinePrior(r));
                     return (
                       <div key={type}>
-                        <p className="text-xs font-medium">{CHECK_TYPE_LABEL[type] ?? type}</p>
+                        <p className="label-caps font-sans">{CHECK_TYPE_LABEL[type] ?? type}</p>
                         <div className="mt-1.5 grid grid-cols-1 gap-3 sm:grid-cols-2">
                           <div className="rounded-lg border border-[#4169e1]/25 bg-[#4169e1]/5 p-2.5 sm:border-r-2">
                             {others.length === 0 ? (

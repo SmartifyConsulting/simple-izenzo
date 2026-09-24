@@ -1,7 +1,11 @@
 -- Marks both parties as verified (KYC = id_document, KYB = kyb) on BID9938656, for testing purposes
--- only — this writes the exact same identity_verifications rows a real passed Didit check would,
--- so it satisfies Pre-Screening, the WaD gate's own KYC/KYB checks, and the "ID Number + AtA /
--- Proof of Address" verified badge all at once (they all read from this table).
+-- only. Writes to BOTH tables the real flow touches:
+--   identity_verifications — what the KYC/KYB two-column boxes, Pre-Screening, and the
+--     "ID Number + AtA / Proof of Address" verified badge all read.
+--   engagement_diligence — what actually decides "bothCleared" and triggers WaD's own
+--     auto-complete (and, now, the Continue button). Skipping this table is why an earlier version
+--     of this script left the Continue button never appearing — identity_verifications alone was
+--     never enough to satisfy bothCleared.
 
 do $$
 declare
@@ -43,7 +47,7 @@ begin
           subject_label, completed_at
         ) values (
           v_check, 'passed', 'approved', 'manual', v_tx_id, v_bidder_user_id, v_bidder_org_id,
-          'Bidder (test override)', now()
+          'Bidder', now()
         );
       end if;
     end if;
@@ -62,11 +66,29 @@ begin
           subject_label, completed_at
         ) values (
           v_check, 'passed', 'approved', 'manual', v_tx_id, v_counterparty_user_id, v_counterparty_org_id,
-          'Counterparty (test override)', now()
+          'Counterparty', now()
         );
       end if;
     end if;
   end loop;
 
-  raise notice 'Marked KYC/KYB passed for both parties on BID9938656 (tx %).', v_tx_id;
+  -- engagement_diligence has one row per reviewer_side (not per check), covering both kyc_state
+  -- and kyb_state together.
+  if exists (select 1 from public.engagement_diligence where transaction_id = v_tx_id and reviewer_side = 'bidder') then
+    update public.engagement_diligence set kyc_state = 'passed', kyb_state = 'passed', updated_by = v_bidder_user_id
+    where transaction_id = v_tx_id and reviewer_side = 'bidder';
+  else
+    insert into public.engagement_diligence (transaction_id, reviewer_side, kyc_state, kyb_state, updated_by)
+    values (v_tx_id, 'bidder', 'passed', 'passed', v_bidder_user_id);
+  end if;
+
+  if exists (select 1 from public.engagement_diligence where transaction_id = v_tx_id and reviewer_side = 'counterparty') then
+    update public.engagement_diligence set kyc_state = 'passed', kyb_state = 'passed', updated_by = v_counterparty_user_id
+    where transaction_id = v_tx_id and reviewer_side = 'counterparty';
+  else
+    insert into public.engagement_diligence (transaction_id, reviewer_side, kyc_state, kyb_state, updated_by)
+    values (v_tx_id, 'counterparty', 'passed', 'passed', v_counterparty_user_id);
+  end if;
+
+  raise notice 'Marked KYC/KYB passed for both parties on BID9938656 (tx %) — bothCleared should now be true.', v_tx_id;
 end $$;
