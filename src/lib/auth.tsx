@@ -18,10 +18,20 @@ export type Profile = {
    * scoped to a specific deal, at the WaD gate. */
   id_number_type?: "id" | "passport" | null;
   id_number?: string | null;
-  /** Compulsory proof that this person may act (bid, sign, trade) on their organisation's behalf. */
+  /** Compulsory proof that this person may act (bid, sign, trade) on their organisation's behalf.
+   * Required of a company account only — an individual proves where they live instead. */
   authority_to_act_path?: string | null;
   authority_to_act_name?: string | null;
   authority_to_act_uploaded_at?: string | null;
+  /** Individuals only: a residential address document under three months old. */
+  residential_address_path?: string | null;
+  residential_address_name?: string | null;
+  residential_address_uploaded_at?: string | null;
+  /** Whether this seat trades as a company or as a natural person. Null on accounts created before
+   * the choice was recorded — read as a company, which is what the old registration asked for. */
+  account_type?: "company" | "individual" | null;
+  /** True until a new account finishes the registration wizard. False for pre-existing accounts. */
+  onboarding_required?: boolean | null;
 };
 
 export type Org = {
@@ -82,7 +92,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const uidRef = useRef<string | undefined>(undefined);
-
 
   async function load(uid: string | undefined) {
     uidRef.current = uid;

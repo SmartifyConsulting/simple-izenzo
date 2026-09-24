@@ -1037,6 +1037,53 @@ function LiveDealEngine() {
     if (flowStep === "searching" || mediaRunning || choicePending || offerUnresolved) setStep1Open(true);
   }, [flowStep, mediaRunning, choicePending, offerUnresolved]);
 
+  /** Continue on the cleared Without a Doubt gate. This is the one deliberate hand-off into
+   * execution: the moment is stamped on the transaction so the Legal Agreements pulse (and every
+   * other device reading the deal) can see the bidder actually went there, the workflow's own step
+   * moves on so the gate is genuinely behind them, and the Business Docs frame is opened.
+   *
+   * Stamped with an update rather than advance() alone: advance() only writes stage/step, and the
+   * whole point of this column is to distinguish "WaD cleared" from "bidder continued past it". */
+  async function continueFromWad() {
+    if (!dealTx) return;
+    await supabase
+      .from("transactions")
+      .update({
+        wad_continued_at: dealTx.wad_continued_at ?? new Date().toISOString(),
+        stage: "execution",
+        step: "business-docs",
+      } as never)
+      .eq("id", dealTx.id);
+    await reloadDeal();
+    setStagePanel("business-docs");
+  }
+
+  // Where the workspace should land around the WaD hand-off. Deliberately transition-based rather
+  // than derived on every render: once the bidder has moved on, the frames stay theirs to open and
+  // close. What this covers is arriving at a deal — a reload or a tab switch with no live event to
+  // hang off — so a cleared deal opens on the gate that still needs continuing, and a continued one
+  // opens where Continue sent it rather than back on the finished gate.
+  const wadHandoffRef = useRef<{ txId: string; continued: boolean } | null>(null);
+  useEffect(() => {
+    if (!dealTx || !dealTx.wad_completed_at) return;
+    const continued = Boolean(dealTx.wad_continued_at);
+    const prev = wadHandoffRef.current;
+    const firstLook = !prev || prev.txId !== dealTx.id;
+    const justChanged = Boolean(prev && prev.txId === dealTx.id && prev.continued !== continued);
+    wadHandoffRef.current = { txId: dealTx.id, continued };
+    if (!firstLook && !justChanged) return;
+
+    if (continued) {
+      setSealedWadOpen(false);
+      setStagePanel("business-docs");
+    } else {
+      // Nothing else is waiting on the bidder here — Continue is the only action — so the record
+      // opens itself instead of sitting behind a click.
+      setStep1Open(false);
+      setSealedWadOpen(true);
+    }
+  }, [dealTx?.id, dealTx?.wad_completed_at, dealTx?.wad_continued_at]);
+
   /** Which workflow item is genuinely current right now — the stored stage/step can't tell
    * "searching" apart from "results are in", so the page says it outright. Search AI + AI+ and
    * Online Media Screening are two separate, independently-timed operations — each pulses only
@@ -1109,9 +1156,23 @@ function LiveDealEngine() {
         o["kycKyb"] = dealTx.wad_completed_at ? "done" : "active";
         // Green pulse moves to WaD itself the moment the offer is accepted — not just once WaD
         // is fully cleared.
-        o["wad"] = dealTx.wad_completed_at ? "done" : negotiationTurn === "accepted" ? "active" : "open";
+        // Cleared, but the bidder has not yet continued past it — the pulse stays on WaD itself so
+        // the Continue button is what draws the eye. Legal Agreements is deliberately left not
+        // pulsing until then: it is not the current step until the bidder has been sent there.
+        const wadContinued = Boolean(dealTx.wad_continued_at);
+        o["wad"] = !dealTx.wad_completed_at
+          ? negotiationTurn === "accepted"
+            ? "active"
+            : "open"
+          : wadContinued
+            ? "done"
+            : "active";
         if (dealTx.wad_completed_at) {
-          o["businessDocs"] = dealTx.step === "business-docs" ? "active" : "done";
+          o["businessDocs"] = !wadContinued
+            ? "open"
+            : dealTx.step === "business-docs"
+              ? "active"
+              : "done";
           // Business documents in: Execution is what's next, so that's where the pulse goes.
           if (o["businessDocs"] === "done") {
             o["execution"] = "active";
@@ -1160,10 +1221,15 @@ function LiveDealEngine() {
     if (dealTx.intent_confirmed_at) {
       o["poi"] = dealTx.poi_sealed_at ? "done" : "active";
       if (dealTx.poi_sealed_at) {
+        const wadContinued = Boolean(dealTx.wad_continued_at);
         o["kycKyb"] = dealTx.wad_completed_at ? "done" : "active";
-        o["wad"] = dealTx.wad_completed_at ? "done" : "open";
+        o["wad"] = !dealTx.wad_completed_at ? "open" : wadContinued ? "done" : "active";
         if (dealTx.wad_completed_at) {
-          o["businessDocs"] = dealTx.step === "business-docs" ? "active" : "done";
+          o["businessDocs"] = !wadContinued
+            ? "open"
+            : dealTx.step === "business-docs"
+              ? "active"
+              : "done";
           if (o["businessDocs"] === "done") {
             o["execution"] = "active";
             o["preparation"] = "active";
@@ -3258,7 +3324,11 @@ function LiveDealEngine() {
                             setSealedWadOpen(false);
                             setSealedPoiOpen(false);
                             setOfferFrameOpen(false);
-                            setStagePanel("business-docs");
+                            // Clicking Continue is what actually sends the deal into execution:
+                            // the moment is stamped on the transaction (which is what Legal
+                            // Agreements' pulse is gated on), the step moves on, and the next
+                            // frame opens by itself.
+                            void continueFromWad();
                           }}
                         />
                       </div>

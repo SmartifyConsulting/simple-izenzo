@@ -142,7 +142,7 @@ export function SignUpForm({
 
         const { error: pErr } = await supabase
           .from("profiles")
-          .update({ org_id: org.id })
+          .update({ org_id: org.id, account_type: accountType } as never)
           .eq("id", userId);
         if (pErr) throw pErr;
 
@@ -178,6 +178,9 @@ export function SignUpForm({
       return;
     }
     if (result.redirected) return;
+    // A Google sign-up never sees the steps above, so it cannot have picked a company/individual
+    // type or provided a document — the authenticated layout's registration gate walks it through
+    // those instead of dropping it straight into the app.
     navigate({ to: safeNext(next), replace: true });
   }
 

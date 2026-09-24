@@ -20,6 +20,13 @@ export type Transaction = {
   poi_sealed_at: string | null;
   poi_hash: string | null;
   wad_completed_at: string | null;
+  /** Set when the bidder clicks Continue on the cleared Without a Doubt gate. Legal Agreements only
+   * starts pulsing on the strength of this. Null for rows that pre-date the column. */
+  wad_continued_at?: string | null;
+  /** AI interpretation of the legal agreements, shown on Execution > Concept. */
+  concept_brief?: string | null;
+  concept_brief_generated_at?: string | null;
+  concept_brief_error?: string | null;
   finality_sealed_at: string | null;
   created_at: string;
   /** BID.../OFF... shown wherever this deal is listed — generated once when the bid/offer was
