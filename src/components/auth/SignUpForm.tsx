@@ -301,8 +301,8 @@ export function SignUpForm({
           <div className="space-y-4" aria-live="polite">
             <h3 className="text-lg font-semibold">Check your email</h3>
             <p className="text-sm text-muted-foreground">
-              We sent a confirmation link to <span className="font-medium text-foreground">{email}</span>.
-              Open it to continue with step 2 — your organisation details.
+              To continue setting up your account, please verify your email address via the link
+              sent to <span className="font-medium text-foreground">{email}</span>.
             </p>
             {message && <p className="text-sm text-destructive">{message}</p>}
             <Button type="button" variant="outline" className="w-full" onClick={resend} disabled={resendIn > 0}>
