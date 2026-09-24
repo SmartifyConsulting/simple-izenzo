@@ -16,6 +16,7 @@ import {
   Move,
   Paperclip,
   Ban,
+  Plus,
   X as XIcon,
   StopCircle,
   Pencil,
@@ -656,6 +657,12 @@ function LiveDealEngine() {
   }, [dealTx?.id, choicePending]);
   // The trade record, once everything has cleared — folded away by default.
   const [tradeSummaryOpen, setTradeSummaryOpen] = useState(false);
+  // Step 1 · Trading bundles every completed Trading-stage record (Bid Registration, Bid
+  // Information, Search Results, Online Scanning Results, Confirmed Intent, Seal Intent, Offer)
+  // behind one collapsed-by-default accordion, so a deal that's moved on doesn't keep the whole
+  // trail of how it got here taking up the top of the workspace. Compliance/Execution frames
+  // further down are untouched by this — only Step 1's own records are gated on it.
+  const [step1Open, setStep1Open] = useState(false);
   // Once Intent is confirmed, its frame folds into a small accordion nested under Online Media
   // Screening Results rather than staying open as its own full-size panel.
   const [confirmedIntentOpen, setConfirmedIntentOpen] = useState(false);
@@ -1013,6 +1020,22 @@ function LiveDealEngine() {
     setOfferFrameOpen(false);
     setStagePanel((prev) => (prev === "wad" ? prev : "wad"));
   }, [negotiationTurn, dealTx?.id, dealTx?.wad_completed_at]);
+
+  // Step 1 opens itself the moment there's genuinely live work in it that needs attention — a
+  // search or screening actually running, a choice sitting there waiting to be made, or an
+  // unresolved Offer someone still needs to accept/counter/reject — rather than leaving those
+  // behind a manual click just because the accordion defaults closed. Once the offer is settled
+  // (accepted/opted_out) it's just a record again and can stay collapsed like everything else.
+  const offerUnresolved = Boolean(
+    dealTx?.poi_sealed_at &&
+      !dealTx?.wad_completed_at &&
+      negotiationTurn &&
+      negotiationTurn !== "accepted" &&
+      negotiationTurn !== "opted_out",
+  );
+  useEffect(() => {
+    if (flowStep === "searching" || mediaRunning || choicePending || offerUnresolved) setStep1Open(true);
+  }, [flowStep, mediaRunning, choicePending, offerUnresolved]);
 
   /** Which workflow item is genuinely current right now — the stored stage/step can't tell
    * "searching" apart from "results are in", so the page says it outright. Search AI + AI+ and
@@ -2333,12 +2356,29 @@ function LiveDealEngine() {
             </div>
           )}
 
+          {/* The single toggle for every completed Trading-stage record below — always visible
+              itself (that's the point: it's the way back in once the group is collapsed), and
+              collapsed by default so a deal that's moved on doesn't open with its whole history
+              already taking up the screen. */}
+          {activity && dealTx && (
+            <button
+              type="button"
+              onClick={() => setStep1Open((v) => !v)}
+              aria-expanded={step1Open}
+              className="mb-1.5 flex w-full items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-left text-xs font-semibold text-foreground hover:bg-accent"
+            >
+              {step1Open ? <Minus className="h-3.5 w-3.5 shrink-0" /> : <Plus className="h-3.5 w-3.5 shrink-0" />}
+              Step 1 · Trading
+              <ChevronDown className={cn("ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform", step1Open && "rotate-180")} />
+            </button>
+          )}
+
           {/* Bid Registration — the very top of the workspace, pinned above everything else that
               scrolls beneath it. The BID/OFF id sits on the same line as the heading (not its own
               row) to keep this frame as short as possible. Column 1: the bidder's identity/
               verification and how long that business has been active. Column 2: the bid's own
               name (wrapped, right-aligned), when it was registered, and the country. */}
-          {activity && dealTx && (
+          {step1Open && activity && dealTx && (
             // Fully opaque: the glass treatment's translucency let content scrolling beneath show
             // through this pinned frame.
             <div className="glass-node space-y-1 bg-card p-3 [backdrop-filter:none] [background-image:none]">
@@ -2477,7 +2517,7 @@ function LiveDealEngine() {
 
           {/* Bidder details + AI summary come next — what was actually submitted, never buried
               behind the progress ribbon. The attachment(s) live here too, with preview/download. */}
-          {activity && dealTx && (
+          {step1Open && activity && dealTx && (
             <div className="glass-node mt-1.5 space-y-1.5 p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="flex min-w-0 items-center gap-2">
@@ -2794,7 +2834,7 @@ function LiveDealEngine() {
                     asking about no longer decides whether it exists. Hidden while still searching —
                     the slim progress bar above is the only thing shown until there's something to
                     open this frame for. */}
-                {dealTx && (flowStep === "results" || interestCount > 0) && (
+                {step1Open && dealTx && (flowStep === "results" || interestCount > 0) && (
                   <div className="rounded-2xl border border-border bg-card">
                     <button
                       type="button"
@@ -2858,7 +2898,7 @@ function LiveDealEngine() {
                     frame itself now shows the moment screening starts, not just once the first
                     counterparty's results are in, so the progress bar always has this frame to
                     live inside instead of floating above it on its own. */}
-                {dealTx && (mediaRunning || (mediaResults && mediaResults.length > 0)) && (
+                {step1Open && dealTx && (mediaRunning || (mediaResults && mediaResults.length > 0)) && (
                   <div className="rounded-2xl border border-border bg-card p-3">
                     <div className="flex items-center gap-2">
                       <button
@@ -3077,7 +3117,7 @@ function LiveDealEngine() {
                 {/* Confirmed Intent, kept for the rest of the deal as a folded record. It no longer
                     depends on which step the workspace is asking about, so it stops disappearing
                     when the flow moves to sealing, compliance or execution. */}
-                {dealTx?.intent_confirmed_at && (
+                {step1Open && dealTx?.intent_confirmed_at && (
                   <div className="rounded-2xl border border-border bg-card">
                     <button
                       type="button"
@@ -3118,7 +3158,7 @@ function LiveDealEngine() {
                 {/* Sealed intent reads the same way: a folded record whose certificate is
                     there when it's wanted, with the sealing sentence as subtext under the pill
                     rather than a second heading inside the frame. */}
-                {dealTx?.poi_sealed_at && (
+                {step1Open && dealTx?.poi_sealed_at && (
                   <div className="rounded-2xl border border-border bg-card">
                     <button
                       type="button"
@@ -3158,7 +3198,7 @@ function LiveDealEngine() {
                 {/* The Offer gets its own frame here, above Without a Doubt — not nested inside
                     it. Open by default: it's current until it's approved, and stays available as
                     its own record (the full exchange, who said what) after. */}
-                {dealTx?.poi_sealed_at && (
+                {step1Open && dealTx?.poi_sealed_at && (
                   <div className="rounded-2xl border border-border bg-card">
                     <button
                       type="button"
