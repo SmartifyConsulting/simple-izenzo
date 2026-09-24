@@ -6,11 +6,18 @@ import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { PasswordInput } from "@/components/PasswordInput";
 import { AuthorityToActPanel } from "@/components/verification/AuthorityToActPanel";
 import { mapAuthError } from "@/lib/auth";
 import { generateOrgBrief } from "@/lib/orgBrief.functions";
+import { beginRegistration, endRegistration } from "@/lib/registrationFlow";
 import { COUNTRIES } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 
@@ -142,7 +149,7 @@ export function SignUpForm({
 
         const { error: pErr } = await supabase
           .from("profiles")
-          .update({ org_id: org.id })
+          .update({ org_id: org.id, account_type: accountType } as never)
           .eq("id", userId);
         if (pErr) throw pErr;
 
@@ -154,9 +161,14 @@ export function SignUpForm({
       }
 
       toast.success("Account created");
-      // One last step before heading in: an ID/passport number and an Authority to Act document.
-      // Skippable — the authenticated layout shows the same step again as a dismissible dialog for
-      // anyone who skips it here, so this is never a dead end.
+      // Sign-up signs the person in immediately, which the home page and the sign-in page both
+      // treat as "they're done — send them into the app". That would fire right now and unmount
+      // this form before step 3 renders, so the wizard marks itself in progress first; the screens
+      // that would otherwise redirect stand down until it finishes or the person leaves.
+      beginRegistration();
+      // One last step before heading in: an ID/passport number and the document that suits the
+      // account — an Authority to Act for a company, proof of residential address for an
+      // individual. The authenticated layout still catches anyone who closes the tab here.
       setStep(3);
     } catch (err) {
       const msg = mapAuthError((err as Error).message);
@@ -178,6 +190,9 @@ export function SignUpForm({
       return;
     }
     if (result.redirected) return;
+    // A Google sign-up never sees the steps above, so it cannot have picked a company/individual
+    // type or provided a document — the authenticated layout's registration gate walks it through
+    // those instead of dropping it straight into the app.
     navigate({ to: safeNext(next), replace: true });
   }
 
@@ -186,11 +201,15 @@ export function SignUpForm({
       {!hideHeader && (
         <>
           <h2 className="text-xl font-semibold tracking-tight">Create your account</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Open a seat on the Izenzo Trading Gateway.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Open a seat on the Izenzo Trading Gateway.
+          </p>
         </>
       )}
 
-      <div className={cn(compact ? "mb-2" : "mb-4", !hideHeader && "mt-7", "flex items-center gap-2")}>
+      <div
+        className={cn(compact ? "mb-2" : "mb-4", !hideHeader && "mt-7", "flex items-center gap-2")}
+      >
         {([1, 2, 3] as const).map((n, i) => (
           <span key={n} className="flex items-center gap-2">
             {i > 0 && <span className="h-px w-6 bg-border" />}
@@ -205,7 +224,11 @@ export function SignUpForm({
           </span>
         ))}
         <p className="ml-2 text-xs text-muted-foreground">
-          {step === 1 ? "Your details" : step === 2 ? "Organisation details" : "Complete registration"}
+          {step === 1
+            ? "Your details"
+            : step === 2
+              ? "Organisation details"
+              : "Complete registration"}
         </p>
       </div>
 
@@ -214,7 +237,9 @@ export function SignUpForm({
           <form onSubmit={onContinue} className={compact ? "space-y-1.5" : "space-y-4"}>
             <div className={cn("grid grid-cols-2", compact ? "gap-2" : "gap-3")}>
               <div className={compact ? "space-y-1" : "space-y-1.5"}>
-                <Label htmlFor="hero-first-name" className={compact ? "text-xs" : undefined}>First name</Label>
+                <Label htmlFor="hero-first-name" className={compact ? "text-xs" : undefined}>
+                  First name
+                </Label>
                 <Input
                   id="hero-first-name"
                   value={firstName}
@@ -225,7 +250,9 @@ export function SignUpForm({
                 />
               </div>
               <div className={compact ? "space-y-1" : "space-y-1.5"}>
-                <Label htmlFor="hero-last-name" className={compact ? "text-xs" : undefined}>Last name</Label>
+                <Label htmlFor="hero-last-name" className={compact ? "text-xs" : undefined}>
+                  Last name
+                </Label>
                 <Input
                   id="hero-last-name"
                   value={lastName}
@@ -237,7 +264,9 @@ export function SignUpForm({
               </div>
             </div>
             <div className={compact ? "space-y-1" : "space-y-1.5"}>
-              <Label htmlFor="hero-email" className={compact ? "text-xs" : undefined}>Email</Label>
+              <Label htmlFor="hero-email" className={compact ? "text-xs" : undefined}>
+                Email
+              </Label>
               <Input
                 id="hero-email"
                 type="email"
@@ -249,7 +278,9 @@ export function SignUpForm({
               />
             </div>
             <div className={compact ? "space-y-1" : "space-y-1.5"}>
-              <Label htmlFor="hero-password" className={compact ? "text-xs" : undefined}>Password</Label>
+              <Label htmlFor="hero-password" className={compact ? "text-xs" : undefined}>
+                Password
+              </Label>
               <PasswordInput
                 id="hero-password"
                 value={password}
@@ -261,7 +292,10 @@ export function SignUpForm({
               {!compact && (
                 <ul className="mt-2 space-y-1">
                   {rules.map((r) => (
-                    <li key={r.label} className={"text-xs " + (r.ok ? "text-success" : "text-muted-foreground")}>
+                    <li
+                      key={r.label}
+                      className={"text-xs " + (r.ok ? "text-success" : "text-muted-foreground")}
+                    >
                       {r.ok ? "✓" : "•"} {r.label}
                     </li>
                   ))}
@@ -285,7 +319,14 @@ export function SignUpForm({
               <span className="h-px flex-1 bg-border" />
             </div>
 
-            <Button type="button" variant="outline" size={compact ? "sm" : "default"} className="w-full" onClick={google} disabled={busy}>
+            <Button
+              type="button"
+              variant="outline"
+              size={compact ? "sm" : "default"}
+              className="w-full"
+              onClick={google}
+              disabled={busy}
+            >
               Continue with Google
             </Button>
           </form>
@@ -305,7 +346,9 @@ export function SignUpForm({
                   }
                 >
                   <span className="block font-medium">Company</span>
-                  <span className="block text-xs text-muted-foreground">Trading as an organisation</span>
+                  <span className="block text-xs text-muted-foreground">
+                    Trading as an organisation
+                  </span>
                 </button>
                 <button
                   type="button"
@@ -318,7 +361,9 @@ export function SignUpForm({
                   }
                 >
                   <span className="block font-medium">Individual</span>
-                  <span className="block text-xs text-muted-foreground">Trading in your own name</span>
+                  <span className="block text-xs text-muted-foreground">
+                    Trading in your own name
+                  </span>
                 </button>
               </div>
             </div>
@@ -435,7 +480,13 @@ export function SignUpForm({
             )}
 
             <div className="flex gap-2">
-              <Button type="button" variant="outline" className="flex-1" onClick={() => setStep(1)} disabled={busy}>
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => setStep(1)}
+                disabled={busy}
+              >
                 Back
               </Button>
               <Button type="submit" className="flex-1" disabled={busy}>
@@ -444,14 +495,24 @@ export function SignUpForm({
             </div>
           </form>
         ) : (
-          <AuthorityToActPanel onSaved={() => navigate({ to: safeNext(next), replace: true })} />
+          <AuthorityToActPanel
+            onSaved={() => {
+              // Registration is finished — let the app take over from here.
+              endRegistration();
+              navigate({ to: safeNext(next), replace: true });
+            }}
+          />
         )}
       </div>
 
       {!hideFooterLink && step !== 3 && (
         <p className={cn("text-center text-sm text-muted-foreground", compact ? "mt-3" : "mt-6")}>
           Already have an account?{" "}
-          <Link to="/auth" search={{ mode: "signin", next }} className="font-medium text-foreground hover:underline">
+          <Link
+            to="/auth"
+            search={{ mode: "signin", next }}
+            className="font-medium text-foreground hover:underline"
+          >
             Sign in
           </Link>
         </p>

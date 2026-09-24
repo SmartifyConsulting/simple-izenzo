@@ -44,7 +44,7 @@ export async function webSearch(opts: {
   effort?: "low" | "medium" | "high";
   timeoutMs?: number;
   /** Records this call's real cost (a flat per-search fee, per OpenAI's hosted web-search tool
-   * pricing, plus its own token usage) against a transaction/org for the Expense report. */
+   * pricing, plus its own token usage) against a transaction/org for the Token Ledger. */
   usage?: AiUsageContext | undefined;
 }): Promise<WebSearchResult> {
   let lastError = "The web could not be searched just now.";

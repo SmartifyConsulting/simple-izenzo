@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ChevronDown, ChevronRight, CheckCircle2, Copy, CreditCard, Eye, KeyRound, Lock, Loader2, Plug, XCircle } from "lucide-react";
@@ -20,10 +20,12 @@ import {
   saveIntegration,
   testIntegration,
   type AiUsageReport,
+  groupUsageRows,
   type CreditSpendReport,
   type IntegrationRow,
   type ProviderPricingCache,
 } from "@/lib/integrations.functions";
+import { cn } from "@/lib/utils";
 
 /** Opens a provider page in a new tab without handing it our referrer. */
 function openExternal(url: string) {
@@ -115,7 +117,7 @@ export function IntegrationsTab() {
           Guided setup
         </Button>
         <Button size="sm" variant={view === "report" ? "default" : "outline"} onClick={() => setView("report")}>
-          Expense report
+          Token Ledger
         </Button>
         <span className="text-xs text-muted-foreground">
           {view === "guided"
@@ -187,6 +189,46 @@ export function IntegrationsTab() {
   );
 }
 
+/** A collapsed-by-default heading with a cost summary, used for the ledger's month/week/day
+ * tiers. `defaultOpen` only sets the initial state — once rendered it's the reader's to open and
+ * close, so a re-render doesn't fight them. */
+function CollapsibleGroup({
+  label,
+  summary,
+  defaultOpen = false,
+  small = false,
+  children,
+}: {
+  label: string;
+  summary: string;
+  defaultOpen?: boolean;
+  small?: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="rounded-xl border border-border">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 px-4 py-2 text-left hover:bg-muted/30"
+      >
+        <span className="flex min-w-0 items-center gap-2">
+          {open ? (
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          ) : (
+            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          )}
+          <span className={cn("truncate font-semibold", small ? "text-xs" : "text-sm")}>{label}</span>
+        </span>
+        <span className="shrink-0 text-xs text-muted-foreground">{summary}</span>
+      </button>
+      {open && <div className="px-3 pb-3">{children}</div>}
+    </div>
+  );
+}
+
 /** Real, if estimated, provider cost — every OpenAI/Tavily/Didit/Resend call this app makes is
  * now logged to ai_usage_events (see aiUsage.server.ts), with its cost worked out from the token
  * counts/flat rates configured there. This is the actual external spend, not the platform's own
@@ -199,6 +241,11 @@ function AiCostReport() {
     retry: false,
   });
   const [openTxId, setOpenTxId] = useState<string | null>(null);
+
+  // Month → week → day buckets, so a long ledger stays readable: month headings, the weeks inside
+  // them, then the individual days, with only today's day open. Anything older is a deliberate
+  // click rather than something to scroll past.
+  const grouped = groupUsageRows((data as AiUsageReport | undefined)?.byTransaction ?? []);
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
   if (error) return <p className="text-sm text-muted-foreground">{(error as Error).message}</p>;
@@ -251,54 +298,98 @@ function AiCostReport() {
         {report.byTransaction.length === 0 ? (
           <p className="text-xs text-muted-foreground">No usage logged against a transaction yet.</p>
         ) : (
-          <ul className="divide-y divide-border rounded-xl border border-border">
-            {report.byTransaction.map((t) => {
-              const open = openTxId === t.transactionId;
-              return (
-                <li key={t.transactionId}>
-                  <button
-                    type="button"
-                    onClick={() => setOpenTxId(open ? null : t.transactionId)}
-                    aria-expanded={open}
-                    className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm hover:bg-muted/30"
-                  >
-                    <span className="flex min-w-0 items-center gap-2">
-                      {open ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
-                      <span className="truncate font-mono text-xs font-semibold">{t.reference ?? t.transactionId}</span>
-                      {t.title && <span className="truncate text-xs text-muted-foreground">{t.title}</span>}
-                    </span>
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      ${t.costUsd.toFixed(2)} · {t.count} call{t.count === 1 ? "" : "s"}
-                    </span>
-                  </button>
-                  {open && (
-                    <ul className="divide-y divide-border bg-muted/20 px-4">
-                      {t.events.map((e, i) => (
-                        <li key={i} className="flex items-center justify-between gap-3 py-2 pl-6 text-xs">
-                          <span className="text-muted-foreground">
-                            {e.provider} · {e.operation}
-                            {e.model ? ` · ${e.model}` : ""}
-                          </span>
-                          <span className="flex shrink-0 items-center gap-3">
-                            <span className="font-medium">${(e.costUsd ?? 0).toFixed(4)}</span>
-                            <span className="text-muted-foreground">
-                              {new Date(e.createdAt).toLocaleString(undefined, {
-                                year: "numeric",
-                                month: "short",
-                                day: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
+          <div className="space-y-3">
+            {grouped.map((month) => (
+              <CollapsibleGroup
+                key={month.key}
+                label={month.label}
+                summary={`$${month.costUsd.toFixed(2)} · ${month.count} call${month.count === 1 ? "" : "s"}`}
+                defaultOpen={month.isCurrentMonth}
+              >
+                <div className="space-y-2 pl-3">
+                  {month.weeks.map((week) => (
+                    <CollapsibleGroup
+                      key={week.key}
+                      label={week.label}
+                      summary={`$${week.costUsd.toFixed(2)} · ${week.count} call${week.count === 1 ? "" : "s"}`}
+                      defaultOpen={week.isCurrentWeek}
+                      small
+                    >
+                      <div className="space-y-2 pl-3">
+                        {week.days.map((day) => (
+                          <CollapsibleGroup
+                            key={day.key}
+                            label={day.label}
+                            summary={`$${day.costUsd.toFixed(2)} · ${day.count} call${day.count === 1 ? "" : "s"}`}
+                            // Only today opens on arrival; every earlier day is a deliberate click.
+                            defaultOpen={day.isToday}
+                            small
+                          >
+                            <ul className="divide-y divide-border rounded-xl border border-border">
+                              {day.rows.map((t) => {
+                                const open = openTxId === t.transactionId;
+                                return (
+                                  <li key={t.transactionId}>
+                                    <button
+                                      type="button"
+                                      onClick={() => setOpenTxId(open ? null : t.transactionId)}
+                                      aria-expanded={open}
+                                      className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm hover:bg-muted/30"
+                                    >
+                                      <span className="flex min-w-0 items-center gap-2">
+                                        {open ? (
+                                          <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                        ) : (
+                                          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                        )}
+                                        <span className="truncate font-mono text-xs font-semibold">
+                                          {t.reference ?? t.transactionId}
+                                        </span>
+                                        {t.title && (
+                                          <span className="truncate text-xs text-muted-foreground">{t.title}</span>
+                                        )}
+                                      </span>
+                                      <span className="shrink-0 text-xs text-muted-foreground">
+                                        ${t.costUsd.toFixed(2)} · {t.count} call{t.count === 1 ? "" : "s"}
+                                      </span>
+                                    </button>
+                                    {open && (
+                                      <ul className="divide-y divide-border bg-muted/20 px-4">
+                                        {t.events.map((e, i) => (
+                                          <li key={i} className="flex items-center justify-between gap-3 py-2 pl-6 text-xs">
+                                            <span className="text-muted-foreground">
+                                              {e.provider} · {e.operation}
+                                              {e.model ? ` · ${e.model}` : ""}
+                                            </span>
+                                            <span className="flex shrink-0 items-center gap-3">
+                                              <span className="font-medium">${(e.costUsd ?? 0).toFixed(4)}</span>
+                                              <span className="text-muted-foreground">
+                                                {new Date(e.createdAt).toLocaleString(undefined, {
+                                                  year: "numeric",
+                                                  month: "short",
+                                                  day: "numeric",
+                                                  hour: "2-digit",
+                                                  minute: "2-digit",
+                                                })}
+                                              </span>
+                                            </span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    )}
+                                  </li>
+                                );
                               })}
-                            </span>
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+                            </ul>
+                          </CollapsibleGroup>
+                        ))}
+                      </div>
+                    </CollapsibleGroup>
+                  ))}
+                </div>
+              </CollapsibleGroup>
+            ))}
+          </div>
         )}
       </div>
     </div>

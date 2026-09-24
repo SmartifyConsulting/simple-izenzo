@@ -1,6 +1,6 @@
 /** Server-only. Records what each external AI/integration call actually costs on the admin's own
  * provider account — OpenAI, Tavily, Didit, Resend — into ai_usage_events, so Admin → Integrations
- * → Expense report can show real spend, not just the platform's own internal token economy
+ * → Token Ledger can show real spend, not just the platform's own internal token economy
  * (credit_ledger). Every call is best-effort: logging a cost must never fail the real request that
  * earned it.
  *

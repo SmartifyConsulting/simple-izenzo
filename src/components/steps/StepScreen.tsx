@@ -43,6 +43,8 @@ import { VerificationPanel } from "@/components/verification/VerificationPanel";
 import { Logo } from "@/components/Logo";
 import { MutualEngagementPanel } from "@/components/engagement/MutualEngagementPanel";
 import { attachLegalDocument, getEngagement, signDocument, type Side } from "@/lib/engagement.functions";
+import { generateConceptBrief } from "@/lib/conceptBrief.functions";
+import { DocumentSummaryList } from "@/components/canvas/DocumentSummaryList";
 import { buildBrandedCertificatePdf } from "@/lib/certificatePdf";
 import { Confetti } from "@/components/effects/Confetti";
 import { CommoditySearch } from "@/components/CommoditySearch";
@@ -2432,6 +2434,8 @@ function ExecutionStep({ tx, step, reload }: Props) {
   const qc = useQueryClient();
   const [form, setForm] = useState({ prep_stage: PREP_STAGES[0]!, notes: "" });
   const [busy, setBusy] = useState(false);
+  const genBrief = useServerFn(generateConceptBrief);
+  const briefRequested = useRef(false);
 
   const { data: records = [] } = useQuery({
     queryKey: ["execution", tx.id],
@@ -2445,6 +2449,24 @@ function ExecutionStep({ tx, step, reload }: Props) {
       return data ?? [];
     },
   });
+
+  // Concept is the first thing execution opens on, so its brief is generated the first time the
+  // step is looked at rather than making someone ask for it. Guarded by a ref so a re-render or a
+  // reload never fires a second paid call, and by the stored timestamp so it is generated once per
+  // deal, not once per visit.
+  useEffect(() => {
+    if (step !== "preparation" || form.prep_stage !== "Concept") return;
+    if (tx.concept_brief || tx.concept_brief_generated_at || briefRequested.current) return;
+    briefRequested.current = true;
+    void genBrief({ data: { transactionId: tx.id } })
+      .then(() => reload())
+      .catch(() => {
+        // The reason is recorded on the deal by the server function itself — the panel below reads
+        // it from there, so there is nothing to surface here.
+        reload();
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, form.prep_stage, tx.id, tx.concept_brief, tx.concept_brief_generated_at]);
 
   async function record(e: React.FormEvent) {
     e.preventDefault();
@@ -2478,6 +2500,33 @@ function ExecutionStep({ tx, step, reload }: Props) {
 
   return (
     <div className="space-y-6">
+      {/* Concept opens with the AI's reading of the signed agreements, so both parties start from the
+          same understanding of what each is expected to do, the terms and the dates. Advisory only —
+          the agreements themselves remain the authority. */}
+      {step === "preparation" && form.prep_stage === "Concept" && (
+        <Panel
+          title="What the agreements say"
+          description="The AI's interpretation of the signed legal agreements — what each party is expected to do, the terms, and the dates. Read it against the agreements themselves; it is a reading, not advice."
+        >
+          {tx.concept_brief ? (
+            <>
+              <DocumentSummaryList summary={tx.concept_brief} />
+              {tx.concept_brief_generated_at && (
+                <p className="mt-3 text-[11px] text-muted-foreground">
+                  Read from the agreements {when(tx.concept_brief_generated_at)}
+                </p>
+              )}
+            </>
+          ) : tx.concept_brief_error ? (
+            <p className="text-xs text-muted-foreground">{userFacingText(tx.concept_brief_error)}</p>
+          ) : (
+            <p className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Reading the agreements…
+            </p>
+          )}
+        </Panel>
+      )}
+
       <Panel
         title="Record this step"
         footer={

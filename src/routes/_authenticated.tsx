@@ -69,21 +69,29 @@ function RequireEmailVerified() {
   const onOrgSetup = pathname.startsWith("/account/settings");
 
   // Registration is done once both compulsory items are on file: an ID/passport number (typed,
-  // never scanned) and an Authority to Act document. KYC, KYB, AML and PEP no longer gate
+  // never scanned) and the document that suits the account — an Authority to Act for a company,
+  // proof of residential address for an individual. KYC, KYB, AML and PEP no longer gate
   // registration at all — those only run later, scoped to a specific deal, at the WaD gate.
-  // Sign-up itself now asks for these as its own third step; this dialog only ever catches
-  // someone who chose "Do this later" there (or an account that pre-dates this step) — dismissing
-  // it again lasts for this browser session, same as the old identity-check gate did.
+  //
+  // Two distinct cases here, deliberately kept apart:
+  //  - A brand-new account (onboarding_required) is walked through the wizard and cannot dismiss it.
+  //    Sign-up's own third step covers the email path; this catches a Google sign-up, which never
+  //    reaches that step and so arrives with the choice and the document still outstanding.
+  //  - An account that pre-dates the wizard keeps the old dismissible prompt, so nobody already
+  //    mid-test is trapped by a rule introduced after they signed up.
   const [registrationDismissed, setRegistrationDismissed] = useState(() => {
     if (typeof window === "undefined") return false;
     return window.sessionStorage.getItem("izenzo:registration-later") === "1";
   });
+  const isCompanySeat = profile?.account_type !== "individual";
+  const missingRegistrationDoc = isCompanySeat
+    ? !profile?.authority_to_act_path
+    : !profile?.residential_address_path;
+  const registrationIncomplete =
+    !loading && !!profile && !needsOrg && (!profile.id_number || missingRegistrationDoc);
+  const isNewAccount = registrationIncomplete && Boolean(profile?.onboarding_required);
   const needsRegistrationDetails =
-    !loading &&
-    !!profile &&
-    !needsOrg &&
-    (!profile.id_number || !profile.authority_to_act_path) &&
-    !registrationDismissed;
+    registrationIncomplete && (isNewAccount || !registrationDismissed);
 
   useEffect(() => {
     if (!mustVerify && needsOrg && !onOrgSetup) navigate({ to: "/account/settings", replace: true });
@@ -97,6 +105,7 @@ function RequireEmailVerified() {
       <VerifyEmailDialog open={mustVerify} />
       <RegistrationDetailsDialog
         open={!mustVerify && needsRegistrationDetails}
+        blocking={isNewAccount}
         onDismiss={() => {
           if (typeof window !== "undefined") window.sessionStorage.setItem("izenzo:registration-later", "1");
           setRegistrationDismissed(true);

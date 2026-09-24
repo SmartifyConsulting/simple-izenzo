@@ -11,4 +11,5 @@ export const TEST_USERS: { label: string; email: string }[] = [
   { label: "James", email: "james@izenzo.co.za" },
   { label: "Hanish (Gmail)", email: "hanishgupta@gmail.com" },
   { label: "Hanish (Seedaxis)", email: "hanish@seedaxis.co.za" },
+  { label: "Holarc", email: "support@holarc.com" },
 ];
