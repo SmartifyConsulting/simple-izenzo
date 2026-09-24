@@ -261,7 +261,7 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
             >
               {kindWord} Registration
             </span>
-            <span className="font-mono text-xs text-muted-foreground">{tx.reference}</span>
+            <span className="font-mono text-base font-bold tracking-wide text-foreground">{tx.reference}</span>
           </div>
           <p className="text-sm text-muted-foreground">
             Registered {when(tx.created_at)} · {money(tx.price, tx.currency)}

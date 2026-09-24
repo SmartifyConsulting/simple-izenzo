@@ -3,7 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Check, ChevronDown, Coins, Download, FileText, Loader2, ShieldCheck, Sparkles, Lock, UploadCloud } from "lucide-react";
+import { Check, ChevronDown, Coins, Download, FileText, Loader2, Sparkles, Lock, UploadCloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1843,7 +1843,7 @@ async function sha256Hex(text: string) {
 function WadStep({ tx, reload, onContinue }: Props) {
   const complete = useServerFn(completeWad);
   const navigate = useNavigate();
-  const { org } = useAuth();
+  const { org, user } = useAuth();
   const shortOnTokens = (org?.credits ?? 0) < WAD_COST;
   const loadEngagement = useServerFn(getEngagement);
   // The offer has to be approved (see MutualEngagementPanel — "The Offer" section) before Without
@@ -1903,7 +1903,7 @@ function WadStep({ tx, reload, onContinue }: Props) {
     queryFn: async () => {
       const { data } = await supabase
         .from("identity_verifications")
-        .select("id, check_type, status, reason, completed_at, created_at")
+        .select("id, check_type, status, reason, completed_at, created_at, subject_user_id, subject_org_id, subject_label")
         .eq("transaction_id", tx.id)
         .order("created_at", { ascending: false });
       return data ?? [];
@@ -1916,6 +1916,21 @@ function WadStep({ tx, reload, onContinue }: Props) {
     if (!priorByKind.has(r.check_type as string)) priorByKind.set(r.check_type as string, r);
   }
   const priorChecks = Array.from(priorByKind.values());
+
+  function isMinePrior(r: (typeof priorRows)[number]): boolean {
+    if (user?.id && r.subject_user_id === user.id) return true;
+    if (org?.id && r.subject_org_id === org.id) return true;
+    return false;
+  }
+  /** Same green/blue, other-party-left split as the KYC/KYB checks below — newest row per check
+   * type, per distinct subject, rather than one row per check type regardless of whose it was. */
+  const priorBySubject = new Map<string, (typeof priorRows)[number]>();
+  for (const r of priorRows) {
+    const key = `${r.check_type}:${r.subject_user_id ?? r.subject_org_id ?? r.subject_label ?? "unknown"}`;
+    if (!priorBySubject.has(key)) priorBySubject.set(key, r);
+  }
+  const priorSubjectRows = Array.from(priorBySubject.values());
+  const priorCheckTypes = Array.from(new Set(priorSubjectRows.map((r) => r.check_type as string)));
 
   // Anything already cleared in Step 1 ticks itself; everything else stays open for a person.
   useEffect(() => {
@@ -2149,6 +2164,17 @@ function WadStep({ tx, reload, onContinue }: Props) {
         </div>
       }
     >
+      {/* The outer frame this whole panel sits inside already carries the "Without a Doubt" grey
+          pill heading — this copy is the next thing under it, not a second heading of its own. */}
+      <p className="mb-1.5 text-xs text-muted-foreground">
+        Complete your own identity (KYC) and company (KYB) verification, with both results posted
+        to the deal so you each have the same independent assurance that the other party has been
+        verified. “Without a Doubt” clears automatically once both parties are verified.
+      </p>
+      <div className="mb-4">
+        <TokenGateFooter cost={WAD_COST} />
+      </div>
+
       {!offerApproved && (
         <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
           <Lock className="h-3.5 w-3.5" /> Waiting on the counterparty to approve the offer above.
@@ -2259,22 +2285,8 @@ function WadStep({ tx, reload, onContinue }: Props) {
         </div>
       )}
 
-      {/* Rendered by hand (VerificationPanel's own header suppressed via hideHeader) so "Already
-          screened in Step 1" can sit between the heading and the checks themselves, matching how
-          this whole gate reads top to bottom: what each side is, what was screened already, what's
-          being verified now. */}
-      <div className="mb-4 flex items-center gap-2">
-        <ShieldCheck className="h-4 w-4 text-primary" />
-        <h2 className="label-caps font-sans">Due Diligence</h2>
-      </div>
-      <p className="mb-4 text-xs text-muted-foreground">
-        Complete your own identity (KYC) and company (KYB) verification, with both results posted
-        to the deal so you each have the same independent assurance that the other party has been
-        verified. “Without a Doubt” clears automatically once both parties are verified.
-      </p>
-
-      {priorChecks.length > 0 && (() => {
-        const preScreenAllPassed = priorChecks.every((r) => r.status === "passed");
+      {priorSubjectRows.length > 0 && (() => {
+        const preScreenAllPassed = priorSubjectRows.every((r) => r.status === "passed");
         const preScreenOpen = preScreenOpenOverride ?? !preScreenAllPassed;
         return (
           <div className="mb-4 rounded-lg border border-border p-3">
@@ -2295,26 +2307,68 @@ function WadStep({ tx, reload, onContinue }: Props) {
             </button>
             {preScreenOpen && (
               <>
-                <ul className="mt-2 space-y-1.5">
-                  {priorChecks.map((r) => (
-                    <li key={r.id} className="flex items-center justify-between gap-2 text-xs">
-                      <span>{CHECK_TYPE_LABEL[r.check_type as string] ?? r.check_type}</span>
-                      <span
-                        className={cn(
-                          "shrink-0 text-xs",
-                          r.status === "passed"
-                            ? "text-emerald-500"
-                            : r.status === "failed" || r.status === "review"
-                              ? "text-[#F97316]"
-                              : "text-muted-foreground",
-                        )}
-                      >
-                        {PRIOR_STATUS_LABEL[r.status as string] ?? r.status}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-2 text-xs text-muted-foreground">
+                {/* Same green/blue, other-party-left split as the KYC/KYB checks below, one row per
+                    check type per side, rather than a single flat list that didn't say whose result
+                    was whose. */}
+                <div className="mt-3 space-y-3">
+                  {priorCheckTypes.map((type) => {
+                    const rowsForType = priorSubjectRows.filter((r) => r.check_type === type);
+                    const mine = rowsForType.find(isMinePrior) ?? null;
+                    const others = rowsForType.filter((r) => !isMinePrior(r));
+                    return (
+                      <div key={type}>
+                        <p className="text-xs font-medium">{CHECK_TYPE_LABEL[type] ?? type}</p>
+                        <div className="mt-1.5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          <div className="rounded-lg border border-[#4169e1]/25 bg-[#4169e1]/5 p-2.5 sm:border-r-2">
+                            {others.length === 0 ? (
+                              <p className="text-xs text-muted-foreground">No result yet for the other party.</p>
+                            ) : (
+                              others.map((r) => (
+                                <div key={r.id} className="flex items-center justify-between gap-2">
+                                  <Badge variant="secondary" className="bg-[#4169e1]/15 font-normal text-[#1c2f6b]">
+                                    {r.subject_label ?? "Counterparty"}
+                                  </Badge>
+                                  <span
+                                    className={cn(
+                                      "shrink-0 text-xs",
+                                      r.status === "passed"
+                                        ? "text-emerald-500"
+                                        : r.status === "failed" || r.status === "review"
+                                          ? "text-[#F97316]"
+                                          : "text-muted-foreground",
+                                    )}
+                                  >
+                                    {PRIOR_STATUS_LABEL[r.status as string] ?? r.status}
+                                  </span>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                          <div className="rounded-lg border border-emerald-600/25 bg-emerald-600/5 p-2.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <Badge variant="secondary" className="bg-emerald-600/15 font-normal text-emerald-700">
+                                You
+                              </Badge>
+                              <span
+                                className={cn(
+                                  "shrink-0 text-xs",
+                                  mine?.status === "passed"
+                                    ? "text-emerald-500"
+                                    : mine?.status === "failed" || mine?.status === "review"
+                                      ? "text-[#F97316]"
+                                      : "text-muted-foreground",
+                                )}
+                              >
+                                {mine ? PRIOR_STATUS_LABEL[mine.status as string] ?? mine.status : "No result yet"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="mt-3 text-xs text-muted-foreground">
                   These results carry through from the background screening on {chosenCp?.name ?? "the chosen party"} — they are not run again here.
                 </p>
               </>
