@@ -623,10 +623,11 @@ function LiveDealEngine() {
   const choicePending = Boolean(
     mediaResults && mediaResults.length > 0 && !mediaRunning && !dbHasChosenParty,
   );
-  // Open by default always — collapsing it once a choice was made hid the full candidate list
-  // (every company found, each tagged "Selected" if shortlisted) behind an extra click, reading
-  // as if only the one chosen party had ever been found.
-  const searchResultsOpen = dealTx ? (searchResultsOpenByTx[dealTx.id] ?? true) : true;
+  // Opened explicitly the moment a search starts (see setSearchResultsOpen(txId, true) below) —
+  // this bare default only matters on a page refresh of an existing deal, where nothing "starts"
+  // to trigger that call. Collapsed there, like every other frame on reload, rather than
+  // reopening on its own regardless of where the deal actually is.
+  const searchResultsOpen = dealTx ? (searchResultsOpenByTx[dealTx.id] ?? false) : false;
   // Once a party is actually chosen the choice is settled: this folds back into the plain
   // "Search Results" record instead of staying open.
   useEffect(() => {
@@ -659,11 +660,24 @@ function LiveDealEngine() {
 
   // The sealed Proof of Intent folds the same way — closed until the certificate is wanted.
   const [sealedPoiOpen, setSealedPoiOpen] = useState(false);
-  // The Offer has its own frame, open by default — it's the thing actually current until it's
-  // approved, not a record to dig for the way the others are.
-  const [offerFrameOpen, setOfferFrameOpen] = useState(true);
+  // The Offer has its own frame. Collapsed on a fresh page load like every other frame — opened
+  // explicitly the moment Seal Intent actually happens (see below) rather than defaulting open,
+  // which previously meant reloading an existing deal always showed it open regardless of where
+  // the negotiation actually stood.
+  const [offerFrameOpen, setOfferFrameOpen] = useState(false);
   // Cleared WaD case — same folded-record treatment, closed until wanted.
   const [sealedWadOpen, setSealedWadOpen] = useState(false);
+  // Opens the Offer frame the moment sealing actually happens live in this session — distinct
+  // from a page load that finds the deal already sealed, which leaves it collapsed like every
+  // other frame. `undefined` is the "haven't seen a value yet" sentinel so the very first render
+  // (whatever it loads with) never itself counts as a live transition.
+  const prevPoiSealedRef = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    const prev = prevPoiSealedRef.current;
+    const current = dealTx?.poi_sealed_at ?? null;
+    if (prev !== undefined && !prev && current) setOfferFrameOpen(true);
+    prevPoiSealedRef.current = current;
+  }, [dealTx?.poi_sealed_at]);
 
   // Which counterparty (from the media-screening findings) the user is about to proceed with —
   // this is where the actual pick happens now, right next to the screening evidence for it.
