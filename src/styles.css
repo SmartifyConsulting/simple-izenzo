@@ -15,11 +15,13 @@
 @import "@fontsource-variable/manrope";
 
 @custom-variant dark (&:is(.dark *));
-/* This app's actual light/dark toggle sets [data-theme] on <html> (see useTheme()), never a
- * `.dark` class — so the `dark:` variant above never fires here. Dark is the base/default look
- * throughout, with [data-theme="light"] as the override, so this variant is named the same way:
- * use it to override a dark-default color for the light skin specifically. */
-@custom-variant theme-light (&:is([data-theme="light"] *));
+/* This app's actual light/dark toggle sets [data-app] on <html> (see applyAppSkin() in
+ * appSkin.ts) — "alpha-bravo" is the light/cream skin, "izenzo" is the dark Ink & Aqua one. It
+ * never sets a `.dark` class or [data-theme="light"] (an earlier version of this variant targeted
+ * that, which never fires — [data-theme] is always "dark", full stop, per stylePreset.ts).
+ * Dark is the base/default look throughout, with alpha-bravo as the light override, so this
+ * variant is named the same way: use it to override a dark-default color for the light skin. */
+@custom-variant theme-light (&:is([data-app="alpha-bravo"] *));
 
 /*
  * Izenzo design system — "Ink & Aqua": deep navy/ink ground, glass panels, teal signal,
