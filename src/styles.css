@@ -15,6 +15,11 @@
 @import "@fontsource-variable/manrope";
 
 @custom-variant dark (&:is(.dark *));
+/* This app's actual light/dark toggle sets [data-theme] on <html> (see useTheme()), never a
+ * `.dark` class — so the `dark:` variant above never fires here. Dark is the base/default look
+ * throughout, with [data-theme="light"] as the override, so this variant is named the same way:
+ * use it to override a dark-default color for the light skin specifically. */
+@custom-variant theme-light (&:is([data-theme="light"] *));
 
 /*
  * Izenzo design system — "Ink & Aqua": deep navy/ink ground, glass panels, teal signal,

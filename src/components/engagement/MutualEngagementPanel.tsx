@@ -114,15 +114,17 @@ export function MutualEngagementPanel({
           {state.responses.map((r) => {
             const isBidder = r.responder_side === "bidder";
             return (
-              <li className={cn("flex items-end gap-1.5", isBidder ? "justify-start" : "justify-end")} key={r.id}>
+              <li className={cn("flex flex-col", isBidder ? "items-start" : "items-end")} key={r.id}>
                 <div
                   className={cn(
                     "max-w-[85%] rounded-2xl px-3 py-2 text-xs",
-                    // Fixed light text on both bubbles rather than a `dark:` variant — this app
-                    // sets `data-theme="dark"`, not a `.dark` class, so `dark:*` utilities never
-                    // actually apply here and the darker fallback shade was left unreadable
-                    // against the workspace's near-black background.
-                    isBidder ? "rounded-bl-sm bg-emerald-600/20 text-emerald-100" : "rounded-br-sm bg-[#4169e1]/25 text-blue-100",
+                    // A dark-default color with a theme-light: override, not a `dark:` variant —
+                    // this app sets [data-theme] on <html>, not a `.dark` class, so `dark:*`
+                    // utilities never actually apply here (see the theme-light custom variant in
+                    // styles.css).
+                    isBidder
+                      ? "rounded-bl-sm bg-emerald-600/20 text-emerald-100 theme-light:text-emerald-950"
+                      : "rounded-br-sm bg-[#4169e1]/25 text-blue-100 theme-light:text-[#1c2f6b]",
                   )}
                 >
                   <p className="font-semibold">
@@ -138,8 +140,8 @@ export function MutualEngagementPanel({
                   </p>
                   {r.message && <p className="mt-1">{r.message}</p>}
                 </div>
-                {/* Outside the bubble, to its right, rather than as a trailing line inside it. */}
-                <span className="shrink-0 whitespace-nowrap text-[10px] text-muted-foreground">{when(r.created_at)}</span>
+                {/* Under the bubble, left-aligned, rather than beside it. */}
+                <span className="mt-0.5 text-left text-[10px] text-muted-foreground">{when(r.created_at)}</span>
               </li>
             );
           })}
