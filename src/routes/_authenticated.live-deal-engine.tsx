@@ -2502,7 +2502,12 @@ function LiveDealEngine() {
               aria-expanded={step1Open}
               className={cn(
                 "mb-1.5 flex w-full items-center gap-2 rounded-full border-2 px-3 py-1.5 text-left text-xs font-semibold text-foreground",
-                dealTx.stage !== "trading"
+                // dealTx.stage flips to "compliance" at Seal Intent, before the Offer/Counter Offer
+                // negotiation that follows it even starts — using that alone turned this gold the
+                // moment the Offer frame opened, well before anyone had approved anything. Settles
+                // only once the bid/offer is actually approved (negotiationTurn === "accepted") or
+                // further along (wad_completed_at).
+                negotiationTurn === "accepted" || dealTx.wad_completed_at
                   ? "border-black bg-amber-400/35 hover:bg-amber-400/50"
                   : "border-border bg-muted hover:bg-muted/70",
               )}
