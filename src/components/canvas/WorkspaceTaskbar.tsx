@@ -30,7 +30,6 @@ import { useDealWindows } from "@/lib/dealWindows";
 import { fallbackReference, tradeKindOf } from "@/lib/tx";
 import { cancelBid } from "@/lib/cancelBid.functions";
 import { cn } from "@/lib/utils";
-import { ProfileAvatarMenu } from "@/components/guided/ProfileAvatarMenu";
 
 // The bid tab strip belongs to the signed-in workspace only, so it is opt-in per screen rather
 // than "everywhere except the pages we happened to list" — that older exclusion list let the tabs
@@ -139,7 +138,7 @@ function DealSearchDialog({
  * not just Live Deal Engine — but never shows on the marketing site itself. */
 export function WorkspaceTaskbar() {
   const { windows, setMode, close, reorder, register } = useDealWindows();
-  const { org, user } = useAuth();
+  const { org } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -354,40 +353,39 @@ export function WorkspaceTaskbar() {
       </div>
       </TooltipProvider>
 
-      {/* Pinned to the far right, outside the scrollable strip, same as Search/New on the left. */}
-      <div className="ml-auto flex shrink-0 items-center gap-1">
-        {/* A real reload, not a data refetch — the whole point is not having to reach for the
-            browser's own refresh control while working in the Live Workspace. */}
-        <button
-          type="button"
-          onClick={() => window.location.reload()}
-          title="Refresh this page"
-          aria-label="Refresh this page"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-t-md border border-border border-b-transparent bg-transparent text-muted-foreground hover:bg-card/50 hover:text-foreground"
-        >
-          <RefreshCw className="h-3.5 w-3.5" />
-        </button>
-        {deals.length > 0 && (
+      {/* Pinned to the far right, outside the scrollable strip, same as Search/New on the left.
+          Close all sits last (the very rightmost control) since it's the most destructive one
+          here. */}
+      <TooltipProvider delayDuration={300}>
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          {/* A real reload, not a data refetch — the whole point is not having to reach for the
+              browser's own refresh control while working in the Live Workspace. */}
           <button
             type="button"
-            onClick={() => setClearAllConfirm(true)}
-            title="Close all tabs"
-            aria-label="Close all tabs"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-t-md border border-border border-b-transparent bg-transparent text-muted-foreground hover:bg-card/50 hover:text-destructive"
+            onClick={() => window.location.reload()}
+            title="Refresh this page"
+            aria-label="Refresh this page"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-t-md border border-border border-b-transparent bg-transparent text-muted-foreground hover:bg-card/50 hover:text-foreground"
           >
-            <XCircle className="h-3.5 w-3.5" />
+            <RefreshCw className="h-3.5 w-3.5" />
           </button>
-        )}
-
-        {/* Account menu (Settings, sign out, the test-user switcher) — this taskbar is the one
-            piece of chrome every signed-in page shares, so it's the only place this is guaranteed
-            reachable no matter which workspace page someone is on. */}
-        {user && (
-          <div className="shrink-0 pb-1">
-            <ProfileAvatarMenu />
-          </div>
-        )}
-      </div>
+          {deals.length > 0 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => setClearAllConfirm(true)}
+                  aria-label="Close all tabs"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-destructive text-destructive-foreground transition-opacity hover:opacity-90"
+                >
+                  <XCircle className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Close all</TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+      </TooltipProvider>
 
       <AlertDialog open={clearAllConfirm} onOpenChange={setClearAllConfirm}>
         <AlertDialogContent>
