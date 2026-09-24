@@ -3,7 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Check, Coins, Download, FileText, Loader2, Sparkles, Lock, UploadCloud } from "lucide-react";
+import { Check, ChevronDown, Coins, Download, FileText, Loader2, ShieldCheck, Sparkles, Lock, UploadCloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1872,6 +1872,7 @@ function WadStep({ tx, reload, onContinue }: Props) {
   const [checks, setChecks] = useState<Record<string, boolean>>({});
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
+  const [preScreenOpenOverride, setPreScreenOpenOverride] = useState<boolean | null>(null);
   const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
   const [skipDialogOpen, setSkipDialogOpen] = useState(false);
   const [skipReason, setSkipReason] = useState("");
@@ -2258,41 +2259,76 @@ function WadStep({ tx, reload, onContinue }: Props) {
         </div>
       )}
 
+      {/* Rendered by hand (VerificationPanel's own header suppressed via hideHeader) so "Already
+          screened in Step 1" can sit between the heading and the checks themselves, matching how
+          this whole gate reads top to bottom: what each side is, what was screened already, what's
+          being verified now. */}
+      <div className="mb-4 flex items-center gap-2">
+        <ShieldCheck className="h-4 w-4 text-primary" />
+        <h2 className="label-caps font-sans">Due Diligence</h2>
+      </div>
+      <p className="mb-4 text-xs text-muted-foreground">
+        Complete your own identity (KYC) and company (KYB) verification, with both results posted
+        to the deal so you each have the same independent assurance that the other party has been
+        verified. “Without a Doubt” clears automatically once both parties are verified.
+      </p>
+
+      {priorChecks.length > 0 && (() => {
+        const preScreenAllPassed = priorChecks.every((r) => r.status === "passed");
+        const preScreenOpen = preScreenOpenOverride ?? !preScreenAllPassed;
+        return (
+          <div className="mb-4 rounded-lg border border-border p-3">
+            <button
+              type="button"
+              onClick={() => setPreScreenOpenOverride(!preScreenOpen)}
+              className="flex w-full items-center justify-between gap-2 text-left"
+            >
+              <span className="flex items-center gap-2">
+                <span className="label-caps font-sans">Pre-Screening</span>
+                {preScreenAllPassed && (
+                  <Badge variant="outline" className="border-success/40 bg-success/10 font-normal text-success">
+                    Both verified
+                  </Badge>
+                )}
+              </span>
+              <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", preScreenOpen && "rotate-180")} />
+            </button>
+            {preScreenOpen && (
+              <>
+                <ul className="mt-2 space-y-1.5">
+                  {priorChecks.map((r) => (
+                    <li key={r.id} className="flex items-center justify-between gap-2 text-xs">
+                      <span>{CHECK_TYPE_LABEL[r.check_type as string] ?? r.check_type}</span>
+                      <span
+                        className={cn(
+                          "shrink-0 text-xs",
+                          r.status === "passed"
+                            ? "text-emerald-500"
+                            : r.status === "failed" || r.status === "review"
+                              ? "text-[#F97316]"
+                              : "text-muted-foreground",
+                        )}
+                      >
+                        {PRIOR_STATUS_LABEL[r.status as string] ?? r.status}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  These results carry through from the background screening on {chosenCp?.name ?? "the chosen party"} — they are not run again here.
+                </p>
+              </>
+            )}
+          </div>
+        );
+      })()}
+
       <VerificationPanel
         bare
+        hideHeader
         transactionId={tx.id}
         checks={["id_document", "kyb"]}
-        title="Due Diligence"
-        description="Complete your own identity (KYC) and company (KYB) verification, with both results posted to the deal so you each have the same independent assurance that the other party has been verified. “Without a Doubt” clears automatically once both parties are verified."
       />
-
-      {priorChecks.length > 0 && (
-        <div className="mb-4 mt-4 rounded-lg border border-border p-3">
-          <p className="label-caps font-sans">Already screened in Step 1</p>
-          <ul className="mt-2 space-y-1.5">
-            {priorChecks.map((r) => (
-              <li key={r.id} className="flex items-center justify-between gap-2 text-xs">
-                <span>{CHECK_TYPE_LABEL[r.check_type as string] ?? r.check_type}</span>
-                <span
-                  className={cn(
-                    "shrink-0 text-xs",
-                    r.status === "passed"
-                      ? "text-emerald-500"
-                      : r.status === "failed" || r.status === "review"
-                        ? "text-[#F97316]"
-                        : "text-muted-foreground",
-                  )}
-                >
-                  {PRIOR_STATUS_LABEL[r.status as string] ?? r.status}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-2 text-xs text-muted-foreground">
-            These results carry through from the background screening on {chosenCp?.name ?? "the chosen party"} — they are not run again here.
-          </p>
-        </div>
-      )}
 
     </Panel>
 

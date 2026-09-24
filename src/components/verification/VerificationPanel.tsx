@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import QRCode from "qrcode";
-import { Loader2, RefreshCw, ShieldCheck } from "lucide-react";
+import { ChevronDown, Loader2, RefreshCw, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/auth";
@@ -107,9 +107,13 @@ type Props = {
   /** Drops the outer bordered card and its header divider — for a caller (the WaD gate) that
    * already renders this inside another frame of its own, so the two borders don't nest. */
   bare?: boolean;
+  /** Skips the icon/title/description block entirely — for a caller that renders its own heading
+   * and needs to place something (the WaD gate's "Already screened in Step 1") between that
+   * heading and the checks themselves, rather than after this component's own closing tag. */
+  hideHeader?: boolean;
 };
 
-export function VerificationPanel({ transactionId, checks: requested, title, description, bare }: Props) {
+export function VerificationPanel({ transactionId, checks: requested, title, description, bare, hideHeader }: Props) {
   const { user, profile } = useAuth();
   const listEnabled = useServerFn(listEnabledCheckTypes);
   const start = useServerFn(startVerification);
@@ -118,6 +122,9 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
   const listForTx = useServerFn(listVerificationsForTx);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Undefined = follow the automatic rule (collapsed once both sides have passed); true/false once
+  // a person overrides it by hand, which then wins regardless of status.
+  const [openOverride, setOpenOverride] = useState<Record<string, boolean>>({});
 
   const { data: rows = [], isLoading, refetch } = useQuery({
     queryKey: ["identity-verifications", transactionId ?? "me"],
@@ -176,13 +183,17 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
   const Wrapper = bare ? "div" : "section";
   return (
     <Wrapper className={bare ? undefined : "rounded-xl border border-border"}>
-      <div className={cn("flex items-center gap-2", bare ? "pb-3" : "border-b border-border px-4 py-3")}>
-        <ShieldCheck className="h-4 w-4 text-primary" />
-        <h2 className="label-caps font-sans">{title ?? "Identity verification"}</h2>
-      </div>
+      {!hideHeader && (
+        <>
+          <div className={cn("flex items-center gap-2", bare ? "pb-3" : "border-b border-border px-4 py-3")}>
+            <ShieldCheck className="h-4 w-4 text-primary" />
+            <h2 className="label-caps font-sans">{title ?? "Identity verification"}</h2>
+          </div>
 
-      {description && (
-        <p className={cn("text-xs text-muted-foreground", bare ? "pb-3" : "px-4 pt-4")}>{description}</p>
+          {description && (
+            <p className={cn("text-xs text-muted-foreground", bare ? "pb-3" : "px-4 pt-4")}>{description}</p>
+          )}
+        </>
       )}
 
       <div className={cn("space-y-4", bare ? undefined : "p-4")}>
@@ -193,14 +204,35 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
           const myRow = subjects.find(isMine) ?? null;
           const otherSubjects = subjects.filter((r) => !isMine(r));
 
+          // Collapses to a one-line summary once both sides have genuinely passed — nothing left
+          // to act on, so the full two-column detail is just something to scroll past. A manual
+          // override (the chevron below) always wins over this once a person has touched it.
+          const bothPassed = Boolean(myRow?.status === "passed") && otherSubjects.length > 0 && otherSubjects.every((r) => r.status === "passed");
+          const open = openOverride[type] ?? !bothPassed;
+
           return (
             <div key={type} className="rounded-lg border border-border p-4">
-              <p className="label-caps font-sans">{CHECK_LABEL[type]}</p>
+              <button
+                type="button"
+                onClick={() => setOpenOverride((prev) => ({ ...prev, [type]: !open }))}
+                className="flex w-full items-center justify-between gap-2 text-left"
+              >
+                <span className="flex items-center gap-2">
+                  <span className="label-caps font-sans">{CHECK_LABEL[type]}</span>
+                  {bothPassed && (
+                    <Badge variant="outline" className="border-success/40 bg-success/10 font-normal text-success">
+                      Both verified
+                    </Badge>
+                  )}
+                </span>
+                <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} />
+              </button>
 
               {/* Two columns, same side each convention appears everywhere else in this app: the
                   other party on the left in blue, "you" on the right in green. Only the right
                   column ever gets a Start/Refresh button or a QR code — nobody can act on someone
                   else's identity check. */}
+              {open && (
               <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2 rounded-lg border border-[#4169e1]/25 bg-[#4169e1]/5 p-3 sm:border-r-2">
                   {otherSubjects.length === 0 ? (
@@ -274,6 +306,7 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
                   )}
                 </div>
               </div>
+              )}
             </div>
           );
         })}
