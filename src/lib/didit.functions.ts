@@ -11,13 +11,15 @@ export type VerificationRow = {
   provider_url: string | null;
   subject_label: string | null;
   subject_counterparty_id: string | null;
+  subject_user_id: string | null;
+  subject_org_id: string | null;
   transaction_id: string | null;
   created_at: string;
   completed_at: string | null;
 };
 
 const SELECT =
-  "id, check_type, status, decision, reason, provider_url, subject_label, subject_counterparty_id, transaction_id, created_at, completed_at";
+  "id, check_type, status, decision, reason, provider_url, subject_label, subject_counterparty_id, subject_user_id, subject_org_id, transaction_id, created_at, completed_at";
 
 /** My own identity verifications (Account settings). */
 export const listMyVerifications = createServerFn({ method: "POST" })

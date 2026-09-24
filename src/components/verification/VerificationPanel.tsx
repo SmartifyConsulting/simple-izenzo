@@ -1,10 +1,12 @@
-import { useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import QRCode from "qrcode";
 import { Loader2, RefreshCw, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import {
   listEnabledCheckTypes,
@@ -18,8 +20,8 @@ import {
 export type CheckType = "id_document" | "kyb" | "aml";
 
 const CHECK_LABEL: Record<CheckType, string> = {
-  id_document: "ID document + selfie",
-  kyb: "Company (KYB) — entity, UBO & AML",
+  id_document: "KYC",
+  kyb: "KYB",
   aml: "Sanctions / PEP",
 };
 
@@ -44,6 +46,58 @@ function fmt(value: string | null) {
   return new Date(value).toLocaleString();
 }
 
+/** Which distinct person/company a row belongs to — a deal's WaD checks always cover two subjects
+ * (the bidder's own and the counterparty's own), and mixing them into one row per check type is
+ * exactly what made it unclear whose KYC/KYB was whose. */
+function subjectKey(r: VerificationRow): string {
+  return r.subject_user_id ?? r.subject_org_id ?? r.subject_counterparty_id ?? r.subject_label ?? "unknown";
+}
+
+/** Rows are already newest-first from the server — keep only the latest one per distinct subject. */
+function latestPerSubject(rows: VerificationRow[]): VerificationRow[] {
+  const seen = new Map<string, VerificationRow>();
+  for (const r of rows) {
+    const k = subjectKey(r);
+    if (!seen.has(k)) seen.set(k, r);
+  }
+  return [...seen.values()];
+}
+
+/** A QR code generated client-side from the hosted verification URL — no third-party image service
+ * ever sees it, since that URL is a one-time link into this specific person's identity check.
+ * Scanning it with a phone is the whole interaction now; nothing here opens a window or a modal. */
+function VerificationQr({ value }: { value: string }) {
+  const [dataUrl, setDataUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    setDataUrl(null);
+    void QRCode.toDataURL(value, { width: 160, margin: 1 })
+      .then((url) => {
+        if (live) setDataUrl(url);
+      })
+      .catch(() => {
+        if (live) setDataUrl(null);
+      });
+    return () => {
+      live = false;
+    };
+  }, [value]);
+
+  if (!dataUrl) {
+    return <div className="h-40 w-40 shrink-0 animate-pulse rounded-lg bg-muted" />;
+  }
+  return (
+    <img
+      src={dataUrl}
+      alt="Scan with your phone to complete this check"
+      width={160}
+      height={160}
+      className="h-40 w-40 shrink-0 rounded-lg border border-border bg-white p-1.5"
+    />
+  );
+}
+
 type Props = {
   /** Omit for the signed-in person's own verification; supply a deal id for the WaD gate. */
   transactionId?: string;
@@ -56,25 +110,22 @@ type Props = {
 };
 
 export function VerificationPanel({ transactionId, checks: requested, title, description, bare }: Props) {
+  const { user, profile } = useAuth();
   const listEnabled = useServerFn(listEnabledCheckTypes);
   const start = useServerFn(startVerification);
   const refresh = useServerFn(refreshVerification);
   const listMine = useServerFn(listMyVerifications);
   const listForTx = useServerFn(listVerificationsForTx);
   const [busy, setBusy] = useState<string | null>(null);
-  const [rerunning, setRerunning] = useState(false);
-
-  // The hosted provider page refuses to display inside another site's frame, so we always hand
-  // over the link itself as well — if the new tab is blocked, the person can still open it.
-  const [sessionUrl, setSessionUrl] = useState<string | null>(null);
-  const [blocked, setBlocked] = useState(false);
-  const popupRef = useRef<Window | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const { data: rows = [], isLoading, refetch } = useQuery({
     queryKey: ["identity-verifications", transactionId ?? "me"],
     queryFn: async (): Promise<VerificationRow[]> =>
       transactionId ? listForTx({ data: { transactionId } }) : listMine({}),
+    // Polls while anything is mid-check so a scanned QR's result lands here on its own — no button
+    // to remember to click, no window to poll from the other end.
+    refetchInterval: (query) => (query.state.data ?? []).some((r) => r.status === "in_progress") ? 4000 : false,
   });
 
   // The separate sanctions / PEP check only appears while an administrator has it switched on.
@@ -85,63 +136,23 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
   });
   const checks = requested.filter((c) => (enabled ?? ["id_document", "kyb"]).includes(c));
 
-  const latest = (type: CheckType) => rows.find((r) => r.check_type === type);
-
-  function isNarrow() {
-    return typeof window !== "undefined" && window.matchMedia("(max-width: 640px)").matches;
-  }
-
-  /** Open the provider in its own window, launched inside the click so no popup blocker fires:
-   * the window is opened blank first, then pointed at the session URL once it comes back. The
-   * provider refuses to be displayed inside another site, so an in-page frame is impossible. */
-  function openProviderWindow(url: string) {
-    if (isNarrow()) {
-      const tab = window.open(url, "_blank", "noopener,noreferrer");
-      setBlocked(!tab);
-      return;
-    }
-    const existing = popupRef.current;
-    if (existing && !existing.closed) {
-      existing.location.href = url;
-      existing.focus();
-      setBlocked(false);
-      return;
-    }
-    const win = window.open(url, "izenzo-verify", "popup,width=520,height=800");
-    popupRef.current = win;
-    setBlocked(!win);
-    if (win) win.focus();
+  function isMine(r: VerificationRow): boolean {
+    if (user?.id && r.subject_user_id === user.id) return true;
+    if (profile?.org_id && r.subject_org_id === profile.org_id) return true;
+    return false;
   }
 
   async function onStart(type: CheckType) {
     setBusy(type);
     setError(null);
-    // Opened synchronously with the click; only the destination waits on the server.
-    const pending = isNarrow()
-      ? null
-      : window.open("", "izenzo-verify", "popup,width=520,height=800");
-    if (pending) {
-      popupRef.current = pending;
-      try {
-        pending.document.write(
-          "<title>Opening verification…</title><body style='font:14px system-ui;padding:24px'>Opening your identity check…</body>",
-        );
-      } catch {
-        // Some browsers disallow writing into the blank popup — harmless.
-      }
-    }
     try {
       const origin = typeof window !== "undefined" ? window.location.origin : undefined;
-      const res = await start({
+      await start({
         data: { checkType: type, ...(transactionId ? { transactionId } : {}), ...(origin ? { origin } : {}) },
       });
-      setSessionUrl(res.url);
-      openProviderWindow(res.url);
-      toast.success("Verification opened in its own window. The result lands here on its own.");
-      void refetch();
+      await refetch();
+      toast.success("Scan the QR code with your phone to complete this check.");
     } catch (err) {
-      pending?.close();
-      popupRef.current = null;
       setError((err as Error).message);
       toast.error((err as Error).message);
     } finally {
@@ -162,133 +173,103 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
     }
   }
 
-  async function copyLink(url: string) {
-    try {
-      await navigator.clipboard.writeText(url);
-      toast.success("Link copied — paste it into a new browser tab.");
-    } catch {
-      toast.error("Could not copy the link. Select it and copy it by hand.");
-    }
-  }
-
-  async function onRerunAll() {
-    setRerunning(true);
-    setError(null);
-    let opened = 0;
-    for (const type of checks) {
-      try {
-        const origin = typeof window !== "undefined" ? window.location.origin : undefined;
-        const res = await start({
-          data: { checkType: type, ...(transactionId ? { transactionId } : {}), ...(origin ? { origin } : {}) },
-        });
-        if (res.url) setSessionUrl(res.url);
-        opened += 1;
-      } catch (err) {
-        setError((err as Error).message);
-      }
-    }
-    setRerunning(false);
-    void refetch();
-    if (opened > 0) {
-      toast.success(`${opened} of ${checks.length} checks re-opened.`);
-    } else {
-      toast.error("None of the checks could be re-opened.");
-    }
-  }
-
   const Wrapper = bare ? "div" : "section";
   return (
     <Wrapper className={bare ? undefined : "rounded-xl border border-border"}>
-      <div className={cn("flex items-center justify-between gap-3", bare ? "pb-3" : "border-b border-border px-4 py-3")}>
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4 text-primary" />
-          <h2 className="label-caps font-sans">{title ?? "Identity verification"}</h2>
-        </div>
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-7 gap-1.5 text-xs"
-          disabled={rerunning || Boolean(busy)}
-          onClick={() => void onRerunAll()}
-        >
-          {rerunning ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <RefreshCw className="h-3.5 w-3.5" />
-          )}
-          Re-run all
-        </Button>
+      <div className={cn("flex items-center gap-2", bare ? "pb-3" : "border-b border-border px-4 py-3")}>
+        <ShieldCheck className="h-4 w-4 text-primary" />
+        <h2 className="label-caps font-sans">{title ?? "Identity verification"}</h2>
       </div>
 
       {description && (
         <p className={cn("text-xs text-muted-foreground", bare ? "pb-3" : "px-4 pt-4")}>{description}</p>
       )}
 
-      <div className={cn("space-y-3", bare ? undefined : "p-4")}>
+      <div className={cn("space-y-4", bare ? undefined : "p-4")}>
         {isLoading && <p className="text-xs text-muted-foreground">Loading…</p>}
 
-
         {checks.map((type) => {
-          const row = latest(type);
-          const status = row?.status ?? "pending";
+          const subjects = latestPerSubject(rows.filter((r) => r.check_type === type));
+          const myRow = subjects.find(isMine) ?? null;
+          const otherSubjects = subjects.filter((r) => !isMine(r));
+
           return (
-            <div
-              key={type}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-4"
-            >
-              <div className="min-w-0">
-                <p className="text-xs font-medium">{CHECK_LABEL[type]}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {row
-                    ? `${row.subject_label ? `${row.subject_label} · ` : ""}${
-                        fmt(row.completed_at) ?? fmt(row.created_at) ?? ""
-                      }`
-                    : "No check run yet."}
-                </p>
-                {row?.reason && <p className="mt-1 text-xs text-destructive">{row.reason}</p>}
-              </div>
+            <div key={type} className="rounded-lg border border-border p-4">
+              <p className="label-caps font-sans">{CHECK_LABEL[type]}</p>
 
-              <div className="flex shrink-0 items-center gap-2">
-                <Badge
-                  variant="outline"
-                  className={cn(STATUS_TONE[status] ?? "border-border bg-muted text-muted-foreground")}
-                >
-                  {STATUS_LABEL[status] ?? status}
-                </Badge>
-
-                {row && row.status === "in_progress" && row.provider_url && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setSessionUrl(row.provider_url);
-                      openProviderWindow(row.provider_url!);
-                    }}
-                  >
-                    {popupRef.current && !popupRef.current.closed ? "Reopen window" : "Continue"}
-                  </Button>
-                )}
-
-                {row && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={busy === row.id}
-                    onClick={() => onRefresh(row.id)}
-                    aria-label="Check for a result"
-                  >
-                    {busy === row.id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <RefreshCw className="h-3.5 w-3.5" />
+              {/* My own check, always shown first — the only one with a Start/Refresh button or a
+                  QR code, since nobody can act on someone else's identity check. */}
+              <div className="mt-3 flex flex-wrap items-start gap-4">
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary" className="bg-emerald-600/15 font-normal text-emerald-700">
+                      You
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className={cn(STATUS_TONE[myRow?.status ?? "pending"] ?? "border-border bg-muted text-muted-foreground")}
+                    >
+                      {STATUS_LABEL[myRow?.status ?? "pending"] ?? "not started"}
+                    </Badge>
+                    {myRow && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 px-2"
+                        disabled={busy === myRow.id}
+                        onClick={() => onRefresh(myRow.id)}
+                        aria-label="Check for a result"
+                      >
+                        {busy === myRow.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
                     )}
-                  </Button>
-                )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {myRow ? fmt(myRow.completed_at) ?? fmt(myRow.created_at) ?? "" : "No check run yet."}
+                  </p>
+                  {myRow?.reason && <p className="text-xs text-destructive">{myRow.reason}</p>}
 
-                <Button size="sm" disabled={busy === type} onClick={() => onStart(type)}>
-                  {busy === type ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : row ? "Run again" : "Start"}
-                </Button>
+                  {(!myRow || myRow.status === "failed" || myRow.status === "expired") && (
+                    <Button size="sm" disabled={busy === type} onClick={() => onStart(type)}>
+                      {busy === type ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : myRow ? "Run again" : "Start"}
+                    </Button>
+                  )}
+                </div>
+
+                {/* Left-aligned next to the status, not below it — scanning it is the entire next
+                    step, so it belongs beside the thing it's for. */}
+                {myRow?.status === "in_progress" && myRow.provider_url && (
+                  <div className="space-y-1">
+                    <VerificationQr value={myRow.provider_url} />
+                    <p className="max-w-[10rem] text-center text-[10px] text-muted-foreground">
+                      Scan with your phone
+                    </p>
+                  </div>
+                )}
               </div>
+
+              {/* The other side's own check on themselves — read-only, so it never gets a Start,
+                  Refresh or QR of its own, only a name and a status. */}
+              {otherSubjects.map((r) => (
+                <div key={r.id} className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
+                  <Badge variant="secondary" className="bg-[#4169e1]/15 font-normal text-[#1c2f6b]">
+                    {r.subject_label ?? "Counterparty"}
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className={cn(STATUS_TONE[r.status] ?? "border-border bg-muted text-muted-foreground")}
+                  >
+                    {STATUS_LABEL[r.status] ?? r.status}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {fmt(r.completed_at) ?? fmt(r.created_at) ?? ""}
+                  </span>
+                </div>
+              ))}
             </div>
           );
         })}
@@ -297,30 +278,6 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
           <p className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
             {error}
           </p>
-        )}
-
-        {sessionUrl && (
-          <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
-            <p className="text-xs text-muted-foreground">
-              {blocked
-                ? "Your browser blocked the verification window. It cannot be shown inside this page, so open it yourself:"
-                : "Verification in progress in its own window. Lost it? Reopen it here — it cannot be shown inside this page."}
-            </p>
-            <p className="break-all text-[11px] text-muted-foreground">{sessionUrl}</p>
-            <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" onClick={() => openProviderWindow(sessionUrl)}>
-                Reopen window
-              </Button>
-              <a href={sessionUrl} target="_blank" rel="noopener noreferrer">
-                <Button size="sm" variant="outline">
-                  Open in a new tab
-                </Button>
-              </a>
-              <Button size="sm" variant="ghost" onClick={() => void copyLink(sessionUrl)}>
-                Copy link
-              </Button>
-            </div>
-          </div>
         )}
 
         <p className="text-xs text-muted-foreground">
