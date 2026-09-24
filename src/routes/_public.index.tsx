@@ -74,6 +74,11 @@ const STAGES = [
 /** A signed-in visitor's still-open bids/offers — shown under the search bar on the home screen
  * so relaunching the app (a new tab, a bookmark) surfaces what's already in flight instead of
  * only offering to start something new. Linkable straight into the Live Workspace. */
+// Raised from 6: with enough deals in flight, a deal sorted just past the old cutoff (by
+// updated_at, not creation order) simply never appeared here — "View all in Trades" below covers
+// whatever's still off the end of this list.
+const HOME_DEALS_LIMIT = 10;
+
 function ActiveDealsPanel() {
   const { org } = useAuth();
 
@@ -87,7 +92,7 @@ function ActiveDealsPanel() {
         .or(`org_id.eq.${org!.id},counterparty_org_id.eq.${org!.id}`)
         .not("stage", "in", "(finality,memory)")
         .order("updated_at", { ascending: false })
-        .limit(6);
+        .limit(HOME_DEALS_LIMIT);
       if (error) throw error;
       return (data ?? []) as {
         id: string;
@@ -131,6 +136,11 @@ function ActiveDealsPanel() {
           ))
         )}
       </div>
+      {deals.length === HOME_DEALS_LIMIT && (
+        <Link to="/trades" className="mt-2.5 block text-[11px] font-medium text-primary hover:underline">
+          View all in Trades →
+        </Link>
+      )}
     </div>
   );
 }
