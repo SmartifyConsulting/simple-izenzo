@@ -1912,9 +1912,17 @@ function LiveDealEngine() {
   // setMode had just minimized as a side effect of activating the new one), flashing its "is
   // minimized" placeholder for a moment on every tab switch.
   const windowId = txParam ?? dealTx?.id ?? "new";
+  // A real deal's label must come from its own row, never from the blank workspace's draft
+  // reference. When a deal is opened from the URL, `txParam` is a real transaction id on the very
+  // first render while `dealTx` is still null — letting `draftReference` (the "ID…" claimed for
+  // the empty workspace) label it there wrote that placeholder onto a real deal's tab, and left it
+  // there if the person switched away before the row arrived. Until the row is in, the label is
+  // withheld rather than guessed, and the effect below skips the update for this render.
   const windowLabel = dealTx
     ? dealTx.reference || activity?.reference || fallbackReference(dealTx.id, activity?.direction ?? "bid")
-    : (draftReference ?? "+ New");
+    : windowId === "new"
+      ? (draftReference ?? "+ New")
+      : null;
   const { windows, register: registerWindow, setMode, move, close: closeWindow, isPoppedElsewhere } = useDealWindows();
   const win = windows.find((w) => w.id === windowId);
   const windowMode = popout ? "docked" : (win?.mode ?? "docked");
@@ -1933,7 +1941,10 @@ function LiveDealEngine() {
 
   useEffect(() => {
     if (popout) return;
-    registerWindow(windowId, windowLabel, dealTx?.commodity ?? dealTx?.title ?? undefined);
+    // windowLabel is null while a real deal's row is still loading — registering then would hand
+    // the tab a guessed label, which is exactly the "ID…" placeholder bug. The effect re-runs as
+    // soon as the row lands and the real reference is known.
+    if (windowLabel) registerWindow(windowId, windowLabel, dealTx?.commodity ?? dealTx?.title ?? undefined);
     // The not-yet-created placeholder isn't a real saved workspace worth remembering a stray
     // docked position or minimized state for — always present it maximized, even if a stale
     // "new" entry from before this page had that default was left sitting in localStorage.

@@ -137,7 +137,7 @@ function DealSearchDialog({
  * of pill buttons. Rendered once from the root so it persists across every authenticated page,
  * not just Live Deal Engine — but never shows on the marketing site itself. */
 export function WorkspaceTaskbar() {
-  const { windows, setMode, close, reorder } = useDealWindows();
+  const { windows, setMode, close, reorder, register } = useDealWindows();
   const { org, user } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -217,6 +217,36 @@ export function WorkspaceTaskbar() {
   // The blank template tab is permanent and always leftmost: recorded deals get their own tab, and
   // this one stays an empty workspace to start the next bid or offer in.
   const deals = windows.filter((w) => w.id !== "new");
+
+  // A tab opened from the URL before its transaction row finished loading could be labelled with
+  // the blank workspace's "ID…" placeholder. Re-derive every real tab's label from its own row so
+  // those correct themselves instead of staying wrong for as long as the tab is open. Only the
+  // reference comes from here — never the deal's own state — and a settled BID…/OFFER… label is
+  // left alone, so a row that has not loaded yet can never blank one out.
+  const tabIds = deals.map((w) => w.id).join(",");
+  useEffect(() => {
+    if (!org?.id || !tabIds) return;
+    let cancelled = false;
+    void (async () => {
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("id, reference, commodity, title")
+        .in("id", tabIds.split(","));
+      if (cancelled || error || !data) return;
+      for (const row of data as {
+        id: string;
+        reference: string | null;
+        commodity: string | null;
+        title: string | null;
+      }[]) {
+        if (tradeKindOf(row.reference) === "workspace") continue;
+        register(row.id, row.reference as string, row.commodity ?? row.title ?? undefined);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [org?.id, tabIds, register]);
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 flex items-end gap-1 bg-muted/60 px-2 pt-1.5 backdrop-blur">
