@@ -11,6 +11,7 @@ import { InlineFrame } from "@/components/canvas/DealCanvas";
 import { MapView } from "@/components/canvas/MapView";
 import { MutualEngagementPanel } from "@/components/engagement/MutualEngagementPanel";
 import { getEngagement } from "@/lib/engagement.functions";
+import { DocumentSummaryList } from "@/components/canvas/DocumentSummaryList";
 import { money, tradeKindOf, when, type Transaction } from "@/lib/tx";
 import { cn } from "@/lib/utils";
 
@@ -165,9 +166,13 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
                 <p><span className="text-muted-foreground">Jurisdiction:</span> {tx.jurisdiction ?? "—"}</p>
                 <p><span className="text-muted-foreground">Incoterms:</span> {tx.incoterms ?? "—"}</p>
               </div>
+              {/* Same scannable, section-headed formatting the bidder's own Bid Information gets —
+                  not a plain paragraph dump of the AI summary. */}
               {(tx as unknown as { document_summary?: string | null }).document_summary && (
-                <div className="mt-2 rounded-lg bg-muted/40 p-3 text-xs leading-relaxed text-foreground">
-                  {(tx as unknown as { document_summary?: string | null }).document_summary}
+                <div className="mt-2 border-t border-border pt-2">
+                  <DocumentSummaryList
+                    summary={(tx as unknown as { document_summary: string }).document_summary}
+                  />
                 </div>
               )}
               {docs.length > 0 && (
