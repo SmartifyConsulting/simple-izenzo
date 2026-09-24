@@ -560,7 +560,7 @@ function MapNode({
       {sub && (
         <span
           className={cn(
-            "w-full text-center font-semibold uppercase leading-snug tracking-wide",
+            "w-full whitespace-pre-line text-center font-semibold uppercase leading-snug tracking-wide",
             subSize === "sm" ? "text-[10px]" : "text-[9.5px]",
             subTone === "gate"
               ? "text-[#C1653D]"
@@ -770,7 +770,7 @@ export function MapView({
         })}
         {node("withoutADoubt", "Without a Doubt", "compliance", "wad", ShieldCheck, {
           overrideKey: "wad",
-          sub: "KYC & KYB on each other",
+          sub: "Hard gate · non-waivable\nKYC & KYB on each other",
           subTone: "gate",
         })}
         {node("businessDocs", "Legal Agreements", "execution", "business-docs", FolderClosed, {
