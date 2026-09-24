@@ -1174,6 +1174,7 @@ export function CounterpartyRecord({
   onSearchAgain,
   onStopSearch,
   onAiPlusRunningChange,
+  stopAiPlusSignal = 0,
 }: {
   txId?: string | null;
   /** True while the AI/AI+ search is still running, so the panel polls for freshly saved rows. */
@@ -1213,8 +1214,12 @@ export function CounterpartyRecord({
   /** True while that final pick is being recorded and the step is advancing to Intent. */
   finalizing?: boolean;
   /** Lets the caller show its own top-level progress bar for the AI+ pass, which now starts
-   * itself right after the regular search finishes. */
-  onAiPlusRunningChange?: (running: boolean) => void;
+   * itself right after the regular search finishes. The second argument says whether the last
+   * pass was stopped on purpose rather than finished, so the caller can word its bar honestly. */
+  onAiPlusRunningChange?: (running: boolean, stopped: boolean) => void;
+  /** Increments each time the caller's Stop action on the AI+ bar is used. The abort has to happen
+   * where the request was made, so the button lives above and reports down here as a signal. */
+  stopAiPlusSignal?: number;
 }) {
   const qc = useQueryClient();
   const setShortlist = useServerFn(setCounterpartyShortlist);
@@ -1345,23 +1350,54 @@ export function CounterpartyRecord({
   // finished and rendered at least one result — not only once a person has gone on to shortlist
   // one — so it's requested once per transaction, right here.
   const [aiPlusRunning, setAiPlusRunning] = useState(false);
+  // Set when the person stopped the pass rather than letting it finish, so the bar above can say
+  // so instead of disappearing as though it had completed.
+  const [aiPlusStopped, setAiPlusStopped] = useState(false);
+  // Aborts the in-flight AI+ request. This only cancels the *client's* wait — the server keeps
+  // going and still saves whatever it finds, exactly like the regular search's own Stop. That's
+  // deliberate: the alternative would leave a half-run pass with no way to know what it wrote.
+  const aiPlusAbortRef = useRef<AbortController | null>(null);
   useEffect(() => {
     if (!txId || searching || candidates.length === 0 || aiPlusRequested.current.has(txId)) return;
     aiPlusRequested.current.add(txId);
+    const controller = new AbortController();
+    aiPlusAbortRef.current = controller;
+    setAiPlusStopped(false);
     setAiPlusRunning(true);
-    void runAiPlusSearch({ data: { transactionId: txId, kind: "ai_plus" } })
+    void runAiPlusSearch({ data: { transactionId: txId, kind: "ai_plus" }, signal: controller.signal })
       .then(() => qc.invalidateQueries({ queryKey: ["counterparties", txId] }))
       .catch(() => {
-        // Best-effort — AI+ failing here must never disrupt the search results already on screen.
-        aiPlusRequested.current.delete(txId);
+        // A stop isn't a failure. Anything else is best-effort too, but it must not leave the
+        // request marked as done-and-successful, or a genuine error would never be retried.
+        if (!controller.signal.aborted) aiPlusRequested.current.delete(txId);
       })
-      .finally(() => setAiPlusRunning(false));
+      .finally(() => {
+        if (aiPlusAbortRef.current === controller) aiPlusAbortRef.current = null;
+        setAiPlusRunning(false);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [txId, searching, candidates.length]);
 
   useEffect(() => {
-    onAiPlusRunningChange?.(aiPlusRunning);
-  }, [aiPlusRunning, onAiPlusRunningChange]);
+    onAiPlusRunningChange?.(aiPlusRunning, aiPlusStopped);
+  }, [aiPlusRunning, aiPlusStopped, onAiPlusRunningChange]);
+
+  // The caller's Stop button on the AI+ bar reports down here, where the request actually lives.
+  // One shot per press: the signal is a counter, so re-running a search (which resets nothing
+  // above) can't re-fire this against a later pass.
+  const handledStopSignal = useRef(stopAiPlusSignal);
+  useEffect(() => {
+    if (stopAiPlusSignal === handledStopSignal.current) return;
+    handledStopSignal.current = stopAiPlusSignal;
+    if (!aiPlusAbortRef.current) return;
+    aiPlusAbortRef.current.abort();
+    aiPlusAbortRef.current = null;
+    setAiPlusStopped(true);
+    setAiPlusRunning(false);
+    // The server keeps working after the abort, so pull whatever it has already written — and the
+    // bar above says the list may still fill in, so it must actually be able to.
+    void qc.invalidateQueries({ queryKey: ["counterparties", txId] });
+  }, [stopAiPlusSignal, qc, txId]);
 
   // Follow the stored verification rows for this deal so a check that finishes (or a webhook that
   // lands minutes later) updates the line in place, without re-running the screening.
@@ -1462,6 +1498,10 @@ export function CounterpartyRecord({
 
   async function toggle(c: CounterpartyCandidate, next: boolean) {
     if (locked) return;
+    // The deeper AI+ pass is still adding candidates to this same list, so a tick made now would
+    // be judged against an incomplete list — and its enrich-on-shortlist call races the pass that
+    // is already enriching. Selection opens again the moment the pass finishes or is stopped.
+    if (aiPlusRunning) return;
     qc.setQueryData<CounterpartyCandidate[]>(["counterparties", txId], (prev) =>
       (prev ?? []).map((row) => (row.id === c.id ? { ...row, shortlisted: next } : row)),
     );
@@ -1702,19 +1742,25 @@ export function CounterpartyRecord({
                 <RadioGroupItem
                   id={`shortlist-${c.id}`}
                   value={c.id}
+                  disabled={aiPlusRunning}
                   className="mt-0.5"
                 />
               ) : (
                 <Checkbox
                   id={`shortlist-${c.id}`}
                   checked={Boolean(c.shortlisted)}
+                  disabled={aiPlusRunning}
                   onCheckedChange={(v) => toggle(c, Boolean(v))}
                   className="mt-0.5"
                 />
               )}
               <label
                 htmlFor={`shortlist-${c.id}`}
-                className="min-w-0 flex-1 cursor-pointer"
+                aria-disabled={aiPlusRunning || undefined}
+                className={cn(
+                  "min-w-0 flex-1",
+                  aiPlusRunning ? "cursor-not-allowed opacity-60" : "cursor-pointer",
+                )}
               >
                 <span className="flex items-center gap-2">
                   <span className="text-sm font-medium text-slate-900">{c.name}</span>
@@ -1831,9 +1877,10 @@ export function CounterpartyRecord({
             type="button"
             className={cn(
               "mt-3 w-full bg-info text-white hover:bg-info/90",
-              ticked.length === 0 && "bg-slate-300 text-slate-700 hover:bg-slate-300 disabled:opacity-100",
+              (aiPlusRunning || ticked.length === 0) &&
+                "bg-slate-300 text-slate-700 hover:bg-slate-300 disabled:opacity-100",
             )}
-            disabled={ticked.length === 0}
+            disabled={aiPlusRunning || ticked.length === 0}
             onClick={() => onContinue(ticked)}
           >
             Select to continue
