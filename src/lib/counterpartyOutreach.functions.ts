@@ -537,6 +537,7 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
         transactionId: cp.transaction_id,
         title: `${tx?.reference ? `${tx.reference} — ` : ""}you've been matched to a live opportunity`,
         body: `${cp.name} has been selected as a potential counterparty for ${dealName}. Open the deal to see the full details and respond.`,
+        claimCounterpartyId: cp.id,
       });
       if (tx?.org_id) {
         const { notifyBidder } = await import("@/lib/bidderNotify.server");

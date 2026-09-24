@@ -2363,6 +2363,7 @@ export type Database = {
       notifications: {
         Row: {
           body: string | null
+          claim_counterparty_id: string | null
           created_at: string
           id: string
           org_id: string | null
@@ -2373,6 +2374,7 @@ export type Database = {
         }
         Insert: {
           body?: string | null
+          claim_counterparty_id?: string | null
           created_at?: string
           id?: string
           org_id?: string | null
@@ -2383,6 +2385,7 @@ export type Database = {
         }
         Update: {
           body?: string | null
+          claim_counterparty_id?: string | null
           created_at?: string
           id?: string
           org_id?: string | null
@@ -2392,6 +2395,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "notifications_claim_counterparty_id_fkey"
+            columns: ["claim_counterparty_id"]
+            isOneToOne: false
+            referencedRelation: "counterparties"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "notifications_org_id_fkey"
             columns: ["org_id"]

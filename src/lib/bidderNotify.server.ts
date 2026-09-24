@@ -168,6 +168,12 @@ export async function notifyCounterpartyContact(args: {
   /** Writes the Inbox/on-screen notification even if this person's preference is email-only —
    * see notifyTransactionOwner's own `force` for why. */
   force?: boolean;
+  /** Set only for the initial "you've been matched" notification, before this org has actually
+   * linked itself to the deal (transactions.counterparty_org_id is still null at that point). The
+   * transaction isn't visible to them yet, so the Inbox link needs to go through
+   * /counterparty/claim — which is what actually grants access — rather than straight to a
+   * transaction RLS will just hide from them. */
+  claimCounterpartyId?: string;
 }): Promise<void> {
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -186,7 +192,8 @@ export async function notifyCounterpartyContact(args: {
       transaction_id: args.transactionId,
       title: args.title,
       body: args.body,
-    });
+      ...(args.claimCounterpartyId ? { claim_counterparty_id: args.claimCounterpartyId } : {}),
+    } as never);
     if (error) console.error("[notifyCounterpartyContact] inbox write failed:", error.message);
   } catch (e) {
     console.error("[notifyCounterpartyContact] failed:", e instanceof Error ? e.message : e);

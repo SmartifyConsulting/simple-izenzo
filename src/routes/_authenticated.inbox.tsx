@@ -63,6 +63,7 @@ type NotificationRow = {
   read: boolean;
   created_at: string;
   transaction_id: string | null;
+  claim_counterparty_id: string | null;
 };
 
 function InboxPage() {
@@ -81,7 +82,7 @@ function InboxPage() {
       // company had received both.
       const { data, error } = await supabase
         .from("notifications")
-        .select("id, title, body, read, created_at, transaction_id")
+        .select("id, title, body, read, created_at, transaction_id, claim_counterparty_id")
         .eq("org_id", org!.id)
         .order("created_at", { ascending: false })
         .limit(50);
@@ -240,24 +241,42 @@ function InboxPage() {
                                         <div className="min-w-0">
                                           <div className="flex flex-wrap items-center gap-1.5">
                                             {reference && n.transaction_id && (
-                                              <Link
-                                                to="/live-deal-engine"
-                                                search={{ tx: n.transaction_id }}
-                                                onClick={() => void markRead(n.id)}
-                                                className={cn(
-                                                  "shrink-0 font-mono text-xs font-bold underline-offset-2 hover:underline",
-                                                  // Same Bid=green / Offer=blue convention as the
-                                                  // workspace taskbar and registration pill, so a
-                                                  // reference reads the same way everywhere.
-                                                  tradeKindOf(reference) === "bid"
-                                                    ? "text-[#00e676]"
-                                                    : tradeKindOf(reference) === "offer"
-                                                      ? "text-[#4169e1]"
-                                                      : "text-primary",
-                                                )}
-                                              >
-                                                {reference}
-                                              </Link>
+                                              n.claim_counterparty_id ? (
+                                                <Link
+                                                  to="/counterparty/claim"
+                                                  search={{ cp: n.claim_counterparty_id }}
+                                                  onClick={() => void markRead(n.id)}
+                                                  className={cn(
+                                                    "shrink-0 font-mono text-xs font-bold underline-offset-2 hover:underline",
+                                                    tradeKindOf(reference) === "bid"
+                                                      ? "text-[#00e676]"
+                                                      : tradeKindOf(reference) === "offer"
+                                                        ? "text-[#4169e1]"
+                                                        : "text-primary",
+                                                  )}
+                                                >
+                                                  {reference}
+                                                </Link>
+                                              ) : (
+                                                <Link
+                                                  to="/live-deal-engine"
+                                                  search={{ tx: n.transaction_id }}
+                                                  onClick={() => void markRead(n.id)}
+                                                  className={cn(
+                                                    "shrink-0 font-mono text-xs font-bold underline-offset-2 hover:underline",
+                                                    // Same Bid=green / Offer=blue convention as the
+                                                    // workspace taskbar and registration pill, so a
+                                                    // reference reads the same way everywhere.
+                                                    tradeKindOf(reference) === "bid"
+                                                      ? "text-[#00e676]"
+                                                      : tradeKindOf(reference) === "offer"
+                                                        ? "text-[#4169e1]"
+                                                        : "text-primary",
+                                                  )}
+                                                >
+                                                  {reference}
+                                                </Link>
+                                              )
                                             )}
                                             {/* The title's own BID/OFF id is baked into its text
                                                 server-side, so it needs to be clickable even when
@@ -268,7 +287,24 @@ function InboxPage() {
                                                 the same Bid=green / Offer=blue convention as the
                                                 reference above it, so a notification about a bid or
                                                 an offer reads at a glance. */}
-                                            {n.transaction_id ? (
+                                            {n.claim_counterparty_id ? (
+                                              <Link
+                                                to="/counterparty/claim"
+                                                search={{ cp: n.claim_counterparty_id }}
+                                                onClick={() => void markRead(n.id)}
+                                                className={cn(
+                                                  "text-sm hover:underline",
+                                                  n.read ? "font-medium" : "font-semibold",
+                                                  reference && tradeKindOf(reference) === "bid"
+                                                    ? "text-[#00e676]"
+                                                    : reference && tradeKindOf(reference) === "offer"
+                                                      ? "text-[#4169e1]"
+                                                      : "text-foreground",
+                                                )}
+                                              >
+                                                {n.title}
+                                              </Link>
+                                            ) : n.transaction_id ? (
                                               <Link
                                                 to="/live-deal-engine"
                                                 search={{ tx: n.transaction_id }}
