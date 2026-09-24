@@ -619,3 +619,105 @@ export const getCreditSpendReport = createServerFn({ method: "POST" })
       byTransaction: [...byTxMap.values()].sort((a, b) => b.tokens - a.tokens),
     };
   });
+
+export type AiUsageByProvider = { provider: string; costUsd: number; count: number };
+export type AiUsageEvent = {
+  provider: string;
+  operation: string;
+  model: string | null;
+  totalTokens: number | null;
+  costUsd: number | null;
+  createdAt: string;
+};
+export type AiUsageByTransaction = {
+  transactionId: string;
+  reference: string | null;
+  title: string | null;
+  costUsd: number;
+  count: number;
+  events: AiUsageEvent[];
+};
+export type AiUsageReport = {
+  totalCostUsd: number;
+  totalEvents: number;
+  byProvider: AiUsageByProvider[];
+  byTransaction: AiUsageByTransaction[];
+};
+
+/** What every external AI/integration call has actually cost, estimated from ai_usage_events —
+ * the real spend on the admin's own OpenAI, Tavily, Didit and Resend accounts, as opposed to
+ * getCreditSpendReport's platform-internal token economy. Costs are estimates from the rates
+ * configured in aiUsage.server.ts, not a live read of each provider's own invoice. */
+export const getAiUsageReport = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<AiUsageReport> => {
+    await assertAdmin(context as any);
+    const db = await admin();
+
+    const { data: rows, error } = await db
+      .from("ai_usage_events")
+      .select("provider, operation, model, total_tokens, cost_usd, transaction_id, created_at")
+      .order("created_at", { ascending: false })
+      .limit(5000);
+    if (error) throw new Error(error.message);
+
+    const events = (rows ?? []) as {
+      provider: string;
+      operation: string;
+      model: string | null;
+      total_tokens: number | null;
+      cost_usd: number | null;
+      transaction_id: string | null;
+      created_at: string;
+    }[];
+
+    const txIds = [...new Set(events.map((e) => e.transaction_id).filter((id): id is string => Boolean(id)))];
+    const { data: txs } = txIds.length
+      ? await db.from("transactions").select("id, reference, title").in("id", txIds)
+      : { data: [] as { id: string; reference: string | null; title: string | null }[] };
+    const txInfo = new Map((txs ?? []).map((t) => [t.id, t]));
+
+    const byProviderMap = new Map<string, AiUsageByProvider>();
+    const byTxMap = new Map<string, AiUsageByTransaction>();
+    let totalCostUsd = 0;
+
+    for (const e of events) {
+      const cost = e.cost_usd ?? 0;
+      totalCostUsd += cost;
+
+      const p = byProviderMap.get(e.provider) ?? { provider: e.provider, costUsd: 0, count: 0 };
+      p.costUsd += cost;
+      p.count += 1;
+      byProviderMap.set(e.provider, p);
+
+      if (e.transaction_id) {
+        const info = txInfo.get(e.transaction_id);
+        const t = byTxMap.get(e.transaction_id) ?? {
+          transactionId: e.transaction_id,
+          reference: info?.reference ?? null,
+          title: info?.title ?? null,
+          costUsd: 0,
+          count: 0,
+          events: [],
+        };
+        t.costUsd += cost;
+        t.count += 1;
+        t.events.push({
+          provider: e.provider,
+          operation: e.operation,
+          model: e.model,
+          totalTokens: e.total_tokens,
+          costUsd: e.cost_usd,
+          createdAt: e.created_at,
+        });
+        byTxMap.set(e.transaction_id, t);
+      }
+    }
+
+    return {
+      totalCostUsd: Math.round(totalCostUsd * 100000) / 100000,
+      totalEvents: events.length,
+      byProvider: [...byProviderMap.values()].sort((a, b) => b.costUsd - a.costUsd),
+      byTransaction: [...byTxMap.values()].sort((a, b) => b.costUsd - a.costUsd),
+    };
+  });

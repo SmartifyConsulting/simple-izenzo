@@ -164,6 +164,17 @@ export const startVerification = createServerFn({ method: "POST" })
         })
         .eq("id", row.id);
 
+      {
+        const { logAiUsage, diditSessionCostUsd } = await import("@/lib/aiUsage.server");
+        void logAiUsage({
+          provider: "didit",
+          operation: `${data.checkType}_check`,
+          transactionId: data.transactionId ?? null,
+          orgId: subjectOrgId,
+          costUsd: diditSessionCostUsd(),
+        });
+      }
+
       if (data.transactionId) {
         await supabaseAdmin.from("transaction_events").insert({
           transaction_id: data.transactionId,

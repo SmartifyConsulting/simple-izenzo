@@ -205,6 +205,56 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_usage_events: {
+        Row: {
+          cost_usd: number | null
+          created_at: string
+          id: string
+          input_tokens: number | null
+          model: string | null
+          operation: string
+          org_id: string | null
+          output_tokens: number | null
+          provider: string
+          total_tokens: number | null
+          transaction_id: string | null
+        }
+        Insert: {
+          cost_usd?: number | null
+          created_at?: string
+          id?: string
+          input_tokens?: number | null
+          model?: string | null
+          operation: string
+          org_id?: string | null
+          output_tokens?: number | null
+          provider: string
+          total_tokens?: number | null
+          transaction_id?: string | null
+        }
+        Update: {
+          cost_usd?: number | null
+          created_at?: string
+          id?: string
+          input_tokens?: number | null
+          model?: string | null
+          operation?: string
+          org_id?: string | null
+          output_tokens?: number | null
+          provider?: string
+          total_tokens?: number | null
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_usage_events_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_suggestion_events: {
         Row: {
           actor_id: string

@@ -2,6 +2,8 @@
  * Tavily is used first; the server secret TAVILY_API_KEY is the fallback. It is read on every call,
  * so saving or rotating the key takes effect immediately. */
 
+import type { AiUsageContext } from "@/lib/aiUsage.server";
+
 const TAVILY_SEARCH_URL = "https://api.tavily.com/search";
 
 export async function loadTavilyApiKey(): Promise<string | null> {
@@ -47,6 +49,9 @@ export async function tavilySearch(
     topic?: "general" | "news";
     includeDomains?: string[];
     timeoutMs?: number;
+    /** Records this call's flat per-search-credit cost against a transaction/org for the Expense
+     * report — best-effort, optional. */
+    usage?: AiUsageContext | undefined;
   } = {},
 ): Promise<TavilyResult[]> {
   const controller = new AbortController();
@@ -68,6 +73,16 @@ export async function tavilySearch(
     });
     if (!res.ok) throw new Error(tavilyFailureMessage(res.status));
     const payload = (await res.json()) as { results?: { title?: string; url?: string; content?: string }[] };
+    if (opts.usage) {
+      const { logAiUsage, tavilySearchCostUsd } = await import("@/lib/aiUsage.server");
+      void logAiUsage({
+        provider: "tavily",
+        operation: opts.usage.operation,
+        transactionId: opts.usage.transactionId,
+        orgId: opts.usage.orgId,
+        costUsd: tavilySearchCostUsd(),
+      });
+    }
     return (payload.results ?? [])
       .map((r) => ({
         title: String(r.title ?? "").replace(/\s+/g, " ").trim().slice(0, 200),

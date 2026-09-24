@@ -113,14 +113,21 @@ async function findOfficialWebsite(
   name: string,
   apiKey: string,
   tavilyKey: string | null,
+  usage?: { transactionId?: string | null | undefined; orgId?: string | null | undefined },
 ): Promise<string | null> {
   try {
     if (tavilyKey) {
       const { tavilySearch } = await import("@/lib/tavily.server");
-      const results = await tavilySearch(tavilyKey, `${name} official website`, { max: 5, timeoutMs: 20_000 });
+      const results = await tavilySearch(tavilyKey, `${name} official website`, {
+        max: 5,
+        timeoutMs: 20_000,
+        usage: usage && { operation: "enrich_website_tavily", ...usage },
+      });
       if (results.length === 0) return null;
       const { callAiChat } = await import("@/lib/aiChat.server");
-      const res = await callAiChat(apiKey, {
+      const res = await callAiChat(
+        apiKey,
+        {
           model: "gpt-5-mini",
           messages: [
             {
@@ -138,7 +145,9 @@ async function findOfficialWebsite(
                 .join("\n\n")}`,
             },
           ],
-      });
+        },
+        { usage: usage && { operation: "enrich_website_judge", ...usage } },
+      );
       if (!res.ok) return null;
       const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
       const url = (json.choices?.[0]?.message?.content ?? "").trim();
@@ -153,6 +162,7 @@ async function findOfficialWebsite(
         "single word NONE if you can't confirm one — never a directory, marketplace, news or social result.",
       input: `Company: ${name}`,
       models: CONTACT_MODELS,
+      usage: usage && { operation: "enrich_website_web", ...usage },
     });
     const url = r.text.trim();
     return /^https?:\/\//.test(url) ? url : null;
@@ -170,6 +180,7 @@ async function readContactFromSite(
   website: string,
   apiKey: string,
   tavilyKey: string | null,
+  usage?: { transactionId?: string | null | undefined; orgId?: string | null | undefined },
 ): Promise<{ email: string | null; phone: string | null }> {
   try {
     let pageText = "";
@@ -180,6 +191,7 @@ async function readContactFromSite(
         includeDomains: [domain],
         max: 5,
         timeoutMs: 20_000,
+        usage: usage && { operation: "enrich_contact_tavily", ...usage },
       });
       pageText = results.map((r) => `${r.url}\n${r.content}`).join("\n\n");
     }
@@ -193,13 +205,16 @@ async function readContactFromSite(
           "infer or construct either.",
         input: `Company: ${name}\nWebsite: ${website}`,
         models: CONTACT_MODELS,
+        usage: usage && { operation: "enrich_contact_web", ...usage },
       });
       pageText = r.text;
     }
     if (!pageText.trim()) return { email: null, phone: null };
 
     const { callAiChat } = await import("@/lib/aiChat.server");
-    const res = await callAiChat(apiKey, {
+    const res = await callAiChat(
+      apiKey,
+      {
         model: "gpt-5-mini",
         messages: [
           {
@@ -212,7 +227,9 @@ async function readContactFromSite(
           },
           { role: "user", content: pageText.slice(0, 12000) },
         ],
-    });
+      },
+      { usage: usage && { operation: "enrich_contact_judge", ...usage } },
+    );
     if (!res.ok) return { email: null, phone: null };
     const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
     const raw = json.choices?.[0]?.message?.content ?? "";
@@ -239,7 +256,7 @@ export const findCounterpartyContact = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: cp, error } = await supabase
       .from("counterparties")
-      .select("id, name")
+      .select("id, name, transaction_id")
       .eq("id", data.counterpartyId)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -251,7 +268,9 @@ export const findCounterpartyContact = createServerFn({ method: "POST" })
     const { loadTavilyApiKey } = await import("@/lib/tavily.server");
     const tavilyKey = await loadTavilyApiKey();
 
-    const { email } = await readContactFromSite(cp.name, data.website, apiKey, tavilyKey);
+    const { email } = await readContactFromSite(cp.name, data.website, apiKey, tavilyKey, {
+      transactionId: cp.transaction_id,
+    });
 
     const { error: upErr } = await supabase
       .from("counterparties")
@@ -332,10 +351,11 @@ export const enrichCounterparty = createServerFn({ method: "POST" })
     const { loadTavilyApiKey } = await import("@/lib/tavily.server");
     const tavilyKey = await loadTavilyApiKey();
 
-    const website = await findOfficialWebsite(row.name, apiKey, tavilyKey);
+    const enrichUsage = { transactionId: row.transaction_id };
+    const website = await findOfficialWebsite(row.name, apiKey, tavilyKey, enrichUsage);
     if (!website) return { source: "unavailable" as const };
 
-    const { email, phone } = await readContactFromSite(row.name, website, apiKey, tavilyKey);
+    const { email, phone } = await readContactFromSite(row.name, website, apiKey, tavilyKey, enrichUsage);
     const { error: upErr } = await supabase
       .from("counterparties")
       .update({ website, contact_email: email, phone } as never)
@@ -416,12 +436,12 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
     // Tier 1b: no website on file at all yet — a quick best-effort search for one, the same way
     // enrichCounterparty does, so there's at least a domain to try before giving up.
     if (!toEmail && !website && canSearch) {
-      website = await findOfficialWebsite(cp.name, apiKey!, tavilyKey);
+      website = await findOfficialWebsite(cp.name, apiKey!, tavilyKey, { transactionId: cp.transaction_id });
     }
 
     // Tier 1c: a website is known — read it for a literal, verbatim email before ever guessing.
     if (!toEmail && website && canSearch) {
-      const { email } = await readContactFromSite(cp.name, website, apiKey!, tavilyKey);
+      const { email } = await readContactFromSite(cp.name, website, apiKey!, tavilyKey, { transactionId: cp.transaction_id });
       if (email) toEmail = email;
     }
 
@@ -440,7 +460,9 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
       try {
         const domain = new URL(website).hostname.replace(/^www\./, "");
         const { callAiChat } = await import("@/lib/aiChat.server");
-        const res = await callAiChat(apiKey, {
+        const res = await callAiChat(
+          apiKey,
+          {
             model: "gpt-5-mini",
             messages: [
               {
@@ -453,7 +475,9 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
               },
               { role: "user", content: `Domain: ${domain}\nCompany: ${cp.name}` },
             ],
-        });
+          },
+          { usage: { operation: "outreach_email_guess", transactionId: cp.transaction_id } },
+        );
         if (res.status === 402) {
           const { alertLowFunds } = await import("@/lib/opsAlerts.server");
           void alertLowFunds("OpenAI", 402);
@@ -487,6 +511,7 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
       await sendEmail(creds, {
         to: toEmail,
         ...(bidderEmail ? { cc: [bidderEmail] } : {}),
+        usage: { operation: "outreach_email", transactionId: cp.transaction_id },
         subject: `${cp.name}, you've been matched to a live opportunity on Izenzo`,
         html: renderBrandedEmail(
           `<p>Hello,</p>` +
@@ -539,6 +564,7 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
       await sendEmail(creds, {
         to: bidderEmail,
         bcc: [...guessedEmails, ADMIN_EMAIL],
+        usage: { operation: "outreach_email_guessed", transactionId: cp.transaction_id },
         subject: `Reaching out to ${cp.name} on your behalf`,
         html: renderBrandedEmail(
           `<p>Hello,</p>` +
@@ -569,6 +595,7 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
     await sendEmail(creds, {
       to: bidderEmail,
       bcc: [ADMIN_EMAIL],
+      usage: { operation: "outreach_email_not_found", transactionId: cp.transaction_id },
       subject: `We couldn't find contact details for ${cp.name}`,
       html: renderBrandedEmail(
         `<p>Hello,</p>` +
@@ -623,6 +650,7 @@ export const inviteCounterparty = createServerFn({ method: "POST" })
 
     await sendEmail(creds, {
       to: cp.contact_email,
+      usage: { operation: "invite_email", transactionId: cp.transaction_id },
       subject: `${cp.name}, you're shortlisted for a live opportunity on Izenzo`,
       html: renderBrandedEmail(
         `<p>Hello,</p>` +

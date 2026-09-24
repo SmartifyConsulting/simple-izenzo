@@ -32,7 +32,7 @@ async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
   {
     const { data: tx, error: txErr } = await supabase
       .from("transactions")
-      .select("id, title, commodity, quantity, unit, price, currency, incoterms, jurisdiction, search_prompt")
+      .select("id, org_id, title, commodity, quantity, unit, price, currency, incoterms, jurisdiction, search_prompt")
       .eq("id", transactionId)
       .maybeSingle();
     if (txErr) throw new Error(txErr.message);
@@ -189,19 +189,23 @@ async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
       const { callAiChat, aiChatFailureMessage } = await import("@/lib/aiChat.server");
       // Reading the documents is the request that matters, so it gets the full retry budget. It
       // goes to the OpenAI account saved under Admin → Integrations.
-      const res = await callAiChat(apiKey!, {
-        model: "gpt-5-mini",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You read trade documents (IDs, contracts, invoices, spec sheets, spreadsheets) and extract " +
-              "deal details precisely. Reply with raw JSON only — no markdown fences, no commentary." +
-              extra,
-          },
-          { role: "user", content: [{ type: "text", text: instruction + extra }, ...parts] },
-        ],
-      });
+      const res = await callAiChat(
+        apiKey!,
+        {
+          model: "gpt-5-mini",
+          messages: [
+            {
+              role: "system",
+              content:
+                "You read trade documents (IDs, contracts, invoices, spec sheets, spreadsheets) and extract " +
+                "deal details precisely. Reply with raw JSON only — no markdown fences, no commentary." +
+                extra,
+            },
+            { role: "user", content: [{ type: "text", text: instruction + extra }, ...parts] },
+          ],
+        },
+        { usage: { operation: "document_read", transactionId: tx.id, orgId: tx.org_id } },
+      );
       if (!res.ok) {
         const message = await aiChatFailureMessage(res);
         const body = await res.clone().text().catch(() => "");

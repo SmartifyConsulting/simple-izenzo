@@ -37,9 +37,13 @@ function aiPlusOptions(model: string, kind: "ai" | "ai_plus" = "ai_plus") {
  * gateway fallback: when no key is saved the request fails with wording that says so rather than
  * billing a different account. Transient request limits are retried and failures are worded
  * plainly. */
-async function chatCompletion(apiKey: string | null, body: unknown): Promise<Response> {
+async function chatCompletion(
+  apiKey: string | null,
+  body: unknown,
+  usage?: { operation: string; transactionId?: string | null | undefined; orgId?: string | null | undefined },
+): Promise<Response> {
   const { callAiChat } = await import("@/lib/aiChat.server");
-  return callAiChat(apiKey, body);
+  return callAiChat(apiKey, body, { usage });
 }
 
 async function aiFailureMessage(res: Response): Promise<string> {
@@ -373,6 +377,7 @@ async function findOnWeb(
   instructions: string,
   input: string,
   query?: string,
+  usage?: { transactionId?: string | null | undefined; orgId?: string | null | undefined },
 ) {
   const { webSearch } = await import("@/lib/openaiWebSearch.server");
   const { loadTavilyApiKey, tavilySearch } = await import("@/lib/tavily.server");
@@ -381,27 +386,35 @@ async function findOnWeb(
   const tavilyKey = query ? await loadTavilyApiKey() : null;
   if (tavilyKey && query) {
     try {
-      const pages = await tavilySearch(tavilyKey, query, { depth: kind === "ai" ? "basic" : "advanced", max: 8 });
+      const pages = await tavilySearch(tavilyKey, query, {
+        depth: kind === "ai" ? "basic" : "advanced",
+        max: 8,
+        usage: usage && { operation: `${kind}_search_tavily`, ...usage },
+      });
       if (pages.length > 0) {
         const model = AI_MODEL;
-        const res = await chatCompletion(apiKey, {
-          model,
-          ...aiPlusOptions(model, kind),
-          messages: [
-            {
-              role: "system",
-              content:
-                instructions +
-                " The public internet search results are given in the message: use only those pages, and set sourceUrl to one of their addresses.",
-            },
-            {
-              role: "user",
-              content: `${input}\n\nSearch results:\n${pages
-                .map((pg, i) => `${i + 1}. ${pg.title} — ${pg.url}\n${pg.content}`)
-                .join("\n\n")}`,
-            },
-          ],
-        });
+        const res = await chatCompletion(
+          apiKey,
+          {
+            model,
+            ...aiPlusOptions(model, kind),
+            messages: [
+              {
+                role: "system",
+                content:
+                  instructions +
+                  " The public internet search results are given in the message: use only those pages, and set sourceUrl to one of their addresses.",
+              },
+              {
+                role: "user",
+                content: `${input}\n\nSearch results:\n${pages
+                  .map((pg, i) => `${i + 1}. ${pg.title} — ${pg.url}\n${pg.content}`)
+                  .join("\n\n")}`,
+              },
+            ],
+          },
+          usage && { operation: `${kind}_search`, ...usage },
+        );
         if (!res.ok) throw new Error(await aiFailureMessage(res));
         const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
         return {
@@ -443,6 +456,7 @@ async function findOnWeb(
       input,
       models: webModelsFor(kind),
       effort: kind === "ai" ? "low" : "medium",
+      usage: usage && { operation: `${kind}_search_web`, ...usage },
     });
     return {
       output: r.text,
@@ -770,6 +784,8 @@ export const searchCounterparties = createServerFn({ method: "POST" })
       docSummary,
       fallbackSubject: subject,
       ownOrgName: ownOrg?.name ?? "",
+      transactionId: data.transactionId,
+      orgId: tx.org_id,
     });
     pipelineMs = Date.now() - pipelineStartedAt;
     const { model, sources, failures } = pipeline;
@@ -1266,14 +1282,18 @@ export const runAiProposal = createServerFn({ method: "POST" })
       .join("\n");
 
     const model = AI_MODEL;
-    const res = await chatCompletion(apiKey, {
-      model,
-      ...aiPlusOptions(model, data.kind),
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: prompt },
-      ],
-    });
+    const res = await chatCompletion(
+      apiKey,
+      {
+        model,
+        ...aiPlusOptions(model, data.kind),
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: prompt },
+        ],
+      },
+      { operation: "ai_proposal", transactionId: tx.id, orgId: tx.org_id },
+    );
     if (res.status === 402) {
       const { alertLowFunds } = await import("@/lib/opsAlerts.server");
       void alertLowFunds("OpenAI", 402);
@@ -1363,7 +1383,7 @@ export const extractMaterialTerms = createServerFn({ method: "POST" })
             { role: "user", content: prompt },
           ],
         },
-        { retries: 0 },
+        { retries: 0, usage: { operation: "material_terms", transactionId: tx.id, orgId: tx.org_id } },
       );
 
       if (!res.ok) return { terms: fallback, source: "fallback" as const };

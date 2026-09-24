@@ -2,6 +2,8 @@
  * `integration_credentials` (configured under Admin → Integrations) and sends transactional
  * email through the Resend API. */
 
+import type { AiUsageContext } from "@/lib/aiUsage.server";
+
 export type ResendCreds = {
   apiKey: string;
   fromAddress: string;
@@ -78,7 +80,16 @@ export function renderBrandedEmail(bodyHtml: string): string {
 
 export async function sendEmail(
   creds: ResendCreds,
-  opts: { to: string; cc?: string[]; bcc?: string[]; subject: string; html: string },
+  opts: {
+    to: string;
+    cc?: string[];
+    bcc?: string[];
+    subject: string;
+    html: string;
+    /** Records this send's (near-negligible, but tracked for completeness) cost against a
+     * transaction/org for the Expense report — best-effort, optional. */
+    usage?: AiUsageContext | undefined;
+  },
 ): Promise<void> {
   const url = creds.viaGateway
     ? "https://connector-gateway.lovable.dev/resend/emails"
@@ -116,6 +127,16 @@ export async function sendEmail(
       );
     }
     throw new Error(`The email could not be sent — ${explainResendRefusal(res.status, body, creds.fromAddress, failure.message)}`);
+  }
+  if (opts.usage) {
+    const { logAiUsage, resendEmailCostUsd } = await import("@/lib/aiUsage.server");
+    void logAiUsage({
+      provider: "resend",
+      operation: opts.usage.operation,
+      transactionId: opts.usage.transactionId,
+      orgId: opts.usage.orgId,
+      costUsd: resendEmailCostUsd(),
+    });
   }
 }
 

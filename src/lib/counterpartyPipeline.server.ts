@@ -59,6 +59,10 @@ export type PipelineInput = {
   /** Used only if the understanding step cannot run. */
   fallbackSubject: string;
   ownOrgName: string;
+  /** Attributes this pipeline run's real AI/search cost to a transaction/org, for the Admin →
+   * Integrations Expense report — best-effort, optional. */
+  transactionId?: string | null | undefined;
+  orgId?: string | null | undefined;
 };
 
 export type PipelineResult = {
@@ -91,6 +95,8 @@ async function chatJson(
   system: string,
   user: string,
   kind: "ai" | "ai_plus",
+  operation: string,
+  usage?: { transactionId?: string | null | undefined; orgId?: string | null | undefined },
 ): Promise<Record<string, unknown>> {
   const { callOpenAiChat, openAiFailureMessage } = await import("@/lib/openaiCall.server");
   const request = {
@@ -110,7 +116,23 @@ async function chatJson(
 
   if (!res.ok) throw new Error(await openAiFailureMessage(res));
 
-  const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+  const json = (await res.json()) as {
+    choices?: { message?: { content?: string } }[];
+    usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+  };
+  if (usage) {
+    const { logAiUsage } = await import("@/lib/aiUsage.server");
+    void logAiUsage({
+      provider: "openai",
+      operation,
+      transactionId: usage.transactionId,
+      orgId: usage.orgId,
+      model,
+      inputTokens: json.usage?.prompt_tokens ?? null,
+      outputTokens: json.usage?.completion_tokens ?? null,
+      totalTokens: json.usage?.total_tokens ?? null,
+    });
+  }
   const content = json.choices?.[0]?.message?.content ?? "";
   const body = content.slice(content.indexOf("{"), content.lastIndexOf("}") + 1);
   try {
@@ -177,7 +199,7 @@ async function understand(input: PipelineInput): Promise<BriefCore> {
     .join("\n");
 
   try {
-    const r = await chatJson(input.apiKey, input.chatModel, "low", system, user, input.kind);
+    const r = await chatJson(input.apiKey, input.chatModel, "low", system, user, input.kind, "counterparty_search_understand", input);
     const brief: BriefCore = {
       transactionSummary: String(r["transactionSummary"] ?? "").slice(0, 800),
       role: String(r["role"] ?? "").slice(0, 300),
@@ -276,6 +298,7 @@ async function searchWithOpenAi(input: PipelineInput, briefText: string, maxOrgs
       `Return up to ${maxOrgs} organisations as a JSON array only, or [] if none qualify. ` +
       'Each item: {"name":string,"jurisdiction":string,"sector":string,"evidence":string,"sourceUrl":string}.',
     input: `Required counterparty brief:\n${briefText}`,
+    usage: { operation: "counterparty_search_web", transactionId: input.transactionId, orgId: input.orgId },
   });
 }
 
@@ -293,6 +316,7 @@ async function searchWithTavily(input: PipelineInput, brief: Brief, briefText: s
       tavilySearch(input.tavilyKey as string, q, {
         depth: input.kind === "ai" ? "basic" : "advanced",
         max: 8,
+        usage: { operation: "counterparty_search_tavily", transactionId: input.transactionId, orgId: input.orgId },
       }),
     ),
   );
@@ -323,6 +347,8 @@ async function searchWithTavily(input: PipelineInput, brief: Brief, briefText: s
       .map((pg, i) => `${i + 1}. ${pg.title} — ${pg.url}\n${pg.content}`)
       .join("\n\n")}`,
       input.kind,
+      "counterparty_search_identify",
+      input,
     );
   return {
     text: JSON.stringify(Array.isArray(r["organisations"]) ? r["organisations"] : []),
@@ -449,6 +475,8 @@ export async function findCounterparties(input: PipelineInput): Promise<Pipeline
         .map((c, i) => `${i + 1}. ${c.name} (${c.jurisdiction ?? "place unknown"}, ${c.sector ?? "sector unknown"})\n   Evidence: ${c.evidence}\n   Page: ${c.sourceUrl}`)
         .join("\n")}`,
       input.kind,
+      "counterparty_search_reason",
+      input,
     );
     verdicts = Array.isArray(r["results"]) ? (r["results"] as Record<string, unknown>[]) : [];
   } catch {

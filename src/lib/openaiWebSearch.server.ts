@@ -1,6 +1,8 @@
 /** Server-only. Reads the live web through OpenAI's own web search tool, so finding organisations
  * and checking them online needs nothing but the OpenAI account saved in Admin → Integrations. */
 
+import type { AiUsageContext } from "@/lib/aiUsage.server";
+
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 
 export type WebSource = { url: string; title: string };
@@ -41,6 +43,9 @@ export async function webSearch(opts: {
   models: string[];
   effort?: "low" | "medium" | "high";
   timeoutMs?: number;
+  /** Records this call's real cost (a flat per-search fee, per OpenAI's hosted web-search tool
+   * pricing, plus its own token usage) against a transaction/org for the Expense report. */
+  usage?: AiUsageContext | undefined;
 }): Promise<WebSearchResult> {
   let lastError = "The web could not be searched just now.";
   for (const model of opts.models) {
@@ -79,8 +84,26 @@ export async function webSearch(opts: {
         const { openAiFailureMessage } = await import("@/lib/openaiCall.server");
         throw new Error(await openAiFailureMessage(res));
       }
-      const payload = (await res.json()) as { output?: ResponseItem[] };
+      const payload = (await res.json()) as {
+        output?: ResponseItem[];
+        usage?: { input_tokens?: number; output_tokens?: number; total_tokens?: number };
+      };
       const { text, sources } = readOutput(payload);
+      if (opts.usage) {
+        const { logAiUsage, estimateChatCostUsd, openAiWebSearchCostUsd } = await import("@/lib/aiUsage.server");
+        const tokenCost = estimateChatCostUsd(model, payload.usage?.input_tokens ?? null, payload.usage?.output_tokens ?? null) ?? 0;
+        void logAiUsage({
+          provider: "openai",
+          operation: opts.usage.operation,
+          transactionId: opts.usage.transactionId,
+          orgId: opts.usage.orgId,
+          model,
+          inputTokens: payload.usage?.input_tokens ?? null,
+          outputTokens: payload.usage?.output_tokens ?? null,
+          totalTokens: payload.usage?.total_tokens ?? null,
+          costUsd: tokenCost + openAiWebSearchCostUsd(),
+        });
+      }
       if (!text) {
         lastError = "The web search came back empty.";
         continue;

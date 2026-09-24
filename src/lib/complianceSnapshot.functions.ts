@@ -43,7 +43,7 @@ export const runComplianceSnapshot = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: cp, error } = await supabase
       .from("counterparties")
-      .select("id, name, jurisdiction, media_flags")
+      .select("id, name, jurisdiction, media_flags, transaction_id")
       .eq("id", data.counterpartyId)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -80,7 +80,11 @@ export const runComplianceSnapshot = createServerFn({ method: "POST" })
         let pageText = "";
         if (tavilyKey) {
           const { tavilySearch } = await import("@/lib/tavily.server");
-          const results = await tavilySearch(tavilyKey, query, { max: 6, timeoutMs: 20_000 });
+          const results = await tavilySearch(tavilyKey, query, {
+            max: 6,
+            timeoutMs: 20_000,
+            usage: { operation: "compliance_check_tavily", transactionId: cp.transaction_id },
+          });
           pageText = results.map((r) => `${r.url}\n${r.title}\n${r.content}`).join("\n\n");
         } else {
           const { webSearch } = await import("@/lib/openaiWebSearch.server");
@@ -92,13 +96,16 @@ export const runComplianceSnapshot = createServerFn({ method: "POST" })
               "Search the public web for sanctions listings, fraud, active litigation, insolvency or " +
               "blacklisting tied to the named company. Report only what you actually find.",
             input: `Company: ${cp.name}${cp.jurisdiction ? ` (${cp.jurisdiction})` : ""}`,
+            usage: { operation: "compliance_check_web", transactionId: cp.transaction_id },
           });
           pageText = r.text;
         }
 
         if (pageText.trim()) {
           const { callAiChat } = await import("@/lib/aiChat.server");
-          const res = await callAiChat(apiKey, {
+          const res = await callAiChat(
+            apiKey,
+            {
               model: "gpt-5-mini",
               response_format: { type: "json_object" },
               messages: [
@@ -117,7 +124,9 @@ export const runComplianceSnapshot = createServerFn({ method: "POST" })
                   content: `Company: ${cp.name}${cp.jurisdiction ? ` (${cp.jurisdiction})` : ""}\n\n${pageText.slice(0, 10000)}`,
                 },
               ],
-          });
+            },
+            { usage: { operation: "compliance_check_judge", transactionId: cp.transaction_id } },
+          );
           if (res.ok) {
             const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
             const content = json.choices?.[0]?.message?.content ?? "";

@@ -12,12 +12,14 @@ import { PasswordInput } from "@/components/PasswordInput";
 import { INTEGRATION_PROVIDERS, type IntegrationProvider } from "@/lib/integrations.catalog";
 import {
   deleteIntegration,
+  getAiUsageReport,
   getCreditSpendReport,
   getProviderPricing,
   listIntegrations,
   revealIntegrationSecrets,
   saveIntegration,
   testIntegration,
+  type AiUsageReport,
   type CreditSpendReport,
   type IntegrationRow,
   type ProviderPricingCache,
@@ -137,7 +139,13 @@ export function IntegrationsTab() {
       {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
 
       {view === "report" ? (
-        <SpendReport />
+        <div className="space-y-10">
+          <AiCostReport />
+          <div className="border-t border-border pt-6">
+            <h3 className="mb-3 text-sm font-semibold">Platform token economy</h3>
+            <CreditSpendReportSection />
+          </div>
+        </div>
       ) : guided ? (
         <GuidedSetup byProvider={byProvider} pricing={pricing} onChanged={refresh} />
       ) : (
@@ -179,12 +187,130 @@ export function IntegrationsTab() {
   );
 }
 
+/** Real, if estimated, provider cost — every OpenAI/Tavily/Didit/Resend call this app makes is
+ * now logged to ai_usage_events (see aiUsage.server.ts), with its cost worked out from the token
+ * counts/flat rates configured there. This is the actual external spend, not the platform's own
+ * token economy (see CreditSpendReportSection below, a separate number entirely). */
+function AiCostReport() {
+  const load = useServerFn(getAiUsageReport);
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["ai-usage-report"],
+    queryFn: () => load({}),
+    retry: false,
+  });
+  const [openTxId, setOpenTxId] = useState<string | null>(null);
+
+  if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
+  if (error) return <p className="text-sm text-muted-foreground">{(error as Error).message}</p>;
+  if (!data) return null;
+
+  const report = data as AiUsageReport;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start gap-3 rounded-md border border-primary/30 bg-primary/5 p-4">
+        <CreditCard className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+        <p className="text-xs text-muted-foreground">
+          Estimated real cost on the admin's own OpenAI, Tavily, Didit and Resend accounts — from
+          rates configured in code, not a live read of each provider's invoice. Logging started
+          when this feature shipped, so anything called before that isn't included.
+        </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="rounded-xl border border-border p-4">
+          <p className="text-xs text-muted-foreground">Estimated total spend</p>
+          <p className="mt-1 text-2xl font-semibold">${report.totalCostUsd.toFixed(2)}</p>
+        </div>
+        <div className="rounded-xl border border-border p-4">
+          <p className="text-xs text-muted-foreground">Logged calls</p>
+          <p className="mt-1 text-2xl font-semibold">{report.totalEvents}</p>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold">By provider</h3>
+        {report.byProvider.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No AI/integration usage logged yet.</p>
+        ) : (
+          <ul className="divide-y divide-border rounded-xl border border-border">
+            {report.byProvider.map((p) => (
+              <li key={p.provider} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+                <span className="capitalize">{p.provider}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  ${p.costUsd.toFixed(2)} · {p.count} call{p.count === 1 ? "" : "s"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold">By transaction</h3>
+        {report.byTransaction.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No usage logged against a transaction yet.</p>
+        ) : (
+          <ul className="divide-y divide-border rounded-xl border border-border">
+            {report.byTransaction.map((t) => {
+              const open = openTxId === t.transactionId;
+              return (
+                <li key={t.transactionId}>
+                  <button
+                    type="button"
+                    onClick={() => setOpenTxId(open ? null : t.transactionId)}
+                    aria-expanded={open}
+                    className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm hover:bg-muted/30"
+                  >
+                    <span className="flex min-w-0 items-center gap-2">
+                      {open ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+                      <span className="truncate font-mono text-xs font-semibold">{t.reference ?? t.transactionId}</span>
+                      {t.title && <span className="truncate text-xs text-muted-foreground">{t.title}</span>}
+                    </span>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      ${t.costUsd.toFixed(2)} · {t.count} call{t.count === 1 ? "" : "s"}
+                    </span>
+                  </button>
+                  {open && (
+                    <ul className="divide-y divide-border bg-muted/20 px-4">
+                      {t.events.map((e, i) => (
+                        <li key={i} className="flex items-center justify-between gap-3 py-2 pl-6 text-xs">
+                          <span className="text-muted-foreground">
+                            {e.provider} · {e.operation}
+                            {e.model ? ` · ${e.model}` : ""}
+                          </span>
+                          <span className="flex shrink-0 items-center gap-3">
+                            <span className="font-medium">${(e.costUsd ?? 0).toFixed(4)}</span>
+                            <span className="text-muted-foreground">
+                              {new Date(e.createdAt).toLocaleString(undefined, {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /** What the org's own credits (tokens) are being spent on, broken down by what they were spent for
  * and by which organisation — Proof of Intent and WaD verification are the only two gates that
- * currently debit credits. This is the platform's internal token economy, not the real external
- * cost on the admin's own OpenAI/Tavily/Didit/Resend accounts, which those providers bill directly
- * and this app doesn't meter anywhere. */
-function SpendReport() {
+ * currently debit credits. This is the platform's internal token economy — what's charged to
+ * customers — a separate number from AiCostReport above, which is the real external cost on the
+ * admin's own OpenAI/Tavily/Didit/Resend accounts. */
+function CreditSpendReportSection() {
   const load = useServerFn(getCreditSpendReport);
   const { data, isLoading, error } = useQuery({
     queryKey: ["credit-spend-report"],
@@ -204,9 +330,9 @@ function SpendReport() {
         <CreditCard className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
         <p className="text-xs text-muted-foreground">
           This tracks the platform's own token economy — every debit against an organisation's
-          credits (Proof of Intent, WaD verification). It does not track real cost on the admin's
-          own OpenAI, Tavily, Didit or Resend accounts — those are billed directly by each provider
-          and aren't metered here.
+          credits (Proof of Intent, WaD verification), i.e. what's charged to customers. See the
+          Real provider cost section above for actual spend on the admin's own OpenAI, Tavily,
+          Didit or Resend accounts.
         </p>
       </div>
 

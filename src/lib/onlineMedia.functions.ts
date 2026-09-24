@@ -57,6 +57,7 @@ async function scanWithTavily(
   openAiKey: string | null,
   name: string,
   jurisdiction: string | null,
+  usage?: { transactionId?: string | null | undefined; orgId?: string | null | undefined },
 ): Promise<MediaFinding[]> {
   const { tavilySearch } = await import("@/lib/tavily.server");
   const base = `"${name}"${jurisdiction ? ` ${jurisdiction}` : ""}`;
@@ -68,6 +69,7 @@ async function scanWithTavily(
           max: 5,
           ...(cfg.domains ? { includeDomains: cfg.domains } : {}),
           ...(cfg.topic ? { topic: cfg.topic } : {}),
+          usage: usage && { operation: "media_scan_tavily", ...usage },
         });
         return { src, pages, error: null as string | null };
       } catch (err) {
@@ -114,7 +116,24 @@ async function scanWithTavily(
           { retries: 1 },
         );
         if (res.ok) {
-          const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+          const json = (await res.json()) as {
+            choices?: { message?: { content?: string } }[];
+            model?: string;
+            usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+          };
+          if (usage) {
+            const { logAiUsage } = await import("@/lib/aiUsage.server");
+            void logAiUsage({
+              provider: "openai",
+              operation: "media_scan_judge",
+              transactionId: usage.transactionId,
+              orgId: usage.orgId,
+              model: json.model ?? "gpt-5-mini",
+              inputTokens: json.usage?.prompt_tokens ?? null,
+              outputTokens: json.usage?.completion_tokens ?? null,
+              totalTokens: json.usage?.total_tokens ?? null,
+            });
+          }
           const content = json.choices?.[0]?.message?.content ?? "";
           const parsed = JSON.parse(content.slice(content.indexOf("{"), content.lastIndexOf("}") + 1)) as {
             findings?: { source?: string; status?: string; detail?: string; url?: string | null }[];
@@ -177,13 +196,19 @@ async function scanWithTavily(
 
 /** One OpenAI web search covering all six sources for one company. Throws with the reason when the
  * search itself fails, so the screen can say why instead of only "could not scan". */
-async function scanWithOpenAi(apiKey: string, name: string, jurisdiction: string | null): Promise<Judged> {
+async function scanWithOpenAi(
+  apiKey: string,
+  name: string,
+  jurisdiction: string | null,
+  usage?: { transactionId?: string | null | undefined; orgId?: string | null | undefined },
+): Promise<Judged> {
   const { webSearch } = await import("@/lib/openaiWebSearch.server");
   const sourceLines = SOURCES.map((s) => `- ${s.source}: ${s.label}`).join("\n");
   const result = await webSearch({
     apiKey,
     models: ["gpt-5-mini", "gpt-5"],
     effort: "low",
+    usage: usage && { operation: "media_scan_web", ...usage },
     instructions:
       "You run an online presence and adverse-media check on one company for a trade counterparty review, using web search. " +
       "For each source listed, search for the company on that kind of site (for example LinkedIn, Facebook, TikTok, Instagram or X, marketplaces and directories, news) and decide: " +
@@ -263,7 +288,7 @@ export const runOnlineMediaChecks = createServerFn({ method: "POST" })
       } else if (tavilyKey) {
         // Public internet search through Tavily, judged by OpenAI.
         try {
-          findings = await scanWithTavily(tavilyKey, apiKey, cp.name, cp.jurisdiction);
+          findings = await scanWithTavily(tavilyKey, apiKey, cp.name, cp.jurisdiction, { transactionId: data.transactionId });
         } catch (err) {
           const reason = (err as Error).message;
           findings = SOURCES.map((src) => ({ source: src.source, label: src.label, status: "failed" as const, detail: reason }));
@@ -271,7 +296,7 @@ export const runOnlineMediaChecks = createServerFn({ method: "POST" })
       } else {
         // One OpenAI web search covers all six sources for this company.
         try {
-          const judged = await scanWithOpenAi(apiKey as string, cp.name, cp.jurisdiction);
+          const judged = await scanWithOpenAi(apiKey as string, cp.name, cp.jurisdiction, { transactionId: data.transactionId });
           findings = SOURCES.map((src): MediaFinding => {
             const j = judged.get(src.source);
             if (!j) {
