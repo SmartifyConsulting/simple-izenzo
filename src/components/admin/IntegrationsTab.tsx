@@ -26,6 +26,14 @@ import {
   type ProviderPricingCache,
 } from "@/lib/integrations.functions";
 import { cn } from "@/lib/utils";
+import { homeCurrencyFor } from "@/lib/currency";
+
+// Same static USD→ZAR rate the rest of the app uses for a home-currency estimate — Izenzo is a
+// South African platform, so admin cost figures show both currencies rather than dollars alone.
+const ZAR_RATE = homeCurrencyFor("south africa")?.usdRate ?? 18.5;
+function usdZar(usd: number, decimals = 2): string {
+  return `$${usd.toFixed(decimals)} (R${(usd * ZAR_RATE).toFixed(decimals)})`;
+}
 
 /** Opens a provider page in a new tab without handing it our referrer. */
 function openExternal(url: string) {
@@ -197,17 +205,22 @@ function CollapsibleGroup({
   summary,
   defaultOpen = false,
   small = false,
+  /** Only the outermost (month) level keeps its own bordered box — nesting the same frame inside
+   * week and day levels too just stacked boxes within boxes. Week/day pass framed={false} to blend
+   * into the month frame they already sit inside instead of drawing another one. */
+  framed = true,
   children,
 }: {
   label: string;
   summary: string;
   defaultOpen?: boolean;
   small?: boolean;
+  framed?: boolean;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="rounded-xl border border-border">
+    <div className={cn(framed && "rounded-xl border border-border")}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -267,7 +280,7 @@ function AiCostReport() {
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-xl border border-border p-4">
           <p className="text-xs text-muted-foreground">Estimated total spend</p>
-          <p className="mt-1 text-2xl font-semibold">${report.totalCostUsd.toFixed(2)}</p>
+          <p className="mt-1 text-2xl font-semibold">{usdZar(report.totalCostUsd)}</p>
         </div>
         <div className="rounded-xl border border-border p-4">
           <p className="text-xs text-muted-foreground">Logged calls</p>
@@ -285,7 +298,7 @@ function AiCostReport() {
               <li key={p.provider} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
                 <span className="capitalize">{p.provider}</span>
                 <span className="shrink-0 text-xs text-muted-foreground">
-                  ${p.costUsd.toFixed(2)} · {p.count} call{p.count === 1 ? "" : "s"}
+                  {usdZar(p.costUsd)} · {p.count} call{p.count === 1 ? "" : "s"}
                 </span>
               </li>
             ))}
@@ -303,7 +316,7 @@ function AiCostReport() {
               <CollapsibleGroup
                 key={month.key}
                 label={month.label}
-                summary={`$${month.costUsd.toFixed(2)} · ${month.count} call${month.count === 1 ? "" : "s"}`}
+                summary={`${usdZar(month.costUsd)} · ${month.count} call${month.count === 1 ? "" : "s"}`}
                 defaultOpen={month.isCurrentMonth}
               >
                 <div className="space-y-2 pl-3">
@@ -311,19 +324,21 @@ function AiCostReport() {
                     <CollapsibleGroup
                       key={week.key}
                       label={week.label}
-                      summary={`$${week.costUsd.toFixed(2)} · ${week.count} call${week.count === 1 ? "" : "s"}`}
+                      summary={`${usdZar(week.costUsd)} · ${week.count} call${week.count === 1 ? "" : "s"}`}
                       defaultOpen={week.isCurrentWeek}
                       small
+                      framed={false}
                     >
                       <div className="space-y-2 pl-3">
                         {week.days.map((day) => (
                           <CollapsibleGroup
                             key={day.key}
                             label={day.label}
-                            summary={`$${day.costUsd.toFixed(2)} · ${day.count} call${day.count === 1 ? "" : "s"}`}
+                            summary={`${usdZar(day.costUsd)} · ${day.count} call${day.count === 1 ? "" : "s"}`}
                             // Only today opens on arrival; every earlier day is a deliberate click.
                             defaultOpen={day.isToday}
                             small
+                            framed={false}
                           >
                             <ul className="divide-y divide-border rounded-xl border border-border">
                               {day.rows.map((t) => {
@@ -350,7 +365,7 @@ function AiCostReport() {
                                         )}
                                       </span>
                                       <span className="shrink-0 text-xs text-muted-foreground">
-                                        ${t.costUsd.toFixed(2)} · {t.count} call{t.count === 1 ? "" : "s"}
+                                        {usdZar(t.costUsd)} · {t.count} call{t.count === 1 ? "" : "s"}
                                       </span>
                                     </button>
                                     {open && (
@@ -362,7 +377,7 @@ function AiCostReport() {
                                               {e.model ? ` · ${e.model}` : ""}
                                             </span>
                                             <span className="flex shrink-0 items-center gap-3">
-                                              <span className="font-medium">${(e.costUsd ?? 0).toFixed(4)}</span>
+                                              <span className="font-medium">{usdZar(e.costUsd ?? 0, 4)}</span>
                                               <span className="text-muted-foreground">
                                                 {new Date(e.createdAt).toLocaleString(undefined, {
                                                   year: "numeric",
