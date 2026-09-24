@@ -2855,6 +2855,10 @@ function LiveDealEngine() {
                   setDealTx(tx);
                   setSeedPrompt(seed.prompt);
                   setSeedFiles(seed.files);
+                  // A brand-new bid/offer (including one seeded from the home page's search bar)
+                  // should land with its own Step 1 record visible, not collapsed behind a click —
+                  // there's nothing to hide yet since this is the only thing that's happened so far.
+                  setStep1Open(true);
                   try {
                     localStorage.setItem(ACTIVE_DEAL_KEY, JSON.stringify({ txId: tx.id, activity: recorded }));
                   } catch {

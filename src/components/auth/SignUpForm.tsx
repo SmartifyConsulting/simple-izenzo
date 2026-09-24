@@ -213,9 +213,10 @@ export function SignUpForm({
 
         const { error: pErr } = await supabase
           .from("profiles")
-          .upsert({ id: userId, org_id: org.id, account_type: accountType, full_name: fullName } as never, {
-            onConflict: "id",
-          });
+          .upsert(
+            { id: userId, org_id: org.id, account_type: accountType, full_name: fullName, email } as never,
+            { onConflict: "id" },
+          );
         if (pErr) throw pErr;
 
         // Best effort: write the company profile from their website in the background. A failure

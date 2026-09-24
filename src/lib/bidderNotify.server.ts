@@ -182,7 +182,27 @@ export async function notifyCounterpartyContact(args: {
       .select("*")
       .ilike("email", args.email.trim())
       .maybeSingle();
-    const row = profile as { id?: string | null; org_id?: string | null } | null;
+    let row = profile as { id?: string | null; org_id?: string | null } | null;
+    if (!row?.id) {
+      // profiles.email can be blank on an account provisioned before it was reliably saved at
+      // sign-up — fall back to the organisation this address is the contact for, and notify
+      // whoever owns that org, rather than silently dropping the Inbox write while the email
+      // itself still went out.
+      const { data: org } = await supabaseAdmin
+        .from("organisations")
+        .select("id")
+        .ilike("primary_contact_email", args.email.trim())
+        .maybeSingle();
+      if (org?.id) {
+        const { data: member } = await supabaseAdmin
+          .from("org_members")
+          .select("user_id")
+          .eq("org_id", org.id)
+          .eq("role", "owner")
+          .maybeSingle();
+        if (member?.user_id) row = { id: member.user_id, org_id: org.id };
+      }
+    }
     if (!row?.id) return;
     const channel = await getNotificationChannel(supabaseAdmin, row.id);
     if (channel === "email" && !args.force) return; // They asked for email only, which they have already had.
