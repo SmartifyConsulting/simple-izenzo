@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Archive,
+  BadgeCheck,
   CheckCircle2,
   ChevronDown,
   Lock,
@@ -738,6 +739,44 @@ function LiveDealEngine() {
     queryFn: () => listIdChecks({ data: { transactionId: dealTx!.id } }),
   });
   const idCheck = idVerifications.find((v) => v.check_type === "id_document") ?? null;
+
+  // The counterparty's own identity, once Seal Intent has actually happened — shown alongside the
+  // bidder's in Bid Registration, in blue (the counterparty's colour everywhere else in this
+  // workspace), with the same KYC/KYB verification status the WaD gate itself tracks.
+  const { data: counterpartyIdentity } = useQuery({
+    queryKey: ["counterparty-identity", dealTx?.id, dealTx?.poi_sealed_at],
+    enabled: Boolean(dealTx?.id && dealTx?.poi_sealed_at),
+    queryFn: async () => {
+      const [{ data: cp }, { data: diligence }] = await Promise.all([
+        supabase
+          .from("counterparties")
+          .select("name")
+          .eq("transaction_id", dealTx!.id)
+          .eq("status", "chosen")
+          .maybeSingle(),
+        supabase
+          .from("engagement_diligence")
+          .select("kyc_state, kyb_state")
+          .eq("transaction_id", dealTx!.id)
+          .eq("reviewer_side", "counterparty")
+          .maybeSingle(),
+      ]);
+      // The link between this deal and the counterparty's own organisation lives on the
+      // transaction itself (set once they claim the match), not on the counterparties row.
+      const orgId = dealTx!.counterparty_org_id;
+      const { data: org } = orgId
+        ? await supabase.from("organisations").select("created_at").eq("id", orgId).maybeSingle()
+        : { data: null };
+      const settled = ["passed", "waived"];
+      const row = diligence as { kyc_state?: string; kyb_state?: string } | null;
+      const verified = Boolean(row && settled.includes(row.kyc_state ?? "") && settled.includes(row.kyb_state ?? ""));
+      return {
+        name: (cp as { name?: string | null } | null)?.name ?? null,
+        activeSince: (org as { created_at?: string } | null)?.created_at ?? null,
+        verified,
+      };
+    },
+  });
 
   // Same query key DocumentUploadStep uses, so once a file is attached there (or here) both
   // stay in sync off one cache entry rather than each polling storage independently.
@@ -2347,6 +2386,42 @@ function LiveDealEngine() {
                     <p className="text-[11px] text-muted-foreground">
                       {org?.country ?? dealTx.jurisdiction}
                     </p>
+                  )}
+                  {/* The counterparty's own identity, once there's a sealed deal to show it
+                      against — in blue, the counterparty's colour everywhere else in this
+                      workspace, with the same verified/pending badge style as the bidder's own
+                      above it. */}
+                  {dealTx.poi_sealed_at && counterpartyIdentity?.name && (
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2 border-t border-border pt-1.5">
+                      <span className="min-w-0 truncate text-sm font-semibold text-[#4169e1]">
+                        {counterpartyIdentity.name}
+                      </span>
+                      {counterpartyIdentity.verified ? (
+                        <span
+                          title="Verified via Didit KYC/KYB"
+                          className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#4169e1] px-1.5 py-0.5 text-[10px] font-semibold text-white"
+                        >
+                          <BadgeCheck className="h-3 w-3" aria-hidden /> Verified
+                        </span>
+                      ) : (
+                        <span
+                          title="KYC/KYB check running for this deal"
+                          className="inline-flex shrink-0 items-center gap-1 rounded-full bg-destructive px-1.5 py-0.5 text-[10px] font-medium text-destructive-foreground"
+                        >
+                          KYC/KYB check pending
+                        </span>
+                      )}
+                      {counterpartyIdentity.activeSince && (
+                        <p className="w-full text-[11px] text-[#4169e1]/80">
+                          Active Since:{" "}
+                          {new Date(counterpartyIdentity.activeSince).toLocaleDateString(undefined, {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
                 <div className="min-w-0 space-y-1 text-right">
