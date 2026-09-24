@@ -1819,7 +1819,7 @@ const WAD_CHECK_SOURCE: Record<string, ScreeningCheck["kind"] | null> = {
 };
 
 const CHECK_TYPE_LABEL: Record<string, string> = {
-  id_document: "KYC",
+  id_document: "Cursory KYC",
   kyb: "KYB",
   aml: "Sanctions / PEP",
 };
