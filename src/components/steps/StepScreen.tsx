@@ -2079,11 +2079,8 @@ function WadStep({ tx, reload }: Props) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <TokenGateFooter cost={WAD_COST} />
           <div className="flex flex-wrap justify-end gap-2">
-            <Button size="sm" variant="outline" disabled={busy || shortOnTokens} onClick={() => decide("referred")}>
-              Refer
-            </Button>
             <Button size="sm" variant="outline" disabled={busy || shortOnTokens} onClick={() => decide("blocked")}>
-              Block
+              Exit
             </Button>
             <Button
               size="sm"
