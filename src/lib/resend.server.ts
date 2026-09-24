@@ -87,7 +87,7 @@ export async function sendEmail(
     subject: string;
     html: string;
     /** Records this send's (near-negligible, but tracked for completeness) cost against a
-     * transaction/org for the Expense report — best-effort, optional. */
+     * transaction/org for the Token Ledger — best-effort, optional. */
     usage?: AiUsageContext | undefined;
   },
 ): Promise<void> {

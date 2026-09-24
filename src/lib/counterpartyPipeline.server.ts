@@ -60,7 +60,7 @@ export type PipelineInput = {
   fallbackSubject: string;
   ownOrgName: string;
   /** Attributes this pipeline run's real AI/search cost to a transaction/org, for the Admin →
-   * Integrations Expense report — best-effort, optional. */
+   * Integrations Token Ledger — best-effort, optional. */
   transactionId?: string | null | undefined;
   orgId?: string | null | undefined;
 };

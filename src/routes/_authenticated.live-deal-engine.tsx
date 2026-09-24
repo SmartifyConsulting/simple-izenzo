@@ -70,6 +70,7 @@ import { loadRelevantCounterparties } from "@/lib/bidRelevance";
 import { nameKey } from "@/lib/dedupeOrgs";
 import { advance, fallbackReference, recordEvent, swapReferencePrefix, tradeKindOf, type TradeKind, type Transaction } from "@/lib/tx";
 import type { StageKey } from "@/lib/spine";
+import { openingFrameFor } from "@/lib/openingFrame";
 import { useAuth } from "@/lib/auth";
 import { classifyTradeSide, searchCounterparties } from "@/lib/izenzo.functions";
 
@@ -1040,10 +1041,15 @@ function LiveDealEngine() {
   /** Continue on the cleared Without a Doubt gate. This is the one deliberate hand-off into
    * execution: the moment is stamped on the transaction so the Legal Agreements pulse (and every
    * other device reading the deal) can see the bidder actually went there, the workflow's own step
-   * moves on so the gate is genuinely behind them, and the Business Docs frame is opened.
+   * moves on so the gate is genuinely behind them, and Step 3 is opened in place of Steps 1 and 2.
    *
    * Stamped with an update rather than advance() alone: advance() only writes stage/step, and the
-   * whole point of this column is to distinguish "WaD cleared" from "bidder continued past it". */
+   * whole point of this column is to distinguish "WaD cleared" from "bidder continued past it".
+   *
+   * The folding is done here rather than left to the effect below, because this is a live click:
+   * the person has just finished with Steps 1 and 2 and should see them close as Step 3 opens, the
+   * same collapse-on-advance every other hand-off in this workspace gets. The effect covers arriving
+   * at a deal that was already continued; it deliberately leaves the frames alone once it has. */
   async function continueFromWad() {
     if (!dealTx) return;
     await supabase
@@ -1055,6 +1061,16 @@ function LiveDealEngine() {
       } as never)
       .eq("id", dealTx.id);
     await reloadDeal();
+
+    // Step 1 (every trading record) and Step 2 (the WaD gate) are now behind the deal — collapse
+    // both, and open Step 3's frame so execution is what's on screen.
+    setStep1Open(false);
+    setConfirmedIntentOpen(false);
+    setSealedPoiOpen(false);
+    setOfferFrameOpen(false);
+    setSealedWadOpen(false);
+    setTradeSummaryOpen(false);
+    setMapPanel(null);
     setStagePanel("business-docs");
   }
 
@@ -1751,6 +1767,33 @@ function LiveDealEngine() {
         } catch {
           // Best-effort — resuming later just won't work if storage is unavailable.
         }
+
+        // Opening a bid by its ID (a hyperlink from a report or another screen) should land on the
+        // step the deal is actually up to, with that frame already expanded — otherwise the
+        // workspace opens on a column of collapsed headings and there's no sign of what to do next.
+        // Only the one current frame is opened; the rest stay folded away as records.
+        switch (openingFrameFor(tx).kind) {
+          case "businessDocs":
+            setSealedWadOpen(false);
+            if (tx.step === "business-docs") setStagePanel("business-docs");
+            break;
+          case "sealedWad":
+            setSealedWadOpen(true);
+            break;
+          case "offer":
+            // Negotiation is live — the Offer frame is the thing waiting on someone.
+            setOfferFrameOpen(true);
+            break;
+          case "sealedPoi":
+            setSealedPoiOpen(true);
+            break;
+          case "confirmedIntent":
+            setConfirmedIntentOpen(true);
+            break;
+        }
+        // Step 1 holds the record of how the deal got here; it only needs to be open while its own
+        // work is still live, which the stepOverrides-driven effect above already handles.
+        setStep1Open(false);
       } catch {
         // Deal not found or not visible to this user — leave the picker showing.
       }

@@ -644,6 +644,125 @@ export type AiUsageReport = {
   byTransaction: AiUsageByTransaction[];
 };
 
+/** A month → week → day tree for the ledger. Weeks are Monday-start, matching how the Inbox
+ * groups notifications, so the two reports read the same way. */
+export type UsageDay = {
+  key: string;
+  label: string;
+  costUsd: number;
+  count: number;
+  rows: AiUsageByTransaction[];
+  isToday: boolean;
+};
+export type UsageWeek = {
+  key: string;
+  label: string;
+  costUsd: number;
+  count: number;
+  days: UsageDay[];
+  isCurrentWeek: boolean;
+};
+export type UsageMonth = {
+  key: string;
+  label: string;
+  costUsd: number;
+  count: number;
+  weeks: UsageWeek[];
+  isCurrentMonth: boolean;
+};
+
+function startOfDay(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+/** Monday-start week, so a weekend doesn't split a working week across two headings. */
+function startOfWeek(d: Date): Date {
+  const s = startOfDay(d);
+  const dow = (s.getDay() + 6) % 7;
+  s.setDate(s.getDate() - dow);
+  return s;
+}
+
+/** Buckets transaction rows by the day each was last charged, then rolls those days into their
+ * week and month. A row's date is its most recent event, which is the only date the report has —
+ * this is a ledger of spend, not a record of when each deal was opened. */
+export function groupUsageRows(rows: AiUsageByTransaction[]): UsageMonth[] {
+  const today = startOfDay(new Date());
+  const thisWeek = startOfWeek(today);
+  const monthMap = new Map<string, UsageMonth>();
+
+  for (const row of rows) {
+    const latest = row.events.reduce<Date | null>((acc, e) => {
+      const d = new Date(e.createdAt);
+      return !acc || d > acc ? d : acc;
+    }, null);
+    if (!latest) continue;
+
+    const day = startOfDay(latest);
+    const week = startOfWeek(latest);
+    const two = (n: number) => String(n).padStart(2, "0");
+    const monthKey = `${day.getFullYear()}-${two(day.getMonth() + 1)}`;
+    const weekKey = `${week.getFullYear()}-${two(week.getMonth() + 1)}-${two(week.getDate())}`;
+    const dayKey = `${day.getFullYear()}-${two(day.getMonth() + 1)}-${two(day.getDate())}`;
+
+    let month = monthMap.get(monthKey);
+    if (!month) {
+      month = {
+        key: monthKey,
+        label: day.toLocaleDateString(undefined, { month: "long", year: "numeric" }),
+        costUsd: 0,
+        count: 0,
+        weeks: [],
+        isCurrentMonth: day.getFullYear() === today.getFullYear() && day.getMonth() === today.getMonth(),
+      };
+      monthMap.set(monthKey, month);
+    }
+
+    let weekBucket = month.weeks.find((w) => w.key === weekKey);
+    if (!weekBucket) {
+      weekBucket = {
+        key: weekKey,
+        label: `Week of ${week.toLocaleDateString(undefined, { day: "numeric", month: "short" })}`,
+        costUsd: 0,
+        count: 0,
+        days: [],
+        isCurrentWeek: week.getTime() === thisWeek.getTime(),
+      };
+      month.weeks.push(weekBucket);
+    }
+
+    let dayBucket = weekBucket.days.find((d) => d.key === dayKey);
+    if (!dayBucket) {
+      const isToday = day.getTime() === today.getTime();
+      dayBucket = {
+        key: dayKey,
+        label: isToday ? "Today" : day.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" }),
+        costUsd: 0,
+        count: 0,
+        rows: [],
+        isToday,
+      };
+      weekBucket.days.push(dayBucket);
+    }
+
+    dayBucket.rows.push(row);
+    dayBucket.costUsd += row.costUsd;
+    dayBucket.count += row.count;
+    weekBucket.costUsd += row.costUsd;
+    weekBucket.count += row.count;
+    month.costUsd += row.costUsd;
+    month.count += row.count;
+  }
+
+  // Newest first at every level — the current month, its current week and today all lead.
+  const months = [...monthMap.values()].sort((a, b) => b.key.localeCompare(a.key));
+  for (const m of months) {
+    m.weeks.sort((a, b) => b.key.localeCompare(a.key));
+    for (const w of m.weeks) w.days.sort((a, b) => b.key.localeCompare(a.key));
+  }
+  return months;
+}
+
 /** What every external AI/integration call has actually cost, estimated from ai_usage_events —
  * the real spend on the admin's own OpenAI, Tavily, Didit and Resend accounts, as opposed to
  * getCreditSpendReport's platform-internal token economy. Costs are estimates from the rates

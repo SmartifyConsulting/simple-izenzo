@@ -8,6 +8,7 @@ import { AuthTabs } from "@/components/auth/AuthTabs";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { fallbackReference, when } from "@/lib/tx";
+import { registrationInProgress } from "@/lib/registrationFlow";
 
 type Search = { next?: string | undefined };
 
@@ -137,7 +138,10 @@ function ActiveDealsPanel() {
         )}
       </div>
       {deals.length === HOME_DEALS_LIMIT && (
-        <Link to="/trades" className="mt-2.5 block text-[11px] font-medium text-primary hover:underline">
+        <Link
+          to="/trades"
+          className="mt-2.5 block text-[11px] font-medium text-primary hover:underline"
+        >
           View all in Trades →
         </Link>
       )}
@@ -156,6 +160,9 @@ function AlphaBravoHome() {
   useEffect(() => {
     if (loading) return;
     if (user) {
+      // A sign-up that is still on its final step stays put — it is signed in already, so without
+      // this the wizard would be navigated away from before the document step could render.
+      if (registrationInProgress()) return;
       // Only an explicit destination (a deep link that required sign-in) still bounces a
       // signed-in visitor onward — arriving fresh (a new tab, a bookmark, relaunching the app)
       // now lands here, on the home screen, instead of skipping straight past it.

@@ -30,7 +30,7 @@ function missingKeyResponse(): Response {
  * an ordinary OpenAI-style body and get an ordinary reply back.
  *
  * Passing `usage` records the real cost of this call (estimated from its token counts) against a
- * transaction/org in ai_usage_events, for the Admin → Integrations Expense report — omit it for
+ * transaction/org in ai_usage_events, for the Admin → Integrations Token Ledger — omit it for
  * calls that aren't meaningfully attributable to one (best-effort, optional at every call site). */
 export async function callAiChat(
   apiKey: string | null,
