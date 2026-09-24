@@ -2122,7 +2122,7 @@ function WadStep({ tx, reload, onContinue }: Props) {
               disabled={busy || shortOnTokens}
               onClick={() => setSkipDialogOpen(true)}
             >
-              Skip
+              Skip Verification
             </Button>
             <Button size="sm" variant="outline" disabled={busy || shortOnTokens} onClick={() => setExitConfirmOpen(true)}>
               Exit

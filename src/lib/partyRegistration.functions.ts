@@ -57,13 +57,16 @@ export const getPartyRegistrationInfo = createServerFn({ method: "POST" })
     const results: PartyRegistrationInfo[] = [];
     for (const s of sides) {
       if (!s.orgId) continue;
-      const { data: member } = await supabaseAdmin
+      // Earliest member of the org, not filtered by role: .maybeSingle() with a role filter threw
+      // outright (and silently emptied this whole result) on any org with more than one "owner"
+      // row, which an org with several members can genuinely have.
+      const { data: members } = await supabaseAdmin
         .from("org_members")
         .select("user_id")
         .eq("org_id", s.orgId)
-        .eq("role", "owner")
-        .maybeSingle();
-      const memberId = (member as { user_id?: string } | null)?.user_id;
+        .order("created_at", { ascending: true })
+        .limit(1);
+      const memberId = (members as { user_id?: string }[] | null)?.[0]?.user_id;
       if (!memberId) continue;
 
       const { data: profileRow } = await supabaseAdmin.from("profiles").select("*").eq("id", memberId).maybeSingle();
