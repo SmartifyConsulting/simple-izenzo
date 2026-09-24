@@ -7,8 +7,7 @@ import { SubmitBidButton } from "@/components/marketing/SubmitBidButton";
 import { AuthTabs } from "@/components/auth/AuthTabs";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { fallbackReference } from "@/lib/tx";
-import { cn } from "@/lib/utils";
+import { fallbackReference, when } from "@/lib/tx";
 
 type Search = { next?: string | undefined };
 
@@ -72,7 +71,7 @@ const STAGES = [
   },
 ];
 
-/** A signed-in visitor's still-open bids/offers — shown beside the search bar on the home screen
+/** A signed-in visitor's still-open bids/offers — shown under the search bar on the home screen
  * so relaunching the app (a new tab, a bookmark) surfaces what's already in flight instead of
  * only offering to start something new. Linkable straight into the Live Workspace. */
 function ActiveDealsPanel() {
@@ -84,13 +83,20 @@ function ActiveDealsPanel() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("transactions")
-        .select("id, title, reference, commodity, stage")
+        .select("id, title, reference, commodity, stage, created_at")
         .or(`org_id.eq.${org!.id},counterparty_org_id.eq.${org!.id}`)
         .not("stage", "in", "(finality,memory)")
         .order("updated_at", { ascending: false })
         .limit(6);
       if (error) throw error;
-      return (data ?? []) as { id: string; title: string | null; reference: string | null; commodity: string | null; stage: string }[];
+      return (data ?? []) as {
+        id: string;
+        title: string | null;
+        reference: string | null;
+        commodity: string | null;
+        stage: string;
+        created_at: string;
+      }[];
     },
   });
 
@@ -110,8 +116,13 @@ function ActiveDealsPanel() {
               search={{ tx: d.id }}
               className="flex items-center justify-between gap-2 rounded-lg border border-success/30 bg-success/5 px-2.5 py-1.5 text-xs transition-colors hover:border-success/60 hover:bg-success/10"
             >
-              <span className="min-w-0 flex-1 truncate font-medium text-foreground">
-                {d.reference ?? d.commodity ?? d.title ?? fallbackReference(d.id, "bid")}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-medium text-foreground">
+                  {d.reference ?? fallbackReference(d.id, "bid")}
+                </span>
+                <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                  {d.title ?? d.commodity ?? "Untitled"} · Created {when(d.created_at)}
+                </span>
               </span>
               <span className="shrink-0 rounded-full bg-success/15 px-1.5 py-0.5 text-[10px] font-medium text-success">
                 {d.stage}
@@ -170,13 +181,16 @@ function AlphaBravoHome() {
         )}
       </div>
 
-      {/* The search bar gives up a quarter of its width once a signed-in visitor's active deals
-          have somewhere to go — full width for a signed-out visitor, who has nothing to show
-          there. */}
-      <div className={cn("mt-5 grid gap-4", user ? "lg:grid-cols-[3fr_1fr]" : "grid-cols-1")}>
+      <div className="mt-5 w-full">
         <HeroMatchCard />
-        {user && <ActiveDealsPanel />}
       </div>
+
+      {/* A signed-in visitor's active deals sit under the search bar, not beside it. */}
+      {user && (
+        <div className="mt-4">
+          <ActiveDealsPanel />
+        </div>
+      )}
 
       <p className="mt-8 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
         How a match plays out
