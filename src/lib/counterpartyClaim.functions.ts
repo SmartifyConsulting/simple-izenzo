@@ -14,7 +14,15 @@ export const claimCounterparty = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    const { data: cp, error: cpErr } = await supabase
+    // Read both the counterparty row and the deal it belongs to through the admin client, not the
+    // caller's: both tables' RLS policies only grant a select once transactions.counterparty_org_id
+    // already names one of the caller's companies, which is exactly what this handler is about to
+    // write — the whole point of a claim link is reaching a row the caller can't see yet. Through
+    // the caller's own client, `cp` read back as absent for every brand-new claim, failing with
+    // "This link is no longer valid." before the person had any chance to link their org. Nothing
+    // is returned from here beyond what the caller already holds a link to.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: cp, error: cpErr } = await supabaseAdmin
       .from("counterparties")
       .select("id, name, transaction_id, status")
       .eq("id", data.counterpartyId)
@@ -25,12 +33,6 @@ export const claimCounterparty = createServerFn({ method: "POST" })
       throw new Error("This counterparty has not been chosen on this deal yet — the link isn't active.");
     }
 
-    // Read the deal through the admin client, not the caller's: the counterparty-org policies only
-    // grant a select once transactions.counterparty_org_id already names one of their companies,
-    // which is exactly what this handler is about to write. Through the caller's client the row
-    // read back as absent, so every claim-link click failed with "This deal is no longer available."
-    // Nothing is returned from here beyond what the caller already holds a link to.
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: tx, error: txErr } = await supabaseAdmin
       .from("transactions")
       .select("id, org_id, counterparty_org_id, title, reference")
