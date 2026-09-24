@@ -196,7 +196,6 @@ export function WorkspaceTaskbar() {
     }
   }
 
-  if (!isWorkspacePath(pathname)) return null;
 
   function activate(id: string, mode: string) {
     if (mode === "minimized") setMode(id, "maximized");
@@ -247,6 +246,8 @@ export function WorkspaceTaskbar() {
       cancelled = true;
     };
   }, [org?.id, tabIds, register]);
+
+  if (!isWorkspacePath(pathname)) return null;
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 flex items-end gap-1 bg-muted/60 px-2 pt-1.5 backdrop-blur">
