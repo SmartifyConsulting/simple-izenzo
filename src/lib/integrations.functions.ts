@@ -435,9 +435,12 @@ export type ProviderPricingEntry = { text: string; fetchedAt: string; sourceUrl?
 export type ProviderPricingCache = Record<string, ProviderPricingEntry>;
 
 const PRICING_SETTINGS_KEY = "provider_pricing_cache";
-/** Refreshed at most once a month — pricing pages don't move often enough to justify checking on
- * every page load, and this is one shared cache for every org, not a per-org lookup. */
-const PRICING_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+/** Refreshed at most once a week — also the cadence the scheduled Edge Function
+ * (supabase/functions/refresh-provider-pricing) runs on via pg_cron, so an admin opening
+ * Integrations mid-week still sees pricing no older than the last scheduled run, and this
+ * lazy path covers the gap if that job is ever paused. One shared cache for every org, not a
+ * per-org lookup. */
+const PRICING_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 /** The standard model only — the heavier gpt-5 tier (Izenzo AI+'s model) is reserved for AI+
  * Recommendations and never used for background admin lookups like this one. */
 const PRICING_MODELS = ["gpt-5-mini", "gpt-5"];
