@@ -560,7 +560,7 @@ export const classifySignatureDocuments = createServerFn({ method: "POST" })
       const { loadOpenAiApiKey } = await import("@/lib/openai.server");
       const apiKey = await loadOpenAiApiKey();
       if (!apiKey) return { flagged: [] };
-      const { callAiChat } = await import("@/lib/lovableAi.server");
+      const { callAiChat } = await import("@/lib/aiChat.server");
       const res = await callAiChat(
         apiKey,
         {

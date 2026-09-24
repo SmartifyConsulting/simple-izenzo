@@ -118,7 +118,7 @@ async function findOfficialWebsite(
       const { tavilySearch } = await import("@/lib/tavily.server");
       const results = await tavilySearch(tavilyKey, `${name} official website`, { max: 5, timeoutMs: 20_000 });
       if (results.length === 0) return null;
-      const { callAiChat } = await import("@/lib/lovableAi.server");
+      const { callAiChat } = await import("@/lib/aiChat.server");
       const res = await callAiChat(apiKey, {
           model: "gpt-5-mini",
           messages: [
@@ -197,7 +197,7 @@ async function readContactFromSite(
     }
     if (!pageText.trim()) return { email: null, phone: null };
 
-    const { callAiChat } = await import("@/lib/lovableAi.server");
+    const { callAiChat } = await import("@/lib/aiChat.server");
     const res = await callAiChat(apiKey, {
         model: "gpt-5-mini",
         messages: [
@@ -438,7 +438,7 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
     if (!toEmail && website && apiKey) {
       try {
         const domain = new URL(website).hostname.replace(/^www\./, "");
-        const { callAiChat } = await import("@/lib/lovableAi.server");
+        const { callAiChat } = await import("@/lib/aiChat.server");
         const res = await callAiChat(apiKey, {
             model: "gpt-5-mini",
             messages: [

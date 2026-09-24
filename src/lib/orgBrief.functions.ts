@@ -54,7 +54,7 @@ export const generateOrgBrief = createServerFn({ method: "POST" })
       .filter(Boolean)
       .join("\n");
 
-    const { callAiChat } = await import("@/lib/lovableAi.server");
+    const { callAiChat } = await import("@/lib/aiChat.server");
     const res = await callAiChat(apiKey, {
         model: "gpt-5-mini",
         messages: [

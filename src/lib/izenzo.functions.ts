@@ -17,12 +17,12 @@ async function sha256(input: string) {
 
 const txInput = (data: unknown) => z.object({ transactionId: z.string().uuid() }).parse(data);
 
-/** GPT-6 Astra is reserved strictly for the AI+ Recommendations engine (decisionPack.functions.ts).
- * Counterparty search and every web check — the "AI" step and the "AI+" step alike — run on the
- * standard model through Tavily (public internet search) and OpenAI. The "AI+" kind still gets a
- * more thorough pass (higher reasoning effort, a bigger token budget), just never a different,
- * heavier model — Astra was previously used here too, which both broke that separation and made
- * every search wait on Astra's own latency for no benefit specific to search. */
+/** The heavier model (gpt-5) is reserved strictly for the AI+ Recommendations engine
+ * (decisionPack.functions.ts). Counterparty search and every web check — the "AI" step and the
+ * "AI+" step alike — run on the standard model through Tavily (public internet search) and OpenAI.
+ * The "AI+" kind still gets a more thorough pass (higher reasoning effort, a bigger token budget),
+ * just never a different, heavier model — Astra was previously used here too, which both broke that
+ * separation and made every search wait on Astra's own latency for no benefit specific to search. */
 const AI_MODEL = "gpt-5-mini";
 
 function aiPlusOptions(model: string, kind: "ai" | "ai_plus" = "ai_plus") {
@@ -33,23 +33,18 @@ function aiPlusOptions(model: string, kind: "ai" | "ai_plus" = "ai_plus") {
   };
 }
 
-/** Sends one search request. It uses the OpenAI account saved under Admin → Integrations when one
- * is saved, and falls back to the built-in AI service when it is not, so a missing OpenAI key never
- * dead-ends a search. Transient request limits are retried and failures are worded plainly. */
+/** Sends one search request to the OpenAI account saved under Admin → Integrations. There is no
+ * gateway fallback: when no key is saved the request fails with wording that says so rather than
+ * billing a different account. Transient request limits are retried and failures are worded
+ * plainly. */
 async function chatCompletion(apiKey: string | null, body: unknown): Promise<Response> {
-  if (apiKey) {
-    const { callOpenAiChat } = await import("@/lib/openaiCall.server");
-    return callOpenAiChat(apiKey, body);
-  }
-  const { callLovableAiChat } = await import("@/lib/lovableAi.server");
-  return callLovableAiChat(body, { retries: 2 });
+  const { callAiChat } = await import("@/lib/aiChat.server");
+  return callAiChat(apiKey, body);
 }
 
 async function aiFailureMessage(res: Response): Promise<string> {
-  const { isLovableAiResponse, lovableAiFailureMessage } = await import("@/lib/lovableAi.server");
-  if (isLovableAiResponse(res)) return lovableAiFailureMessage(res);
-  const { openAiFailureMessage } = await import("@/lib/openaiCall.server");
-  return openAiFailureMessage(res);
+  const { aiChatFailureMessage } = await import("@/lib/aiChat.server");
+  return aiChatFailureMessage(res);
 }
 
 
@@ -1353,7 +1348,7 @@ export const extractMaterialTerms = createServerFn({ method: "POST" })
     try {
       // This has a safe fallback below, so it never spends the retry budget a free OpenAI
       // account allows — the document read is what needs those retries.
-      const { callAiChat } = await import("@/lib/lovableAi.server");
+      const { callAiChat } = await import("@/lib/aiChat.server");
       const res = await callAiChat(
         apiKey,
         {
@@ -1434,7 +1429,7 @@ export const classifyDocument = createServerFn({ method: "POST" })
     try {
       // Filename heuristics below cover this completely, so it gives up at once on a busy
       // account rather than using up the few requests a free OpenAI account allows per minute.
-      const { callAiChat } = await import("@/lib/lovableAi.server");
+      const { callAiChat } = await import("@/lib/aiChat.server");
       const res = await callAiChat(
         apiKey,
         {

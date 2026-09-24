@@ -438,8 +438,8 @@ const PRICING_SETTINGS_KEY = "provider_pricing_cache";
 /** Refreshed at most once a month — pricing pages don't move often enough to justify checking on
  * every page load, and this is one shared cache for every org, not a per-org lookup. */
 const PRICING_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
-/** gpt-5-mini only — Astra (Izenzo AI+'s model) is reserved for AI+ Recommendations and never used
- * for background admin lookups like this one. */
+/** The standard model only — the heavier gpt-5 tier (Izenzo AI+'s model) is reserved for AI+
+ * Recommendations and never used for background admin lookups like this one. */
 const PRICING_MODELS = ["gpt-5-mini", "gpt-5"];
 
 function pricingIsStale(entry: ProviderPricingEntry | undefined): boolean {

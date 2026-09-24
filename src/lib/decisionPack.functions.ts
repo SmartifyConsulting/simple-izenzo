@@ -21,7 +21,7 @@ import {
  * proposal, and that adoption is its own attributed, timestamped, append-only event.
  */
 
-const AI_PLUS_MODEL = "gpt-6-astra";
+const AI_PLUS_MODEL = "gpt-5";
 
 export const PROPOSAL_TYPES = [
   "counterparty",
@@ -630,7 +630,7 @@ export const runDecisionPack = createServerFn({ method: "POST" })
         ]
           .filter(Boolean)
           .join("\n\n");
-        const { callAiChat } = await import("@/lib/lovableAi.server");
+        const { callAiChat } = await import("@/lib/aiChat.server");
         const res = await callAiChat(apiKey, {
           model: AI_PLUS_MODEL,
           reasoning_effort: "medium",
@@ -726,22 +726,11 @@ export const runDecisionPack = createServerFn({ method: "POST" })
             { role: "user", content: prompt },
           ],
         };
-        // The saved OpenAI account currently has no credit and refuses every request, so the
-        // built-in AI service is used while that is the case. The saved credential stays in place
-        // and this preference is all that changes to go back to it.
-        const { lovableAiConfigured, callLovableAiChat, lovableAiFailureMessage } = await import(
-          "@/lib/lovableAi.server"
-        );
-        const useLovable = lovableAiConfigured();
-        let res: Response;
-        if (useLovable) {
-          res = await callLovableAiChat(request, { retries: 2 });
-        } else {
-          const { callOpenAiChat } = await import("@/lib/openaiCall.server");
-          res = await callOpenAiChat(apiKey, request, { retries: 2 });
-        }
+        // AI+ runs on the OpenAI account saved under Admin → Integrations. The built-in Lovable
+        // service is no longer used for any AI traffic.
+        const { callOpenAiChat } = await import("@/lib/openaiCall.server");
+        const res = await callOpenAiChat(apiKey, request, { retries: 2 });
         if (!res.ok) {
-          if (useLovable) throw new Error(await lovableAiFailureMessage(res));
           const { openAiFailureMessage } = await import("@/lib/openaiCall.server");
           const message = await openAiFailureMessage(res);
           const body = await res.text().catch(() => "");

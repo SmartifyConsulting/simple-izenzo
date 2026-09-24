@@ -186,9 +186,9 @@ async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
     // One retry with a stricter instruction, so a reply that came back in the wrong shape isn't
     // treated as an unreadable document.
     async function ask(extra: string) {
-      const { callAiChat, aiChatFailureMessage } = await import("@/lib/lovableAi.server");
+      const { callAiChat, aiChatFailureMessage } = await import("@/lib/aiChat.server");
       // Reading the documents is the request that matters, so it gets the full retry budget. It
-      // goes to the built-in AI when that is available, otherwise to the saved OpenAI account.
+      // goes to the OpenAI account saved under Admin → Integrations.
       const res = await callAiChat(apiKey!, {
         model: "gpt-5-mini",
         messages: [
@@ -204,14 +204,11 @@ async function readAndSummarize(supabase: AuthedClient, transactionId: string) {
       });
       if (!res.ok) {
         const message = await aiChatFailureMessage(res);
-        const { isLovableAiResponse } = await import("@/lib/lovableAi.server");
-        if (!isLovableAiResponse(res)) {
-          const body = await res.clone().text().catch(() => "");
-          const { isOpenAiQuotaExceeded } = await import("@/lib/openai.server");
-          if (isOpenAiQuotaExceeded(body)) {
-            const { alertLowFunds } = await import("@/lib/opsAlerts.server");
-            void alertLowFunds("OpenAI", res.status, body);
-          }
+        const body = await res.clone().text().catch(() => "");
+        const { isOpenAiQuotaExceeded } = await import("@/lib/openai.server");
+        if (isOpenAiQuotaExceeded(body)) {
+          const { alertLowFunds } = await import("@/lib/opsAlerts.server");
+          void alertLowFunds("OpenAI", res.status, body);
         }
         throw new Error(message);
       }

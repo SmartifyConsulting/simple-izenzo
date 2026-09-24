@@ -17,7 +17,6 @@ vi.mock("@/lib/tavily.server", () => ({
 }));
 vi.mock("@/lib/openaiWebSearch.server", () => ({
   webSearch: async () => ({ text: webText, sources: webSources, model: "test-model" }),
-  gatewayWebSearch: async () => ({ text: webText, sources: webSources, model: "test-model" }),
 }));
 
 import { findCounterparties, type PipelineInput } from "./counterpartyPipeline.server";

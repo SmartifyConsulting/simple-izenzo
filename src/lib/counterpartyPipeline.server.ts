@@ -81,8 +81,8 @@ const list = (v: unknown, max = 8): string[] =>
 
 /** One JSON-answering request to the chat model. Throws with a plain reason on failure.
  *
- * Which service answers depends on the search: the ordinary search runs on the OpenAI account saved
- * under Admin → Integrations, and AI+ runs on the built-in model. */
+ * Which service answers depends on the search: every search runs on the OpenAI account saved
+ * under Admin → Integrations. */
 async function chatJson(
   apiKey: string | null,
 
@@ -92,7 +92,6 @@ async function chatJson(
   user: string,
   kind: "ai" | "ai_plus",
 ): Promise<Record<string, unknown>> {
-  const { lovableAiConfigured, callLovableAiChat, lovableAiFailureMessage } = await import("@/lib/lovableAi.server");
   const { callOpenAiChat, openAiFailureMessage } = await import("@/lib/openaiCall.server");
   const request = {
     model,
@@ -104,12 +103,12 @@ async function chatJson(
       { role: "user", content: user },
     ],
   };
-  const useLovable = (kind === "ai_plus" || !apiKey) && lovableAiConfigured();
-  const res = useLovable
-    ? await callLovableAiChat(request, { retries: 2 })
-    : await callOpenAiChat(apiKey ?? "", request, { retries: 2 });
+  if (!apiKey) {
+    throw new Error("AI is not connected: add an OpenAI API key under Admin → Integrations.");
+  }
+  const res = await callOpenAiChat(apiKey, request, { retries: 2 });
 
-  if (!res.ok) throw new Error(useLovable ? await lovableAiFailureMessage(res) : await openAiFailureMessage(res));
+  if (!res.ok) throw new Error(await openAiFailureMessage(res));
 
   const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
   const content = json.choices?.[0]?.message?.content ?? "";

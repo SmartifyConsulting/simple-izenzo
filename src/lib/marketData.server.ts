@@ -34,7 +34,7 @@ export async function loadMarketContext(opts: {
     const { webSearch } = await import("@/lib/openaiWebSearch.server");
     const r = await webSearch({
       apiKey: opts.apiKey,
-      models: ["gpt-6-astra", "gpt-5"],
+      models: ["gpt-5"],
       effort: "low",
       timeoutMs: 60_000,
       instructions:
