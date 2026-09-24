@@ -1,0 +1,15 @@
+-- Backfills the Inbox notification that should have been written when Holarc Health (Pty) Ltd was
+-- matched to BID9537009 (counterparty d6ecf4ae-93ac-4fde-a3cf-d3ce615d181d, transaction
+-- 47f9ce48-a83b-4145-b291-e696fd6e59bd) but was silently skipped because the outreach email's
+-- address matched a stale duplicate org instead of the real support@holarchealth.com profile.
+-- Wording matches exactly what counterpartyOutreach.functions.ts would have written.
+
+insert into public.notifications (user_id, org_id, transaction_id, title, body)
+select
+  p.id,
+  p.org_id,
+  '47f9ce48-a83b-4145-b291-e696fd6e59bd',
+  'BID9537009 — you''ve been matched to a live opportunity',
+  'Holarc Health (Pty) Ltd has been selected as a potential counterparty for Holarc Health New Bid BID9537009. Open the deal to see the full details and respond.'
+from public.profiles p
+where lower(p.email) = 'support@holarchealth.com';

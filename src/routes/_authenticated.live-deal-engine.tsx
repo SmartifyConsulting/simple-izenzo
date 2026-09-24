@@ -799,12 +799,9 @@ function LiveDealEngine() {
   const kindWord = workspaceKind === "offer" ? "Offer" : workspaceKind === "bid" ? "Bid" : "Bid/Offer";
   const registrationLabel = `${kindWord} Registration`;
   const informationLabel = `${kindWord} Information`;
-  const registrationPill =
-    workspaceKind === "offer"
-      ? "bg-[#4169e1] text-white"
-      : workspaceKind === "bid"
-        ? "bg-emerald-600 text-white"
-        : "bg-[var(--lw-pill-bg)] text-[var(--lw-pill-fg)]";
+  // Plain grey, the same as every other form-heading pill in this workspace — Bid Registration
+  // isn't a special case just because a bid/offer has a colour of its own elsewhere on the card.
+  const registrationPill = "bg-[var(--lw-pill-bg)] text-[var(--lw-pill-fg)]";
   const { data: workspaceDocs = [], isPending: workspaceDocsPending } = useQuery({
     queryKey: ["documents", dealTx?.id],
     enabled: Boolean(dealTx?.id),
@@ -2591,8 +2588,8 @@ function LiveDealEngine() {
                     (negotiationTurn === "accepted" || dealTx.wad_completed_at) &&
                     counterpartyIdentity?.name && (
                     <div className="mt-1.5 flex flex-wrap items-center gap-2 border-t border-border pt-1.5">
-                      <User className="h-4 w-4 shrink-0 text-[#3457e6]" aria-label="Counterparty" />
-                      <span className="min-w-0 truncate text-sm font-bold text-[#3457e6]">
+                      <User className="h-4 w-4 shrink-0 text-[#4169e1]" aria-label="Counterparty" />
+                      <span className="min-w-0 truncate rounded-full bg-[#4169e1] px-2.5 py-1 text-sm font-bold text-white">
                         {counterpartyIdentity.name}
                       </span>
                       {counterpartyIdentity.verified ? (
@@ -2611,7 +2608,7 @@ function LiveDealEngine() {
                         </span>
                       )}
                       {counterpartyIdentity.activeSince && (
-                        <p className="w-full pl-6 text-[11px] text-[#3457e6]/80">
+                        <p className="w-full pl-6 text-[11px] text-[#4169e1]/80">
                           Active Since:{" "}
                           {new Date(counterpartyIdentity.activeSince).toLocaleDateString(undefined, {
                             year: "numeric",
