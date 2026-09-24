@@ -2794,7 +2794,32 @@ function LiveDealEngine() {
                         </span>
                       </button>
                       {/* The choice action lives at the bottom of the records below. */}
-
+                      {dbHasChosenParty && !dealTx?.poi_sealed_at && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <button
+                              type="button"
+                              title="Not happy with the online screening findings? Pick someone else."
+                              className="shrink-0 text-[11px] font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                            >
+                              Choose a different party
+                            </button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Choose a different party?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                The party you picked is released and the counterparty list opens again, in case the
+                                screening findings above changed your mind. Nothing already screened is lost.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Keep this party</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => void reopenChoice()}>Reopen the list</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
                     </div>
 
                     {/* Same slim progress bar treatment as the search above — inside this frame
