@@ -9,6 +9,7 @@ export function AuthTabs({
   defaultTab,
   className,
   compact = false,
+  initialSignupStep,
 }: {
   next?: string | undefined;
   defaultTab?: "signin" | "signup" | undefined;
@@ -16,6 +17,7 @@ export function AuthTabs({
   /** Tighter spacing throughout — used when this sits in a small space (the home page hero)
    * rather than the standalone /auth page. */
   compact?: boolean;
+  initialSignupStep?: 1 | 2 | 3;
 }) {
   return (
     <div className={className}>
@@ -39,7 +41,7 @@ export function AuthTabs({
           <SignInForm next={next} hideHeader hideFooterLink compact={compact} />
         </TabsContent>
         <TabsContent value="signup" className={compact ? "pt-2" : "pt-6"}>
-          <SignUpForm next={next} hideHeader hideFooterLink compact={compact} />
+          <SignUpForm next={next} initialStep={initialSignupStep} hideHeader hideFooterLink compact={compact} />
         </TabsContent>
       </Tabs>
     </div>
