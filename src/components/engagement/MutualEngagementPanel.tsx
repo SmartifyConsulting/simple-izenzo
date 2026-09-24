@@ -139,6 +139,11 @@ export function MutualEngagementPanel({
           enforces this too: only the counterparty ever finalises the deal). */}
       {!resolved && !isObserver && (
         <>
+          {waitingOnOther && (
+            <p className="text-[11px] text-muted-foreground">
+              Waiting for {sideWord(turnSide)} to decide — accept, counter or reject.
+            </p>
+          )}
           <div className="flex flex-wrap gap-2">
             <Button
               size="sm"
@@ -171,11 +176,6 @@ export function MutualEngagementPanel({
               {busy === "opted_out" ? "Rejecting…" : "Reject"}
             </Button>
           </div>
-          {waitingOnOther && (
-            <p className="text-[11px] text-muted-foreground">
-              Waiting for {sideWord(turnSide)} to decide — accept, counter or reject.
-            </p>
-          )}
         </>
       )}
       {isObserver && (
@@ -189,12 +189,15 @@ export function MutualEngagementPanel({
   return (
     <div className="space-y-4">
       {offerOnly ? (
-        offerBody
+        // No header here — the caller's own frame already carries the "Offer" heading — but the
+        // buttons (flickering or live) still sit inside a proper bordered box of their own,
+        // instead of floating bare in the parent panel.
+        <div className="rounded-xl border border-border">{offerBody}</div>
       ) : (
         <section className="rounded-xl border border-border">
-          <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+          <div className="flex items-center gap-2 px-4 py-3">
             <MessageSquareWarning className="h-4 w-4 text-primary" />
-            <h2 className="label-caps font-sans">The Offer</h2>
+            <h2 className="label-caps font-sans">Offer</h2>
           </div>
           {offerBody}
         </section>
