@@ -782,6 +782,7 @@ export function InlineFrame({
   reload,
   onClose,
   onChangeParty,
+  onContinue,
   viewOnly,
   bare,
 }: {
@@ -796,6 +797,9 @@ export function InlineFrame({
   /** Offered on Intent and Proof of Intent (before the seal is paid for) so a user who changes
    * their mind can reopen the counterparty choice instead of being stuck with their first pick. */
   onChangeParty?: (() => void) | undefined;
+  /** Moves the Live Workspace on to the next step's own panel — passed through to whichever step
+   * screen ends in an explicit "Continue". */
+  onContinue?: (() => void) | undefined;
   /** True when this is a past, already-completed stage opened from the map — shown as a frozen
    * snapshot rather than the live, editable step, since its data can't be changed anymore. */
   viewOnly?: boolean | undefined;
@@ -839,7 +843,7 @@ export function InlineFrame({
       <p className="rounded-xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">{locked}.</p>
     ) : (
       <>
-        <StepScreen tx={tx} stage={stage} step={step} reload={reload} onChangeParty={onChangeParty} />
+        <StepScreen tx={tx} stage={stage} step={step} reload={reload} onChangeParty={onChangeParty} onContinue={onContinue} />
         {/* Intent and Seal Intent now each have their own "Change Party" button in their own
             footer — this standalone link is no longer needed for either. */}
         {step !== "intent" && step !== "poi" && changePartyLink}
@@ -883,7 +887,7 @@ export function InlineFrame({
           <StepScreen tx={tx} stage={stage} step={step} reload={reload} />
         </div>
       ) : (
-        <StepScreen tx={tx} stage={stage} step={step} reload={reload} onChangeParty={onChangeParty} />
+        <StepScreen tx={tx} stage={stage} step={step} reload={reload} onChangeParty={onChangeParty} onContinue={onContinue} />
       )}
       {/* Intent and Seal Intent now each have their own "Change Party" button in their own
           footer — this standalone link is no longer needed for either. */}

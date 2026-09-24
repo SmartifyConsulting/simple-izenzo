@@ -3016,6 +3016,15 @@ function LiveDealEngine() {
                           step="wad"
                           reload={() => void reloadDeal()}
                           onClose={() => setStagePanel(null)}
+                          onContinue={() => {
+                            // Same collapse-on-advance behaviour every other folded record in
+                            // this workspace gets — the frame you just finished with tucks away
+                            // once you move on, rather than staying pinned open.
+                            setSealedWadOpen(false);
+                            setSealedPoiOpen(false);
+                            setOfferFrameOpen(false);
+                            setStagePanel("business-docs");
+                          }}
                         />
                       </div>
                     )}

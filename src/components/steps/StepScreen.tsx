@@ -84,6 +84,9 @@ type Props = {
   /** Releases the chosen counterparty and reopens the list — only meaningful on Intent/Seal
    * Intent, where it's still possible to change who this deal is with. */
   onChangeParty?: (() => void) | undefined;
+  /** Moves the Live Workspace on to the next step's own panel — only meaningful where a step ends
+   * in an explicit "Continue" rather than auto-advancing on its own. */
+  onContinue?: (() => void) | undefined;
 };
 
 /* ---------- shared bits ---------- */
@@ -1832,7 +1835,7 @@ async function sha256Hex(text: string) {
     .join("");
 }
 
-function WadStep({ tx, reload }: Props) {
+function WadStep({ tx, reload, onContinue }: Props) {
   const complete = useServerFn(completeWad);
   const navigate = useNavigate();
   const { org } = useAuth();
@@ -1981,26 +1984,6 @@ function WadStep({ tx, reload }: Props) {
     });
   }
 
-  async function downloadCleared() {
-    const { data: doc } = await supabase
-      .from("documents")
-      .select("storage_path, name")
-      .eq("transaction_id", tx.id)
-      .eq("doc_type", "certificate")
-      .ilike("name", "Without a Doubt%")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (!doc?.storage_path) {
-      toast.error("The clearance certificate is not on file for this deal.");
-      return;
-    }
-    const { data: signed } = await supabase.storage
-      .from("documents")
-      .createSignedUrl(doc.storage_path, 120, { download: doc.name });
-    if (signed?.signedUrl) window.open(signed.signedUrl, "_blank");
-  }
-
   async function decide(decision: "cleared" | "referred" | "blocked", overrideChecks?: Record<string, boolean>) {
     setBusy(true);
     try {
@@ -2044,19 +2027,13 @@ function WadStep({ tx, reload }: Props) {
   }, [bothCleared, tx.wad_completed_at, busy]);
 
   if (tx.wad_completed_at) {
+    // No outer Panel/title here — the frame this sits inside already reads "Without a Doubt", so
+    // wrapping the certificate in a second "Without a Doubt" panel just nested the same heading
+    // inside itself. The certificate (already filed in Bid Information, previewable and
+    // downloadable from the Documents folder on the map) speaks for itself.
     return (
-      <div className="space-y-6">
-      <Panel
-        title="Without a Doubt — cleared"
-        description={`Cleared ${when(tx.wad_completed_at)}`}
-        footer={
-          <div className="text-right">
-            <Button size="sm" variant="outline" className="gap-2" onClick={() => void downloadCleared()}>
-              <Download className="h-3.5 w-3.5" /> Download certificate
-            </Button>
-          </div>
-        }
-      >
+      <div className="space-y-3">
+        <p className="text-xs text-muted-foreground">Cleared {when(tx.wad_completed_at)}</p>
         <CertificateBlock
           heading="Without a Doubt Clearance"
           lines={[
@@ -2066,10 +2043,11 @@ function WadStep({ tx, reload }: Props) {
           ]}
           sealId={shortHash(tx.id)}
         />
-        <p className="mt-3 text-xs text-muted-foreground">
-          Without a Doubt has cleared. Execution is open.
-        </p>
-      </Panel>
+        <div className="flex justify-end">
+          <Button size="sm" onClick={() => onContinue?.()}>
+            Continue
+          </Button>
+        </div>
       </div>
     );
   }
