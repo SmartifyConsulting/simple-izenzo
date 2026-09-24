@@ -8,6 +8,7 @@ import { AvatarUpload } from "@/components/AvatarUpload";
 import { DocumentsTab } from "@/components/account/DocumentsTab";
 import { NotificationPreferences } from "@/components/account/NotificationPreferences";
 import { OrganisationsPanel } from "@/components/account/OrganisationsPanel";
+import { VerificationPanel } from "@/components/verification/VerificationPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -156,8 +157,16 @@ function SettingsPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="kyb" className="mt-6">
+        <TabsContent value="kyb" className="mt-6 space-y-6">
           <OrganisationsPanel />
+          {/* Company and identity checks are started from here — without this the panel existed but
+              nothing in the app ever rendered it, so no one could pass the check that creating a
+              bid now requires. */}
+          <VerificationPanel
+            checks={["kyb", "id_document"]}
+            title="Verification"
+            description="Verify the company you trade as. A bid or offer can only be recorded against a company that has passed a company (KYB) check."
+          />
         </TabsContent>
 
         <TabsContent value="documents" className="mt-6">

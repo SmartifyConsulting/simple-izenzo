@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -2229,13 +2230,17 @@ export function CanvasStart({
   initialReference?: string | null | undefined;
 }) {
   const { org, orgs, user, profile, refresh } = useAuth();
-  // Which company this bid/offer is traded as — only shown as a choice when the user belongs to
-  // more than one; otherwise the account's default org is used without asking.
+  // Which company this bid/offer is traded as. Only shown as a choice when the user belongs to
+  // more than one; otherwise the account's default org is used without asking. Kept null until
+  // the person actually picks, so the account default keeps applying on its own.
   const [companyId, setCompanyId] = useState<string | null>(null);
   // Generated the moment picking starts (not at final submit) so the workspace can show a real
   // BID/OFF id immediately — reused as-is at submit time rather than generating a second,
   // different-looking one.
   const [draftReference, setDraftReference] = useState<string | null>(initialReference ?? null);
+  // Whether the company this bid/offer would be traded as has passed a company check. null while
+  // the answer is still in flight, so the gate never flashes "not verified" at a verified org.
+  const [companyVerified, setCompanyVerified] = useState<boolean | null>(null);
   const activeCompanyId = companyId ?? org?.id ?? null;
   const [picking, setPickingState] = useState(Boolean(initialDirection));
   const setPicking = (v: boolean) => {
@@ -2406,10 +2411,42 @@ export function CanvasStart({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // A bid/offer is only accepted from a company that has passed a company (KYB) check — the
+  // badge on the deal is worth nothing if anyone can create one without it. Read directly rather
+  // than through a server fn so this stays a plain RLS-scoped read of a table already readable
+  // here.
+  useEffect(() => {
+    if (!activeCompanyId) {
+      setCompanyVerified(null);
+      return;
+    }
+    let live = true;
+    setCompanyVerified(null);
+    void (async () => {
+      const { data, error } = await supabase
+        .from("identity_verifications")
+        .select("check_type, status")
+        .eq("subject_org_id", activeCompanyId)
+        .eq("check_type", "kyb")
+        .eq("status", "passed")
+        .limit(1);
+      if (!live) return;
+      // A read that fails (RLS, or the table not being reachable) must not block trading — treat
+      // it as "no check on file" and let the gate say so plainly.
+      setCompanyVerified(!error && (data ?? []).length > 0);
+    })();
+    return () => {
+      live = false;
+    };
+  }, [activeCompanyId]);
+
   // Same look as the marketing hero's search bar — one unified pill with the description on the
   // left, the drop zone on the right, and a circular submit button — so capturing what someone's
   // after starts here instead of asking them to repeat it once the deal already exists.
-  const canBeginPicking = prompt.trim().length > 0 || pendingFiles.length > 0;
+  // Blocked until the company is verified: a deal is a public claim about a company, so it can't
+  // be created on an unverified one.
+  const canBeginPicking =
+    (prompt.trim().length > 0 || pendingFiles.length > 0) && companyVerified === true;
 
   function removePendingFile(name: string) {
     setPendingFiles((prev) => prev.filter((f) => f.name !== name));
@@ -2417,6 +2454,31 @@ export function CanvasStart({
 
   const startNode = (
     <div className="mx-auto w-full max-w-2xl space-y-3">
+      {/* Who the bid/offer is traded as. Only worth asking when there's more than one company to
+          choose between — a single-company account would just see a dropdown with one option. */}
+      {orgs.length > 1 && (
+        <div className="flex items-center gap-2">
+          <Label htmlFor="trade-as" className="shrink-0 text-xs text-muted-foreground">
+            Trade as
+          </Label>
+          <Select
+            {...(activeCompanyId ? { value: activeCompanyId } : {})}
+            onValueChange={(v) => setCompanyId(v)}
+          >
+            <SelectTrigger id="trade-as" className="h-8 w-fit min-w-52 text-xs">
+              <SelectValue placeholder="Choose a company" />
+            </SelectTrigger>
+            <SelectContent>
+              {orgs.map((o) => (
+                <SelectItem key={o.id} value={o.id} className="text-xs">
+                  {o.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       {/* Small, explicit — no need to guess the side from wording once documents land. */}
       <div className="flex items-center gap-1 rounded-full border border-border bg-background p-0.5 w-fit">
         <button
@@ -2511,6 +2573,28 @@ export function CanvasStart({
           <ArrowUp className="h-4 w-4" />
         </button>
       </div>
+
+      {/* The submit button is disabled until the company passes a company check, so say why —
+          otherwise a disabled button with no explanation is just a dead end. */}
+      {companyVerified === false && (
+        <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs">
+          <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive" aria-hidden />
+          <span className="text-muted-foreground">
+            <span className="font-semibold text-foreground">
+              {orgs.find((o) => o.id === activeCompanyId)?.name ?? "This company"}
+            </span>{" "}
+            isn't verified yet, so a bid or offer can't be recorded against it. Complete a company
+            (KYB) check under{" "}
+            <Link
+              to="/account/settings"
+              className="font-semibold text-foreground underline underline-offset-2"
+            >
+              Account → Organisations
+            </Link>{" "}
+            first.
+          </span>
+        </div>
+      )}
 
       {pendingFiles.length > 0 && (
         <ul className="space-y-1.5">
