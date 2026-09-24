@@ -19,6 +19,7 @@ import {
   X as XIcon,
   StopCircle,
   Pencil,
+  User,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import {
@@ -669,16 +670,19 @@ function LiveDealEngine() {
   // Cleared WaD case — same folded-record treatment, closed until wanted.
   const [sealedWadOpen, setSealedWadOpen] = useState(false);
   // Opens the Offer frame the moment sealing actually happens live in this session — distinct
-  // from a page load that finds the deal already sealed, which leaves it collapsed like every
-  // other frame. `undefined` is the "haven't seen a value yet" sentinel so the very first render
-  // (whatever it loads with) never itself counts as a live transition.
-  const prevPoiSealedRef = useRef<string | null | undefined>(undefined);
+  // from a page load (or a switch to a different tab) that finds the deal already sealed, which
+  // leaves it collapsed like every other frame. Tracked per transaction id: the first time this
+  // effect sees a given deal, it only records where poi_sealed_at already stood — never opens the
+  // frame off that baseline read — and only a later, live transition from null to set (for that
+  // same tx id) actually opens it.
+  const lastSeenSealRef = useRef<{ txId: string; poiSealedAt: string | null } | null>(null);
   useEffect(() => {
-    const prev = prevPoiSealedRef.current;
-    const current = dealTx?.poi_sealed_at ?? null;
-    if (prev !== undefined && !prev && current) setOfferFrameOpen(true);
-    prevPoiSealedRef.current = current;
-  }, [dealTx?.poi_sealed_at]);
+    if (!dealTx) return;
+    const current = dealTx.poi_sealed_at ?? null;
+    const last = lastSeenSealRef.current;
+    if (last && last.txId === dealTx.id && !last.poiSealedAt && current) setOfferFrameOpen(true);
+    lastSeenSealRef.current = { txId: dealTx.id, poiSealedAt: current };
+  }, [dealTx?.id, dealTx?.poi_sealed_at]);
 
   // Which counterparty (from the media-screening findings) the user is about to proceed with —
   // this is where the actual pick happens now, right next to the screening evidence for it.
@@ -2393,13 +2397,14 @@ function LiveDealEngine() {
                       above it. */}
                   {dealTx.poi_sealed_at && counterpartyIdentity?.name && (
                     <div className="mt-1.5 flex flex-wrap items-center gap-2 border-t border-border pt-1.5">
-                      <span className="min-w-0 truncate text-sm font-semibold text-[#4169e1]">
+                      <User className="h-4 w-4 shrink-0 text-[#3457e6]" aria-label="Counterparty" />
+                      <span className="min-w-0 truncate text-sm font-bold text-[#3457e6]">
                         {counterpartyIdentity.name}
                       </span>
                       {counterpartyIdentity.verified ? (
                         <span
                           title="Verified via Didit KYC/KYB"
-                          className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#4169e1] px-1.5 py-0.5 text-[10px] font-semibold text-white"
+                          className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#3457e6] px-1.5 py-0.5 text-[10px] font-semibold text-white"
                         >
                           <BadgeCheck className="h-3 w-3" aria-hidden /> Verified
                         </span>
@@ -2412,7 +2417,7 @@ function LiveDealEngine() {
                         </span>
                       )}
                       {counterpartyIdentity.activeSince && (
-                        <p className="w-full text-[11px] text-[#4169e1]/80">
+                        <p className="w-full pl-6 text-[11px] text-[#3457e6]/80">
                           Active Since:{" "}
                           {new Date(counterpartyIdentity.activeSince).toLocaleDateString(undefined, {
                             year: "numeric",
