@@ -61,7 +61,6 @@ function RequireEmailVerified() {
     !loading &&
     !!profile &&
     provider === "email" &&
-    (profile.login_count ?? 0) >= 2 &&
     !profile.email_verified_at &&
     !nativelyConfirmed;
 
