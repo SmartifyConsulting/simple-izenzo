@@ -172,9 +172,6 @@ function AlphaBravoHome() {
         <div className="max-w-4xl">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
             <Sparkles className="h-3.5 w-3.5" /> AI-Powered Trade Matching
-            <span className="ml-2 rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold uppercase text-white">
-              Lovable live test 14:07 UTC
-            </span>
           </span>
           <h1 className="mt-3 max-w-3xl text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl">
             Governance Infrastructure Marketplace
