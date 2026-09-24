@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { AuthorityDocumentCard } from "@/components/verification/AuthorityDocumentCard";
 import { ProofOfResidenceCard } from "@/components/verification/ProofOfResidenceCard";
+import { verifyRegistrationDocument } from "@/lib/registrationDocumentCheck.functions";
 
 /** Registration captures an ID/passport number by hand (no photo scan) plus the one document that
  * suits the account: an Authority to Act for a company, proof of residential address for an
@@ -45,6 +46,37 @@ export function AuthorityToActPanel({ onSaved }: { onSaved?: () => void }) {
     setBusy(true);
     setError(null);
     try {
+      let identityVerified = false;
+      let identityVerifiedReason: string | null = null;
+      try {
+        const check = await verifyRegistrationDocument({
+          data: isIndividual
+            ? {
+                documentType: "proof_of_residence",
+                storagePath: profile.residential_address_path ?? "",
+                fileName: profile.residential_address_name ?? "document",
+                fullName: profile.full_name ?? "",
+                idNumber: idNumber.trim(),
+                email: profile.email ?? undefined,
+              }
+            : {
+                documentType: "authority_to_act",
+                storagePath: profile.authority_to_act_path ?? "",
+                fileName: profile.authority_to_act_name ?? "document",
+                fullName: profile.full_name ?? "",
+                idNumber: idNumber.trim(),
+                email: profile.email ?? undefined,
+              },
+        });
+        identityVerified = check.checked && check.matches;
+        identityVerifiedReason = check.reason;
+        if (check.checked && !check.matches) {
+          toast.warning(`Document doesn't look like a match: ${check.reason}`);
+        }
+      } catch {
+        // Best-effort only — a failed check just means no verified badge yet, not a blocked save.
+      }
+
       const { error: updateError } = await supabase
         .from("profiles")
         .update({
@@ -54,6 +86,8 @@ export function AuthorityToActPanel({ onSaved }: { onSaved?: () => void }) {
           // Reaching this point means both compulsory items are on file, so the registration wizard
           // is done — the layout stops asking as soon as this is read back.
           onboarding_required: false,
+          identity_verified: identityVerified,
+          identity_verified_reason: identityVerifiedReason,
         } as never)
         .eq("id", profile.id);
       if (updateError) throw updateError;

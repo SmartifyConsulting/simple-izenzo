@@ -28,6 +28,9 @@ export type DocumentRef = { name: string; notes?: string | null; storage_path?: 
 export async function buildDocumentParts(
   supabase: DocumentStorageClient,
   docs: DocumentRef[],
+  /** Defaults to the shared "documents" bucket deal attachments live in — pass a different bucket
+   * for documents stored elsewhere (e.g. "authority-to-act", "proof-of-residence"). */
+  bucket = "documents",
 ): Promise<{ parts: Part[]; unreadable: string[] }> {
   const parts: Part[] = [];
   const unreadable: string[] = [];
@@ -41,7 +44,7 @@ export async function buildDocumentParts(
       // Images go by signed link so the gateway reads them directly instead of this server
       // re-encoding every photo.
       const { data: signed } = await supabase.storage
-        .from("documents")
+        .from(bucket)
         .createSignedUrl(d.storage_path, 300);
       if (signed?.signedUrl) {
         parts.push({ type: "image_url", image_url: { url: signed.signedUrl } });
@@ -52,7 +55,7 @@ export async function buildDocumentParts(
     }
 
     const { data: blob, error: dlErr } = await supabase.storage
-      .from("documents")
+      .from(bucket)
       .download(d.storage_path);
     if (dlErr || !blob) {
       unreadable.push(name);

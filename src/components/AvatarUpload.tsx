@@ -112,7 +112,7 @@ export function AvatarUpload({
   );
 
   return (
-    <div className="flex items-start gap-4">
+    <div className="flex items-start gap-3">
       {url ? (
         <AvatarViewer
           url={url}
@@ -135,22 +135,11 @@ export function AvatarUpload({
           {preview}
         </button>
       )}
-      <div>
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          disabled={busy}
-          className="text-xs font-medium text-foreground hover:underline"
-        >
-          {url ? "Change image" : "Upload image"}
-        </button>
-        <p className="text-xs text-muted-foreground">PNG, JPG, WEBP or GIF, up to 5 MB.</p>
-        {error && (
-          <p role="alert" className="mt-1 max-w-xs text-xs text-destructive">
-            {error}
-          </p>
-        )}
-      </div>
+      {error && (
+        <p role="alert" className="max-w-xs text-xs text-destructive">
+          {error}
+        </p>
+      )}
       <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={onChange} />
     </div>
   );

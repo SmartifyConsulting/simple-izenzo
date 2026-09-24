@@ -32,6 +32,11 @@ export type Profile = {
   account_type?: "company" | "individual" | null;
   /** True until a new account finishes the registration wizard. False for pre-existing accounts. */
   onboarding_required?: boolean | null;
+  /** True only once the AI document check has confirmed the registration document (Authority to
+   * Act, or ID + proof of residence) plausibly belongs to this person — drives the verified badge
+   * shown next to their name. Never a substitute for the real KYC/KYB check at the WaD gate. */
+  identity_verified?: boolean | null;
+  identity_verified_reason?: string | null;
 };
 
 export type Org = {

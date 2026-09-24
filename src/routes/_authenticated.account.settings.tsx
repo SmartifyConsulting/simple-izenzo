@@ -27,8 +27,7 @@ export const Route = createFileRoute("/_authenticated/account/settings")({
 });
 
 function SettingsPage() {
-  const { profile, refresh, user } = useAuth();
-  const emailVerified = Boolean(user?.email_confirmed_at || profile?.email_verified_at);
+  const { profile, refresh } = useAuth();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -83,13 +82,30 @@ function SettingsPage() {
             <div className="space-y-6">
               <form onSubmit={save} className="space-y-4 rounded-md border border-border p-5">
                 {profile && (
-                  <AvatarUpload
-                    url={profile.avatar_url}
-                    fallback={(profile.full_name ?? profile.email ?? "?").slice(0, 2).toUpperCase()}
-                    folder="users"
-                    ownerId={profile.id}
-                    onUploaded={onAvatarUploaded}
-                  />
+                  <div className="flex items-center gap-3">
+                    <AvatarUpload
+                      url={profile.avatar_url}
+                      fallback={(profile.full_name ?? profile.email ?? "?").slice(0, 2).toUpperCase()}
+                      folder="users"
+                      ownerId={profile.id}
+                      onUploaded={onAvatarUploaded}
+                    />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold">{profile.full_name || "Unnamed"}</span>
+                        {profile.identity_verified ? (
+                          <Badge variant="secondary" className="bg-success/15 text-success font-normal">
+                            Verified
+                          </Badge>
+                        ) : null}
+                      </div>
+                      {profile.id_number && (
+                        <p className="text-xs text-muted-foreground">
+                          {profile.id_number_type === "passport" ? "Passport" : "ID"} {profile.id_number}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 )}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
@@ -113,18 +129,7 @@ function SettingsPage() {
                   </div>
                 )}
                 <div className="space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="email">Email address</Label>
-                    {emailVerified ? (
-                      <Badge variant="secondary" className="bg-success/15 text-success font-normal">
-                        Verified
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="font-normal text-muted-foreground">
-                        Not verified
-                      </Badge>
-                    )}
-                  </div>
+                  <Label htmlFor="email">Email address</Label>
                   <Input id="email" value={profile?.email ?? ""} disabled />
                   <p className="text-xs text-muted-foreground">
                     Your sign-in identity. Contact support to change.
