@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Plus, Search, X, XCircle } from "lucide-react";
+import { Plus, RefreshCw, Search, X, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
   Command,
@@ -355,26 +355,39 @@ export function WorkspaceTaskbar() {
       </TooltipProvider>
 
       {/* Pinned to the far right, outside the scrollable strip, same as Search/New on the left. */}
-      {deals.length > 0 && (
+      <div className="ml-auto flex shrink-0 items-center gap-1">
+        {/* A real reload, not a data refetch — the whole point is not having to reach for the
+            browser's own refresh control while working in the Live Workspace. */}
         <button
           type="button"
-          onClick={() => setClearAllConfirm(true)}
-          title="Close all tabs"
-          aria-label="Close all tabs"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-t-md border border-border border-b-transparent bg-transparent text-muted-foreground hover:bg-card/50 hover:text-destructive"
+          onClick={() => window.location.reload()}
+          title="Refresh this page"
+          aria-label="Refresh this page"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-t-md border border-border border-b-transparent bg-transparent text-muted-foreground hover:bg-card/50 hover:text-foreground"
         >
-          <XCircle className="h-3.5 w-3.5" />
+          <RefreshCw className="h-3.5 w-3.5" />
         </button>
-      )}
+        {deals.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setClearAllConfirm(true)}
+            title="Close all tabs"
+            aria-label="Close all tabs"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-t-md border border-border border-b-transparent bg-transparent text-muted-foreground hover:bg-card/50 hover:text-destructive"
+          >
+            <XCircle className="h-3.5 w-3.5" />
+          </button>
+        )}
 
-      {/* Account menu (Settings, sign out, the test-user switcher) — this taskbar is the one
-          piece of chrome every signed-in page shares, so it's the only place this is guaranteed
-          reachable no matter which workspace page someone is on. */}
-      {user && (
-        <div className={cn("shrink-0 pb-1", deals.length === 0 && "ml-auto")}>
-          <ProfileAvatarMenu />
-        </div>
-      )}
+        {/* Account menu (Settings, sign out, the test-user switcher) — this taskbar is the one
+            piece of chrome every signed-in page shares, so it's the only place this is guaranteed
+            reachable no matter which workspace page someone is on. */}
+        {user && (
+          <div className="shrink-0 pb-1">
+            <ProfileAvatarMenu />
+          </div>
+        )}
+      </div>
 
       <AlertDialog open={clearAllConfirm} onOpenChange={setClearAllConfirm}>
         <AlertDialogContent>
