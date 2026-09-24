@@ -1176,6 +1176,7 @@ export function CounterpartyRecord({
   searchPrompt = null,
   onSearchAgain,
   onStopSearch,
+  onAiPlusRunningChange,
 }: {
   txId?: string | null;
   /** True while the AI/AI+ search is still running, so the panel polls for freshly saved rows. */
@@ -1214,6 +1215,9 @@ export function CounterpartyRecord({
   onFinalize?: (counterpartyId: string) => void;
   /** True while that final pick is being recorded and the step is advancing to Intent. */
   finalizing?: boolean;
+  /** Lets the caller show its own top-level progress bar for the AI+ pass, which now starts
+   * itself right after the regular search finishes. */
+  onAiPlusRunningChange?: (running: boolean) => void;
 }) {
   const qc = useQueryClient();
   const setShortlist = useServerFn(setCounterpartyShortlist);
@@ -1340,6 +1344,28 @@ export function CounterpartyRecord({
     },
   });
 
+  // The deeper AI+ pass now starts itself the moment the regular ("ai") search has actually
+  // finished and rendered at least one result — not only once a person has gone on to shortlist
+  // one — so it's requested once per transaction, right here.
+  const [aiPlusRunning, setAiPlusRunning] = useState(false);
+  useEffect(() => {
+    if (!txId || searching || candidates.length === 0 || aiPlusRequested.current.has(txId)) return;
+    aiPlusRequested.current.add(txId);
+    setAiPlusRunning(true);
+    void runAiPlusSearch({ data: { transactionId: txId, kind: "ai_plus" } })
+      .then(() => qc.invalidateQueries({ queryKey: ["counterparties", txId] }))
+      .catch(() => {
+        // Best-effort — AI+ failing here must never disrupt the search results already on screen.
+        aiPlusRequested.current.delete(txId);
+      })
+      .finally(() => setAiPlusRunning(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [txId, searching, candidates.length]);
+
+  useEffect(() => {
+    onAiPlusRunningChange?.(aiPlusRunning);
+  }, [aiPlusRunning, onAiPlusRunningChange]);
+
   // Follow the stored verification rows for this deal so a check that finishes (or a webhook that
   // lands minutes later) updates the line in place, without re-running the screening.
   const listVerifications = useServerFn(listVerificationsForTx);
@@ -1460,22 +1486,12 @@ export function CounterpartyRecord({
       // Fire-and-forget: pull website/contact details for this candidate the moment they're
       // shortlisted, either straight off their platform org profile or via a best-effort web
       // lookup. Never blocks the tick itself, and never surfaces as an error if it can't find
-      // anything.
+      // anything. (AI+ itself now starts on its own, right after the regular search finishes —
+      // see the effect above — rather than waiting on a shortlist.)
       if (next) {
         void enrichContact({ data: { counterpartyId: c.id } })
           .then(() => qc.invalidateQueries({ queryKey: ["counterparties", txId] }))
           .catch(() => {});
-        // The first time a candidate is actually shortlisted for this transaction, run the
-        // deeper AI+ pass over it — never before, and never more than once per transaction here.
-        if (txId && !aiPlusRequested.current.has(txId)) {
-          aiPlusRequested.current.add(txId);
-          void runAiPlusSearch({ data: { transactionId: txId, kind: "ai_plus" } })
-            .then(() => qc.invalidateQueries({ queryKey: ["counterparties", txId] }))
-            .catch(() => {
-              // Best-effort — AI+ failing here must never disrupt the shortlist the person just made.
-              aiPlusRequested.current.delete(txId);
-            });
-        }
       }
     } catch (err) {
       toast.error((err as Error).message);
