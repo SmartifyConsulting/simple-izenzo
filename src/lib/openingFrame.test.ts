@@ -61,6 +61,24 @@ describe("openingFrameFor", () => {
     });
   });
 
+  it("opens legal agreements once stage has moved to execution, even if wad_continued_at was never stamped", () => {
+    // Real case found live: a deal already on Legal Agreements (stage execution, step
+    // business-docs) but wad_continued_at was still null — a data gap from before that column's
+    // write path existed. Opening the sealed WaD card here would show two frames as "current" at
+    // once (the map already shows Legal Agreements as the live step).
+    expect(
+      openingFrameFor({
+        ...base,
+        stage: "execution",
+        step: "business-docs",
+        intent_confirmed_at: "2026-01-01T00:00:00Z",
+        poi_sealed_at: "2026-01-02T00:00:00Z",
+        wad_completed_at: "2026-01-03T00:00:00Z",
+        wad_continued_at: null,
+      }),
+    ).toEqual({ kind: "businessDocs" });
+  });
+
   it("prefers the most advanced state the deal has reached", () => {
     const fullyAdvanced = openingFrameFor({
       ...base,

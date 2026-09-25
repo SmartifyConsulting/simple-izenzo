@@ -17,14 +17,24 @@ export type OpeningFrame =
   | { kind: "confirmedIntent" };
 
 type TxLike = Pick<Transaction, "wad_completed_at" | "poi_sealed_at" | "intent_confirmed_at"> & {
+  stage?: string | null;
   step?: string | null;
   wad_continued_at?: string | null;
 };
 
 export function openingFrameFor(tx: TxLike): OpeningFrame {
+  // stage/step is the authoritative "what's current" signal once it has actually moved into
+  // execution (or past it) — trust that over wad_continued_at, which can be unset on a row even
+  // though the deal has genuinely moved on (data written before that column existed, or advanced
+  // by hand while testing). Without this, a deal already on to Legal Agreements could still open
+  // on the sealed WaD card instead, alongside whatever else the current step already shows —
+  // exactly the "two frames expanded at once" bug this exists to prevent.
+  if (tx.stage === "execution" || tx.stage === "finality" || tx.stage === "memory") {
+    return { kind: "businessDocs" };
+  }
   // Past Without a Doubt and continued into execution: the legal agreements are what is current.
   if (tx.wad_completed_at && tx.wad_continued_at) return { kind: "businessDocs" };
-  // Cleared but not continued — nothing else is waiting, so open the gate holding the Continue.
+  // Cleared but not yet advanced — nothing else is waiting, so open the gate holding the Continue.
   if (tx.wad_completed_at) return { kind: "sealedWad" };
   // Intent sealed: the Offer ⇄ Counter Offer exchange is live and waiting on someone.
   if (tx.poi_sealed_at) return { kind: "offer" };
