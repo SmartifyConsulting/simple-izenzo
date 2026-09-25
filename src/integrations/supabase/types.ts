@@ -3346,9 +3346,13 @@ export type Database = {
       transactions: {
         Row: {
           commodity: string | null
+          concept_answers: Json
           concept_brief: string | null
           concept_brief_error: string | null
           concept_brief_generated_at: string | null
+          concept_questions: Json | null
+          concept_questions_error: string | null
+          concept_questions_generated_at: string | null
           counterparty_org_id: string | null
           created_at: string
           created_by: string
@@ -3383,9 +3387,13 @@ export type Database = {
         }
         Insert: {
           commodity?: string | null
+          concept_answers?: Json
           concept_brief?: string | null
           concept_brief_error?: string | null
           concept_brief_generated_at?: string | null
+          concept_questions?: Json | null
+          concept_questions_error?: string | null
+          concept_questions_generated_at?: string | null
           counterparty_org_id?: string | null
           created_at?: string
           created_by?: string
@@ -3420,9 +3428,13 @@ export type Database = {
         }
         Update: {
           commodity?: string | null
+          concept_answers?: Json
           concept_brief?: string | null
           concept_brief_error?: string | null
           concept_brief_generated_at?: string | null
+          concept_questions?: Json | null
+          concept_questions_error?: string | null
+          concept_questions_generated_at?: string | null
           counterparty_org_id?: string | null
           created_at?: string
           created_by?: string
