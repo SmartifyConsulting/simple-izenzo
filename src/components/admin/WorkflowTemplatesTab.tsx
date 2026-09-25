@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { stepDef } from "@/lib/spine";
+import { GovernanceCard } from "@/components/steps/GovernanceCard";
 
 type Stage = { key: string; label: string; steps: string[] };
 type Template = {
@@ -118,7 +119,9 @@ export function WorkflowTemplatesTab() {
                 <p className="label-caps mb-2">{si + 1}. {stage.label}</p>
                 <ol className="space-y-1">
                   {stage.steps.map((s, i) => (
-                    <li key={s} className="flex items-center justify-between rounded-md border border-border px-2 py-1.5 text-sm">
+                    <li key={s} className="rounded-md border border-border px-2 py-1.5 text-sm">
+                     <details>
+                      <summary className="flex cursor-pointer items-center justify-between">
                       <span>{stepDef(stage.key, s)?.label ?? s}</span>
                       {!readOnly && (
                         <span className="flex gap-1">
@@ -126,6 +129,9 @@ export function WorkflowTemplatesTab() {
                           <button type="button" onClick={() => move(si, i, 1)} aria-label="Move down"><ArrowDown className="h-3.5 w-3.5" /></button>
                         </span>
                       )}
+                      </summary>
+                      <div className="mt-2"><GovernanceCard stage={stage.key} step={s} force /></div>
+                     </details>
                     </li>
                   ))}
                 </ol>

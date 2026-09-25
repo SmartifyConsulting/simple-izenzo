@@ -1,4 +1,5 @@
 import { hasSeenOfferCelebration, markOfferCelebrationSeen } from "@/lib/celebrationSeen";
+import { GovernanceCard } from "@/components/steps/GovernanceCard";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -263,6 +264,7 @@ function Empty({ text }: { text: string }) {
 export function StepScreen(props: Props) {
   return (
     <div className="space-y-8">
+      <GovernanceCard stage={props.stage} step={props.step} />
       <Body {...props} />
     </div>
   );
