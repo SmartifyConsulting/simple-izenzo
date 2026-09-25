@@ -22,8 +22,7 @@ function ContactUs() {
         <p className="label-caps">Get in touch</p>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight">Contact Us</h1>
         <p className="mt-5 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Questions about your seat, a transaction, or the Izenzo Trading Gateway itself — reach us
-          directly.
+          Questions about your seat, a transaction, or the Izenzo Trading Gateway itself — reach us directly.
         </p>
         <dl className="mt-8 space-y-4 text-sm">
           <div>
@@ -37,7 +36,7 @@ function ContactUs() {
           <div>
             <dt className="font-semibold">Registered entity</dt>
             <dd className="mt-1 text-muted-foreground">
-              Izenzo is the trading name of Starfair162 (Pty) Ltd, Reg: 2018 / 331720 / 07.
+              Izenzo is the trading name of Starfair162 (Pty) Ltd, Reg: 2018 / 331720 / 07
             </dd>
           </div>
         </dl>

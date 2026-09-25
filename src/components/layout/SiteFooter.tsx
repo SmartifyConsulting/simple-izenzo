@@ -1,8 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
-const linkClass =
-  "text-[11px] tracking-wide text-muted-foreground transition-colors hover:text-foreground sm:text-xs";
+const linkClass = "text-[11px] tracking-wide text-muted-foreground transition-colors hover:text-foreground sm:text-xs";
 
 /** The shared footer, used by the marketing site and every signed-in page — pinned to the bottom
  * of the viewport (not just the end of the page content) so it's always visible rather than
@@ -20,7 +19,7 @@ export function SiteFooter({ compact }: { compact?: boolean | undefined }) {
     >
       <div className="mx-auto flex h-full w-full items-center justify-between gap-4 px-5">
         <p className="whitespace-nowrap text-[11px] tracking-wide text-muted-foreground sm:text-xs">
-          Izenzo is the trading name of Starfair162 (Pty) Ltd Reg: 2018 / 331720 / 07.
+          Izenzo is the trading name of Starfair162 (Pty) Ltd Reg: 2018 / 331720 / 07
         </p>
         <nav aria-label="Footer" className="flex items-center gap-6">
           <Link to="/glossary" className={linkClass}>

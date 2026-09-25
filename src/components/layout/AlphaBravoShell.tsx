@@ -36,7 +36,7 @@ function AlphaBravoShellInner({ children }: { children: ReactNode }) {
       <div className="fixed inset-x-0 bottom-0 z-30 bg-foreground text-background">
         <footer className="mx-auto flex h-[3.2rem] w-full max-w-6xl items-center justify-between gap-4 px-5">
           <p className="whitespace-nowrap text-[11px] tracking-wide text-background/70 sm:text-xs">
-            Izenzo is the trading name of Starfair162 (Pty) Ltd Reg: 2018 / 331720 / 07.
+            Izenzo is the trading name of Starfair162 (Pty) Ltd Reg: 2018 / 331720 / 07
           </p>
           <nav aria-label="Footer" className="flex items-center gap-6">
             <Link
@@ -73,9 +73,5 @@ function AlphaBravoShellInner({ children }: { children: ReactNode }) {
 /** Small square-bracket step label used on the Trades/Blog list pages, matching the
  * reference site's "01 / 02 / 03" numbered-list styling. */
 export function AlphaBravoEyebrow({ children }: { children: ReactNode }) {
-  return (
-    <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-      {children}
-    </p>
-  );
+  return <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">{children}</p>;
 }
