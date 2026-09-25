@@ -446,6 +446,19 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
               </CollapsibleFrame>
             )}
 
+            {/* Once both sides have cleared WaD the counterparty goes straight to Legal
+                Agreements — the same frame the bidder has, live (not view-only) so they can
+                upload and sign their side of every document. */}
+            {tx.wad_completed_at && (
+              <div className="glass-node p-4">
+                <span className="label-caps mb-2 inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+                  Step 2 · GRC — Legal Agreements
+                </span>
+                <InlineFrame bare tx={tx} stage="execution" step="business-docs" reload={reload} onClose={() => {}} />
+              </div>
+            )}
+
+
             {tx.finality_sealed_at && (
               <CollapsibleFrame
                 label="Finality"
