@@ -2589,7 +2589,7 @@ function BusinessDocsStep({ tx, reload, onContinue }: Props) {
     setSigningId(documentId);
     try {
       await sign({
-        data: { documentId, transactionId: tx.id, signerName: profile?.full_name ?? profile?.email ?? "—" },
+        data: { documentId, transactionId: tx.id },
       });
       await qc.invalidateQueries({ queryKey: ["legal-agreement-signatures", tx.id] });
       await qc.invalidateQueries({ queryKey: ["legal-agreements", tx.id] });
