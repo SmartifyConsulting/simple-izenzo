@@ -1,4 +1,5 @@
 import { hasSeenOfferCelebration, markOfferCelebrationSeen } from "@/lib/celebrationSeen";
+import { GovernanceCard } from "@/components/steps/GovernanceCard";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
