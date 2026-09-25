@@ -1285,6 +1285,24 @@ function LiveDealEngine() {
     workspaceDocs.length,
   ]);
 
+  // Step 2 · GRC is finished once every legal agreement is signed by both parties.
+  const grcDone = Boolean(dealTx?.wad_completed_at && stepOverrides["businessDocs"] === "done");
+  // Workflow hand-offs: confirmed Intent folds Step 1 and opens Step 2; a finished GRC folds
+  // Step 2 and opens Step 3. Only on the transition (or first look at a deal), so manual +/−
+  // still works afterwards.
+  const stepFlowRef = useRef<{ txId: string; phase: number } | null>(null);
+  useEffect(() => {
+    if (!dealTx) return;
+    const phase = grcDone ? 3 : dealTx.intent_confirmed_at ? 2 : 1;
+    const prev = stepFlowRef.current;
+    stepFlowRef.current = { txId: dealTx.id, phase };
+    if (prev && prev.txId === dealTx.id && prev.phase === phase) return;
+    if (phase === 1) return;
+    setStep1Open(false);
+    setStep2Open(phase === 2);
+    setStep3Open(phase === 3);
+  }, [dealTx?.id, dealTx?.intent_confirmed_at, grcDone]);
+
 
 
   // Which canvas step should pulse, on top of whichever step the canvas already highlights as
