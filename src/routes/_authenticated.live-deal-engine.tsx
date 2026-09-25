@@ -1316,19 +1316,24 @@ function LiveDealEngine() {
     dealTx?.wad_completed_at && (legalAllSigned || stepOverrides["businessDocs"] === "done"),
   );
   // Workflow hand-offs: confirmed Intent folds Step 1 and opens Step 2; a finished GRC folds
-  // Step 2 and opens Step 3. Only on the transition (or first look at a deal), so manual +/−
-  // still works afterwards.
+  // Step 2 and opens Step 3. Also the thing that guarantees "collapsed except the current phase"
+  // on a refresh or a return visit — a genuinely different deal (a fresh mount, a reopened tab,
+  // switching to another bid) always resets to exactly its own current phase, regardless of what
+  // was left open on whatever was being looked at before. Within the same deal at phase 1, this
+  // stays hands-off so a manual +/− isn't fought — Step 1's own open state is driven by live-
+  // activity flags elsewhere, not by this effect.
   const stepFlowRef = useRef<{ txId: string; phase: number } | null>(null);
   useEffect(() => {
     if (!dealTx) return;
     const phase = grcDone ? 3 : dealTx.intent_confirmed_at ? 2 : 1;
     const prev = stepFlowRef.current;
+    const sameDeal = Boolean(prev && prev.txId === dealTx.id);
     stepFlowRef.current = { txId: dealTx.id, phase };
-    if (prev && prev.txId === dealTx.id && prev.phase === phase) return;
-    if (phase === 1) return;
+    if (sameDeal && prev!.phase === phase) return;
     // Only a genuine 2→3 transition (both signatures just landed, this session) is a celebration —
     // opening a deal that was already past GRC on a fresh page load is not.
-    if (prev && prev.txId === dealTx.id && prev.phase === 2 && phase === 3) setLegalSignedCelebrate(true);
+    if (sameDeal && prev!.phase === 2 && phase === 3) setLegalSignedCelebrate(true);
+    if (sameDeal && phase === 1) return;
     setStep1Open(false);
     setStep2Open(phase === 2);
     setStep3Open(phase === 3);
@@ -2577,7 +2582,7 @@ function LiveDealEngine() {
                 // further along (wad_completed_at).
                 dealTx.intent_confirmed_at
                   ? "border-black bg-amber-400/35 hover:bg-amber-400/50"
-                  : "border-border bg-muted hover:bg-muted/70",
+                  : "border-info/40 bg-info/15 hover:bg-info/25",
               )}
             >
               {step1Open ? <Minus className="h-3.5 w-3.5 shrink-0" /> : <Plus className="h-3.5 w-3.5 shrink-0" />}
@@ -3391,7 +3396,7 @@ function LiveDealEngine() {
                     aria-expanded={step2Open}
                     className={cn(
                       "mt-1.5 flex w-full items-center gap-2 rounded-full border-2 px-3 py-1.5 text-left text-xs font-semibold text-foreground",
-                      grcDone ? "border-black bg-amber-400/35 hover:bg-amber-400/50" : "border-border bg-muted hover:bg-muted/70",
+                      grcDone ? "border-black bg-amber-400/35 hover:bg-amber-400/50" : "border-info/40 bg-info/15 hover:bg-info/25",
                     )}
                   >
                     {step2Open ? <Minus className="h-3.5 w-3.5 shrink-0" /> : <Plus className="h-3.5 w-3.5 shrink-0" />}
@@ -3587,7 +3592,7 @@ function LiveDealEngine() {
                     type="button"
                     onClick={() => setStep3Open((v) => !v)}
                     aria-expanded={step3Open}
-                    className="mt-1.5 flex w-full items-center gap-2 rounded-full border-2 border-border bg-muted px-3 py-1.5 text-left text-xs font-semibold text-foreground hover:bg-muted/70"
+                    className="mt-1.5 flex w-full items-center gap-2 rounded-full border-2 border-info/40 bg-info/15 px-3 py-1.5 text-left text-xs font-semibold text-foreground hover:bg-info/25"
                   >
                     {step3Open ? <Minus className="h-3.5 w-3.5 shrink-0" /> : <Plus className="h-3.5 w-3.5 shrink-0" />}
                     <span className="label-caps rounded-full bg-[var(--step-pill-bg)] px-2.5 py-0.5 text-[var(--step-pill-fg)]">

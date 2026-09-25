@@ -299,7 +299,7 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
             <div
               className={cn(
                 "flex items-center gap-2 rounded-full border-2 px-3 py-1.5",
-                offerApproved ? "border-black bg-amber-400/35" : "border-border bg-muted",
+                offerApproved ? "border-black bg-amber-400/35" : "border-info/40 bg-info/15",
               )}
             >
               <span className="label-caps rounded-full bg-[var(--step-pill-bg)] px-2.5 py-0.5 text-[var(--step-pill-fg)]">
