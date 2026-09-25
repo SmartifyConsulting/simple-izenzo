@@ -794,7 +794,7 @@ export function MapView({
           overrideKey: "wad",
           sub: "This is a hard gate and non-waivable",
           subTone: "gate",
-          iconClassName: "text-black",
+          iconClassName: "fill-black text-black",
         })}
         {node("businessDocs", "Legal Agreements", "execution", "business-docs", FolderClosed, {
           sub: "Digital sign-off by both parties",
