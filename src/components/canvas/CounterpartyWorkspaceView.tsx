@@ -184,10 +184,22 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
         : negotiationTurn === "counterparty" || negotiationTurn === "offer"
           ? "counterOffer"
           : "none";
+  // Once cleared, WaD stayed "active" (pulsing) forever — it never checked wad_continued_at the
+  // way the bidder's own stepOverrides does, so it kept pulsing on the counterparty's map even
+  // after the deal had moved on to Legal Agreements. Mirrors live-deal-engine.tsx's logic: done
+  // once continued, and Legal Agreements picks up the pulse in its place.
+  const wadContinued = Boolean(tx.wad_continued_at);
   const mapOverrides = {
     offer: phase === "offer" ? "active" : "open",
     counterOffer: phase === "counterOffer" ? "active" : "open",
-    wad: !tx.wad_completed_at ? (phase === "wad" ? "active" : "open") : "active",
+    wad: !tx.wad_completed_at ? (phase === "wad" ? "active" : "open") : wadContinued ? "done" : "active",
+    businessDocs: !tx.wad_completed_at
+      ? "open"
+      : !wadContinued
+        ? "open"
+        : tx.step === "business-docs"
+          ? "active"
+          : "done",
   } as const;
 
   // Same one-time confetti moment as the bidder's Live Workspace — fires the first time this
@@ -299,7 +311,7 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
             <div
               className={cn(
                 "flex items-center gap-2 rounded-full border-2 px-3 py-1.5",
-                offerApproved ? "border-black bg-amber-400/35" : "border-black bg-black",
+                offerApproved ? "border-black bg-amber-400/70" : "border-black bg-black",
               )}
             >
               <span

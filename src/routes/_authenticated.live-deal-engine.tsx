@@ -2581,7 +2581,7 @@ function LiveDealEngine() {
                 // only once the bid/offer is actually approved (negotiationTurn === "accepted") or
                 // further along (wad_completed_at).
                 dealTx.intent_confirmed_at
-                  ? "border-black bg-amber-400/35 text-foreground hover:bg-amber-400/50"
+                  ? "border-black bg-amber-400/70 text-foreground hover:bg-amber-400/85"
                   : "border-black bg-black text-white hover:bg-black/90",
               )}
             >
@@ -3415,7 +3415,7 @@ function LiveDealEngine() {
                     className={cn(
                       "mt-1.5 flex w-full items-center gap-2 rounded-full border-2 px-3 py-1.5 text-left text-xs font-semibold",
                       grcDone
-                        ? "border-black bg-amber-400/35 text-foreground hover:bg-amber-400/50"
+                        ? "border-black bg-amber-400/70 text-foreground hover:bg-amber-400/85"
                         : "border-black bg-black text-white hover:bg-black/90",
                     )}
                   >
