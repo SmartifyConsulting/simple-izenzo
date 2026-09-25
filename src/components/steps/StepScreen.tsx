@@ -1,3 +1,4 @@
+import { hasSeenOfferCelebration, markOfferCelebrationSeen } from "@/lib/celebrationSeen";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -2087,6 +2088,26 @@ function WadStep({ tx, reload, onContinue }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bothCleared, tx.wad_completed_at, busy]);
 
+  // KYC/KYB success: confetti for whichever party opens this first, then both sides move straight
+  // on to Legal Documents — no Continue button to wonder about.
+  const [wadCelebrate, setWadCelebrate] = useState(false);
+  const wadHandledRef = useRef(false);
+  useEffect(() => {
+    if (!tx.wad_completed_at || wadHandledRef.current) return;
+    wadHandledRef.current = true;
+    const key = `${tx.id}:wad`;
+    if (!hasSeenOfferCelebration(key)) {
+      markOfferCelebrationSeen(key);
+      setWadCelebrate(true);
+    }
+    const t = setTimeout(() => onContinue?.(), 1200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tx.wad_completed_at]);
+  const wadConfetti = wadCelebrate ? (
+    <Confetti message="KYC and KYB passed on both sides — on to the legal documents." onDone={() => setWadCelebrate(false)} />
+  ) : null;
+
   if (tx.wad_completed_at && revealCertificate) {
     // No outer Panel/title here — the frame this sits inside already reads "Without a Doubt", so
     // wrapping the certificate in a second "Without a Doubt" panel just nested the same heading
@@ -2094,6 +2115,7 @@ function WadStep({ tx, reload, onContinue }: Props) {
     // downloadable from the Documents folder on the map) speaks for itself.
     return (
       <div className="space-y-3">
+        {wadConfetti}
         <p className="text-xs text-muted-foreground">Cleared {when(tx.wad_completed_at)}</p>
         <CertificateBlock
           heading="Without a Doubt Clearance"
@@ -2104,11 +2126,6 @@ function WadStep({ tx, reload, onContinue }: Props) {
           ]}
           sealId={shortHash(tx.id)}
         />
-        <div className="flex justify-end">
-          <Button size="sm" onClick={() => onContinue?.()}>
-            Continue
-          </Button>
-        </div>
       </div>
     );
   }
@@ -2491,8 +2508,7 @@ function BusinessDocsStep({ tx, reload, onContinue }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [docName, setDocName] = useState("");
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [signingId, setSigningId] = useState<string | null>(null);
   const [celebrate, setCelebrate] = useState(false);
   const allSignedHandled = useRef(false);
@@ -2539,29 +2555,29 @@ function BusinessDocsStep({ tx, reload, onContinue }: Props) {
     },
   });
 
-  function pickFile(file: File) {
-    setPendingFile(file);
-    setDocName(file.name.replace(/\.[^.]+$/, ""));
+  function pickFiles(files: FileList | File[]) {
+    const list = Array.from(files);
+    setPendingFiles((prev) => [...prev, ...list.filter((f) => !prev.some((p) => p.name === f.name && p.size === f.size))]);
   }
 
   async function addDocument() {
-    if (!pendingFile) return;
+    if (pendingFiles.length === 0) return;
     setUploading(true);
     try {
-      const file = pendingFile;
-      const path = `deals/${tx.id}/business/${Date.now()}-${file.name}`;
-      const { error: upErr } = await supabase.storage.from("documents").upload(path, file);
-      if (upErr) throw upErr;
-      const sha = await fingerprintOf({ name: file.name, size: file.size, at: Date.now() });
-      await attach({
-        data: { transactionId: tx.id, name: docName.trim() || file.name, storagePath: path, sha256: sha },
-      });
-      setPendingFile(null);
-      setDocName("");
+      for (const file of pendingFiles) {
+        const path = `deals/${tx.id}/business/${Date.now()}-${file.name}`;
+        const { error: upErr } = await supabase.storage.from("documents").upload(path, file);
+        if (upErr) throw upErr;
+        const sha = await fingerprintOf({ name: file.name, size: file.size, at: Date.now() });
+        await attach({
+          data: { transactionId: tx.id, name: file.name, storagePath: path, sha256: sha },
+        });
+        setPendingFiles((prev) => prev.filter((f) => f !== file));
+      }
       await qc.invalidateQueries({ queryKey: ["legal-agreements", tx.id] });
       await qc.invalidateQueries({ queryKey: ["documents", tx.id] });
       reload();
-      toast.success("Document added — both parties need to sign it.");
+      toast.success("Documents added — both parties need to sign them.");
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -2630,7 +2646,7 @@ function BusinessDocsStep({ tx, reload, onContinue }: Props) {
             onDrop={(e) => {
               e.preventDefault();
               setDragOver(false);
-              if (e.dataTransfer.files[0]) pickFile(e.dataTransfer.files[0]);
+              if (e.dataTransfer.files.length) pickFiles(e.dataTransfer.files);
             }}
             aria-label="Drop a file here or click to browse"
             className={cn(
@@ -2640,22 +2656,45 @@ function BusinessDocsStep({ tx, reload, onContinue }: Props) {
           >
             <UploadCloud className="h-5 w-5 text-muted-foreground" />
             <span className="text-xs font-medium">
-              {pendingFile ? pendingFile.name : "Drop a file here or click to browse"}
+              Drop files here or click to browse
             </span>
+            <span className="text-[11px] text-muted-foreground">You can add several at once.</span>
           </button>
+          {pendingFiles.length > 0 && (
+            <ul className="space-y-1">
+              {pendingFiles.map((f, i) => (
+                <li
+                  key={`${f.name}-${i}`}
+                  className="flex items-center justify-between gap-2 rounded-lg border border-border px-2.5 py-1.5 text-xs"
+                >
+                  <span className="truncate">{f.name}</span>
+                  <button
+                    type="button"
+                    disabled={uploading}
+                    onClick={() => setPendingFiles((prev) => prev.filter((x) => x !== f))}
+                    className="shrink-0 text-muted-foreground hover:text-destructive"
+                    aria-label={`Remove ${f.name}`}
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
           <input
             ref={inputRef}
             type="file"
+            multiple
             className="hidden"
             onChange={(e) => {
-              if (e.target.files?.[0]) pickFile(e.target.files[0]);
+              if (e.target.files?.length) pickFiles(e.target.files);
               e.target.value = "";
             }}
           />
 
           <div className="flex justify-end">
-            <Button size="sm" disabled={!pendingFile || uploading} onClick={() => void addDocument()}>
-              {uploading ? "Adding…" : "Add document"}
+            <Button size="sm" disabled={pendingFiles.length === 0 || uploading} onClick={() => void addDocument()}>
+              {uploading ? "Uploading…" : pendingFiles.length > 1 ? `Upload ${pendingFiles.length} documents` : "Upload document"}
             </Button>
           </div>
         </div>

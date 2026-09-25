@@ -159,3 +159,34 @@ export function whenDate(iso: string | null | undefined) {
     year: "numeric",
   });
 }
+
+/** Placeholder titles ("New Bid", "New Offer", "… New Bid Proposal") add nothing next to the
+ * reference, so they are hidden wherever a bid/offer name is shown. */
+export function displayTitle(title: string | null | undefined): string | null {
+  const t = (title ?? "").replace(/\bnew (bid|offer)( proposal)?\b/gi, "").replace(/\s{2,}/g, " ").trim();
+  return t || null;
+}
+
+const CREATOR_TONES = [
+  "border-l-[hsl(160_70%_40%)]",
+  "border-l-[hsl(220_75%_55%)]",
+  "border-l-[hsl(35_90%_50%)]",
+  "border-l-[hsl(275_60%_55%)]",
+  "border-l-[hsl(345_70%_55%)]",
+  "border-l-[hsl(185_70%_40%)]",
+];
+const CREATOR_BADGES = [
+  "bg-[hsl(160_70%_40%/0.15)] text-[hsl(160_70%_30%)]",
+  "bg-[hsl(220_75%_55%/0.15)] text-[hsl(220_75%_45%)]",
+  "bg-[hsl(35_90%_50%/0.15)] text-[hsl(35_90%_35%)]",
+  "bg-[hsl(275_60%_55%/0.15)] text-[hsl(275_60%_45%)]",
+  "bg-[hsl(345_70%_55%/0.15)] text-[hsl(345_70%_45%)]",
+  "bg-[hsl(185_70%_40%/0.15)] text-[hsl(185_70%_30%)]",
+];
+/** A stable colour per creator so bids by different people are easy to tell apart. */
+export function creatorTone(id: string | null | undefined) {
+  let h = 0;
+  for (const c of id ?? "") h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const i = id ? h % CREATOR_TONES.length : 0;
+  return { border: CREATOR_TONES[i]!, badge: CREATOR_BADGES[i]! };
+}
