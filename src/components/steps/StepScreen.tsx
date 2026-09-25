@@ -2484,7 +2484,8 @@ const PREP_STAGES = ["Concept", "Pre-Feasibility", "Feasibility", "Bankability",
  * automatically in the Bid Information paperclip archive on the Live Workspace. */
 function BusinessDocsStep({ tx, reload, onContinue }: Props) {
   const qc = useQueryClient();
-  const { profile } = useAuth();
+  const { profile, org } = useAuth();
+  const mySide: Side = org?.id === tx.org_id ? "bidder" : "counterparty";
   const attach = useServerFn(attachLegalDocument);
   const sign = useServerFn(signDocument);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -2658,42 +2659,69 @@ function BusinessDocsStep({ tx, reload, onContinue }: Props) {
         {docs.length === 0 ? (
           <Empty text="No legal agreements attached yet." />
         ) : (
-          <ul className="divide-y divide-border">
+          <ul className="space-y-3">
             {docs.map((d) => {
               const sigs = sigsByDoc.get(d.id) ?? [];
-              const bidderSigned = sigs.some((s) => s.signer_side === "bidder");
-              const counterpartySigned = sigs.some((s) => s.signer_side === "counterparty");
+              const bidderSig = sigs.find((s) => s.signer_side === "bidder");
+              const counterpartySig = sigs.find((s) => s.signer_side === "counterparty");
               const fullySigned = Boolean((d as { fully_signed_at?: string | null }).fully_signed_at);
               return (
-                <li key={d.id} className="space-y-1.5 py-2.5 text-sm">
-                  <div className="flex items-center gap-3">
+                <li key={d.id} className="overflow-hidden rounded-xl border border-border">
+                  <div className="flex items-center gap-3 border-b border-border bg-muted/20 px-3 py-2">
                     <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium">{d.name}</p>
+                      <p className="truncate text-sm font-medium">{d.name}</p>
                       <p className="truncate text-xs text-muted-foreground">{when(d.created_at)}</p>
                     </div>
-                    {fullySigned ? (
+                    {fullySigned && (
                       <Badge variant="outline" className="shrink-0 border-success/40 bg-success/10 text-success">
                         signed by both
                       </Badge>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={signingId === d.id}
-                        onClick={() => void signOne(d.id)}
-                      >
-                        {signingId === d.id ? "Signing…" : "Sign"}
-                      </Button>
                     )}
                   </div>
-                  <div className="ml-7 flex flex-wrap gap-3 text-[11px]">
-                    <span className={bidderSigned ? "font-medium text-emerald-600" : "text-muted-foreground"}>
-                      Bidder {bidderSigned ? "signed" : "not yet signed"}
-                    </span>
-                    <span className={counterpartySigned ? "font-medium text-[#4169e1]" : "text-muted-foreground"}>
-                      Counterparty {counterpartySigned ? "signed" : "not yet signed"}
-                    </span>
+                  {/* One labelled half per side, coloured to the same bidder=green /
+                      counterparty=blue convention used everywhere else — the Sign action only
+                      ever appears on whichever half is actually this viewer's own side. */}
+                  <div className="grid grid-cols-2 divide-x divide-border text-xs">
+                    {(
+                      [
+                        { side: "bidder" as const, sig: bidderSig, label: "Bidder", tone: "emerald" as const },
+                        { side: "counterparty" as const, sig: counterpartySig, label: "Counterparty", tone: "blue" as const },
+                      ]
+                    ).map(({ side, sig, label, tone }) => (
+                      <div
+                        key={side}
+                        className={cn(
+                          "space-y-1.5 p-3",
+                          tone === "emerald" ? "bg-emerald-600/5" : "bg-[#4169e1]/5",
+                        )}
+                      >
+                        <p
+                          className={cn(
+                            "label-caps font-sans",
+                            tone === "emerald" ? "text-emerald-600" : "text-[#4169e1]",
+                          )}
+                        >
+                          {label}
+                        </p>
+                        {sig ? (
+                          <p className="text-muted-foreground">
+                            Signed by {sig.signer_name} · {when(sig.signed_at)}
+                          </p>
+                        ) : mySide === side ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={signingId === d.id}
+                            onClick={() => void signOne(d.id)}
+                          >
+                            {signingId === d.id ? "Signing…" : "Sign"}
+                          </Button>
+                        ) : (
+                          <p className="text-muted-foreground">Not yet signed</p>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </li>
               );

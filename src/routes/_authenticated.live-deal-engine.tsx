@@ -817,6 +817,14 @@ function LiveDealEngine() {
       return data ?? [];
     },
   });
+  // AI summarisation (below) is a Bid Information thing — it reads whatever was uploaded up front to
+  // help find a counterparty. Legal Agreements and certificates get attached much later, for an
+  // entirely different reason, and were still triggering a fresh "documents summarised" read just
+  // because they landed in the same shared `documents` table and bumped workspaceDocs.length.
+  const bidInfoDocCount = useMemo(
+    () => workspaceDocs.filter((d) => d.notes !== "Legal Agreement" && d.doc_type !== "certificate").length,
+    [workspaceDocs],
+  );
   const savedAttachments: Attachment[] = useMemo(
     () => workspaceDocs.map((d) => ({
       name: d.name,
@@ -883,14 +891,14 @@ function LiveDealEngine() {
   useEffect(() => {
     if (
       !dealTx ||
-      workspaceDocs.length === 0 ||
+      bidInfoDocCount === 0 ||
       !documentSummary ||
       !GENERIC_TITLES.has(dealTx.title) ||
       titleGenerationStarted.current === dealTx.id
     ) return;
     titleGenerationStarted.current = dealTx.id;
     void rereadDocuments(dealTx.id);
-  }, [dealTx?.id, dealTx?.title, documentSummary, workspaceDocs.length]);
+  }, [dealTx?.id, dealTx?.title, documentSummary, bidInfoDocCount]);
 
   // Documents attached: (re-)read them into a summary. Keyed by how many files this deal has been
   // summarised for, not just "has a summary at all" — so dropping another file after the first
@@ -900,9 +908,9 @@ function LiveDealEngine() {
   const summarizedDocCount = useRef<Record<string, number>>({});
   const rereadDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (!dealTx || workspaceDocs.length === 0 || rereading) return;
+    if (!dealTx || bidInfoDocCount === 0 || rereading) return;
     const txId = dealTx.id;
-    if (summarizedDocCount.current[txId] === workspaceDocs.length) return;
+    if (summarizedDocCount.current[txId] === bidInfoDocCount) return;
     // A bid opened for the first time this session has no entry in the ref yet, which otherwise
     // looks identical to "never summarised" even when it already has a summary (or a recorded read
     // failure) saved from an earlier session — trust that existing outcome instead of re-reading
@@ -910,18 +918,18 @@ function LiveDealEngine() {
     // page loaded. A genuine failed read still surfaces via readError and the "Try again" button;
     // it just doesn't retry itself automatically.
     if (summarizedDocCount.current[txId] === undefined && (documentSummary || readError)) {
-      summarizedDocCount.current[txId] = workspaceDocs.length;
+      summarizedDocCount.current[txId] = bidInfoDocCount;
       return;
     }
     if (rereadDebounceRef.current) clearTimeout(rereadDebounceRef.current);
     rereadDebounceRef.current = setTimeout(() => {
-      summarizedDocCount.current[txId] = workspaceDocs.length;
+      summarizedDocCount.current[txId] = bidInfoDocCount;
       void rereadDocuments(txId);
     }, 1200);
     return () => {
       if (rereadDebounceRef.current) clearTimeout(rereadDebounceRef.current);
     };
-  }, [dealTx?.id, workspaceDocs.length, rereading, documentSummary, readError]);
+  }, [dealTx?.id, bidInfoDocCount, rereading, documentSummary, readError]);
 
 
   // Has interest already been fetched for this bid? Drives the "Fetch Interest" button, so it
