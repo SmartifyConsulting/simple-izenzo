@@ -52,9 +52,13 @@ function negGap(poiSealedAt: string | null, wadCompletedAt: string | null) {
   };
 }
 
-/** "24 Sep 2026" — the report reads absolute dates, sorted newest first. */
+/** "24 Sep 2026, 14:05" — Created/Last Updated need the time, not just the day, to actually tell
+ * two things that happened hours apart on the same day apart. */
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
+  const d = new Date(iso);
+  const date = d.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
+  const time = d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  return `${date}, ${time}`;
 }
 
 /** Calendar-month bucket for a trade, keyed "2026-09" so buckets sort/compare as strings, with a
@@ -152,11 +156,19 @@ function gateStates(t: TxRow) {
   // Execution only reads "in progress" once Legal Agreements (the business-docs step that opens
   // the execution gate) is actually done — while both parties are still signing, this must stay
   // matched with the map's own pulse, which doesn't hand execution the pulse until then either.
-  const execution =
-    t.stage === "finality" || t.stage === "memory" || (t.stage === "execution" && t.step !== "business-docs")
-      ? { label: t.stage === "execution" ? "in progress" : "done", tone: (t.stage === "execution" ? "progress" : "success") as GateTone }
-      : null;
-  return { search, match, poi, wad, execution };
+  const execution: { label: string; tone: GateTone } | null =
+    t.stage === "finality" || t.stage === "memory"
+      ? { label: "done", tone: "success" }
+      : t.stage === "execution" && t.step !== "business-docs"
+        ? { label: "in progress", tone: "progress" }
+        : null;
+  const finality: { label: string; tone: GateTone } | null =
+    t.stage === "memory" ? { label: "done", tone: "success" } : t.stage === "finality" ? { label: "in progress", tone: "progress" } : null;
+  // Memory is the spine's last stage — an ongoing ledger, not something with a "done" past it, so
+  // it only ever reads as open/in progress once reached, never complete.
+  const memory: { label: string; tone: GateTone } | null =
+    t.stage === "memory" ? { label: "in progress", tone: "progress" } : null;
+  return { search, match, poi, wad, execution, finality, memory };
 }
 
 /** A trade with a chosen counterparty — the moment a match becomes real, not just a candidate
@@ -249,7 +261,14 @@ export function TradesListView({
   const [view, setView] = useState<"list" | "card">("list");
 
   const { data: txs = [], isLoading } = useQuery({
-    queryKey: ["my-trades", org?.id],
+    // "full" distinguishes this from SearchButton's own ["my-trades", "search", org?.id] query —
+    // they used to share the bare ["my-trades", org?.id] key, which silently let whichever one
+    // fetched last overwrite the shared cache entry with its own (much narrower) shape, so this
+    // list would intermittently render SearchButton's stripped-down rows — no created_at,
+    // updated_at, or any of the joined bidder/counterparty fields, which is why dates here would
+    // sporadically go "Invalid Date". Both still share the ["my-trades"] prefix so the existing
+    // `invalidateQueries({ queryKey: ["my-trades"] })` calls elsewhere still refresh both.
+    queryKey: ["my-trades", "full", org?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("transactions")
@@ -484,9 +503,7 @@ export function TradesListView({
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-muted/50 text-left">
               <tr>
-                <th className="px-4 py-2 font-medium">Match</th>
-                <th className="px-4 py-2 font-medium">Bidder</th>
-                <th className="px-4 py-2 font-medium">Counterparty</th>
+                <th className="px-4 py-2 font-medium">Bid / Offer</th>
                 <th className="px-4 py-2 font-medium">Search</th>
                 <th className="px-4 py-2 font-medium">Match</th>
                 <th className="px-4 py-2 font-medium">POI</th>
@@ -497,7 +514,9 @@ export function TradesListView({
                 >
                   <ArrowLeftRight className="h-3.5 w-3.5" aria-label="Negotiation" />
                 </th>
-                <th className="px-4 py-2 font-medium">Execution</th>
+                <th className="px-4 py-2 font-medium">EXE</th>
+                <th className="px-4 py-2 font-medium">FIN</th>
+                <th className="px-4 py-2 font-medium">MEM</th>
                 <th className="px-4 py-2 font-medium">Created</th>
                 <th className="px-4 py-2 font-medium">Last Updated</th>
               </tr>
@@ -507,7 +526,7 @@ export function TradesListView({
               return (
                 <tbody key={group.key} className="divide-y divide-border">
                   <tr>
-                    <td colSpan={9} className="bg-muted/30 p-0">
+                    <td colSpan={11} className="bg-muted/30 p-0">
                       <button
                         type="button"
                         onClick={() => toggleMonth(group.key)}
@@ -538,21 +557,23 @@ export function TradesListView({
                           <p className="mt-0.5 max-w-[220px] truncate text-xs text-muted-foreground">
                             {t.commodity || t.title}
                           </p>
-                        </td>
-                        <td className="px-4 py-3 text-xs">
-                          <p className="font-medium text-foreground">{t.bidderCompany ?? "—"}</p>
-                          {t.bidderName && <p className="text-muted-foreground">{t.bidderName}</p>}
-                        </td>
-                        <td className="px-4 py-3 text-xs">
-                          {t.counterpartyName ? (
-                            <p className="font-medium text-foreground">{t.counterpartyName}</p>
-                          ) : (
-                            <p className="text-muted-foreground">Not yet chosen</p>
-                          )}
+                          {/* Bidder and Counterparty used to be their own columns — folded in here,
+                              underneath the deal itself, colour-coded to match the bidder/counterparty
+                              convention used everywhere else (green/blue) instead of taking two more
+                              columns' worth of width. */}
+                          <p className="mt-0.5 max-w-[220px] truncate text-[11px]">
+                            <span className="text-emerald-600">{t.bidderCompany ?? t.bidderName ?? "Bidder —"}</span>
+                            {t.counterpartyName && (
+                              <>
+                                <span className="text-muted-foreground"> → </span>
+                                <span className="text-[#4169e1]">{t.counterpartyName}</span>
+                              </>
+                            )}
+                          </p>
                         </td>
                         <GateColumns t={t} />
-                        <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">{formatDate(t.created_at)}</td>
-                        <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground" title={ageLabel(t.updated_at)}>
+                        <td className="whitespace-nowrap px-4 py-3 text-[11px] text-muted-foreground">{formatDate(t.created_at)}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-[11px] text-muted-foreground" title={ageLabel(t.updated_at)}>
                           {formatDate(t.updated_at)}
                         </td>
                       </tr>
@@ -608,7 +629,7 @@ export function TradesListView({
                         <div className="mt-1 flex flex-wrap items-center gap-1.5">
                           <GateStack t={t} />
                         </div>
-                        <p className="text-[11px] text-muted-foreground">
+                        <p className="text-[10px] text-muted-foreground">
                           Created {formatDate(t.created_at)} · Updated {formatDate(t.updated_at)}
                         </p>
                       </Link>
@@ -638,6 +659,8 @@ function GateColumns({ t }: { t: TxRow }) {
       <td className="px-4 py-3">{g.wad ? <IconPill {...g.wad} /> : <GateDash />}</td>
       <td className="px-4 py-3">{neg ? <IconPill label={neg.title} tone={neg.tone} /> : <GateDash />}</td>
       <td className="px-4 py-3">{g.execution ? <IconPill {...g.execution} /> : <GateDash />}</td>
+      <td className="px-4 py-3">{g.finality ? <IconPill {...g.finality} /> : <GateDash />}</td>
+      <td className="px-4 py-3">{g.memory ? <IconPill {...g.memory} /> : <GateDash />}</td>
     </>
   );
 }
@@ -653,7 +676,9 @@ function GateStack({ t }: { t: TxRow }) {
     { key: "POI", cell: g.poi },
     { key: "WaD", cell: g.wad },
     { key: "NEG", cell: neg ? { label: neg.title, tone: neg.tone } : null },
-    { key: "Execution", cell: g.execution },
+    { key: "EXE", cell: g.execution },
+    { key: "FIN", cell: g.finality },
+    { key: "MEM", cell: g.memory },
   ];
   return (
     <>

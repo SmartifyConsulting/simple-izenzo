@@ -57,12 +57,17 @@ export function SearchButton() {
   const screenList = useScreenList();
   const recentDeals = useRecentDeals();
 
-  // Reuses the same cache the My Trades list fills — every deal this account can see, with its
-  // opening direction — so a Bid/Offer ID (real or the deterministic fallback shown for deals
-  // without a stored reference yet) can be matched entirely client-side, without querying a
-  // `reference` column that may not exist on every environment yet.
+  // Every deal this account can see, with its opening direction — so a Bid/Offer ID (real or the
+  // deterministic fallback shown for deals without a stored reference yet) can be matched entirely
+  // client-side, without querying a `reference` column that may not exist on every environment
+  // yet. Used to share the Trades list's own ["my-trades", org?.id] cache entry directly, but this
+  // query's shape is much narrower (no created_at/updated_at, no joined bidder/counterparty
+  // fields) — sharing one cache slot meant whichever query fetched last silently overwrote the
+  // other's shape for every other subscriber, which is why the Trades screen would intermittently
+  // render this component's stripped-down rows. Own key now, same ["my-trades"] prefix so it still
+  // gets refreshed by the existing `invalidateQueries({ queryKey: ["my-trades"] })` calls.
   const { data: myDeals = [] } = useQuery({
-    queryKey: ["my-trades", org?.id],
+    queryKey: ["my-trades", "search", org?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("transactions")
