@@ -220,7 +220,7 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
                 <span className="flex items-center gap-2">
                   <span className="label-caps font-sans">{CHECK_LABEL[type]}</span>
                   {bothPassed && (
-                    <Badge variant="outline" className="border-success/40 bg-success/10 font-normal text-success">
+                    <Badge variant="outline" className="border-emerald-600 bg-emerald-600 font-normal text-white">
                       Both verified
                     </Badge>
                   )}

@@ -3475,6 +3475,12 @@ function LiveDealEngine() {
                         if (stagePanel === "intent" && !dealTx.intent_confirmed_at) setIntentDismissed(true);
                       }}
                       onChangeParty={() => void reopenChoice()}
+                      // WadStep's own Continue button (shown once cleared) calls this — without it,
+                      // clicking Continue only revealed the certificate locally and never actually
+                      // stamped wad_continued_at, so the map kept the WaD tile pulsing forever
+                      // instead of handing the pulse to Legal Agreements the way every other
+                      // stage-to-stage transition in this workspace does.
+                      onContinue={stagePanel === "wad" ? () => void continueFromWad() : undefined}
                     />
                   )}
 

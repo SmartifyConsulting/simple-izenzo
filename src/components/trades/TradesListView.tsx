@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUpRight, Download, Handshake, LayoutGrid, List, Search } from "lucide-react";
+import { ArrowLeftRight, ArrowUpRight, ChevronDown, Download, Handshake, LayoutGrid, List, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,6 +36,22 @@ function negGap(poiSealedAt: string | null, wadCompletedAt: string | null) {
       ? `Negotiation window — ${span} between Seal Intent and WaD`
       : `Negotiation in progress — ${span} since Seal Intent, WaD still open`,
   };
+}
+
+/** "24 Sep 2026" — the report reads absolute dates, sorted newest first. */
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
+}
+
+/** Calendar-month bucket for a trade, keyed "2026-09" so buckets sort/compare as strings, with a
+ * "September 2026" label for the accordion header. */
+function monthKeyOf(iso: string) {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+function monthLabelOfKey(key: string) {
+  const [year, month] = key.split("-").map(Number);
+  return new Date(year ?? 0, (month ?? 1) - 1, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" });
 }
 
 /** Coarse relative age ("5 days ago", "2 months ago") — the report reads at a glance, not to the
@@ -110,8 +126,11 @@ function gateStates(t: TxRow) {
         ? { label: "expired", tone: "danger" as GateTone }
         : { label: "draft", tone: "warning" as GateTone }
       : null;
+  // Execution only reads "in progress" once Legal Agreements (the business-docs step that opens
+  // the execution gate) is actually done — while both parties are still signing, this must stay
+  // matched with the map's own pulse, which doesn't hand execution the pulse until then either.
   const execution =
-    t.stage === "execution" || t.stage === "finality" || t.stage === "memory"
+    t.stage === "finality" || t.stage === "memory" || (t.stage === "execution" && t.step !== "business-docs")
       ? { label: t.stage === "execution" ? "in progress" : "done", tone: (t.stage === "execution" ? "progress" : "success") as GateTone }
       : null;
   return { search, match, poi, wad, execution };
@@ -277,6 +296,30 @@ export function TradesListView() {
     return [...rows].sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
   }, [txs, scope, stages, query, org?.id]);
 
+  // Grouped by calendar month, newest first (the rows feeding each group are already sorted
+  // descending, so a Map preserves that order across groups too).
+  const currentMonthKey = useMemo(() => monthKeyOf(new Date().toISOString()), []);
+  const monthGroups = useMemo(() => {
+    const map = new Map<string, TxRow[]>();
+    for (const t of filtered) {
+      const key = monthKeyOf(t.created_at);
+      const bucket = map.get(key);
+      if (bucket) bucket.push(t);
+      else map.set(key, [t]);
+    }
+    return [...map.entries()].map(([key, rows]) => ({ key, label: monthLabelOfKey(key), rows }));
+  }, [filtered]);
+  // Only the current month starts expanded — everything older opens on click.
+  const [openMonths, setOpenMonths] = useState<Set<string>>(() => new Set([currentMonthKey]));
+  function toggleMonth(key: string) {
+    setOpenMonths((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
   function exportCsv() {
     const blob = new Blob([toCsv(filtered)], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -398,82 +441,129 @@ export function TradesListView() {
                 <th className="px-4 py-2 font-medium">Search</th>
                 <th className="px-4 py-2 font-medium">Match</th>
                 <th className="px-4 py-2 font-medium">POI</th>
-                <th className="px-4 py-2 font-medium" title="Negotiation — the time between Seal Intent and WaD">
-                  NEG
+                <th
+                  className="px-4 py-2 font-medium"
+                  title="Negotiation — the time between Seal Intent and WaD"
+                >
+                  <ArrowLeftRight className="h-3.5 w-3.5" aria-label="Negotiation" />
                 </th>
                 <th className="px-4 py-2 font-medium">WaD</th>
                 <th className="px-4 py-2 font-medium">Execution</th>
+                <th className="px-4 py-2 font-medium">Created</th>
                 <th className="w-8" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
-              {filtered.map((t) => (
-                <tr key={t.id} className="hover:bg-muted/40">
-                  <td className="px-4 py-3">
-                    <span className="flex items-center gap-1.5">
-                      {isMatched(t) && <MatchIcon />}
-                      <Link to="/live-deal-engine" search={{ tx: t.id }} className="font-mono text-xs font-semibold hover:underline">
-                        {t.reference ?? fallbackReference(t.id, t.direction)}
-                      </Link>
-                    </span>
-                    <p className="mt-0.5 max-w-[220px] truncate text-xs text-muted-foreground">
-                      {t.commodity || t.title}
-                    </p>
-                  </td>
-                  <td className="px-4 py-3 text-xs">
-                    <p className="font-medium text-foreground">{t.bidderCompany ?? "—"}</p>
-                    {t.bidderName && <p className="text-muted-foreground">{t.bidderName}</p>}
-                  </td>
-                  <td className="px-4 py-3 text-xs">
-                    {t.counterpartyName ? (
-                      <p className="font-medium text-foreground">{t.counterpartyName}</p>
-                    ) : (
-                      <p className="text-muted-foreground">Not yet chosen</p>
-                    )}
-                  </td>
-                  <GateColumns t={t} />
-                  <td className="w-8 px-2">
-                    <Link to="/live-deal-engine" search={{ tx: t.id }} title="Open">
-                      <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
+            {monthGroups.map((group) => {
+              const open = openMonths.has(group.key);
+              return (
+                <tbody key={group.key} className="divide-y divide-border">
+                  <tr>
+                    <td colSpan={9} className="bg-muted/30 p-0">
+                      <button
+                        type="button"
+                        onClick={() => toggleMonth(group.key)}
+                        aria-expanded={open}
+                        className="flex w-full items-center gap-2 px-4 py-2 text-left text-xs font-semibold text-foreground hover:bg-muted/50"
+                      >
+                        <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform", !open && "-rotate-90")} />
+                        {group.label}
+                        <span className="font-normal text-muted-foreground">({group.rows.length})</span>
+                      </button>
+                    </td>
+                  </tr>
+                  {open &&
+                    group.rows.map((t) => (
+                      <tr key={t.id} className="hover:bg-muted/40">
+                        <td className="px-4 py-3">
+                          <span className="flex items-center gap-1.5">
+                            {isMatched(t) && <MatchIcon />}
+                            <Link to="/live-deal-engine" search={{ tx: t.id }} className="font-mono text-xs font-semibold hover:underline">
+                              {t.reference ?? fallbackReference(t.id, t.direction)}
+                            </Link>
+                          </span>
+                          <p className="mt-0.5 max-w-[220px] truncate text-xs text-muted-foreground">
+                            {t.commodity || t.title}
+                          </p>
+                        </td>
+                        <td className="px-4 py-3 text-xs">
+                          <p className="font-medium text-foreground">{t.bidderCompany ?? "—"}</p>
+                          {t.bidderName && <p className="text-muted-foreground">{t.bidderName}</p>}
+                        </td>
+                        <td className="px-4 py-3 text-xs">
+                          {t.counterpartyName ? (
+                            <p className="font-medium text-foreground">{t.counterpartyName}</p>
+                          ) : (
+                            <p className="text-muted-foreground">Not yet chosen</p>
+                          )}
+                        </td>
+                        <GateColumns t={t} />
+                        <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">{formatDate(t.created_at)}</td>
+                        <td className="w-8 px-2">
+                          <Link to="/live-deal-engine" search={{ tx: t.id }} title="Open">
+                            <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              );
+            })}
           </table>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((t) => (
-            <Link
-              key={t.id}
-              to="/live-deal-engine"
-              search={{ tx: t.id }}
-              className="flex flex-col gap-2 rounded-xl border border-border p-3.5 transition-colors hover:border-primary/50"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <span className="flex items-center gap-1.5">
-                  {isMatched(t) && <MatchIcon />}
-                  <span className="font-mono text-xs font-semibold">{t.reference ?? fallbackReference(t.id, t.direction)}</span>
-                </span>
-                <span className="shrink-0 text-[11px] text-muted-foreground">{ageLabel(t.created_at)}</span>
+        <div className="divide-y divide-border">
+          {monthGroups.map((group) => {
+            const open = openMonths.has(group.key);
+            return (
+              <div key={group.key}>
+                <button
+                  type="button"
+                  onClick={() => toggleMonth(group.key)}
+                  aria-expanded={open}
+                  className="flex w-full items-center gap-2 bg-muted/30 px-4 py-2 text-left text-xs font-semibold text-foreground hover:bg-muted/50"
+                >
+                  <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform", !open && "-rotate-90")} />
+                  {group.label}
+                  <span className="font-normal text-muted-foreground">({group.rows.length})</span>
+                </button>
+                {open && (
+                  <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {group.rows.map((t) => (
+                      <Link
+                        key={t.id}
+                        to="/live-deal-engine"
+                        search={{ tx: t.id }}
+                        className="flex flex-col gap-2 rounded-xl border border-border p-3.5 transition-colors hover:border-primary/50"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="flex items-center gap-1.5">
+                            {isMatched(t) && <MatchIcon />}
+                            <span className="font-mono text-xs font-semibold">{t.reference ?? fallbackReference(t.id, t.direction)}</span>
+                          </span>
+                          <span className="shrink-0 text-[11px] text-muted-foreground">{ageLabel(t.created_at)}</span>
+                        </div>
+                        <p className="truncate text-sm font-medium">{t.commodity || t.title}</p>
+                        <div className="space-y-0.5 text-xs">
+                          <p>
+                            <span className="text-muted-foreground">Bidder: </span>
+                            {[t.bidderCompany, t.bidderName].filter(Boolean).join(" · ") || "—"}
+                          </p>
+                          <p>
+                            <span className="text-muted-foreground">Counterparty: </span>
+                            {t.counterpartyName ?? "Not yet chosen"}
+                          </p>
+                        </div>
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                          <GateStack t={t} />
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">{formatDate(t.created_at)}</p>
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </div>
-              <p className="truncate text-sm font-medium">{t.commodity || t.title}</p>
-              <div className="space-y-0.5 text-xs">
-                <p>
-                  <span className="text-muted-foreground">Bidder: </span>
-                  {[t.bidderCompany, t.bidderName].filter(Boolean).join(" · ") || "—"}
-                </p>
-                <p>
-                  <span className="text-muted-foreground">Counterparty: </span>
-                  {t.counterpartyName ?? "Not yet chosen"}
-                </p>
-              </div>
-              <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                <GateStack t={t} />
-              </div>
-            </Link>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
