@@ -52,6 +52,7 @@ import { Route as SolutionsTradersRouteImport } from './routes/solutions.traders
 import { Route as VerifyCompleteRouteImport } from './routes/verify.complete'
 import { Route as AuthenticatedAccountBillingRouteImport } from './routes/_authenticated.account.billing'
 import { Route as AuthenticatedAccountSettingsRouteImport } from './routes/_authenticated.account.settings'
+import { Route as AuthenticatedCaseRefRouteImport } from './routes/_authenticated.case.$ref'
 import { Route as AuthenticatedCounterpartyClaimRouteImport } from './routes/_authenticated.counterparty.claim'
 import { Route as AuthenticatedDealIdRouteImport } from './routes/_authenticated.deal.$id'
 import { Route as AuthenticatedGovernanceAuditsRouteImport } from './routes/_authenticated.governance.audits'
@@ -288,6 +289,11 @@ const AuthenticatedAccountSettingsRoute =
     path: '/account/settings',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedCaseRefRoute = AuthenticatedCaseRefRouteImport.update({
+  id: '/case/$ref',
+  path: '/case/$ref',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedCounterpartyClaimRoute =
   AuthenticatedCounterpartyClaimRouteImport.update({
     id: '/counterparty/claim',
@@ -421,6 +427,7 @@ export interface FileRoutesByFullPath {
   '/verify/complete': typeof VerifyCompleteRoute
   '/account/billing': typeof AuthenticatedAccountBillingRoute
   '/account/settings': typeof AuthenticatedAccountSettingsRoute
+  '/case/$ref': typeof AuthenticatedCaseRefRoute
   '/counterparty/claim': typeof AuthenticatedCounterpartyClaimRoute
   '/deal/$id': typeof AuthenticatedDealIdRoute
   '/governance/audits': typeof AuthenticatedGovernanceAuditsRoute
@@ -478,6 +485,7 @@ export interface FileRoutesByTo {
   '/verify/complete': typeof VerifyCompleteRoute
   '/account/billing': typeof AuthenticatedAccountBillingRoute
   '/account/settings': typeof AuthenticatedAccountSettingsRoute
+  '/case/$ref': typeof AuthenticatedCaseRefRoute
   '/counterparty/claim': typeof AuthenticatedCounterpartyClaimRoute
   '/deal/$id': typeof AuthenticatedDealIdRoute
   '/governance/audits': typeof AuthenticatedGovernanceAuditsRoute
@@ -540,6 +548,7 @@ export interface FileRoutesById {
   '/_public/': typeof PublicIndexRoute
   '/_authenticated/account/billing': typeof AuthenticatedAccountBillingRoute
   '/_authenticated/account/settings': typeof AuthenticatedAccountSettingsRoute
+  '/_authenticated/case/$ref': typeof AuthenticatedCaseRefRoute
   '/_authenticated/counterparty/claim': typeof AuthenticatedCounterpartyClaimRoute
   '/_authenticated/deal/$id': typeof AuthenticatedDealIdRoute
   '/_authenticated/governance/audits': typeof AuthenticatedGovernanceAuditsRoute
@@ -601,6 +610,7 @@ export interface FileRouteTypes {
     | '/verify/complete'
     | '/account/billing'
     | '/account/settings'
+    | '/case/$ref'
     | '/counterparty/claim'
     | '/deal/$id'
     | '/governance/audits'
@@ -658,6 +668,7 @@ export interface FileRouteTypes {
     | '/verify/complete'
     | '/account/billing'
     | '/account/settings'
+    | '/case/$ref'
     | '/counterparty/claim'
     | '/deal/$id'
     | '/governance/audits'
@@ -719,6 +730,7 @@ export interface FileRouteTypes {
     | '/_public/'
     | '/_authenticated/account/billing'
     | '/_authenticated/account/settings'
+    | '/_authenticated/case/$ref'
     | '/_authenticated/counterparty/claim'
     | '/_authenticated/deal/$id'
     | '/_authenticated/governance/audits'
@@ -1064,6 +1076,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAccountSettingsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/case/$ref': {
+      id: '/_authenticated/case/$ref'
+      path: '/case/$ref'
+      fullPath: '/case/$ref'
+      preLoaderRoute: typeof AuthenticatedCaseRefRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/counterparty/claim': {
       id: '/_authenticated/counterparty/claim'
       path: '/counterparty/claim'
@@ -1195,6 +1214,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedTradesRoute: typeof AuthenticatedTradesRoute
   AuthenticatedAccountBillingRoute: typeof AuthenticatedAccountBillingRoute
   AuthenticatedAccountSettingsRoute: typeof AuthenticatedAccountSettingsRoute
+  AuthenticatedCaseRefRoute: typeof AuthenticatedCaseRefRoute
   AuthenticatedCounterpartyClaimRoute: typeof AuthenticatedCounterpartyClaimRoute
   AuthenticatedDealIdRoute: typeof AuthenticatedDealIdRoute
   AuthenticatedGovernanceAuditsRoute: typeof AuthenticatedGovernanceAuditsRoute
@@ -1222,6 +1242,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedTradesRoute: AuthenticatedTradesRoute,
   AuthenticatedAccountBillingRoute: AuthenticatedAccountBillingRoute,
   AuthenticatedAccountSettingsRoute: AuthenticatedAccountSettingsRoute,
+  AuthenticatedCaseRefRoute: AuthenticatedCaseRefRoute,
   AuthenticatedCounterpartyClaimRoute: AuthenticatedCounterpartyClaimRoute,
   AuthenticatedDealIdRoute: AuthenticatedDealIdRoute,
   AuthenticatedGovernanceAuditsRoute: AuthenticatedGovernanceAuditsRoute,
