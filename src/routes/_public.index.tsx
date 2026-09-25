@@ -89,7 +89,7 @@ function ActiveDealsPanel() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("transactions")
-        .select("id, title, reference, commodity, stage, created_at")
+        .select("id, title, reference, commodity, stage, created_at, created_by")
         .or(`org_id.eq.${org!.id},counterparty_org_id.eq.${org!.id}`)
         .not("stage", "in", "(finality,memory)")
         .order("updated_at", { ascending: false })
@@ -102,7 +102,23 @@ function ActiveDealsPanel() {
         commodity: string | null;
         stage: string;
         created_at: string;
+        created_by: string | null;
       }[];
+    },
+  });
+
+  // Same "Created by <person>" detail shown on the Trades list — fetched separately since there's
+  // no declared foreign key from transactions.created_by to profiles to embed it on the select.
+  const creatorIds = [...new Set(deals.map((d) => d.created_by).filter((id): id is string => Boolean(id)))];
+  const { data: creatorNameById = {} } = useQuery({
+    queryKey: ["home-active-deals-creators", creatorIds.join(",")],
+    enabled: creatorIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("profiles").select("id, full_name, last_name").in("id", creatorIds);
+      if (error) throw error;
+      return Object.fromEntries(
+        (data ?? []).map((p) => [p.id, [p.full_name, p.last_name].filter(Boolean).join(" ").trim() || null]),
+      ) as Record<string, string | null>;
     },
   });
 
@@ -128,6 +144,7 @@ function ActiveDealsPanel() {
                 </span>
                 <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
                   {d.title ?? d.commodity ?? "Untitled"} · Created {when(d.created_at)}
+                  {d.created_by && creatorNameById[d.created_by] && ` · by ${creatorNameById[d.created_by]}`}
                 </span>
               </span>
               <span className="shrink-0 rounded-full bg-success/15 px-1.5 py-0.5 text-[10px] font-medium text-success">
