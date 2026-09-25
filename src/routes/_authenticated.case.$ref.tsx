@@ -101,7 +101,7 @@ function CasePage() {
   const wadDone = WAD.every((w) => latestWad.get(w.key)?.passed);
 
   async function addEvidence() {
-    if (files.length === 0 && !note.trim()) return toast.error("Add a file or a note.");
+    if (files.length === 0 && !note.trim()) { toast.error("Add a file or a note."); return; }
     setBusy("evidence");
     try {
       const rows: any[] = [];
