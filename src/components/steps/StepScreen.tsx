@@ -263,6 +263,7 @@ function Empty({ text }: { text: string }) {
 export function StepScreen(props: Props) {
   return (
     <div className="space-y-8">
+      <GovernanceCard stage={props.stage} step={props.step} />
       <Body {...props} />
     </div>
   );
