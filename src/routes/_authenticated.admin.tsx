@@ -269,7 +269,14 @@ function UsersTab() {
               <li key={u.id} className="space-y-2 p-4 text-sm sm:space-y-0 sm:grid sm:grid-cols-5 sm:items-center sm:gap-x-4">
                 <div className="min-w-0">
                   <div className="flex min-w-0 items-center gap-2">
-                    <p className="truncate font-medium">{u.full_name ?? u.email}</p>
+                    <button
+                      type="button"
+                      onClick={() => setProfileId(u.id)}
+                      title={`View ${u.full_name ?? u.email}'s profile`}
+                      className="truncate text-left font-medium text-primary underline underline-offset-2 hover:text-primary/80"
+                    >
+                      {u.full_name ?? u.email}
+                    </button>
                     {(() => {
                       const primary = u.org_id ? orgs.find((o) => o.id === u.org_id) : undefined;
                       const credits = primary?.credits ?? 0;
@@ -322,9 +329,6 @@ function UsersTab() {
                       System Admin
                     </Badge>
                   )}
-                  <Button size="sm" variant="ghost" onClick={() => setProfileId(u.id)}>
-                    View
-                  </Button>
                   <Button size="sm" variant="outline" onClick={() => toggleAdmin(u.id, isUserAdmin, u.email)}>
                     {isUserAdmin ? "Revoke admin" : "Make admin"}
                   </Button>
