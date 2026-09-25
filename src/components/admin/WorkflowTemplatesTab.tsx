@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, Copy, Lock, Save } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Copy, GitBranch, GripVertical, Lock, Save } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -22,9 +22,9 @@ type Template = {
   lexicon: Record<string, string>;
 };
 
-// The five gates and their order are the Izenzo spine — fixed in every template. Clients may
-// re-order steps inside a gate, rename wording, and choose a template per organisation.
+// The five gates and their order are the Izenzo spine — fixed in every template.
 const db = supabase as unknown as { from: (t: string) => any };
+const GATE_COLORS = ["#0094DA", "#B0292F", "#0C9E8B", "#293E6B", "#EDB717"];
 
 export function WorkflowTemplatesTab() {
   const qc = useQueryClient();
@@ -47,14 +47,15 @@ export function WorkflowTemplatesTab() {
   const [selected, setSelected] = useState<string>("izenzo_default");
   const current = templates.find((t) => t.key === selected) ?? templates[0];
   const [draft, setDraft] = useState<Template | null>(null);
+  const [openGates, setOpenGates] = useState<Record<string, boolean>>({});
+  const [openSteps, setOpenSteps] = useState<Record<string, boolean>>({});
   useEffect(() => setDraft(current ? structuredClone(current) : null), [current]);
 
   async function duplicate() {
     if (!current) return;
-    const name = `${current.name} (copy)`;
     const key = `custom_${Date.now()}`;
     const { error } = await db.from("workflow_templates").insert({
-      key, name, description: current.description, domain: current.domain,
+      key, name: `${current.name} (copy)`, description: current.description, domain: current.domain,
       stages: current.stages, lexicon: current.lexicon, is_default: false, locked: false,
     });
     if (error) { toast.error(error.message); return; }
@@ -113,30 +114,58 @@ export function WorkflowTemplatesTab() {
             <Input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className="max-w-md" />
           )}
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {draft.stages.map((stage, si) => (
-              <div key={stage.key} className="glass-node p-4">
-                <p className="label-caps mb-2">{si + 1}. {stage.label}</p>
-                <ol className="space-y-1">
-                  {stage.steps.map((s, i) => (
-                    <li key={s} className="rounded-md border border-border px-2 py-1.5 text-sm">
-                     <details>
-                      <summary className="flex cursor-pointer items-center justify-between">
-                      <span>{stepDef(stage.key, s)?.label ?? s}</span>
-                      {!readOnly && (
-                        <span className="flex gap-1">
-                          <button type="button" onClick={() => move(si, i, -1)} aria-label="Move up"><ArrowUp className="h-3.5 w-3.5" /></button>
-                          <button type="button" onClick={() => move(si, i, 1)} aria-label="Move down"><ArrowDown className="h-3.5 w-3.5" /></button>
-                        </span>
-                      )}
-                      </summary>
-                      <div className="mt-2"><GovernanceCard stage={stage.key} step={s} force /></div>
-                     </details>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            ))}
+          <div className="overflow-hidden rounded-lg border border-border">
+            <div className="flex items-center justify-between bg-foreground px-4 py-3 text-background">
+              <span className="flex items-center gap-2 text-sm font-semibold">
+                <GitBranch className="h-4 w-4" />Stage Gates &amp; Activities
+              </span>
+              <span className="text-xs opacity-80">{draft.stages.reduce((n, s) => n + s.steps.length, 0)} steps</span>
+            </div>
+            <div className="divide-y divide-border bg-card">
+              {draft.stages.map((stage, si) => {
+                const open = openGates[stage.key] ?? si === 0;
+                const color = GATE_COLORS[si % GATE_COLORS.length];
+                return (
+                  <div key={stage.key}>
+                    <button type="button" onClick={() => setOpenGates({ ...openGates, [stage.key]: !open })}
+                      className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-muted/50">
+                      <GripVertical className="h-4 w-4 text-muted-foreground" />
+                      {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      <span className="h-3 w-3 rounded-full" style={{ backgroundColor: color }} />
+                      <span className="font-medium">{si + 1}. {stage.label}</span>
+                      <Badge variant="secondary" className="ml-1">{stage.steps.length} {stage.steps.length === 1 ? "activity" : "activities"}</Badge>
+                    </button>
+                    {open && (
+                      <div className="space-y-2 bg-muted/20 px-4 pb-4 pl-14">
+                        {stage.steps.map((s, i) => {
+                          const id = `${stage.key}/${s}`;
+                          const so = openSteps[id] ?? false;
+                          return (
+                            <div key={s} className="rounded-md border border-border bg-card">
+                              <div className="flex items-center gap-2 px-3 py-2 text-sm">
+                                <button type="button" className="flex flex-1 items-center gap-2 text-left"
+                                  onClick={() => setOpenSteps({ ...openSteps, [id]: !so })}>
+                                  {so ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                                  <span className="text-xs text-muted-foreground">{i + 1}</span>
+                                  <span>{stepDef(stage.key, s)?.label ?? s}</span>
+                                </button>
+                                {!readOnly && (
+                                  <span className="flex gap-1">
+                                    <button type="button" onClick={() => move(si, i, -1)} aria-label="Move up"><ArrowUp className="h-3.5 w-3.5" /></button>
+                                    <button type="button" onClick={() => move(si, i, 1)} aria-label="Move down"><ArrowDown className="h-3.5 w-3.5" /></button>
+                                  </span>
+                                )}
+                              </div>
+                              {so && <div className="px-3 pb-3"><GovernanceCard stage={stage.key} step={s} force /></div>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           <div className="glass-node p-4">
