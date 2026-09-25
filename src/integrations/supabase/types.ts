@@ -3950,6 +3950,7 @@ export type Database = {
         Args: { p_id: string; p_note?: string }
         Returns: undefined
       }
+      admin_can_see_tx_org: { Args: { _org: string }; Returns: boolean }
       admin_case_approve_decision: {
         Args: { p_id: string; p_note?: string }
         Returns: undefined
