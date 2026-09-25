@@ -1,3 +1,4 @@
+import { hasSeenOfferCelebration, markOfferCelebrationSeen } from "@/lib/celebrationSeen";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -2087,6 +2088,26 @@ function WadStep({ tx, reload, onContinue }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bothCleared, tx.wad_completed_at, busy]);
 
+  // KYC/KYB success: confetti for whichever party opens this first, then both sides move straight
+  // on to Legal Documents — no Continue button to wonder about.
+  const [wadCelebrate, setWadCelebrate] = useState(false);
+  const wadHandledRef = useRef(false);
+  useEffect(() => {
+    if (!tx.wad_completed_at || wadHandledRef.current) return;
+    wadHandledRef.current = true;
+    const key = `${tx.id}:wad`;
+    if (!hasSeenOfferCelebration(key)) {
+      markOfferCelebrationSeen(key);
+      setWadCelebrate(true);
+    }
+    const t = setTimeout(() => onContinue?.(), 1200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tx.wad_completed_at]);
+  const wadConfetti = wadCelebrate ? (
+    <Confetti message="KYC and KYB passed on both sides — on to the legal documents." onDone={() => setWadCelebrate(false)} />
+  ) : null;
+
   if (tx.wad_completed_at && revealCertificate) {
     // No outer Panel/title here — the frame this sits inside already reads "Without a Doubt", so
     // wrapping the certificate in a second "Without a Doubt" panel just nested the same heading
@@ -2094,6 +2115,7 @@ function WadStep({ tx, reload, onContinue }: Props) {
     // downloadable from the Documents folder on the map) speaks for itself.
     return (
       <div className="space-y-3">
+        {wadConfetti}
         <p className="text-xs text-muted-foreground">Cleared {when(tx.wad_completed_at)}</p>
         <CertificateBlock
           heading="Without a Doubt Clearance"
@@ -2104,11 +2126,6 @@ function WadStep({ tx, reload, onContinue }: Props) {
           ]}
           sealId={shortHash(tx.id)}
         />
-        <div className="flex justify-end">
-          <Button size="sm" onClick={() => onContinue?.()}>
-            Continue
-          </Button>
-        </div>
       </div>
     );
   }
