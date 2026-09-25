@@ -136,7 +136,11 @@ export const Route = createFileRoute("/_authenticated/live-deal-engine")({
       ? { n: Number(search["n"]) }
       : {}),
   }),
-  component: LiveDealEngine,
+  component: () => (
+    <RelabelScope>
+      <LiveDealEngine />
+    </RelabelScope>
+  ),
 });
 
 type Attachment = {
