@@ -2522,6 +2522,7 @@ export type Database = {
           terms_of_trade: string | null
           updated_at: string
           website: string | null
+          workflow_template_key: string | null
           years_in_business: number | null
         }
         Insert: {
@@ -2545,6 +2546,7 @@ export type Database = {
           terms_of_trade?: string | null
           updated_at?: string
           website?: string | null
+          workflow_template_key?: string | null
           years_in_business?: number | null
         }
         Update: {
@@ -2568,6 +2570,7 @@ export type Database = {
           terms_of_trade?: string | null
           updated_at?: string
           website?: string | null
+          workflow_template_key?: string | null
           years_in_business?: number | null
         }
         Relationships: []
@@ -3619,6 +3622,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      workflow_templates: {
+        Row: {
+          ai_directives: Json
+          created_at: string
+          created_by: string | null
+          description: string | null
+          domain: string
+          is_default: boolean
+          key: string
+          lexicon: Json
+          locked: boolean
+          name: string
+          stages: Json
+          updated_at: string
+        }
+        Insert: {
+          ai_directives?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          domain?: string
+          is_default?: boolean
+          key: string
+          lexicon?: Json
+          locked?: boolean
+          name: string
+          stages?: Json
+          updated_at?: string
+        }
+        Update: {
+          ai_directives?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          domain?: string
+          is_default?: boolean
+          key?: string
+          lexicon?: Json
+          locked?: boolean
+          name?: string
+          stages?: Json
+          updated_at?: string
+        }
+        Relationships: []
       }
     }
     Views: {
