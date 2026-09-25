@@ -77,7 +77,7 @@ async function sideOf(
   if (!tx) throw new Error("This deal is no longer available.");
 
   const [{ data: profile }, { data: memberships }] = await Promise.all([
-    supabase.from("profiles").select("org_id, full_name").eq("id", userId).maybeSingle(),
+    supabase.from("profiles").select("org_id, full_name, last_name, email").eq("id", userId).maybeSingle(),
     // A person can belong to more than one organisation, and their profile's own org_id is only
     // their default one — so membership, not that single field, decides which side they're on.
     supabase.from("org_members").select("org_id").eq("user_id", userId),
@@ -89,6 +89,19 @@ async function sideOf(
       ...((memberships as { org_id: string }[] | null) ?? []).map((m) => m.org_id),
     ].filter(Boolean) as string[],
   );
+
+  const profileRecord = profile as {
+    org_id?: string | null;
+    full_name?: string | null;
+    last_name?: string | null;
+    email?: string | null;
+  } | null;
+  const firstName = profileRecord?.full_name?.trim() ?? "";
+  const lastName = profileRecord?.last_name?.trim() ?? "";
+  const fullName =
+    firstName && lastName && !firstName.toLocaleLowerCase().endsWith(lastName.toLocaleLowerCase())
+      ? `${firstName} ${lastName}`
+      : firstName || lastName || profileRecord?.email?.trim() || null;
 
   let side: Side | null = null;
   // The person who registered the deal is always on the bidder's side, even before their
@@ -112,7 +125,7 @@ async function sideOf(
           reference: string | null;
           poi_sealed_at: string | null;
         },
-        myName: (profile as { full_name?: string | null } | null)?.full_name ?? null,
+        myName: fullName,
       };
     }
   }
@@ -128,7 +141,7 @@ async function sideOf(
       reference: string | null;
       poi_sealed_at: string | null;
     },
-    myName: (profile as { full_name?: string | null } | null)?.full_name ?? null,
+    myName: fullName,
   };
 }
 
@@ -734,13 +747,13 @@ export const signDocument = createServerFn({ method: "POST" })
       .object({
         documentId: z.string().uuid(),
         transactionId: z.string().uuid(),
-        signerName: z.string().trim().min(2).max(120),
       })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { side, tx } = await sideOf(supabase, userId, data.transactionId);
+    const { side, tx, myName } = await sideOf(supabase, userId, data.transactionId);
+    if (!myName) throw new Error("Add your full name to your profile before signing.");
 
     const { data: doc, error: docErr } = await supabase
       .from("documents")
@@ -756,7 +769,7 @@ export const signDocument = createServerFn({ method: "POST" })
       document_id: data.documentId,
       transaction_id: data.transactionId,
       signer_user_id: userId,
-      signer_name: data.signerName,
+      signer_name: myName,
       signer_side: side,
     } as never);
     if (sigErr) {
@@ -771,8 +784,8 @@ export const signDocument = createServerFn({ method: "POST" })
       stage: "execution",
       step: "business-docs",
       action: "document_signed",
-      summary: `${data.signerName} (${side}) signed ${(doc as any).name}`,
-      payload: { document_id: data.documentId, side, signer_name: data.signerName },
+      summary: `${myName} (${side}) signed ${(doc as any).name}`,
+      payload: { document_id: data.documentId, side, signer_name: myName },
     });
 
     const { data: sigs } = await supabase
