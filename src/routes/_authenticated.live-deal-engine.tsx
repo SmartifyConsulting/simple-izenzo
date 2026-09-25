@@ -3693,3 +3693,28 @@ function LiveDealEngine() {
     </AppShell>
   );
 }
+
+/** INTERPOL investigations (INV… references) are worked on their own case page. */
+function CaseRedirect() {
+  const { tx } = Route.useSearch() as { tx?: string };
+  const navigate = Route.useNavigate();
+  useEffect(() => {
+    if (!tx) return;
+    let cancelled = false;
+    void supabase
+      .from("transactions")
+      .select("reference")
+      .eq("id", tx)
+      .maybeSingle()
+      .then(({ data }) => {
+        const ref = data?.reference;
+        if (!cancelled && ref && ref.startsWith("INV")) {
+          void navigate({ to: "/case/$ref", params: { ref }, replace: true });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [tx, navigate]);
+  return null;
+}
