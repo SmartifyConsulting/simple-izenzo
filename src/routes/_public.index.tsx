@@ -131,27 +131,35 @@ function ActiveDealsPanel() {
         ) : deals.length === 0 ? (
           <p className="text-xs text-muted-foreground">Nothing open right now.</p>
         ) : (
-          deals.map((d) => (
-            <Link
-              key={d.id}
-              to="/live-deal-engine"
-              search={{ tx: d.id }}
-              className="flex items-center justify-between gap-2 rounded-lg border border-success/30 bg-success/5 px-2.5 py-1.5 text-xs transition-colors hover:border-success/60 hover:bg-success/10"
-            >
-              <span className="min-w-0 flex-1">
-                <span className="block truncate font-medium text-foreground">
-                  {d.reference ?? fallbackReference(d.id, "bid")}
+          deals.map((d) => {
+            const tone = creatorTone(d.created_by);
+            const name = displayTitle(d.title) ?? d.commodity;
+            return (
+              <Link
+                key={d.id}
+                to="/live-deal-engine"
+                search={{ tx: d.id }}
+                className={`flex items-center justify-between gap-2 rounded-lg border border-l-4 border-border bg-card px-2.5 py-1.5 text-xs transition-colors hover:bg-muted/50 ${tone.border}`}
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium text-foreground">
+                    {d.reference ?? fallbackReference(d.id, "bid")}
+                  </span>
+                  <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                    {name ? `${name} · ` : ""}Created {when(d.created_at)}
+                  </span>
                 </span>
-                <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-                  {d.title ?? d.commodity ?? "Untitled"} · Created {when(d.created_at)}
-                  {d.created_by && creatorNameById[d.created_by] && ` · by ${creatorNameById[d.created_by]}`}
+                {d.created_by && creatorNameById[d.created_by] && (
+                  <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${tone.badge}`}>
+                    {creatorNameById[d.created_by]}
+                  </span>
+                )}
+                <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${tone.badge}`}>
+                  {d.stage}
                 </span>
-              </span>
-              <span className="shrink-0 rounded-full bg-success/15 px-1.5 py-0.5 text-[10px] font-medium text-success">
-                {d.stage}
-              </span>
-            </Link>
-          ))
+              </Link>
+            );
+          })
         )}
       </div>
       {deals.length === HOME_DEALS_LIMIT && (
