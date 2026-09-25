@@ -86,7 +86,7 @@ const ADMIN_TABS: AdminTab[] = [
 ];
 
 function AdminPage() {
-  const { roles, loading, refresh } = useAuth();
+  const { roles, loading, refresh, user } = useAuth();
   const isAdmin = roles.includes("admin");
   const search = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
@@ -129,7 +129,11 @@ function AdminPage() {
   // Previously gated behind one hardcoded email — any account with the admin role now sees
   // these too, since that's the same bar the rest of this page is already gated behind.
   const isSuperuser = isAdmin;
-  const tabs = ADMIN_TABS.filter((t) => !t.superuserOnly || isSuperuser).filter((t) => !t.hidden);
+  // Workflow Templates is visible only to georgiaadams.co.za accounts.
+  const canSeeTemplates = (user?.email ?? "").toLowerCase().endsWith("@georgiaadams.co.za");
+  const tabs = ADMIN_TABS.filter((t) => !t.superuserOnly || isSuperuser)
+    .filter((t) => !t.hidden)
+    .filter((t) => t.value !== "templates" || canSeeTemplates);
   const activeValue = search.tab && tabs.some((t) => t.value === search.tab) ? search.tab : (tabs[0]?.value ?? "users");
 
   return (
