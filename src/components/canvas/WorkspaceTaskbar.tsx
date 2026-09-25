@@ -51,7 +51,6 @@ const WORKSPACE_PATHS = [
   "/activity",
   "/credits",
   "/account",
-  "/guided",
   "/support",
   "/transactions",
 ] as const;

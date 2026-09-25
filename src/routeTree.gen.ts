@@ -29,7 +29,6 @@ import { Route as AuthenticatedCreditsRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedDiscoverRouteImport } from './routes/_authenticated.discover'
 import { Route as AuthenticatedFacilitationRouteImport } from './routes/_authenticated.facilitation'
 import { Route as AuthenticatedFunderRouteImport } from './routes/_authenticated.funder'
-import { Route as AuthenticatedGuidedRouteImport } from './routes/_authenticated.guided'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated.inbox'
 import { Route as AuthenticatedLiveDealEngineRouteImport } from './routes/_authenticated.live-deal-engine'
 import { Route as AuthenticatedRegistryRouteImport } from './routes/_authenticated.registry'
@@ -167,11 +166,6 @@ const AuthenticatedFacilitationRoute =
 const AuthenticatedFunderRoute = AuthenticatedFunderRouteImport.update({
   id: '/funder',
   path: '/funder',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedGuidedRoute = AuthenticatedGuidedRouteImport.update({
-  id: '/guided',
-  path: '/guided',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedInboxRoute = AuthenticatedInboxRouteImport.update({
@@ -405,7 +399,6 @@ export interface FileRoutesByFullPath {
   '/discover': typeof AuthenticatedDiscoverRoute
   '/facilitation': typeof AuthenticatedFacilitationRoute
   '/funder': typeof AuthenticatedFunderRoute
-  '/guided': typeof AuthenticatedGuidedRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/live-deal-engine': typeof AuthenticatedLiveDealEngineRoute
   '/registry': typeof AuthenticatedRegistryRoute
@@ -465,7 +458,6 @@ export interface FileRoutesByTo {
   '/discover': typeof AuthenticatedDiscoverRoute
   '/facilitation': typeof AuthenticatedFacilitationRoute
   '/funder': typeof AuthenticatedFunderRoute
-  '/guided': typeof AuthenticatedGuidedRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/live-deal-engine': typeof AuthenticatedLiveDealEngineRoute
   '/registry': typeof AuthenticatedRegistryRoute
@@ -525,7 +517,6 @@ export interface FileRoutesById {
   '/_authenticated/discover': typeof AuthenticatedDiscoverRoute
   '/_authenticated/facilitation': typeof AuthenticatedFacilitationRoute
   '/_authenticated/funder': typeof AuthenticatedFunderRoute
-  '/_authenticated/guided': typeof AuthenticatedGuidedRoute
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
   '/_authenticated/live-deal-engine': typeof AuthenticatedLiveDealEngineRoute
   '/_authenticated/registry': typeof AuthenticatedRegistryRoute
@@ -588,7 +579,6 @@ export interface FileRouteTypes {
     | '/discover'
     | '/facilitation'
     | '/funder'
-    | '/guided'
     | '/inbox'
     | '/live-deal-engine'
     | '/registry'
@@ -648,7 +638,6 @@ export interface FileRouteTypes {
     | '/discover'
     | '/facilitation'
     | '/funder'
-    | '/guided'
     | '/inbox'
     | '/live-deal-engine'
     | '/registry'
@@ -707,7 +696,6 @@ export interface FileRouteTypes {
     | '/_authenticated/discover'
     | '/_authenticated/facilitation'
     | '/_authenticated/funder'
-    | '/_authenticated/guided'
     | '/_authenticated/inbox'
     | '/_authenticated/live-deal-engine'
     | '/_authenticated/registry'
@@ -913,13 +901,6 @@ declare module '@tanstack/react-router' {
       path: '/funder'
       fullPath: '/funder'
       preLoaderRoute: typeof AuthenticatedFunderRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/guided': {
-      id: '/_authenticated/guided'
-      path: '/guided'
-      fullPath: '/guided'
-      preLoaderRoute: typeof AuthenticatedGuidedRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/inbox': {
@@ -1207,7 +1188,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedDiscoverRoute: typeof AuthenticatedDiscoverRoute
   AuthenticatedFacilitationRoute: typeof AuthenticatedFacilitationRoute
   AuthenticatedFunderRoute: typeof AuthenticatedFunderRoute
-  AuthenticatedGuidedRoute: typeof AuthenticatedGuidedRoute
   AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
   AuthenticatedLiveDealEngineRoute: typeof AuthenticatedLiveDealEngineRoute
   AuthenticatedRegistryRoute: typeof AuthenticatedRegistryRoute
@@ -1235,7 +1215,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDiscoverRoute: AuthenticatedDiscoverRoute,
   AuthenticatedFacilitationRoute: AuthenticatedFacilitationRoute,
   AuthenticatedFunderRoute: AuthenticatedFunderRoute,
-  AuthenticatedGuidedRoute: AuthenticatedGuidedRoute,
   AuthenticatedInboxRoute: AuthenticatedInboxRoute,
   AuthenticatedLiveDealEngineRoute: AuthenticatedLiveDealEngineRoute,
   AuthenticatedRegistryRoute: AuthenticatedRegistryRoute,
