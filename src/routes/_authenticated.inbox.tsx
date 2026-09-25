@@ -1,14 +1,13 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeftRight, ChevronDown, Handshake, Hourglass } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
-import { money, tradeKindOf, when, type Transaction } from "@/lib/tx";
+import { tradeKindOf, when } from "@/lib/tx";
 
 /** Monday-based week start, at midnight local time — used to group notifications by week and to
  * tell "this week" apart from every other one. */
@@ -44,12 +43,12 @@ export const Route = createFileRoute("/_authenticated/inbox")({
       { title: "Inbox — Izenzo" },
       {
         name: "description",
-        content: "Transactions where your organisation sits on the other side of the table.",
+        content: "Notifications about deals your organisation is part of.",
       },
       { property: "og:title", content: "Inbox — Izenzo" },
       {
         property: "og:description",
-        content: "Transactions where your organisation is the counterparty.",
+        content: "Notifications about deals your organisation is part of.",
       },
     ],
   }),
@@ -156,44 +155,8 @@ function InboxPage() {
     });
   }
 
-  const { data: txs = [], isLoading } = useQuery({
-    queryKey: ["inbox", org?.id],
-    enabled: Boolean(org?.id),
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("transactions")
-        .select("*")
-        .eq("counterparty_org_id", org!.id)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as Transaction[];
-    },
-  });
-
-  // The bidder's org name for each deal below — this list is always "someone else's bid, you're
-  // the counterparty", so the pair worth showing is that bidder's org name against this org's own.
-  const bidderOrgIds = [...new Set(txs.map((t) => t.org_id).filter(Boolean))];
-  const { data: bidderOrgById = {} } = useQuery({
-    queryKey: ["inbox-bidder-orgs", bidderOrgIds.join(",")],
-    enabled: bidderOrgIds.length > 0,
-    queryFn: async () => {
-      const { data, error } = await supabase.from("organisations").select("id, name").in("id", bidderOrgIds);
-      if (error) throw error;
-      return Object.fromEntries((data ?? []).map((o) => [o.id, o.name])) as Record<string, string>;
-    },
-  });
-
-  // Agreement (Seal Intent done) → negotiating (intent confirmed, not yet sealed) → still waiting
-  // (nothing from this bidder yet) — the same three-stage read as the map's own Confirm
-  // Intent → Seal Intent progression, just condensed to one icon per row.
-  function dealProgressIcon(t: Transaction) {
-    if (t.poi_sealed_at) return <Handshake className="h-3.5 w-3.5 text-success" aria-label="Agreement reached" />;
-    if (t.intent_confirmed_at) return <ArrowLeftRight className="h-3.5 w-3.5 text-info" aria-label="In negotiation" />;
-    return <Hourglass className="h-3.5 w-3.5 text-muted-foreground" aria-label="Awaiting negotiation" />;
-  }
-
   return (
-    <AppShell title="Inbox" description="Where you are on the other side">
+    <AppShell title="Inbox" description="Updates on deals you're part of">
       {notifications.length > 0 && (
         <div className="mb-4 overflow-hidden rounded-md border border-border">
           <div className="flex items-center justify-between gap-2 border-b border-border bg-muted/30 px-4 py-2">
@@ -309,7 +272,7 @@ function InboxPage() {
                                                   search={{ cp: n.claim_counterparty_id }}
                                                   onClick={() => void markRead(n.id)}
                                                   className={cn(
-                                                    "shrink-0 font-mono text-xs font-bold underline-offset-2 hover:underline",
+                                                    "shrink-0 font-mono text-xs font-normal underline-offset-2 hover:underline",
                                                     tradeKindOf(reference) === "bid"
                                                       ? "theme-light:text-success text-[#00e676]"
                                                       : tradeKindOf(reference) === "offer"
@@ -325,7 +288,7 @@ function InboxPage() {
                                                   search={{ tx: n.transaction_id }}
                                                   onClick={() => void markRead(n.id)}
                                                   className={cn(
-                                                    "shrink-0 font-mono text-xs font-bold underline-offset-2 hover:underline",
+                                                    "shrink-0 font-mono text-xs font-normal underline-offset-2 hover:underline",
                                                     // Same Bid=green / Offer=blue convention as the
                                                     // workspace taskbar and registration pill, so a
                                                     // reference reads the same way everywhere.
@@ -426,51 +389,6 @@ function InboxPage() {
           </div>
         </div>
       )}
-
-      <div className="overflow-hidden rounded-md border border-border">
-
-        {isLoading ? (
-          <p className="p-6 text-sm text-muted-foreground">Loading…</p>
-        ) : txs.length === 0 ? (
-          <p className="p-6 text-sm text-muted-foreground">
-            Nothing has been sent to your organisation as counterparty yet.
-          </p>
-        ) : (
-          <ul className="divide-y divide-border">
-            {txs.map((t) => (
-              <li key={t.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
-                <div className="min-w-0">
-                  <p className="flex items-center gap-1.5 text-sm font-medium">
-                    {dealProgressIcon(t)}
-                    <span className="truncate">
-                      {bidderOrgById[t.org_id] ?? "Unknown bidder"}
-                      <span className="mx-1 text-muted-foreground">→</span>
-                      {org?.name ?? "Your organisation"}
-                    </span>
-                  </p>
-                  <p className="text-xs text-muted-foreground">{t.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {money(t.price, t.currency)} · opened {when(t.created_at)}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="font-normal capitalize">
-                    {t.stage}
-                  </Badge>
-                  <Link
-                    to="/tx/$id/$stage/$step"
-                    params={{ id: t.id, stage: t.stage, step: t.step }}
-                  >
-                    <Button size="sm" variant="outline">
-                      Open
-                    </Button>
-                  </Link>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
     </AppShell>
   );
 }
