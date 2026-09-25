@@ -134,6 +134,13 @@
       "when": 1790128382621,
       "tag": "0018_mutual_diligence_and_document_signing",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1790357216918,
+      "tag": "0019_workflow_templates",
+      "breakpoints": true
     }
   ]
 }
