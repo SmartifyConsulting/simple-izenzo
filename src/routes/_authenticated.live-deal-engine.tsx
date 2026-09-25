@@ -1113,15 +1113,10 @@ function LiveDealEngine() {
     wadHandoffRef.current = { txId: dealTx.id, continued };
     if (!firstLook && !justChanged) return;
 
-    if (continued) {
-      setSealedWadOpen(false);
-      setStagePanel("business-docs");
-    } else {
-      // Nothing else is waiting on the bidder here — Continue is the only action — so the record
-      // opens itself instead of sitting behind a click.
-      setStep1Open(false);
-      setSealedWadOpen(true);
-    }
+    // A cleared WaD folds away and Legal Agreements opens as the one active frame.
+    setStep1Open(false);
+    setSealedWadOpen(false);
+    setStagePanel("business-docs");
   }, [dealTx?.id, dealTx?.wad_completed_at, dealTx?.wad_continued_at]);
 
   /** Which workflow item is genuinely current right now — the stored stage/step can't tell
@@ -1204,20 +1199,12 @@ function LiveDealEngine() {
         // Cleared, but the bidder has not yet continued past it — the pulse stays on WaD itself so
         // the Continue button is what draws the eye. Legal Agreements is deliberately left not
         // pulsing until then: it is not the current step until the bidder has been sent there.
-        const wadContinued = Boolean(dealTx.wad_continued_at);
-        o["wad"] = !dealTx.wad_completed_at
-          ? phase === "wad"
-            ? "active"
-            : "open"
-          : wadContinued
-            ? "done"
-            : "active";
+        // WaD and Legal Agreements never pulse together: the moment the certificate issues, WaD is
+        // done and the pulse hands straight over to Legal Agreements.
+        o["wad"] = !dealTx.wad_completed_at ? (phase === "wad" ? "active" : "open") : "done";
         if (dealTx.wad_completed_at) {
-          o["businessDocs"] = !wadContinued
-            ? "open"
-            : dealTx.step === "business-docs"
-              ? "active"
-              : "done";
+          o["businessDocs"] =
+            dealTx.stage === "compliance" || dealTx.step === "business-docs" ? "active" : "done";
           // Business documents in: Execution is what's next, so that's where the pulse goes.
           if (o["businessDocs"] === "done") {
             o["execution"] = "active";
@@ -1267,14 +1254,12 @@ function LiveDealEngine() {
       o["poi"] = dealTx.poi_sealed_at ? "done" : "active";
       if (dealTx.poi_sealed_at) {
         const wadContinued = Boolean(dealTx.wad_continued_at);
+        void wadContinued;
         o["kycKyb"] = dealTx.wad_completed_at ? "done" : "active";
-        o["wad"] = !dealTx.wad_completed_at ? "open" : wadContinued ? "done" : "active";
+        o["wad"] = !dealTx.wad_completed_at ? "open" : "done";
         if (dealTx.wad_completed_at) {
-          o["businessDocs"] = !wadContinued
-            ? "open"
-            : dealTx.step === "business-docs"
-              ? "active"
-              : "done";
+          o["businessDocs"] =
+            dealTx.stage === "compliance" || dealTx.step === "business-docs" ? "active" : "done";
           if (o["businessDocs"] === "done") {
             o["execution"] = "active";
             o["preparation"] = "active";
@@ -1467,7 +1452,8 @@ function LiveDealEngine() {
       // Without a Doubt only opens once the offer is actually accepted — it waits its turn rather
       // than appearing alongside the still-open Offer; cleared → fold it away.
       if (fresh.wad_completed_at) {
-        setStagePanel(null);
+        setSealedWadOpen(false);
+        setStagePanel("business-docs");
       } else if (fresh.poi_sealed_at) {
         const { data: lastResponse } = await supabase
           .from("engagement_responses")
