@@ -46,6 +46,7 @@ import { MutualEngagementPanel } from "@/components/engagement/MutualEngagementP
 import { attachLegalDocument, getEngagement, setDiligenceState, signDocument, type Side } from "@/lib/engagement.functions";
 import { getPartyRegistrationInfo } from "@/lib/partyRegistration.functions";
 import { generateConceptBrief } from "@/lib/conceptBrief.functions";
+import { generateConceptQuestions } from "@/lib/conceptQuestions.functions";
 import { DocumentSummaryList } from "@/components/canvas/DocumentSummaryList";
 import { buildBrandedCertificatePdf } from "@/lib/certificatePdf";
 import { Confetti } from "@/components/effects/Confetti";
@@ -2796,6 +2797,10 @@ function ExecutionStep({ tx, step, reload }: Props) {
   const [busy, setBusy] = useState(false);
   const genBrief = useServerFn(generateConceptBrief);
   const briefRequested = useRef(false);
+  const genQuestions = useServerFn(generateConceptQuestions);
+  const questionsRequested = useRef(false);
+  const [answerDrafts, setAnswerDrafts] = useState<Record<string, string>>({});
+  const [savingAnswer, setSavingAnswer] = useState<number | null>(null);
 
   const { data: records = [] } = useQuery({
     queryKey: ["execution", tx.id],
@@ -2828,6 +2833,33 @@ function ExecutionStep({ tx, step, reload }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, form.prep_stage, tx.id, tx.concept_brief, tx.concept_brief_generated_at]);
 
+  // Same one-time-per-deal pattern as the agreements brief above, for the planning questionnaire.
+  useEffect(() => {
+    if (step !== "preparation" || form.prep_stage !== "Concept") return;
+    if (tx.concept_questions || tx.concept_questions_generated_at || questionsRequested.current) return;
+    questionsRequested.current = true;
+    void genQuestions({ data: { transactionId: tx.id } })
+      .then(() => reload())
+      .catch(() => reload());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, form.prep_stage, tx.id, tx.concept_questions, tx.concept_questions_generated_at]);
+
+  async function saveAnswer(index: number) {
+    const answer = (answerDrafts[index] ?? tx.concept_answers?.[index] ?? "").trim();
+    setSavingAnswer(index);
+    try {
+      const next = { ...(tx.concept_answers ?? {}), [index]: answer };
+      const { error } = await supabase.from("transactions").update({ concept_answers: next } as never).eq("id", tx.id);
+      if (error) throw error;
+      reload();
+      toast.success("Saved");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setSavingAnswer(null);
+    }
+  }
+
   async function record(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -2858,12 +2890,77 @@ function ExecutionStep({ tx, step, reload }: Props) {
     }
   }
 
+  const isConceptStage = step === "preparation" && form.prep_stage === "Concept";
+
   return (
     <div className="space-y-6">
-      {/* Concept opens with the AI's reading of the signed agreements, so both parties start from the
-          same understanding of what each is expected to do, the terms and the dates. Advisory only —
-          the agreements themselves remain the authority. */}
-      {step === "preparation" && form.prep_stage === "Concept" && (
+      {isConceptStage && (
+        <Panel title="Bid / Offer summary" description="What was originally proposed, at a glance.">
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-3">
+            {[
+              ["Title", tx.title || "—"],
+              ["Commodity", tx.commodity || "—"],
+              ["Quantity", tx.quantity ? `${tx.quantity} ${tx.unit ?? ""}`.trim() : "—"],
+              ["Price", tx.price ? money(tx.price, tx.currency) : "—"],
+              ["Incoterms", tx.incoterms || "—"],
+              ["Jurisdiction", tx.jurisdiction || "—"],
+            ].map(([label, value]) => (
+              <div key={label} className="min-w-0">
+                <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</dt>
+                <dd className="mt-0.5 truncate font-medium" title={value}>{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </Panel>
+      )}
+
+      {isConceptStage && (
+        <Panel
+          title="Concept questionnaire"
+          description="A handful of planning questions tailored to this deal — answer what's useful now; you can come back and add more later."
+        >
+          {tx.concept_questions && tx.concept_questions.length > 0 ? (
+            <ul className="space-y-4">
+              {tx.concept_questions.map((question, i) => {
+                const saved = tx.concept_answers?.[i] ?? "";
+                const draft = answerDrafts[i] ?? saved;
+                const changed = draft !== saved;
+                return (
+                  <li key={i} className="space-y-1.5">
+                    <p className="text-sm font-medium">{question}</p>
+                    <Textarea
+                      rows={2}
+                      value={draft}
+                      onChange={(e) => setAnswerDrafts((d) => ({ ...d, [i]: e.target.value }))}
+                    />
+                    <div className="flex justify-end">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={!changed || savingAnswer === i}
+                        onClick={() => void saveAnswer(i)}
+                      >
+                        {savingAnswer === i ? "Saving…" : "Save"}
+                      </Button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : tx.concept_questions_error ? (
+            <p className="text-xs text-muted-foreground">{userFacingText(tx.concept_questions_error)}</p>
+          ) : (
+            <p className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Tailoring questions to this deal…
+            </p>
+          )}
+        </Panel>
+      )}
+
+      {/* Concept also shows the AI's reading of the signed agreements, so both parties start from
+          the same understanding of what each is expected to do, the terms and the dates. Advisory
+          only — the agreements themselves remain the authority. */}
+      {isConceptStage && (
         <Panel
           title="What the agreements say"
           description="The AI's interpretation of the signed legal agreements — what each party is expected to do, the terms, and the dates. Read it against the agreements themselves; it is a reading, not advice."
@@ -2895,6 +2992,7 @@ function ExecutionStep({ tx, step, reload }: Props) {
         </Panel>
       )}
 
+      {!isConceptStage && (
       <Panel
         title="Record this step"
         footer={
@@ -2934,6 +3032,7 @@ function ExecutionStep({ tx, step, reload }: Props) {
           </Field>
         </form>
       </Panel>
+      )}
 
       <Panel title="Execution record">
         {records.length === 0 ? (

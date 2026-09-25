@@ -27,6 +27,13 @@ export type Transaction = {
   concept_brief?: string | null;
   concept_brief_generated_at?: string | null;
   concept_brief_error?: string | null;
+  /** AI-tailored Concept planning questions (problem, proposal, audience, outcomes, requirements,
+   * risks, strategic fit), generated once per deal. concept_answers is shared (not per-side),
+   * keyed by the question's index in concept_questions. */
+  concept_questions?: string[] | null;
+  concept_questions_generated_at?: string | null;
+  concept_questions_error?: string | null;
+  concept_answers?: Record<string, string> | null;
   finality_sealed_at: string | null;
   created_at: string;
   updated_at: string;
