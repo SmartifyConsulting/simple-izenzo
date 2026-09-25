@@ -1041,6 +1041,12 @@ function LiveDealEngine() {
   // screen having been away when the counterparty approved it. Never repeats after that first
   // sighting (see celebrationSeen.ts).
   const [celebrateApproval, setCelebrateApproval] = useState(false);
+  // Fires exactly when Step 2 folds/turns gold and Step 3 opens — not inside BusinessDocsStep's own
+  // local confetti, which never actually got to show: grcDone (computed here, from the same
+  // legalDocs query) and the step-panel's own "all signed" state both flip true on the same render
+  // once the second signature lands, so the panel closes (stagePanel gate below) before its
+  // confetti had a chance to play.
+  const [legalSignedCelebrate, setLegalSignedCelebrate] = useState(false);
   useEffect(() => {
     if (!dealTx || (negotiationTurn !== "accepted" && !dealTx.wad_completed_at)) return;
     if (hasSeenOfferCelebration(dealTx.id)) return;
@@ -1320,6 +1326,9 @@ function LiveDealEngine() {
     stepFlowRef.current = { txId: dealTx.id, phase };
     if (prev && prev.txId === dealTx.id && prev.phase === phase) return;
     if (phase === 1) return;
+    // Only a genuine 2→3 transition (both signatures just landed, this session) is a celebration —
+    // opening a deal that was already past GRC on a fresh page load is not.
+    if (prev && prev.txId === dealTx.id && prev.phase === 2 && phase === 3) setLegalSignedCelebrate(true);
     setStep1Open(false);
     setStep2Open(phase === 2);
     setStep3Open(phase === 3);
@@ -2291,6 +2300,12 @@ function LiveDealEngine() {
 
   const workspaceContent = (
     <>
+      {legalSignedCelebrate && (
+        <Confetti
+          message="Both parties signed — on to Execution."
+          onDone={() => setLegalSignedCelebrate(false)}
+        />
+      )}
       {celebrateApproval && (
         <Confetti message="The offer has been approved." onDone={() => setCelebrateApproval(false)} />
       )}

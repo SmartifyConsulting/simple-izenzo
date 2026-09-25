@@ -2510,7 +2510,6 @@ function BusinessDocsStep({ tx, reload, onContinue }: Props) {
   const [uploading, setUploading] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [signingId, setSigningId] = useState<string | null>(null);
-  const [celebrate, setCelebrate] = useState(false);
   const allSignedHandled = useRef(false);
 
   const { data: docs = [] } = useQuery({
@@ -2610,12 +2609,14 @@ function BusinessDocsStep({ tx, reload, onContinue }: Props) {
 
   const allSigned = docs.length > 0 && docs.every((d) => Boolean((d as { fully_signed_at?: string | null }).fully_signed_at));
 
-  // Once every legal agreement is signed by both parties, the deal is genuinely settled — a
-  // confetti moment, then straight on to Execution's own first step (Concept).
+  // Once every legal agreement is signed by both parties, the deal is genuinely settled — straight
+  // on to Execution's own first step (Concept). The celebration itself (confetti, Step 2 folding
+  // gold, Step 3 opening) is handled one level up, in live-deal-engine.tsx: this panel and its own
+  // local confetti close in the very same render that allSigned flips true, so a Confetti mounted
+  // here never actually got to play.
   useEffect(() => {
     if (!allSigned || allSignedHandled.current) return;
     allSignedHandled.current = true;
-    setCelebrate(true);
     void (async () => {
       await advance(tx.id, "execution", "preparation");
       reload();
@@ -2626,9 +2627,6 @@ function BusinessDocsStep({ tx, reload, onContinue }: Props) {
 
   return (
     <div className="space-y-6">
-      {celebrate && (
-        <Confetti message="Both parties signed — the trade is settled." onDone={() => setCelebrate(false)} />
-      )}
       {/* No title/description here — the outer frame this sits inside already carries the
           "Legal Agreements" heading and this same copy as its subtext. */}
       <Panel>
@@ -2758,12 +2756,12 @@ function BusinessDocsStep({ tx, reload, onContinue }: Props) {
                         {sig ? (
                           <div className="space-y-0.5">
                             <p
-                              className="border-b border-foreground/40 pb-0.5 text-2xl leading-tight text-foreground"
+                              className="border-b border-foreground/40 pb-0.5 text-center text-2xl leading-tight text-foreground"
                               style={{ fontFamily: signatureFont(`${side}:${sig.signer_name}`) }}
                             >
                               {sig.signer_name}
                             </p>
-                            <p className="text-[11px] text-muted-foreground">
+                            <p className="text-center text-[11px] text-muted-foreground">
                               Digitally signed · {when(sig.signed_at)}
                             </p>
                           </div>
