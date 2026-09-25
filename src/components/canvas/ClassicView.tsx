@@ -41,7 +41,7 @@ function nodeState(stage: StageKey, step: string, tx: Transaction): NodeState {
 /** Which of the stepper's five numbered steps the deal is actually in right now — matches
  * STEPS' own numbering (Trading, Compliance & Governance, Execution, Finality, Memory). */
 function currentStepNumber(tx: Transaction): number {
-  if (tx.stage === "execution") return 3;
+  if (tx.stage === "execution") return tx.step === "business-docs" ? 2 : 3;
   if (tx.stage === "finality") return 4;
   if (tx.stage === "memory") return 5;
   if (tx.stage === "compliance") return 2;
@@ -87,7 +87,7 @@ const STEPS: StepDef[] = [
   },
   {
     step: 2,
-    label: "Compliance & Governance",
+    label: "GRC",
     items: [
       { key: "poi", label: "Seal Intent", stage: "trading", step: "poi", icon: FileText },
       {
@@ -295,6 +295,15 @@ export function ClassicView({
   const toggleStep = (step: number) => setCollapsed((c) => ({ ...c, [step]: !c[step] }));
 
   const stateOf = (item: SubItem): NodeState => {
+    const s = rawStateOf(item);
+    // Without a Doubt and Legal Agreements never pulse together: a finished WaD certificate hands
+    // the pulse over to Legal Agreements, and Legal Agreements waits until then.
+    if (item.key === "wad" && tx.wad_completed_at) return "done";
+    if (item.key === "businessDocs" && !tx.wad_completed_at && s === "active") return "open";
+    if (item.key === "businessDocs" && tx.wad_completed_at && s !== "done" && activeStep === 2) return "active";
+    return s;
+  };
+  const rawStateOf = (item: SubItem): NodeState => {
     const override = overrideStates?.[item.key];
     if (override) return override;
     if (item.isEntry && readOnly) {
@@ -316,7 +325,8 @@ export function ClassicView({
           // before the page states each row outright.
           const allDone =
             s.items.every((item) => stateOf(item) === "done") ||
-            (s.step === 1 && Boolean(tx.intent_confirmed_at));
+            (s.step === 1 && Boolean(tx.intent_confirmed_at)) ||
+            (s.step === 2 && activeStep > 2);
           // Bracket + "Step N · " (no step name) — an invisible copy of this is used below to
           // indent the sub-steps by exactly this width, so they line up under the first letter of
           // the step's actual name (e.g. under the "T" of "Trading") rather than under the
@@ -334,7 +344,7 @@ export function ClassicView({
               <span
                 className={cn(
                   "label-caps mt-1 whitespace-nowrap rounded-l-full px-2.5 py-0.5",
-                  allDone ? "bg-success/15 text-success" : "bg-[var(--step-pill-bg)] text-[var(--step-pill-fg)]",
+                  allDone ? "bg-warning text-warning-foreground" : "bg-[var(--step-pill-bg)] text-[var(--step-pill-fg)]",
                 )}
               >
                 {stepCollapsed ? "+" : "−"}Step {s.step} ·{" "}
@@ -355,14 +365,14 @@ export function ClassicView({
                 <span
                   className={cn(
                     "label-caps -ml-2 mt-1 whitespace-nowrap rounded-r-full px-2.5 py-0.5 transition-colors",
-                    allDone ? "bg-success/15 text-success" : "bg-[var(--step-pill-bg)] text-[var(--step-pill-fg)] hover:brightness-110",
+                    allDone ? "bg-warning text-warning-foreground" : "bg-[var(--step-pill-bg)] text-[var(--step-pill-fg)] hover:brightness-110",
                   )}
                 >
                   {s.label}
                 </span>
                 {/* A finished step keeps its tick on the heading itself, so completion still reads
                     at a glance while its sub-tasks are collapsed. */}
-                {allDone && <CheckCircle2 className="ml-auto mt-1 h-3.5 w-3.5 shrink-0 text-success" />}
+                {allDone && <CheckCircle2 className="ml-auto mt-1 h-3.5 w-3.5 shrink-0 text-warning" />}
               </button>
 
               {!stepCollapsed && (
