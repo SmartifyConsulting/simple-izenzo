@@ -1,7 +1,18 @@
 import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeftRight, ArrowUpRight, ChevronDown, Download, Handshake, LayoutGrid, List, Search } from "lucide-react";
+import {
+  ArrowLeftRight,
+  ArrowUpRight,
+  Check,
+  ChevronDown,
+  Download,
+  Handshake,
+  Hourglass,
+  LayoutGrid,
+  List,
+  Search,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -78,25 +89,31 @@ const GATE_TONE_CLASS: Record<GateTone, string> = {
   success: "border-success/40 bg-success/10 text-success",
 };
 
-function GatePill({ label, tone }: { label: string; tone: GateTone }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-medium",
-        GATE_TONE_CLASS[tone],
-      )}
-    >
-      {label}
-    </span>
-  );
-}
-
 /** A gate that hasn't opened yet for this deal at all — a plain outline circle with a dash,
  * distinguishing "not applicable yet" from any actual pending/expired/complete state. */
 function GateDash() {
   return (
     <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-border text-[11px] text-muted-foreground">
       –
+    </span>
+  );
+}
+
+/** A single icon in a small round pill, standing in for the old text pills so every status column
+ * reads at a glance and the whole table fits on one screen: a tick once a gate is complete, an
+ * hourglass while it's still open (any shade of "not done yet"), a dash when it hasn't started. */
+function IconPill({ label, tone }: { label: string; tone: GateTone }) {
+  if (tone === "neutral") return <GateDash />;
+  const Icon = tone === "success" ? Check : Hourglass;
+  return (
+    <span
+      title={label}
+      className={cn(
+        "inline-flex h-5 w-5 items-center justify-center rounded-full border",
+        GATE_TONE_CLASS[tone],
+      )}
+    >
+      <Icon className="h-3 w-3" />
     </span>
   );
 }
@@ -119,12 +136,15 @@ function gateStates(t: TxRow) {
         ? { label: "expired", tone: "danger" as GateTone }
         : { label: "draft", tone: "warning" as GateTone }
       : null;
+  // While negotiation is open (Seal Intent done, WaD not yet cleared), WaD shares NEG's exact
+  // "in progress" tone so the two hourglasses on the row read as the same wait, not two different
+  // ones — only clearing the deal (or letting it run past 21 days) breaks that sync.
   const wad = t.wad_completed_at
     ? { label: "completed", tone: "success" as GateTone }
     : t.poi_sealed_at
       ? ageDays(t.poi_sealed_at) > 21
         ? { label: "expired", tone: "danger" as GateTone }
-        : { label: "draft", tone: "warning" as GateTone }
+        : { label: "in progress", tone: "progress" as GateTone }
       : null;
   // Execution only reads "in progress" once Legal Agreements (the business-docs step that opens
   // the execution gate) is actually done — while both parties are still signing, this must stay
@@ -441,13 +461,13 @@ export function TradesListView() {
                 <th className="px-4 py-2 font-medium">Search</th>
                 <th className="px-4 py-2 font-medium">Match</th>
                 <th className="px-4 py-2 font-medium">POI</th>
+                <th className="px-4 py-2 font-medium">WaD</th>
                 <th
                   className="px-4 py-2 font-medium"
                   title="Negotiation — the time between Seal Intent and WaD"
                 >
                   <ArrowLeftRight className="h-3.5 w-3.5" aria-label="Negotiation" />
                 </th>
-                <th className="px-4 py-2 font-medium">WaD</th>
                 <th className="px-4 py-2 font-medium">Execution</th>
                 <th className="px-4 py-2 font-medium">Created</th>
                 <th className="px-4 py-2 font-medium">Last Updated</th>
@@ -576,29 +596,26 @@ export function TradesListView() {
   );
 }
 
-/** The gate columns as separate `<td>`s, one per header column, for the list/table layout. NEG has
- * its own column between POI and WaD — a duration, not a gate. */
+/** The gate columns as separate `<td>`s, one per header column, for the list/table layout. WaD now
+ * sits before NEG (the negotiation window's own duration, not a gate of its own) — both read as
+ * the same hourglass while negotiation is open, since a deal isn't cleared until WaD is. */
 function GateColumns({ t }: { t: TxRow }) {
   const g = gateStates(t);
   const neg = negGap(t.poi_sealed_at, t.wad_completed_at);
   return (
     <>
-      <td className="px-4 py-3">{g.search ? <GatePill {...g.search} /> : <GateDash />}</td>
-      <td className="px-4 py-3">{g.match ? <GatePill {...g.match} /> : <GateDash />}</td>
-      <td className="px-4 py-3">{g.poi ? <GatePill {...g.poi} /> : <GateDash />}</td>
-      {/* NEG sits between POI and WaD — the negotiation window's own duration, not a gate of its
-          own. It only reads once the intent is sealed (there is no negotiation before that). */}
-      <td className="px-4 py-3" title={neg?.title}>
-        {neg ? <GatePill label={neg.label} tone={neg.tone} /> : <GateDash />}
-      </td>
-      <td className="px-4 py-3">{g.wad ? <GatePill {...g.wad} /> : <GateDash />}</td>
-      <td className="px-4 py-3">{g.execution ? <GatePill {...g.execution} /> : <GateDash />}</td>
+      <td className="px-4 py-3">{g.search ? <IconPill {...g.search} /> : <GateDash />}</td>
+      <td className="px-4 py-3">{g.match ? <IconPill {...g.match} /> : <GateDash />}</td>
+      <td className="px-4 py-3">{g.poi ? <IconPill {...g.poi} /> : <GateDash />}</td>
+      <td className="px-4 py-3">{g.wad ? <IconPill {...g.wad} /> : <GateDash />}</td>
+      <td className="px-4 py-3">{neg ? <IconPill label={neg.title} tone={neg.tone} /> : <GateDash />}</td>
+      <td className="px-4 py-3">{g.execution ? <IconPill {...g.execution} /> : <GateDash />}</td>
     </>
   );
 }
 
-/** The same gates as a wrapping row of pills, for the card layout — with NEG (the negotiation
- * window) between POI and WaD. */
+/** The same gates as a wrapping row of pills, for the card layout — WaD before NEG, matching the
+ * table's column order. */
 function GateStack({ t }: { t: TxRow }) {
   const g = gateStates(t);
   const neg = negGap(t.poi_sealed_at, t.wad_completed_at);
@@ -606,8 +623,8 @@ function GateStack({ t }: { t: TxRow }) {
     { key: "Search", cell: g.search },
     { key: "Match", cell: g.match },
     { key: "POI", cell: g.poi },
-    { key: "NEG", cell: neg },
     { key: "WaD", cell: g.wad },
+    { key: "NEG", cell: neg ? { label: neg.title, tone: neg.tone } : null },
     { key: "Execution", cell: g.execution },
   ];
   return (
@@ -615,7 +632,7 @@ function GateStack({ t }: { t: TxRow }) {
       {entries.map((e) =>
         e.cell ? (
           <span key={e.key} className="flex items-center gap-1 text-[10px] text-muted-foreground">
-            {e.key}: <GatePill {...e.cell} />
+            {e.key}: <IconPill {...e.cell} />
           </span>
         ) : null,
       )}
