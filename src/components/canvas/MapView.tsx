@@ -299,13 +299,13 @@ function MemoryArcLabel() {
 /** A single filed document's flight from Upload Files to the Documents folder — mounted for one
  * uploaded file, animates itself from the Upload Files tile to the folder, then the parent removes
  * it once the flight is done. Pure animation; carries no data of its own. */
-function FlyingDocument() {
+function FlyingDocument({ from }: { from: Box }) {
   const [arrived, setArrived] = useState(false);
   useEffect(() => {
     const raf = requestAnimationFrame(() => setArrived(true));
     return () => cancelAnimationFrame(raf);
   }, []);
-  const start = { x: cx(BOXES.loadDocs), y: cy(BOXES.loadDocs) };
+  const start = { x: cx(from), y: cy(from) };
   const end = { x: DOCS_BOX.x + DOCS_BOX.w / 2, y: DOCS_BOX.y + DOCS_BOX.h / 2 };
   const pos = arrived ? end : start;
   return (
@@ -335,34 +335,45 @@ function DocumentsFolder({
   const [open, setOpen] = useState(false);
   const [hovering, setHovering] = useState(false);
   const [justFiled, setJustFiled] = useState(false);
-  const [flights, setFlights] = useState<number[]>([]);
+  const [flights, setFlights] = useState<{ id: number; from: Box }[]>([]);
   const flightId = useRef(0);
-  const prevCount = useRef(documents.length);
+  // Keyed by path (falling back to name) so a newly-added document can be told apart from ones
+  // already on file — that's what lets each flight start from the tile that actually produced it
+  // (the WaD clearance certificate flies from Without a Doubt, everything else from Upload Files)
+  // instead of every filing looking the same.
+  const prevKeys = useRef(new Set(documents.map((d) => d.path ?? d.name)));
+
   const showList = (open || hovering) && documents.length > 0;
 
   useEffect(() => {
-    if (documents.length > prevCount.current) {
-      const id = ++flightId.current;
-      setFlights((f) => [...f, id]);
+    const currentKeys = new Set(documents.map((d) => d.path ?? d.name));
+    const added = documents.filter((d) => !prevKeys.current.has(d.path ?? d.name));
+    if (added.length > 0) {
+      const newFlights = added.map((d) => ({
+        id: ++flightId.current,
+        from: d.kind === "Certificate" ? BOXES.withoutADoubt : BOXES.loadDocs,
+      }));
+      setFlights((f) => [...f, ...newFlights]);
+      const ids = newFlights.map((f) => f.id);
       // The folder itself only reacts once the flight actually lands, so the bounce/"Filed!"
       // moment feels like the document arriving rather than firing the instant it's uploaded.
       const land = setTimeout(() => {
-        setFlights((f) => f.filter((x) => x !== id));
+        setFlights((f) => f.filter((x) => !ids.includes(x.id)));
         setJustFiled(true);
         const t = setTimeout(() => setJustFiled(false), 1000);
         return () => clearTimeout(t);
       }, 750);
-      prevCount.current = documents.length;
+      prevKeys.current = currentKeys;
       return () => clearTimeout(land);
     }
-    prevCount.current = documents.length;
+    prevKeys.current = currentKeys;
     return undefined;
-  }, [documents.length]);
+  }, [documents]);
 
   return (
     <>
-      {flights.map((id) => (
-        <FlyingDocument key={id} />
+      {flights.map((f) => (
+        <FlyingDocument key={f.id} from={f.from} />
       ))}
       <div
         className="absolute"
