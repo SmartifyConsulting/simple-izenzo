@@ -3,6 +3,7 @@ import {
   Building2,
   CheckCircle2,
   Database,
+  Diamond,
   Download,
   Eye,
   FileText,
@@ -506,6 +507,7 @@ function MapNode({
   subSize,
   step,
   accentColor,
+  iconClassName,
 }: {
   box: Box;
   label: string;
@@ -525,6 +527,11 @@ function MapNode({
   /** The spine step this tile represents — drives the hoverable artefact icon, when this step
    * actually produces one. */
   step?: string | undefined;
+  /** Overrides the icon's own colour — it otherwise just inherits whatever colour the tile's
+   * current state is drawn in (aqua while pulsing, green once done, etc). Used to keep Without a
+   * Doubt's diamond a fixed black regardless of state, so it reads as a hard-gate mark rather than
+   * a status indicator. */
+  iconClassName?: string | undefined;
   /** Overrides `--throb-accent` for this tile's own pulse only, regardless of which side (bidder
    * or counterparty) is viewing — used on Offer/Counter Offer so they always pulse blue for both
    * parties, since that's the negotiation's own colour everywhere else in the app. */
@@ -565,7 +572,7 @@ function MapNode({
       )}
     >
       <span className="flex w-full items-center justify-center gap-1.5">
-        {Icon && <Icon className={cn("h-3.5 w-3.5 shrink-0", state === "open" && "text-primary")} />}
+        {Icon && <Icon className={cn("h-3.5 w-3.5 shrink-0", state === "open" && "text-primary", iconClassName)} />}
         <span className="whitespace-normal break-words leading-tight">{label}</span>
         {state === "done" && <CheckCircle2 className="h-3 w-3 shrink-0 text-success" />}
         {step && <ArtefactHint step={step} />}
@@ -671,6 +678,7 @@ export function MapView({
       noArtefact?: boolean;
       /** Overrides this tile's own pulse color, for both bidder and counterparty. */
       accentColor?: string;
+      iconClassName?: string;
     },
   ) => (
     <MapNode
@@ -683,6 +691,7 @@ export function MapView({
       {...(opts?.plain ? { plain: true } : {})}
       {...(opts?.subSize ? { subSize: opts.subSize } : {})}
       {...(opts?.accentColor ? { accentColor: opts.accentColor } : {})}
+      {...(opts?.iconClassName ? { iconClassName: opts.iconClassName } : {})}
       state={opts?.state ?? st(stage, step, opts?.overrideKey)}
       lock={lock(stage, step)}
       onClick={
@@ -781,10 +790,11 @@ export function MapView({
           noArtefact: true,
           accentColor: "#4169e1",
         })}
-        {node("withoutADoubt", "Without a Doubt", "compliance", "wad", ShieldCheck, {
+        {node("withoutADoubt", "Without a Doubt", "compliance", "wad", Diamond, {
           overrideKey: "wad",
-          sub: "Hard gate · non-waivable\nKYC & KYB on each other",
+          sub: "This is a hard gate and non-waivable",
           subTone: "gate",
+          iconClassName: "text-black",
         })}
         {node("businessDocs", "Legal Agreements", "execution", "business-docs", FolderClosed, {
           sub: "Digital sign-off by both parties",
