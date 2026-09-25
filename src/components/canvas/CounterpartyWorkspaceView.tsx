@@ -88,12 +88,18 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
     queryFn: async () => {
       const { data } = await supabase
         .from("documents")
-        .select("id, name, doc_type, notes, storage_path, created_at")
+        .select("id, name, doc_type, notes, storage_path, created_at, fully_signed_at")
         .eq("transaction_id", tx.id)
         .order("created_at", { ascending: true });
       return data ?? [];
     },
   });
+
+  // Same "all signed" read the bidder's own BusinessDocsStep uses, computed here too so this view
+  // can celebrate and collapse the Legal Agreements frame on its own — it doesn't share React
+  // state with the bidder's copy of that component, even though both render the same InlineFrame.
+  const legalDocs = docs.filter((d) => d.notes === "Legal Agreement");
+  const legalAllSigned = legalDocs.length > 0 && legalDocs.every((d) => Boolean(d.fully_signed_at));
 
   // The counterparty gets the same document folder the bidder sees on the map — every file filed
   // against this deal, previewable and downloadable — just never the bidder's own working steps
@@ -223,6 +229,19 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
     setOfferFrameOpen(false);
   }, [offerApproved]);
 
+  // Same celebration as the bidder's own Live Workspace once both parties have signed every Legal
+  // Agreement — fires once, then folds the Legal Agreements frame away to a collapsed record, the
+  // same "collapse to just the current phase" behaviour the bidder's view already has.
+  const [legalSignedCelebrate, setLegalSignedCelebrate] = useState(false);
+  const [legalOpen, setLegalOpen] = useState(true);
+  const legalAutoCollapsed = useRef(false);
+  useEffect(() => {
+    if (!legalAllSigned || legalAutoCollapsed.current) return;
+    legalAutoCollapsed.current = true;
+    setLegalOpen(false);
+    setLegalSignedCelebrate(true);
+  }, [legalAllSigned]);
+
   // Bid Information is only useful reading before the negotiation gets going — once a counter has
   // gone back and forth, or the offer's been accepted or rejected, it's just noise sitting above
   // the Offer thread that actually matters now. Collapses itself the first time that happens, but
@@ -260,6 +279,12 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
     <AppShell wide title={tx.title} description={`You're viewing this deal as its counterparty — read-only, shared for transparency.`}>
       {celebrateApproval && (
         <Confetti message="The offer has been approved." onDone={() => setCelebrateApproval(false)} />
+      )}
+      {legalSignedCelebrate && (
+        <Confetti
+          message="Both parties signed — on to Execution."
+          onDone={() => setLegalSignedCelebrate(false)}
+        />
       )}
       <div className="mx-auto max-w-6xl space-y-4">
         {/* The registration line spans both columns — who this deal is, and its BID/OFF number. */}
@@ -470,13 +495,29 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
 
             {/* Once both sides have cleared WaD the counterparty goes straight to Legal
                 Agreements — the same frame the bidder has, live (not view-only) so they can
-                upload and sign their side of every document. */}
+                upload and sign their side of every document. Collapses itself the moment both
+                sides have signed everything (same treatment as the Offer frame above), but can
+                still be reopened by hand afterward. */}
             {tx.wad_completed_at && (
               <div className="glass-node p-4">
-                <span className="label-caps mb-2 inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
-                  Step 2 · GRC — Legal Agreements
-                </span>
-                <InlineFrame bare tx={tx} stage="execution" step="business-docs" reload={reload} onClose={() => {}} />
+                <button
+                  type="button"
+                  onClick={() => setLegalOpen((v) => !v)}
+                  className="flex w-full items-center justify-between gap-2 text-left"
+                  aria-expanded={legalOpen}
+                >
+                  <span className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+                    Step 2 · GRC — Legal Agreements
+                  </span>
+                  <ChevronDown
+                    className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", legalOpen && "rotate-180")}
+                  />
+                </button>
+                {legalOpen && (
+                  <div className="mt-2">
+                    <InlineFrame bare tx={tx} stage="execution" step="business-docs" reload={reload} onClose={() => {}} />
+                  </div>
+                )}
               </div>
             )}
 
