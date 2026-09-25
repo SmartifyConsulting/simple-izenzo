@@ -2756,9 +2756,17 @@ function BusinessDocsStep({ tx, reload, onContinue }: Props) {
                           {label}
                         </p>
                         {sig ? (
-                          <p className="text-muted-foreground">
-                            Signed by {sig.signer_name} · {when(sig.signed_at)}
-                          </p>
+                          <div className="space-y-0.5">
+                            <p
+                              className="border-b border-foreground/40 pb-0.5 text-2xl leading-tight text-foreground"
+                              style={{ fontFamily: signatureFont(`${side}:${sig.signer_name}`) }}
+                            >
+                              {sig.signer_name}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">
+                              Digitally signed · {when(sig.signed_at)}
+                            </p>
+                          </div>
                         ) : mySide === side ? (
                           <Button
                             size="sm"
@@ -3321,4 +3329,18 @@ function MemoryLedger({ tx }: Props) {
       )}
     </Panel>
   );
+}
+
+/** Ten script styles; the bidder draws from the even slots and the counterparty from the odd
+ * ones, so the two parties never share a style. Chosen automatically from the signer's name. */
+const SIGNATURE_FONTS = [
+  "Great Vibes", "Caveat", "Dancing Script", "Alex Brush", "Sacramento",
+  "Allura", "Pacifico", "Cedarville Cursive", "Marck Script", "Parisienne",
+];
+function signatureFont(key: string) {
+  const [side, ...rest] = key.split(":");
+  let h = 0;
+  for (const c of rest.join(":")) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const idx = (h % 5) * 2 + (side === "counterparty" ? 1 : 0);
+  return `"${SIGNATURE_FONTS[idx]}", cursive`;
 }

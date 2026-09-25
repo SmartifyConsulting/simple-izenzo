@@ -1286,8 +1286,29 @@ function LiveDealEngine() {
     workspaceDocs.length,
   ]);
 
-  // Step 2 · GRC is finished once every legal agreement is signed by both parties.
-  const grcDone = Boolean(dealTx?.wad_completed_at && stepOverrides["businessDocs"] === "done");
+  // Step 2 · GRC is finished once every legal agreement is signed by both parties. Shares the
+  // Legal Agreements query key so a signature refreshes this immediately.
+  const { data: legalDocs = [] } = useQuery({
+    queryKey: ["legal-agreements", dealTx?.id],
+    enabled: Boolean(dealTx?.id && dealTx?.wad_completed_at),
+    refetchInterval: 15000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("documents")
+        .select("*")
+        .eq("transaction_id", dealTx!.id)
+        .eq("notes", "Legal Agreement")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const legalAllSigned =
+    legalDocs.length > 0 &&
+    legalDocs.every((d) => Boolean((d as { fully_signed_at?: string | null }).fully_signed_at));
+  const grcDone = Boolean(
+    dealTx?.wad_completed_at && (legalAllSigned || stepOverrides["businessDocs"] === "done"),
+  );
   // Workflow hand-offs: confirmed Intent folds Step 1 and opens Step 2; a finished GRC folds
   // Step 2 and opens Step 3. Only on the transition (or first look at a deal), so manual +/−
   // still works afterwards.
