@@ -255,6 +255,26 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
     setBidInfoOpen(false);
   }, [negotiationStarted]);
 
+  // Step 1 and Step 2 actually bundle their own contents behind one toggle each here too now,
+  // matching the bidder's own Live Workspace — previously the Step 1/2 pills were purely
+  // decorative (gold once done) while every frame beneath them stayed individually expanded all
+  // the time, which never actually collapsed anything.
+  const [step1Open, setStep1Open] = useState(true);
+  const step1AutoCollapsed = useRef(false);
+  useEffect(() => {
+    if (!tx.intent_confirmed_at || step1AutoCollapsed.current) return;
+    step1AutoCollapsed.current = true;
+    setStep1Open(false);
+  }, [tx.intent_confirmed_at]);
+
+  const [step2Open, setStep2Open] = useState(true);
+  const step2AutoCollapsed = useRef(false);
+  useEffect(() => {
+    if (!tx.wad_completed_at || step2AutoCollapsed.current) return;
+    step2AutoCollapsed.current = true;
+    setStep2Open(false);
+  }, [tx.wad_completed_at]);
+
   async function respondTo(response: "accepted" | "declined") {
     setResponding(response);
     try {
@@ -328,14 +348,16 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
           <div className="space-y-3">
             <p className="label-caps text-muted-foreground">Live Workspace</p>
 
-            {/* Same "settled record" gold look as the bidder's own Step 1 accordion — plain grey
-                until the offer is actually approved (and the confetti above has fired), gold once
-                it is. Look-alike only here: the counterparty's record beneath it isn't collapsed
-                behind this the way the bidder's Step 1 bundles everything, since this view is
-                already a short, flat list. */}
-            <div
+            {/* Same "settled record" gold look as the bidder's own Step 1 accordion, and now the
+                same real bundling — everything through Confirmed Intent folds away behind this one
+                toggle, instead of every frame beneath it staying independently expanded all the
+                time regardless of this pill's own state. */}
+            <button
+              type="button"
+              onClick={() => setStep1Open((v) => !v)}
+              aria-expanded={step1Open}
               className={cn(
-                "flex items-center gap-2 rounded-full border-2 px-3 py-1.5",
+                "flex w-full items-center gap-2 rounded-full border-2 px-3 py-1.5 text-left",
                 offerApproved ? "border-black bg-amber-400/70" : "border-black bg-black",
               )}
             >
@@ -355,96 +377,147 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
               >
                 {tx.reference}
               </span>
-            </div>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 shrink-0 transition-transform",
+                  offerApproved ? "text-muted-foreground" : "text-white/80",
+                  step1Open && "rotate-180",
+                )}
+              />
+            </button>
 
-            {/* The documents this deal is running on — the counterparty reads them, but the bidder's
-                own Choice and AI+ recommendation output are never part of this view. */}
-            <CollapsibleFrame label={`${kindWord} Information`} open={bidInfoOpen} onToggle={() => setBidInfoOpen((v) => !v)}>
-              <div className="grid gap-2 text-sm sm:grid-cols-2">
-                <p><span className="text-muted-foreground">Commodity:</span> {tx.commodity ?? "—"}</p>
-                <p><span className="text-muted-foreground">Jurisdiction:</span> {tx.jurisdiction ?? "—"}</p>
-                <p><span className="text-muted-foreground">Incoterms:</span> {tx.incoterms ?? "—"}</p>
-              </div>
-              {/* Same scannable, section-headed formatting the bidder's own Bid Information gets —
-                  not a plain paragraph dump of the AI summary. */}
-              {(tx as unknown as { document_summary?: string | null }).document_summary && (
-                <div className="mt-2">
-                  <DocumentSummaryList
-                    summary={(tx as unknown as { document_summary: string }).document_summary}
-                  />
-                </div>
-              )}
-              {docs.length > 0 && (
-                <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
-                  {docs.map((d) => (
-                    <li key={d.id}>{d.name}</li>
-                  ))}
-                </ul>
-              )}
-            </CollapsibleFrame>
+            {step1Open && (
+              <>
+                {/* The documents this deal is running on — the counterparty reads them, but the
+                    bidder's own Choice and AI+ recommendation output are never part of this view. */}
+                <CollapsibleFrame label={`${kindWord} Information`} open={bidInfoOpen} onToggle={() => setBidInfoOpen((v) => !v)}>
+                  <div className="grid gap-2 text-sm sm:grid-cols-2">
+                    <p><span className="text-muted-foreground">Commodity:</span> {tx.commodity ?? "—"}</p>
+                    <p><span className="text-muted-foreground">Jurisdiction:</span> {tx.jurisdiction ?? "—"}</p>
+                    <p><span className="text-muted-foreground">Incoterms:</span> {tx.incoterms ?? "—"}</p>
+                  </div>
+                  {/* Same scannable, section-headed formatting the bidder's own Bid Information
+                      gets — not a plain paragraph dump of the AI summary. */}
+                  {(tx as unknown as { document_summary?: string | null }).document_summary && (
+                    <div className="mt-2">
+                      <DocumentSummaryList
+                        summary={(tx as unknown as { document_summary: string }).document_summary}
+                      />
+                    </div>
+                  )}
+                  {docs.length > 0 && (
+                    <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                      {docs.map((d) => (
+                        <li key={d.id}>{d.name}</li>
+                      ))}
+                    </ul>
+                  )}
+                </CollapsibleFrame>
 
-            {/* The steps leading up to the negotiation stay on the record, folded away — they come
-                before the Offer, so they read in the order the deal actually ran. */}
-            {tx.intent_confirmed_at && (
-              <CollapsibleFrame
-                label="Confirmed Intent"
-                open={openFrame === "intent"}
-                onToggle={() => toggleFrame("intent")}
-              >
-                <InlineFrame bare viewOnly tx={tx} stage="trading" step="intent" reload={reload} onClose={() => {}} />
-              </CollapsibleFrame>
+                {tx.intent_confirmed_at && (
+                  <CollapsibleFrame
+                    label="Confirmed Intent"
+                    open={openFrame === "intent"}
+                    onToggle={() => toggleFrame("intent")}
+                  >
+                    <InlineFrame bare viewOnly tx={tx} stage="trading" step="intent" reload={reload} onClose={() => {}} />
+                  </CollapsibleFrame>
+                )}
+              </>
             )}
 
+            {/* Step 2 bundles Seal Intent through Without a Doubt the same way — collapses once
+                WaD actually clears, matching the bidder's own grcDone-driven fold. */}
             {tx.poi_sealed_at && (
-              <CollapsibleFrame
-                label="Seal Intent"
-                open={openFrame === "poi"}
-                onToggle={() => toggleFrame("poi")}
+              <button
+                type="button"
+                onClick={() => setStep2Open((v) => !v)}
+                aria-expanded={step2Open}
+                className={cn(
+                  "mt-1.5 flex w-full items-center gap-2 rounded-full border-2 px-3 py-1.5 text-left text-xs font-semibold",
+                  tx.wad_completed_at
+                    ? "border-black bg-amber-400/70 text-foreground hover:bg-amber-400/85"
+                    : "border-black bg-black text-white hover:bg-black/90",
+                )}
               >
-                <InlineFrame bare viewOnly tx={tx} stage="trading" step="poi" reload={reload} onClose={() => {}} />
-              </CollapsibleFrame>
-            )}
-
-            {/* The Offer sits after Seal Intent — it only exists once the intent is sealed. Stays
-                visible as its own record after approval too (same folded-frame treatment the
-                bidder's Live Workspace uses) rather than vanishing the moment it's decided —
-                collapses itself the first time it's approved, but can still be reopened by hand. */}
-            {tx.poi_sealed_at && (
-              <div className="rounded-2xl border border-border bg-card">
-                <button
-                  type="button"
-                  onClick={() => setOfferFrameOpen((v) => !v)}
-                  className="flex w-full items-center justify-between gap-2 px-3.5 py-2 text-left"
-                  aria-expanded={offerFrameOpen}
+                <span
+                  className={cn(
+                    "label-caps rounded-full px-2.5 py-0.5",
+                    tx.wad_completed_at ? "bg-[var(--step-pill-bg)] text-[var(--step-pill-fg)]" : "bg-white text-black",
+                  )}
                 >
-                  <span>
-                    <span className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
-                      Offer
+                  Step 2 · GRC
+                </span>
+                <ChevronDown
+                  className={cn(
+                    "ml-auto h-4 w-4 shrink-0 transition-transform",
+                    tx.wad_completed_at ? "text-muted-foreground" : "text-white/80",
+                    step2Open && "rotate-180",
+                  )}
+                />
+              </button>
+            )}
+
+            {tx.poi_sealed_at && step2Open && (
+              <>
+                <CollapsibleFrame
+                  label="Seal Intent"
+                  open={openFrame === "poi"}
+                  onToggle={() => toggleFrame("poi")}
+                >
+                  <InlineFrame bare viewOnly tx={tx} stage="trading" step="poi" reload={reload} onClose={() => {}} />
+                </CollapsibleFrame>
+
+                {/* Stays visible as its own record after approval too (same folded-frame treatment
+                    the bidder's Live Workspace uses) rather than vanishing the moment it's decided —
+                    collapses itself the first time it's approved, but can still be reopened by
+                    hand. */}
+                <div className="rounded-2xl border border-border bg-card">
+                  <button
+                    type="button"
+                    onClick={() => setOfferFrameOpen((v) => !v)}
+                    className="flex w-full items-center justify-between gap-2 px-3.5 py-2 text-left"
+                    aria-expanded={offerFrameOpen}
+                  >
+                    <span>
+                      <span className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+                        Offer
+                      </span>
+                      <span className="mt-1 block text-[11px] text-muted-foreground">
+                        Accept, counter or reject the terms — a back-and-forth exchange between the
+                        two of you until you reach agreement.
+                      </span>
                     </span>
-                    <span className="mt-1 block text-[11px] text-muted-foreground">
-                      Accept, counter or reject the terms — a back-and-forth exchange between the two
-                      of you until you reach agreement.
+                    <ChevronDown
+                      className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", offerFrameOpen && "rotate-180")}
+                    />
+                  </button>
+                  {offerFrameOpen && (
+                    <div className="px-3.5 pb-3">
+                      <MutualEngagementPanel transactionId={tx.id} offerOnly />
+                    </div>
+                  )}
+                </div>
+
+                {offerApproved && !tx.wad_completed_at && (
+                  <div className="glass-node p-4">
+                    <span className="label-caps mb-2 inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+                      Without a Doubt
                     </span>
-                  </span>
-                  <ChevronDown
-                    className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", offerFrameOpen && "rotate-180")}
-                  />
-                </button>
-                {offerFrameOpen && (
-                  <div className="px-3.5 pb-3">
-                    <MutualEngagementPanel transactionId={tx.id} offerOnly />
+                    <InlineFrame bare viewOnly tx={tx} stage="compliance" step="wad" reload={reload} onClose={() => {}} />
                   </div>
                 )}
-              </div>
-            )}
 
-            {offerApproved && !tx.wad_completed_at && (
-              <div className="glass-node p-4">
-                <span className="label-caps mb-2 inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
-                  Without a Doubt
-                </span>
-                <InlineFrame bare viewOnly tx={tx} stage="compliance" step="wad" reload={reload} onClose={() => {}} />
-              </div>
+                {tx.wad_completed_at && (
+                  <CollapsibleFrame
+                    label="Without a Doubt"
+                    open={openFrame === "wad"}
+                    onToggle={() => toggleFrame("wad")}
+                  >
+                    <InlineFrame bare viewOnly tx={tx} stage="compliance" step="wad" reload={reload} onClose={() => {}} />
+                  </CollapsibleFrame>
+                )}
+              </>
             )}
 
             {canRespond && (
@@ -481,16 +554,6 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
                   </div>
                 )}
               </div>
-            )}
-
-            {tx.wad_completed_at && (
-              <CollapsibleFrame
-                label="Without a Doubt"
-                open={openFrame === "wad"}
-                onToggle={() => toggleFrame("wad")}
-              >
-                <InlineFrame bare viewOnly tx={tx} stage="compliance" step="wad" reload={reload} onClose={() => {}} />
-              </CollapsibleFrame>
             )}
 
             {/* Once both sides have cleared WaD the counterparty goes straight to Legal
