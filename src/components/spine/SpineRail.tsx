@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Check, Lock, Circle, Dot, ChevronRight } from "lucide-react";
 import { SPINE, lockReason, stepIndex, type StageKey } from "@/lib/spine";
+import { useWorkflowTemplate } from "@/lib/workflowTemplate";
 import type { Transaction } from "@/lib/tx";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +15,7 @@ export function SpineRail({
   currentStage: string;
   currentStep: string;
 }) {
+  const { spine } = useWorkflowTemplate();
   const currentIdx = stepIndex(tx.stage, tx.step);
   const viewingIdx = stepIndex(currentStage, currentStep);
   const [openStages, setOpenStages] = useState<Set<string>>(() => new Set([currentStage, tx.stage]));
@@ -53,7 +55,7 @@ export function SpineRail({
     <nav className="lg:sticky lg:top-20">
       <p className="label-caps px-1">Trading Gateway</p>
       <ol className="mt-4 space-y-6">
-        {SPINE.map((stage) => {
+        {spine.map((stage) => {
           const locked = lockReason(stage.key as StageKey, stage.steps[0]!.key, tx);
           const isOpen = openStages.has(stage.key);
           return (
