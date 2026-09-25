@@ -14,7 +14,7 @@ type Search = { next?: string | undefined };
 
 function safeNext(next: string | undefined) {
   if (next && next.startsWith("/") && !next.startsWith("//")) return next;
-  return "/live-deal-engine";
+  return "/";
 }
 
 export const Route = createFileRoute("/_public/")({
