@@ -61,11 +61,17 @@ function ProcessingRibbon({ label }: { label: string }) {
  * (and can add their own party to the list), clicks Review to run the social/news media scan on
  * that set, then makes the final choice — after which the wizard picks up at Intent. */
 export function FlightSearchBoard() {
-  const { org } = useAuth();
+  const { org, orgs } = useAuth();
   const qc = useQueryClient();
   const classify = useServerFn(classifyDocument);
   const runMediaScan = useServerFn(runAiProposal);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Which of this person's organisations the new trade gets registered under — only shown as a
+  // picker when they actually belong to more than one. Starts on the primary org (profile.org_id,
+  // via useAuth's own `org`); null here just means "hasn't been touched yet, follow the primary".
+  const [tradeOrgId, setTradeOrgId] = useState<string | null>(null);
+  const activeOrgId = tradeOrgId ?? org?.id ?? null;
 
   const [direction, setDirection] = useState<Direction>("bid");
   const [commodity, setCommodity] = useState("");
@@ -123,7 +129,7 @@ export function FlightSearchBoard() {
   }
 
   async function submit() {
-    if (!org) {
+    if (!activeOrgId) {
       toast.error("Add your organisation details first");
       return;
     }
@@ -138,7 +144,7 @@ export function FlightSearchBoard() {
       const { data: tx, error: txErr } = await supabase
         .from("transactions")
         .insert({
-          org_id: org.id,
+          org_id: activeOrgId,
           stage: "trading",
           step: "bid-offer",
           title: commodity,
@@ -420,6 +426,25 @@ export function FlightSearchBoard() {
 
       {phase === "search" && (
         <div className="rounded-2xl border border-border bg-card p-5">
+          {orgs.length > 1 && (
+            <div className="mb-3 flex items-center justify-end gap-2">
+              <Label className="shrink-0 text-xs text-muted-foreground">Trading as</Label>
+              <Select {...(activeOrgId ? { value: activeOrgId } : {})} onValueChange={setTradeOrgId}>
+                <SelectTrigger className="h-8 w-auto min-w-[10rem] text-xs">
+                  <SelectValue placeholder="Select an organisation" />
+                </SelectTrigger>
+                <SelectContent align="end">
+                  {orgs.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>
+                      {o.name}
+                      {o.id === org?.id ? " (Primary)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="grid gap-1 rounded-lg p-1 sm:grid-cols-2">
             {(["bid", "offer"] as const).map((d) => (
               <button
