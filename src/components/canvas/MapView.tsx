@@ -794,9 +794,13 @@ export function MapView({
         {/* Step 3 — execution. The frame heading stays "Step 3 · Execution"; each tile below it is
             one item from the vertical stepper's own Execution list, in the same order: Project
             Preparation's three sub-steps, then Bankability, then Implementation. */}
+        {/* All three share the same stage/step (there's no persisted sub-stage of its own for
+            Pre-feasibility/Feasibility yet) — without a distinct state each, every one of them
+            pulsed together the moment Execution opened. Only Concept is actually built out, so
+            only it reads its real state; the other two stay a plain, non-pulsing "open" tile. */}
         {node("concept", "Concept", "execution", "preparation")}
-        {node("prefeasibility", "Pre-feasibility", "execution", "preparation")}
-        {node("feasibility", "Feasibility", "execution", "preparation")}
+        {node("prefeasibility", "Pre-feasibility", "execution", "preparation", undefined, { state: "open" })}
+        {node("feasibility", "Feasibility", "execution", "preparation", undefined, { state: "open" })}
         {node("bankability", "Bankability", "execution", "bankability")}
         {node("implementation", "Implementation", "execution", "implementation")}
         {/* Entry/Exit sits between the Step 3 and Step 4 frames, on its own. */}
@@ -826,8 +830,8 @@ export function MapView({
             // This is where AI+ actually draws from and keeps learning — a gold fill with a
             // steady black outline sets it apart from every other tile on the map, rather than
             // reading as just another step.
-            "absolute rounded-full border-2 border-black bg-amber-400/35 px-5 text-center font-sans transition-colors",
-            memoryState === "open" && "text-foreground hover:bg-amber-400/50",
+            "absolute rounded-full border-2 border-black bg-amber-400/70 px-5 text-center font-sans transition-colors",
+            memoryState === "open" && "text-foreground hover:bg-amber-400/85",
             memoryState === "done" && "text-success",
             memoryState === "active" && "animate-throb-aqua text-primary",
             memoryState === "locked" && "cursor-not-allowed text-muted-foreground",
