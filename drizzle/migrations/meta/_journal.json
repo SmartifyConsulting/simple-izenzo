@@ -148,6 +148,13 @@
       "when": 1790358218949,
       "tag": "0020_interpol_case_pages",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1790362146170,
+      "tag": "0021_private_interpol_cases",
+      "breakpoints": true
     }
   ]
 }
