@@ -570,6 +570,14 @@ export function TradesListView({
                               </>
                             )}
                           </p>
+                          {/* The person, not just their company — only worth its own line when the
+                              company name above didn't already say it (an individual trading in
+                              their own name shows nothing extra here). */}
+                          {t.bidderName && t.bidderCompany && (
+                            <p className="mt-0.5 max-w-[220px] truncate text-[10px] text-muted-foreground">
+                              Created by {t.bidderName}
+                            </p>
+                          )}
                         </td>
                         <GateColumns t={t} />
                         <td className="whitespace-nowrap px-4 py-3 text-[11px] text-muted-foreground">{formatDate(t.created_at)}</td>
