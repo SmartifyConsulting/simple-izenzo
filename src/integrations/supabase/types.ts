@@ -871,6 +871,204 @@ export type Database = {
         }
         Relationships: []
       }
+      case_closures: {
+        Row: {
+          closed_by: string
+          closed_by_name: string | null
+          created_at: string
+          follow_up_transaction_id: string | null
+          id: string
+          note: string | null
+          outcome: string
+          summary: string | null
+          transaction_id: string
+        }
+        Insert: {
+          closed_by?: string
+          closed_by_name?: string | null
+          created_at?: string
+          follow_up_transaction_id?: string | null
+          id?: string
+          note?: string | null
+          outcome: string
+          summary?: string | null
+          transaction_id: string
+        }
+        Update: {
+          closed_by?: string
+          closed_by_name?: string | null
+          created_at?: string
+          follow_up_transaction_id?: string | null
+          id?: string
+          note?: string | null
+          outcome?: string
+          summary?: string | null
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_closures_follow_up_transaction_id_fkey"
+            columns: ["follow_up_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_closures_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: true
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      case_evidence: {
+        Row: {
+          added_by: string
+          added_by_name: string | null
+          created_at: string
+          file_name: string | null
+          id: string
+          note: string | null
+          sha256: string | null
+          source: string | null
+          storage_path: string | null
+          transaction_id: string
+        }
+        Insert: {
+          added_by?: string
+          added_by_name?: string | null
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          note?: string | null
+          sha256?: string | null
+          source?: string | null
+          storage_path?: string | null
+          transaction_id: string
+        }
+        Update: {
+          added_by?: string
+          added_by_name?: string | null
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          note?: string | null
+          sha256?: string | null
+          source?: string | null
+          storage_path?: string | null
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_evidence_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      case_leads: {
+        Row: {
+          authority_required: string | null
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decided_by_name: string | null
+          decision: string | null
+          direction: string
+          effect: string | null
+          evidence_basis: string | null
+          expected_result: string | null
+          id: string
+          reason: string | null
+          title: string
+          transaction_id: string
+        }
+        Insert: {
+          authority_required?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decided_by_name?: string | null
+          decision?: string | null
+          direction: string
+          effect?: string | null
+          evidence_basis?: string | null
+          expected_result?: string | null
+          id?: string
+          reason?: string | null
+          title: string
+          transaction_id: string
+        }
+        Update: {
+          authority_required?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decided_by_name?: string | null
+          decision?: string | null
+          direction?: string
+          effect?: string | null
+          evidence_basis?: string | null
+          expected_result?: string | null
+          id?: string
+          reason?: string | null
+          title?: string
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_leads_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      case_wad_checks: {
+        Row: {
+          check_key: string
+          created_at: string
+          id: string
+          note: string | null
+          passed: boolean
+          recorded_by: string
+          recorded_by_name: string | null
+          transaction_id: string
+        }
+        Insert: {
+          check_key: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          passed: boolean
+          recorded_by?: string
+          recorded_by_name?: string | null
+          transaction_id: string
+        }
+        Update: {
+          check_key?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          passed?: boolean
+          recorded_by?: string
+          recorded_by_name?: string | null
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_wad_checks_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       compliance_case_events: {
         Row: {
           actor_id: string
