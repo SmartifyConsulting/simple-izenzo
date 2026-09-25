@@ -265,7 +265,10 @@ function OpenDealsPicker({ currentId, hasAttachment }: { currentId: string | nul
 function LiveDealEngine() {
   const { tx: txParam, popout, panel, q: matchQuery, seed, fresh, n: freshNonce } = Route.useSearch();
   const navigate = useNavigate();
-  const { org } = useAuth();
+  const { org, user } = useAuth();
+  // Step 3 · Execution is Phase 2 — not ready for general users yet, so it's gated to this one
+  // account until that phase actually ships.
+  const canSeeStep3 = user?.email === "georgia.adams@smartify.co.za";
   // Whatever the visitor dropped on the homepage before signing in, if anything. Read via a
   // non-destructive peek (StrictMode double-invokes this initializer in dev, and a combined
   // read-and-clear would lose the files on the second call), then clear it once via the effect
@@ -1728,6 +1731,11 @@ function LiveDealEngine() {
    * step-specific UI (documents, search, choice, POI, WaD) — opens a generic inline detail panel
    * in the Workspace instead, so the Map never navigates away from this screen. */
   function openMapStep(stage: StageKey, step: string, viewOnly = false) {
+    // Step 3 · Execution is Phase 2 — gated off the Live Workspace accordion above, but the map's
+    // own Step 3 tiles (Concept, Bankability, etc.) would otherwise still open it directly. Legal
+    // Agreements is still Step 2 · GRC content, not part of this gate, despite sharing the
+    // "execution" stage on the transaction record.
+    if (stage === "execution" && step !== "business-docs" && !canSeeStep3) return;
     // A past, already-completed stage is shown as a frozen read-only snapshot instead of jumping
     // back into whichever live, editable UI normally owns that step — its data can't change
     // anymore, so it should never feel like the current step you're re-doing.
@@ -3618,7 +3626,7 @@ function LiveDealEngine() {
                   </div>
                 )}
 
-                {dealTx && grcDone && (
+                {dealTx && grcDone && canSeeStep3 && (
                   <button
                     type="button"
                     onClick={() => setStep3Open((v) => !v)}
@@ -3632,7 +3640,7 @@ function LiveDealEngine() {
                     <ChevronDown className={cn("ml-auto h-3.5 w-3.5 shrink-0 text-white/80 transition-transform", step3Open && "rotate-180")} />
                   </button>
                 )}
-                {dealTx && grcDone && step3Open && (
+                {dealTx && grcDone && canSeeStep3 && step3Open && (
                   <InlineFrame
                     tx={dealTx}
                     stage="execution"
