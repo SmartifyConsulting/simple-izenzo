@@ -56,7 +56,7 @@ export function WorkflowTemplatesTab() {
       key, name, description: current.description, domain: current.domain,
       stages: current.stages, lexicon: current.lexicon, is_default: false, locked: false,
     });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Template copied");
     await qc.invalidateQueries({ queryKey: ["workflow-templates"] });
     setSelected(key);
@@ -67,7 +67,7 @@ export function WorkflowTemplatesTab() {
     const { error } = await db.from("workflow_templates")
       .update({ name: draft.name, stages: draft.stages, lexicon: draft.lexicon })
       .eq("key", draft.key);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Template saved");
     await qc.invalidateQueries({ queryKey: ["workflow-templates"] });
   }
@@ -84,7 +84,7 @@ export function WorkflowTemplatesTab() {
 
   async function assign(orgId: string, key: string) {
     const { error } = await db.from("organisations").update({ workflow_template_key: key }).eq("id", orgId);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Template assigned");
     await qc.invalidateQueries({ queryKey: ["workflow-template-orgs"] });
   }
