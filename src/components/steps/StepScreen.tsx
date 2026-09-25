@@ -2535,10 +2535,6 @@ function BusinessDocsStep({ tx, reload, onContinue }: Props) {
       const { data } = await supabase.from("profiles").select("id, full_name, email").in("id", uploaderIds);
       const map: Record<string, string> = {};
       for (const p of data ?? []) map[p.id] = p.full_name || p.email || "";
-      for (const s of signatures) {
-        // Fall back to a signer's name when the profile itself isn't visible to this viewer.
-        void s;
-      }
       return map;
     },
   });
@@ -2843,6 +2839,14 @@ function ExecutionStep({ tx, step, reload }: Props) {
               <Loader2 className="h-3.5 w-3.5 animate-spin" /> Reading the agreements…
             </p>
           )}
+          <div className="mt-4 flex items-center justify-end gap-3 border-t border-border pt-3">
+            <p className="text-[11px] text-muted-foreground">
+              Phase 1 ends here — Execution continues in Phase 2.
+            </p>
+            <Button size="sm" disabled>
+              Continue
+            </Button>
+          </div>
         </Panel>
       )}
 
