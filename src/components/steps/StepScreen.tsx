@@ -2600,10 +2600,9 @@ function BusinessDocsStep({ tx, reload, onContinue }: Props) {
       {celebrate && (
         <Confetti message="Both parties signed — the trade is settled." onDone={() => setCelebrate(false)} />
       )}
-      <Panel
-        title="Legal Agreements"
-        description="Add the NDA, MOU and any other contracts for this deal — either party can attach one, both of you see everything added, and each needs both signatures to take effect."
-      >
+      {/* No title/description here — the outer frame this sits inside already carries the
+          "Legal Agreements" heading and this same copy as its subtext. */}
+      <Panel>
         <div className="space-y-3">
           <Field label="Document name">
             <Input

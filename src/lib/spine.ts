@@ -57,7 +57,8 @@ export const SPINE: StageDef[] = [
       {
         key: "business-docs",
         label: "Legal Agreements",
-        blurb: "Upload the NDA, MOU and any other contracts for this deal.",
+        blurb:
+          "Add the NDA, MOU and any other contracts for this deal — either party can attach one, both of you see everything added, and each needs both signatures to take effect.",
       },
       { key: "entry", label: "Execution Entry", blurb: "Open execution and record the entry position." },
       { key: "preparation", label: "Project Preparation", blurb: "Concept, pre-feasibility and feasibility." },
