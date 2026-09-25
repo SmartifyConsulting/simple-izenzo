@@ -47,7 +47,7 @@ export const SPINE: StageDef[] = [
     key: "compliance",
     label: "Compliance Gate",
     steps: [
-      { key: "wad", label: "Without a Doubt (WAD)", blurb: "KYC, KYB, UBO, sanctions and PEP. 3 tokens (USD 30)." },
+      { key: "wad", label: "Without a Doubt (WAD)", blurb: "This is a hard gate and non-waivable." },
     ],
   },
   {

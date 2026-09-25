@@ -792,7 +792,7 @@ export function MapView({
         })}
         {node("withoutADoubt", "Without a Doubt", "compliance", "wad", Diamond, {
           overrideKey: "wad",
-          sub: "This is a hard gate and non-waivable",
+          sub: "KYC & KYB on each other",
           subTone: "gate",
           iconClassName: "fill-black text-black",
         })}
