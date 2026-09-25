@@ -11,13 +11,16 @@ export function RelabelScope({ children }: { children: ReactNode }) {
   useEffect(() => {
     const root = ref.current;
     if (!root || !active) return;
+    const done = new WeakMap<Node, string>();
     const fix = (node: Node) => {
       const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
       for (let n = walker.nextNode(); n; n = walker.nextNode()) {
         const p = n.parentElement;
         if (!p || p.closest("input,textarea,[contenteditable='true'],script,style")) continue;
         const v = n.nodeValue ?? "";
+        if (done.get(n) === v) continue;
         const next = relabel(v);
+        done.set(n, next);
         if (next !== v) n.nodeValue = next;
       }
     };
