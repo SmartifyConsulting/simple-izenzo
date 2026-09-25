@@ -3330,3 +3330,17 @@ function MemoryLedger({ tx }: Props) {
     </Panel>
   );
 }
+
+/** Ten script styles; the bidder draws from the even slots and the counterparty from the odd
+ * ones, so the two parties never share a style. Chosen automatically from the signer's name. */
+const SIGNATURE_FONTS = [
+  "Great Vibes", "Caveat", "Dancing Script", "Alex Brush", "Sacramento",
+  "Allura", "Pacifico", "Cedarville Cursive", "Marck Script", "Parisienne",
+];
+function signatureFont(key: string) {
+  const [side, ...rest] = key.split(":");
+  let h = 0;
+  for (const c of rest.join(":")) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const idx = (h % 5) * 2 + (side === "counterparty" ? 1 : 0);
+  return `"${SIGNATURE_FONTS[idx]}", cursive`;
+}
