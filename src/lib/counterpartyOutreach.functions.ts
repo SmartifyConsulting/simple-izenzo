@@ -23,10 +23,15 @@ export async function findRegisteredOrg(
   const key = nameKey(name);
   const firstWord = key.split(" ")[0];
   if (!firstWord) return null;
+  // A short prefix, not the whole first word — the wildcard runs against the organisation's raw,
+  // unnormalised name, spaces and all. "SeedAxis" (one token here) vs a registered "Seed Axis"
+  // (two tokens there) never share a contiguous "seedaxis" substring in the stored text, so the
+  // prefix has to be short enough to land before wherever that space actually falls.
+  const prefix = firstWord.slice(0, 5);
   const { data } = await supabase
     .from("organisations")
     .select("name, website, primary_contact_email")
-    .ilike("name", `%${firstWord}%`)
+    .ilike("name", `%${prefix}%`)
     .limit(25);
   const rows = (data ?? []) as { name: string; website: string | null; primary_contact_email: string | null }[];
   let match = rows.find((o) => nameKey(o.name) === key);
@@ -41,6 +46,18 @@ export async function findRegisteredOrg(
       const otherKey = nameKey(o.name);
       return otherKey.length >= 4 && (otherKey.includes(key) || key.includes(otherKey));
     });
+  }
+  // Still nothing? "SeedAxis" and "Seed Axis" are the same company spelled with or without a
+  // space — nameKey keeps internal spaces, so those never match as equal or as a substring of one
+  // another. Comparing with every space stripped catches that one real registered org was on the
+  // platform the whole time, without loosening the match for genuinely different companies (still
+  // requires the whole collapsed name to match, not just a shared fragment).
+  if (!match) {
+    const collapse = (k: string) => k.replace(/\s+/g, "");
+    const collapsedKey = collapse(key);
+    if (collapsedKey.length >= 4) {
+      match = rows.find((o) => collapse(nameKey(o.name)) === collapsedKey);
+    }
   }
   return match ? { website: match.website, primary_contact_email: match.primary_contact_email } : null;
 }

@@ -33,9 +33,11 @@ describe("findRegisteredOrg", () => {
     ]);
     const result = await findRegisteredOrg(client, "SeedAxis");
     expect(result).toEqual({ website: "https://seedaxis.example", primary_contact_email: "hello@seedaxis.example" });
-    // Narrowed the DB query by the name's first significant word, not an exact match.
+    // Narrowed the DB query by a short prefix of the name's first significant word (not the whole
+    // word, and not an exact match) — a short prefix still lands inside the registered name even
+    // when it's spelled with a space the candidate name doesn't have ("Seed Axis" vs "SeedAxis").
     expect(calls[0]?.table).toBe("organisations");
-    expect(calls[0]?.pattern).toBe("%seedaxis%");
+    expect(calls[0]?.pattern).toBe("%seeda%");
   });
 
   it("matches regardless of case and extra whitespace", async () => {
@@ -44,6 +46,14 @@ describe("findRegisteredOrg", () => {
     ]);
     const result = await findRegisteredOrg(client, "SEEDAXIS Group");
     expect(result?.primary_contact_email).toBe("info@seedaxis.example");
+  });
+
+  it("matches a registered org spelled with a space the candidate name doesn't have", async () => {
+    const { client } = fakeSupabase([
+      { name: "Seed Axis (Pty) Ltd", website: null, primary_contact_email: "hello@seedaxis.example" },
+    ]);
+    const result = await findRegisteredOrg(client, "SeedAxis");
+    expect(result?.primary_contact_email).toBe("hello@seedaxis.example");
   });
 
   it("keeps two distinct companies apart even when they share their first word", async () => {
