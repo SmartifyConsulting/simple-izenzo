@@ -29,6 +29,7 @@ export type Transaction = {
   concept_brief_error?: string | null;
   finality_sealed_at: string | null;
   created_at: string;
+  updated_at: string;
   /** BID.../OFF... shown wherever this deal is listed — generated once when the bid/offer was
    * first recorded. Null for rows created before this column existed. */
   reference?: string | null;

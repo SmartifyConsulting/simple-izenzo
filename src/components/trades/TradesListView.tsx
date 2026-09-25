@@ -450,6 +450,7 @@ export function TradesListView() {
                 <th className="px-4 py-2 font-medium">WaD</th>
                 <th className="px-4 py-2 font-medium">Execution</th>
                 <th className="px-4 py-2 font-medium">Created</th>
+                <th className="px-4 py-2 font-medium">Last Updated</th>
                 <th className="w-8" />
               </tr>
             </thead>
@@ -458,7 +459,7 @@ export function TradesListView() {
               return (
                 <tbody key={group.key} className="divide-y divide-border">
                   <tr>
-                    <td colSpan={9} className="bg-muted/30 p-0">
+                    <td colSpan={10} className="bg-muted/30 p-0">
                       <button
                         type="button"
                         onClick={() => toggleMonth(group.key)}
@@ -498,6 +499,9 @@ export function TradesListView() {
                         </td>
                         <GateColumns t={t} />
                         <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">{formatDate(t.created_at)}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground" title={ageLabel(t.updated_at)}>
+                          {formatDate(t.updated_at)}
+                        </td>
                         <td className="w-8 px-2">
                           <Link to="/live-deal-engine" search={{ tx: t.id }} title="Open">
                             <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
@@ -556,7 +560,9 @@ export function TradesListView() {
                         <div className="mt-1 flex flex-wrap items-center gap-1.5">
                           <GateStack t={t} />
                         </div>
-                        <p className="text-[11px] text-muted-foreground">{formatDate(t.created_at)}</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          Created {formatDate(t.created_at)} · Updated {formatDate(t.updated_at)}
+                        </p>
                       </Link>
                     ))}
                   </div>

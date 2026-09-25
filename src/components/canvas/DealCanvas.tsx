@@ -187,6 +187,7 @@ export const FLOWCHART_PREVIEW_TX: Transaction = {
   wad_completed_at: null,
   finality_sealed_at: null,
   created_at: new Date(0).toISOString(),
+  updated_at: new Date(0).toISOString(),
 };
 
 function useNodeState(tx: Transaction) {
