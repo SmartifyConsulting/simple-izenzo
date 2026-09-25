@@ -29,7 +29,19 @@ export async function findRegisteredOrg(
     .ilike("name", `%${firstWord}%`)
     .limit(25);
   const rows = (data ?? []) as { name: string; website: string | null; primary_contact_email: string | null }[];
-  const match = rows.find((o) => nameKey(o.name) === key);
+  let match = rows.find((o) => nameKey(o.name) === key);
+  // Exact-after-normalising still missed real matches — a candidate name with an extra real word
+  // the suffix list doesn't know to strip ("SeedAxis Commodities" for a company registered as
+  // plain "SeedAxis") never matched, so the platform lookup was skipped and it fell through to a
+  // web search for a company that was already on the platform the whole time. Falls back to
+  // whichever registered name is a substring of the other, guarded by a minimum length so two
+  // short, unrelated names sharing a few letters can't collide.
+  if (!match && key.length >= 4) {
+    match = rows.find((o) => {
+      const otherKey = nameKey(o.name);
+      return otherKey.length >= 4 && (otherKey.includes(key) || key.includes(otherKey));
+    });
+  }
   return match ? { website: match.website, primary_contact_email: match.primary_contact_email } : null;
 }
 
