@@ -1,4 +1,4 @@
-import { FileText } from "lucide-react";
+import { FolderClosed } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 /** Which document artefacts a step actually produces, keyed by the step's own spine key. Shown as
@@ -26,10 +26,10 @@ export function ArtefactHint({ step, className }: { step: string; className?: st
           <span
             // cursor-help overrides the not-allowed cursor a locked step's tile shows — reading
             // what a step produces should never look blocked just because the step itself is.
-            className={className ?? "inline-flex shrink-0 cursor-help items-center text-primary/70 hover:text-primary"}
+            className={className ?? "inline-flex shrink-0 cursor-help items-center text-amber-400 hover:text-amber-300"}
             aria-label={`Artefacts: ${artefacts.join(", ")}`}
           >
-            <FileText className="h-3 w-3" />
+            <FolderClosed className="h-3 w-3" />
           </span>
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-[220px]">

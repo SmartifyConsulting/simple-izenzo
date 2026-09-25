@@ -397,9 +397,9 @@ function DocumentsFolder({
         <FolderOpen
           className={cn(
             "h-10 w-10 transition-colors",
-            // Same gold as Step 5 · Memory's own fill — the folder reads as part of the same
-            // "settled record" family once it actually holds something.
-            documents.length > 0 ? "text-amber-400" : "text-muted-foreground/50",
+            // Opaque gold on the light skin only, once it holds something — dark (Ink & Aqua)
+            // keeps its own plain foreground colour instead.
+            documents.length > 0 ? "text-foreground theme-light:text-amber-400" : "text-muted-foreground/50",
             justFiled && "animate-bounce text-success",
           )}
         />
