@@ -1061,7 +1061,8 @@ function LiveDealEngine() {
       negotiationTurn !== "opted_out",
   );
   useEffect(() => {
-    if (flowStep === "searching" || mediaRunning || choicePending || offerUnresolved) setStep1Open(true);
+    if (flowStep === "searching" || mediaRunning || choicePending) setStep1Open(true);
+    if (offerUnresolved) setStep2Open(true);
   }, [flowStep, mediaRunning, choicePending, offerUnresolved]);
 
   /** Continue on the cleared Without a Doubt gate. This is the one deliberate hand-off into
