@@ -26,7 +26,7 @@ export function ArtefactHint({ step, className }: { step: string; className?: st
           <span
             // cursor-help overrides the not-allowed cursor a locked step's tile shows — reading
             // what a step produces should never look blocked just because the step itself is.
-            className={className ?? "inline-flex shrink-0 cursor-help items-center text-amber-400 hover:text-amber-300"}
+            className={className ?? "inline-flex shrink-0 cursor-help items-center fill-amber-400 text-amber-400 hover:fill-amber-300 hover:text-amber-300"}
             aria-label={`Artefacts: ${artefacts.join(", ")}`}
           >
             <FolderClosed className="h-3 w-3" />

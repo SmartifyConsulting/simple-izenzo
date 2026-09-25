@@ -397,9 +397,10 @@ function DocumentsFolder({
         <FolderOpen
           className={cn(
             "h-10 w-10 transition-colors",
-            // Opaque gold on the light skin only, once it holds something — dark (Ink & Aqua)
-            // keeps its own plain foreground colour instead.
-            documents.length > 0 ? "text-foreground theme-light:text-amber-400" : "text-muted-foreground/50",
+            // Yellow outline on the dark (Ink & Aqua) canvas once it holds something, filled solid
+            // yellow only on the light skin — full colour everywhere else this app shows a folder,
+            // but dark mode here stays an outline rather than a solid block.
+            documents.length > 0 ? "text-amber-400 theme-light:fill-amber-400" : "text-muted-foreground/50",
             justFiled && "animate-bounce text-success",
           )}
         />
@@ -794,7 +795,9 @@ export function MapView({
           overrideKey: "wad",
           sub: "KYC & KYB on each other",
           subTone: "gate",
-          iconClassName: "fill-black text-black",
+          // White on the dark (Ink & Aqua) canvas — a black diamond disappeared against it —
+          // staying black only on the light skin.
+          iconClassName: "fill-white text-white theme-light:fill-black theme-light:text-black",
         })}
         {node("businessDocs", "Legal Agreements", "execution", "business-docs", FolderClosed, {
           sub: "Digital sign-off by both parties",

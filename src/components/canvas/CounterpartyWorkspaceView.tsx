@@ -570,7 +570,7 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
                   aria-expanded={legalOpen}
                 >
                   <span className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
-                    Step 2 · GRC — Legal Agreements
+                    Legal Agreements
                   </span>
                   <ChevronDown
                     className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", legalOpen && "rotate-180")}
