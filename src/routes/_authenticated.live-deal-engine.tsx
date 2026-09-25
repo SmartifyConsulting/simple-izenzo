@@ -139,6 +139,7 @@ export const Route = createFileRoute("/_authenticated/live-deal-engine")({
   }),
   component: () => (
     <RelabelScope>
+      <CaseRedirect />
       <LiveDealEngine />
     </RelabelScope>
   ),
