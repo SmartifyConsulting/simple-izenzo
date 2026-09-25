@@ -2756,9 +2756,17 @@ function BusinessDocsStep({ tx, reload, onContinue }: Props) {
                           {label}
                         </p>
                         {sig ? (
-                          <p className="text-muted-foreground">
-                            Signed by {sig.signer_name} · {when(sig.signed_at)}
-                          </p>
+                          <div className="space-y-0.5">
+                            <p
+                              className="border-b border-foreground/40 pb-0.5 text-2xl leading-tight text-foreground"
+                              style={{ fontFamily: signatureFont(`${side}:${sig.signer_name}`) }}
+                            >
+                              {sig.signer_name}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">
+                              Digitally signed · {when(sig.signed_at)}
+                            </p>
+                          </div>
                         ) : mySide === side ? (
                           <Button
                             size="sm"
