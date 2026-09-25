@@ -396,7 +396,9 @@ function DocumentsFolder({
         <FolderOpen
           className={cn(
             "h-10 w-10 transition-colors",
-            documents.length > 0 ? "text-foreground" : "text-muted-foreground/50",
+            // Same gold as Step 5 · Memory's own fill — the folder reads as part of the same
+            // "settled record" family once it actually holds something.
+            documents.length > 0 ? "text-amber-400" : "text-muted-foreground/50",
             justFiled && "animate-bounce text-success",
           )}
         />

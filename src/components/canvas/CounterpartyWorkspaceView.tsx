@@ -299,13 +299,23 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
             <div
               className={cn(
                 "flex items-center gap-2 rounded-full border-2 px-3 py-1.5",
-                offerApproved ? "border-black bg-amber-400/35" : "border-info/40 bg-info/15",
+                offerApproved ? "border-black bg-amber-400/35" : "border-black bg-black",
               )}
             >
-              <span className="label-caps rounded-full bg-[var(--step-pill-bg)] px-2.5 py-0.5 text-[var(--step-pill-fg)]">
+              <span
+                className={cn(
+                  "label-caps rounded-full px-2.5 py-0.5",
+                  offerApproved ? "bg-[var(--step-pill-bg)] text-[var(--step-pill-fg)]" : "bg-white text-black",
+                )}
+              >
                 Step 1 · Trading
               </span>
-              <span className="ml-auto shrink-0 font-mono text-sm font-bold tracking-wide text-foreground">
+              <span
+                className={cn(
+                  "ml-auto shrink-0 font-mono text-sm font-bold tracking-wide",
+                  offerApproved ? "text-foreground" : "text-white",
+                )}
+              >
                 {tx.reference}
               </span>
             </div>

@@ -2574,27 +2574,45 @@ function LiveDealEngine() {
               onClick={() => setStep1Open((v) => !v)}
               aria-expanded={step1Open}
               className={cn(
-                "mb-1.5 flex w-full items-center gap-2 rounded-full border-2 px-3 py-1.5 text-left text-xs font-semibold text-foreground",
+                "mb-1.5 flex w-full items-center gap-2 rounded-full border-2 px-3 py-1.5 text-left text-xs font-semibold",
                 // dealTx.stage flips to "compliance" at Seal Intent, before the Offer/Counter Offer
                 // negotiation that follows it even starts — using that alone turned this gold the
                 // moment the Offer frame opened, well before anyone had approved anything. Settles
                 // only once the bid/offer is actually approved (negotiationTurn === "accepted") or
                 // further along (wad_completed_at).
                 dealTx.intent_confirmed_at
-                  ? "border-black bg-amber-400/35 hover:bg-amber-400/50"
-                  : "border-info/40 bg-info/15 hover:bg-info/25",
+                  ? "border-black bg-amber-400/35 text-foreground hover:bg-amber-400/50"
+                  : "border-black bg-black text-white hover:bg-black/90",
               )}
             >
               {step1Open ? <Minus className="h-3.5 w-3.5 shrink-0" /> : <Plus className="h-3.5 w-3.5 shrink-0" />}
-              <span className="label-caps rounded-full bg-[var(--step-pill-bg)] px-2.5 py-0.5 text-[var(--step-pill-fg)]">
+              <span
+                className={cn(
+                  "label-caps rounded-full px-2.5 py-0.5",
+                  dealTx.intent_confirmed_at
+                    ? "bg-[var(--step-pill-bg)] text-[var(--step-pill-fg)]"
+                    : "bg-white text-black",
+                )}
+              >
                 Step 1 · Trading
               </span>
               {(((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference) && (
-                <span className="ml-auto shrink-0 font-mono text-base font-bold tracking-wide text-foreground">
+                <span
+                  className={cn(
+                    "ml-auto shrink-0 font-mono text-base font-bold tracking-wide",
+                    dealTx.intent_confirmed_at ? "text-foreground" : "text-white",
+                  )}
+                >
                   {((dealTx as unknown as { reference?: string | null } | null)?.reference) ?? draftReference}
                 </span>
               )}
-              <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform", step1Open && "rotate-180")} />
+              <ChevronDown
+                className={cn(
+                  "h-3.5 w-3.5 shrink-0 transition-transform",
+                  dealTx.intent_confirmed_at ? "text-muted-foreground" : "text-white/80",
+                  step1Open && "rotate-180",
+                )}
+              />
             </button>
           )}
 
@@ -3395,15 +3413,28 @@ function LiveDealEngine() {
                     onClick={() => setStep2Open((v) => !v)}
                     aria-expanded={step2Open}
                     className={cn(
-                      "mt-1.5 flex w-full items-center gap-2 rounded-full border-2 px-3 py-1.5 text-left text-xs font-semibold text-foreground",
-                      grcDone ? "border-black bg-amber-400/35 hover:bg-amber-400/50" : "border-info/40 bg-info/15 hover:bg-info/25",
+                      "mt-1.5 flex w-full items-center gap-2 rounded-full border-2 px-3 py-1.5 text-left text-xs font-semibold",
+                      grcDone
+                        ? "border-black bg-amber-400/35 text-foreground hover:bg-amber-400/50"
+                        : "border-black bg-black text-white hover:bg-black/90",
                     )}
                   >
                     {step2Open ? <Minus className="h-3.5 w-3.5 shrink-0" /> : <Plus className="h-3.5 w-3.5 shrink-0" />}
-                    <span className="label-caps rounded-full bg-[var(--step-pill-bg)] px-2.5 py-0.5 text-[var(--step-pill-fg)]">
+                    <span
+                      className={cn(
+                        "label-caps rounded-full px-2.5 py-0.5",
+                        grcDone ? "bg-[var(--step-pill-bg)] text-[var(--step-pill-fg)]" : "bg-white text-black",
+                      )}
+                    >
                       Step 2 · GRC
                     </span>
-                    <ChevronDown className={cn("ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform", step2Open && "rotate-180")} />
+                    <ChevronDown
+                      className={cn(
+                        "ml-auto h-3.5 w-3.5 shrink-0 transition-transform",
+                        grcDone ? "text-muted-foreground" : "text-white/80",
+                        step2Open && "rotate-180",
+                      )}
+                    />
                   </button>
                 )}
 
@@ -3592,13 +3623,13 @@ function LiveDealEngine() {
                     type="button"
                     onClick={() => setStep3Open((v) => !v)}
                     aria-expanded={step3Open}
-                    className="mt-1.5 flex w-full items-center gap-2 rounded-full border-2 border-info/40 bg-info/15 px-3 py-1.5 text-left text-xs font-semibold text-foreground hover:bg-info/25"
+                    className="mt-1.5 flex w-full items-center gap-2 rounded-full border-2 border-black bg-black px-3 py-1.5 text-left text-xs font-semibold text-white hover:bg-black/90"
                   >
                     {step3Open ? <Minus className="h-3.5 w-3.5 shrink-0" /> : <Plus className="h-3.5 w-3.5 shrink-0" />}
-                    <span className="label-caps rounded-full bg-[var(--step-pill-bg)] px-2.5 py-0.5 text-[var(--step-pill-fg)]">
+                    <span className="label-caps rounded-full bg-white px-2.5 py-0.5 text-black">
                       Step 3 · Execution
                     </span>
-                    <ChevronDown className={cn("ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform", step3Open && "rotate-180")} />
+                    <ChevronDown className={cn("ml-auto h-3.5 w-3.5 shrink-0 text-white/80 transition-transform", step3Open && "rotate-180")} />
                   </button>
                 )}
                 {dealTx && grcDone && step3Open && (
