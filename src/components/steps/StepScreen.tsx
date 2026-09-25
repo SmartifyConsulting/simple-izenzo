@@ -2527,9 +2527,25 @@ function BusinessDocsStep({ tx, reload, onContinue }: Props) {
     },
   });
 
+  const uploaderIds = Array.from(new Set(docs.map((d) => d.uploaded_by))).sort();
+  const { data: uploaderNames = {} } = useQuery({
+    queryKey: ["legal-agreement-uploaders", uploaderIds.join(",")],
+    enabled: uploaderIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase.from("profiles").select("id, full_name, email").in("id", uploaderIds);
+      const map: Record<string, string> = {};
+      for (const p of data ?? []) map[p.id] = p.full_name || p.email || "";
+      for (const s of signatures) {
+        // Fall back to a signer's name when the profile itself isn't visible to this viewer.
+        void s;
+      }
+      return map;
+    },
+  });
+
   function pickFile(file: File) {
     setPendingFile(file);
-    if (!docName) setDocName(file.name.replace(/\.[^.]+$/, ""));
+    setDocName(file.name.replace(/\.[^.]+$/, ""));
   }
 
   async function addDocument() {
@@ -2605,13 +2621,7 @@ function BusinessDocsStep({ tx, reload, onContinue }: Props) {
           "Legal Agreements" heading and this same copy as its subtext. */}
       <Panel>
         <div className="space-y-3">
-          <Field label="Document name">
-            <Input
-              value={docName}
-              onChange={(e) => setDocName(e.target.value)}
-              placeholder="e.g. Non-Disclosure Agreement"
-            />
-          </Field>
+
 
           <button
             type="button"
@@ -2655,7 +2665,7 @@ function BusinessDocsStep({ tx, reload, onContinue }: Props) {
         </div>
       </Panel>
 
-      <Panel title="Uploaded">
+      <Panel title="Document Register">
         {docs.length === 0 ? (
           <Empty text="No legal agreements attached yet." />
         ) : (
@@ -2665,13 +2675,19 @@ function BusinessDocsStep({ tx, reload, onContinue }: Props) {
               const bidderSig = sigs.find((s) => s.signer_side === "bidder");
               const counterpartySig = sigs.find((s) => s.signer_side === "counterparty");
               const fullySigned = Boolean((d as { fully_signed_at?: string | null }).fully_signed_at);
+              const uploader =
+                d.uploaded_by === profile?.id
+                  ? "You"
+                  : (uploaderNames[d.uploaded_by] ?? "the other party");
               return (
                 <li key={d.id} className="overflow-hidden rounded-xl border border-border">
                   <div className="flex items-center gap-3 border-b border-border bg-muted/20 px-3 py-2">
                     <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{d.name}</p>
-                      <p className="truncate text-xs text-muted-foreground">{when(d.created_at)}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        Uploaded by {uploader} · {when(d.created_at)}
+                      </p>
                     </div>
                     {fullySigned && (
                       <Badge variant="outline" className="shrink-0 border-success/40 bg-success/10 text-success">
