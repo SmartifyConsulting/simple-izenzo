@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -146,14 +147,28 @@ export function OrganisationsTab() {
               const open = openId === o.id;
               return (
                 <li key={o.id} className="text-sm">
-                  <button
-                    type="button"
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setOpenId(open ? null : o.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") setOpenId(open ? null : o.id);
+                    }}
                     aria-expanded={open}
-                    className="flex w-full items-center gap-3 p-4 text-left hover:bg-muted/40"
+                    className="flex w-full cursor-pointer items-center gap-3 p-4 text-left hover:bg-muted/40"
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium">{o.name}</p>
+                      {/* A real link to that organisation's trades — stops the click from also
+                          toggling this row's accordion, since it navigates instead. */}
+                      <Link
+                        to="/trades"
+                        search={{ q: o.name }}
+                        onClick={(e) => e.stopPropagation()}
+                        title={`See ${o.name}'s trades`}
+                        className="block truncate font-medium text-primary underline underline-offset-2 hover:text-primary/80"
+                      >
+                        {o.name}
+                      </Link>
                       <p className="truncate text-xs text-muted-foreground">
                         {[o.country, o.industry].filter(Boolean).join(" · ") || "No details captured"}
                       </p>
@@ -175,7 +190,7 @@ export function OrganisationsTab() {
                     <ChevronDown
                       className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")}
                     />
-                  </button>
+                  </div>
                   {open && (
                     <div className="border-t border-border bg-muted/20 px-4 py-3">
                       <dl className="mb-4 grid grid-cols-2 gap-x-4 gap-y-2 border-b border-border pb-3 text-xs sm:grid-cols-3">
@@ -215,21 +230,31 @@ export function OrganisationsTab() {
                         <p className="text-xs text-muted-foreground">No users in this organisation yet.</p>
                       ) : (
                         <ul className="space-y-1.5">
-                          {people.map((m) => (
-                            <li key={m.person.id} className="flex items-center justify-between gap-3 text-xs">
-                              <span className="min-w-0">
-                                <span className="font-medium">{m.person.full_name ?? m.person.email}</span>
-                                {m.person.full_name && (
-                                  <span className="ml-2 text-muted-foreground">{m.person.email}</span>
+                          {people.map((m) => {
+                            const label = m.person.full_name ?? m.person.email ?? "Unnamed user";
+                            return (
+                              <li key={m.person.id} className="flex items-center justify-between gap-3 text-xs">
+                                <span className="min-w-0">
+                                  <Link
+                                    to="/trades"
+                                    search={{ userId: m.person.id, userLabel: label }}
+                                    title={`See every trade ${label} has been active on`}
+                                    className="font-medium text-primary underline underline-offset-2 hover:text-primary/80"
+                                  >
+                                    {label}
+                                  </Link>
+                                  {m.person.full_name && (
+                                    <span className="ml-2 text-muted-foreground">{m.person.email}</span>
+                                  )}
+                                </span>
+                                {m.role && (
+                                  <Badge variant="outline" className="font-normal capitalize">
+                                    {m.role}
+                                  </Badge>
                                 )}
-                              </span>
-                              {m.role && (
-                                <Badge variant="outline" className="font-normal capitalize">
-                                  {m.role}
-                                </Badge>
-                              )}
-                            </li>
-                          ))}
+                              </li>
+                            );
+                          })}
                         </ul>
                       )}
                     </div>

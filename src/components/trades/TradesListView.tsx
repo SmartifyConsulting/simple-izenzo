@@ -3,7 +3,6 @@ import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeftRight,
-  ArrowUpRight,
   Check,
   ChevronDown,
   Download,
@@ -28,6 +27,10 @@ type TxRow = Transaction & {
   /** The person who registered the bid/offer, and the company they registered it for. */
   bidderName: string | null;
   bidderCompany: string | null;
+  /** Who actually registered this trade — kept as an id (not just the display name) so an
+   * Admin-side "see this user's trades" link can filter exactly, not by name text that could
+   * collide with someone else's. */
+  createdBy: string | null;
 };
 
 /** The negotiation (NEG) window: the time a deal actually spends between the Proof of Intent
@@ -214,10 +217,21 @@ const STAGE_LABEL: Record<StageKey, string> = Object.fromEntries(
 const STAGE_FILTERS: StageKey[] = SPINE.map((s) => s.key);
 
 /** The "nav menu view" of a deal list — search/filter/list-or-card, identical between /trades and
- * the Dashboard's canvas/list toggle so both surfaces behave the same way. */
-export function TradesListView() {
+ * the Dashboard's canvas/list toggle so both surfaces behave the same way. `initialQuery` seeds the
+ * search box (used when a link elsewhere, e.g. an organisation name in Admin, deep-links here with
+ * a name already typed in); `userId`/`userLabel` narrow the whole list down to one person's trades
+ * (used when a user's name in Admin is clicked). */
+export function TradesListView({
+  initialQuery,
+  userId,
+  userLabel,
+}: {
+  initialQuery?: string | undefined;
+  userId?: string | undefined;
+  userLabel?: string | undefined;
+} = {}) {
   const { org } = useAuth();
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery ?? "");
   // "All" and "My Trades" are mutually exclusive — one is always selected, never both and never
   // neither, so this reads as a single choice rather than two independent toggles.
   const [scope, setScope] = useState<ScopeFilter>("all");
@@ -288,6 +302,7 @@ export function TradesListView() {
           counterpartyName: counterpartyByTx.get(t.id) ?? null,
           bidderName: (createdBy ? personById.get(createdBy) : null) ?? null,
           bidderCompany: companyById.get(t.org_id) ?? (t.org_id === org?.id ? (org?.name ?? null) : null),
+          createdBy,
         };
       });
     },
@@ -295,6 +310,9 @@ export function TradesListView() {
 
   const filtered = useMemo(() => {
     let rows = txs;
+    // Drilled in from a specific person (Admin > Organisations) — every trade they registered,
+    // across every org they can see, regardless of the scope/stage filters below.
+    if (userId) rows = rows.filter((t) => t.createdBy === userId);
     // "My Trades" — the ones this org itself registered (as opposed to every deal it can see
     // because it was picked as somebody else's counterparty).
     if (scope === "mine") rows = rows.filter((t) => t.org_id === org?.id);
@@ -314,7 +332,7 @@ export function TradesListView() {
     // Youngest first — the Age column (and its sort toggle) was removed, but the list still reads
     // most-recent-first by default.
     return [...rows].sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
-  }, [txs, scope, stages, query, org?.id]);
+  }, [txs, scope, stages, query, org?.id, userId]);
 
   // Grouped by calendar month, newest first (the rows feeding each group are already sorted
   // descending, so a Map preserves that order across groups too).
@@ -358,6 +376,17 @@ export function TradesListView() {
           <Download className="h-3.5 w-3.5" /> Export CSV
         </Button>
       </div>
+
+      {userId && (
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-muted/30 px-5 py-2 text-xs">
+          <span>
+            Showing every trade <strong>{userLabel ?? "this user"}</strong> has been active on.
+          </span>
+          <Link to="/trades" className="font-medium text-primary underline underline-offset-2 hover:text-primary/80">
+            Clear filter
+          </Link>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-muted/30 px-5 py-3">
         <div className="flex flex-wrap items-center gap-3">
@@ -471,7 +500,6 @@ export function TradesListView() {
                 <th className="px-4 py-2 font-medium">Execution</th>
                 <th className="px-4 py-2 font-medium">Created</th>
                 <th className="px-4 py-2 font-medium">Last Updated</th>
-                <th className="w-8" />
               </tr>
             </thead>
             {monthGroups.map((group) => {
@@ -479,7 +507,7 @@ export function TradesListView() {
               return (
                 <tbody key={group.key} className="divide-y divide-border">
                   <tr>
-                    <td colSpan={10} className="bg-muted/30 p-0">
+                    <td colSpan={9} className="bg-muted/30 p-0">
                       <button
                         type="button"
                         onClick={() => toggleMonth(group.key)}
@@ -498,7 +526,12 @@ export function TradesListView() {
                         <td className="px-4 py-3">
                           <span className="flex items-center gap-1.5">
                             {isMatched(t) && <MatchIcon />}
-                            <Link to="/live-deal-engine" search={{ tx: t.id }} className="font-mono text-xs font-semibold hover:underline">
+                            <Link
+                              to="/live-deal-engine"
+                              search={{ tx: t.id }}
+                              title="Open"
+                              className="font-mono text-xs font-semibold text-primary underline underline-offset-2 hover:text-primary/80"
+                            >
                               {t.reference ?? fallbackReference(t.id, t.direction)}
                             </Link>
                           </span>
@@ -521,11 +554,6 @@ export function TradesListView() {
                         <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">{formatDate(t.created_at)}</td>
                         <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground" title={ageLabel(t.updated_at)}>
                           {formatDate(t.updated_at)}
-                        </td>
-                        <td className="w-8 px-2">
-                          <Link to="/live-deal-engine" search={{ tx: t.id }} title="Open">
-                            <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
-                          </Link>
                         </td>
                       </tr>
                     ))}
