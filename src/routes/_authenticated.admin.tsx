@@ -22,6 +22,8 @@ import { AuditLogTab } from "@/components/admin/AuditLogTab";
 import { ApiKeysTab } from "@/components/admin/ApiKeysTab";
 import { ArchiveTab } from "@/components/admin/ArchiveTab";
 import { OrganisationsTab, useOrgDirectory } from "@/components/admin/OrganisationsTab";
+import { WorkflowTemplatesTab } from "@/components/admin/WorkflowTemplatesTab";
+import { Workflow } from "lucide-react";
 
 type AdminSearch = { group?: string; tab?: string; activityUser?: string };
 
@@ -80,6 +82,7 @@ const ADMIN_TABS: AdminTab[] = [
   // Issuing/rotating/revoking keys is administrator-only in the database itself
   // (admin_api_* routines), so this stays inside the admin-gated page.
   { value: "api-keys", label: "API Keys", Component: ApiKeysTab, Icon: KeyRound },
+  { value: "templates", label: "Workflow Templates", Component: WorkflowTemplatesTab, Icon: Workflow },
 ];
 
 function AdminPage() {
