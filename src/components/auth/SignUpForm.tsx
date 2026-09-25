@@ -211,10 +211,25 @@ export function SignUpForm({
           .insert({ org_id: org.id, user_id: userId, role: "owner" });
         if (mErr) throw mErr;
 
+        // full_name/last_name are stored separately (every other screen that shows a person's name
+        // joins them back together) — this used to write the whole "First Last" string into
+        // full_name and never touch last_name at all, so Last Name was always blank downstream.
+        const metadataFullName = String(authUser.user_metadata?.["full_name"] ?? "").trim();
+        const [metaFirst, ...metaRest] = metadataFullName.split(/\s+/).filter(Boolean);
+        const profileFirstName = firstName.trim() || metaFirst || null;
+        const profileLastName = lastName.trim() || (metaRest.length > 0 ? metaRest.join(" ") : null);
+
         const { error: pErr } = await supabase
           .from("profiles")
           .upsert(
-            { id: userId, org_id: org.id, account_type: accountType, full_name: fullName, email } as never,
+            {
+              id: userId,
+              org_id: org.id,
+              account_type: accountType,
+              full_name: profileFirstName,
+              last_name: profileLastName,
+              email,
+            } as never,
             { onConflict: "id" },
           );
         if (pErr) throw pErr;
