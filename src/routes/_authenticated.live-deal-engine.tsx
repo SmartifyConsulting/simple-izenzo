@@ -667,6 +667,8 @@ function LiveDealEngine() {
   // trail of how it got here taking up the top of the workspace. Compliance/Execution frames
   // further down are untouched by this — only Step 1's own records are gated on it.
   const [step1Open, setStep1Open] = useState(false);
+  const [step2Open, setStep2Open] = useState(false);
+  const [step3Open, setStep3Open] = useState(false);
   // Once Intent is confirmed, its frame folds into a small accordion nested under Online Media
   // Screening Results rather than staying open as its own full-size panel.
   const [confirmedIntentOpen, setConfirmedIntentOpen] = useState(false);
@@ -1059,7 +1061,8 @@ function LiveDealEngine() {
       negotiationTurn !== "opted_out",
   );
   useEffect(() => {
-    if (flowStep === "searching" || mediaRunning || choicePending || offerUnresolved) setStep1Open(true);
+    if (flowStep === "searching" || mediaRunning || choicePending) setStep1Open(true);
+    if (offerUnresolved) setStep2Open(true);
   }, [flowStep, mediaRunning, choicePending, offerUnresolved]);
 
   /** Continue on the cleared Without a Doubt gate. This is the one deliberate hand-off into
@@ -1282,6 +1285,24 @@ function LiveDealEngine() {
     negotiationTurn,
     workspaceDocs.length,
   ]);
+
+  // Step 2 · GRC is finished once every legal agreement is signed by both parties.
+  const grcDone = Boolean(dealTx?.wad_completed_at && stepOverrides["businessDocs"] === "done");
+  // Workflow hand-offs: confirmed Intent folds Step 1 and opens Step 2; a finished GRC folds
+  // Step 2 and opens Step 3. Only on the transition (or first look at a deal), so manual +/−
+  // still works afterwards.
+  const stepFlowRef = useRef<{ txId: string; phase: number } | null>(null);
+  useEffect(() => {
+    if (!dealTx) return;
+    const phase = grcDone ? 3 : dealTx.intent_confirmed_at ? 2 : 1;
+    const prev = stepFlowRef.current;
+    stepFlowRef.current = { txId: dealTx.id, phase };
+    if (prev && prev.txId === dealTx.id && prev.phase === phase) return;
+    if (phase === 1) return;
+    setStep1Open(false);
+    setStep2Open(phase === 2);
+    setStep3Open(phase === 3);
+  }, [dealTx?.id, dealTx?.intent_confirmed_at, grcDone]);
 
 
 
@@ -2518,7 +2539,7 @@ function LiveDealEngine() {
                 // moment the Offer frame opened, well before anyone had approved anything. Settles
                 // only once the bid/offer is actually approved (negotiationTurn === "accepted") or
                 // further along (wad_completed_at).
-                negotiationTurn === "accepted" || dealTx.wad_completed_at
+                dealTx.intent_confirmed_at
                   ? "border-black bg-amber-400/35 hover:bg-amber-400/50"
                   : "border-border bg-muted hover:bg-muted/70",
               )}
@@ -3327,10 +3348,28 @@ function LiveDealEngine() {
                   </div>
                 )}
 
+                {dealTx?.intent_confirmed_at && (
+                  <button
+                    type="button"
+                    onClick={() => setStep2Open((v) => !v)}
+                    aria-expanded={step2Open}
+                    className={cn(
+                      "mt-1.5 flex w-full items-center gap-2 rounded-full border-2 px-3 py-1.5 text-left text-xs font-semibold text-foreground",
+                      grcDone ? "border-black bg-amber-400/35 hover:bg-amber-400/50" : "border-border bg-muted hover:bg-muted/70",
+                    )}
+                  >
+                    {step2Open ? <Minus className="h-3.5 w-3.5 shrink-0" /> : <Plus className="h-3.5 w-3.5 shrink-0" />}
+                    <span className="label-caps rounded-full bg-[var(--step-pill-bg)] px-2.5 py-0.5 text-[var(--step-pill-fg)]">
+                      Step 2 · GRC
+                    </span>
+                    <ChevronDown className={cn("ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform", step2Open && "rotate-180")} />
+                  </button>
+                )}
+
                 {/* Sealed intent reads the same way: a folded record whose certificate is
                     there when it's wanted, with the sealing sentence as subtext under the pill
                     rather than a second heading inside the frame. */}
-                {step1Open && dealTx?.poi_sealed_at && (
+                {step2Open && dealTx?.poi_sealed_at && (
                   <div className="rounded-2xl border border-border bg-card">
                     <button
                       type="button"
@@ -3370,7 +3409,7 @@ function LiveDealEngine() {
                 {/* The Offer gets its own frame here, above Without a Doubt — not nested inside
                     it. Open by default: it's current until it's approved, and stays available as
                     its own record (the full exchange, who said what) after. */}
-                {step1Open && dealTx?.poi_sealed_at && (
+                {step2Open && dealTx?.poi_sealed_at && (
                   <div className="rounded-2xl border border-border bg-card">
                     <button
                       type="button"
@@ -3401,7 +3440,7 @@ function LiveDealEngine() {
 
                 {/* Cleared WaD case — same folded-record treatment as Seal Intent above. Grouped
                     into Step 1 · Trading too, alongside Trade Summary below it. */}
-                {step1Open && dealTx?.wad_completed_at && (
+                {step2Open && dealTx?.wad_completed_at && (
                   <div className="rounded-2xl border border-border bg-card">
                     <button
                       type="button"
@@ -3453,6 +3492,8 @@ function LiveDealEngine() {
                     recorded, since the folded records above already hold them. */}
                 {dealTx &&
                   stagePanel &&
+                  (stagePanel === "intent" ? true : step2Open) &&
+                  !(stagePanel === "business-docs" && grcDone) &&
                   !(stagePanel === "intent" && dealTx.intent_confirmed_at) &&
                   !(stagePanel === "poi" && dealTx.poi_sealed_at) &&
                   !(stagePanel === "wad" && dealTx.wad_completed_at) &&
@@ -3482,7 +3523,7 @@ function LiveDealEngine() {
                 {/* Only once Step 2's own documents (Business Docs) are in — not the moment the
                     compliance checks clear. Collapsed by default: it's a record to check back on,
                     and Execution is what needs attention by then. */}
-                {step1Open && dealTx?.wad_completed_at && stepOverrides["businessDocs"] === "done" && (
+                {step2Open && dealTx?.wad_completed_at && stepOverrides["businessDocs"] === "done" && (
                   <div className="mt-1.5 rounded-2xl border border-border bg-card">
                     <button
                       type="button"
@@ -3503,6 +3544,30 @@ function LiveDealEngine() {
                       </div>
                     )}
                   </div>
+                )}
+
+                {dealTx && grcDone && (
+                  <button
+                    type="button"
+                    onClick={() => setStep3Open((v) => !v)}
+                    aria-expanded={step3Open}
+                    className="mt-1.5 flex w-full items-center gap-2 rounded-full border-2 border-border bg-muted px-3 py-1.5 text-left text-xs font-semibold text-foreground hover:bg-muted/70"
+                  >
+                    {step3Open ? <Minus className="h-3.5 w-3.5 shrink-0" /> : <Plus className="h-3.5 w-3.5 shrink-0" />}
+                    <span className="label-caps rounded-full bg-[var(--step-pill-bg)] px-2.5 py-0.5 text-[var(--step-pill-fg)]">
+                      Step 3 · Execution
+                    </span>
+                    <ChevronDown className={cn("ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform", step3Open && "rotate-180")} />
+                  </button>
+                )}
+                {dealTx && grcDone && step3Open && (
+                  <InlineFrame
+                    tx={dealTx}
+                    stage="execution"
+                    step="preparation"
+                    reload={() => void reloadDeal()}
+                    onClose={() => setStep3Open(false)}
+                  />
                 )}
 
               </div>
