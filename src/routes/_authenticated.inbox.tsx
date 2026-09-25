@@ -272,7 +272,7 @@ function InboxPage() {
                                                   search={{ cp: n.claim_counterparty_id }}
                                                   onClick={() => void markRead(n.id)}
                                                   className={cn(
-                                                    "shrink-0 font-mono text-xs font-normal underline-offset-2 hover:underline",
+                                                    "shrink-0 font-mono text-xs font-bold underline-offset-2 hover:underline",
                                                     tradeKindOf(reference) === "bid"
                                                       ? "theme-light:text-success text-[#00e676]"
                                                       : tradeKindOf(reference) === "offer"
@@ -288,7 +288,7 @@ function InboxPage() {
                                                   search={{ tx: n.transaction_id }}
                                                   onClick={() => void markRead(n.id)}
                                                   className={cn(
-                                                    "shrink-0 font-mono text-xs font-normal underline-offset-2 hover:underline",
+                                                    "shrink-0 font-mono text-xs font-bold underline-offset-2 hover:underline",
                                                     // Same Bid=green / Offer=blue convention as the
                                                     // workspace taskbar and registration pill, so a
                                                     // reference reads the same way everywhere.
