@@ -16,6 +16,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { PasswordInput } from "@/components/PasswordInput";
 import { AuthorityToActPanel } from "@/components/verification/AuthorityToActPanel";
+import { SignatureSetupPanel } from "@/components/auth/SignatureSetupPanel";
 import { mapAuthError } from "@/lib/auth";
 import { generateOrgBrief } from "@/lib/orgBrief.functions";
 import { beginRegistration, endRegistration } from "@/lib/registrationFlow";
@@ -59,10 +60,10 @@ export function SignUpForm({
    * home page hero) rather than the standalone /auth page. */
   compact?: boolean;
   /** 2 when returning from the email confirmation link. */
-  initialStep?: 1 | 2 | 3 | undefined;
+  initialStep?: 1 | 2 | 3 | 4 | undefined;
 }) {
   const navigate = useNavigate();
-  const [step, setStep] = useState<1 | 2 | 3>(initialStep);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(initialStep);
   const [checkEmail, setCheckEmail] = useState(false);
   const [resendIn, setResendIn] = useState(0);
   const [email, setEmail] = useState("");
@@ -299,7 +300,7 @@ export function SignUpForm({
       <div
         className={cn(compact ? "mb-2" : "mb-4", !hideHeader && "mt-7", "flex items-center gap-2")}
       >
-        {([1, 2, 3] as const).map((n, i) => (
+        {([1, 2, 3, 4] as const).map((n, i) => (
           <span key={n} className="flex items-center gap-2">
             {i > 0 && <span className="h-px w-6 bg-border" />}
             <span
@@ -317,7 +318,9 @@ export function SignUpForm({
             ? "Your details"
             : step === 2
               ? "Organisation details"
-              : "Complete registration"}
+              : step === 3
+                ? "Digital signature"
+                : "Complete registration"}
         </p>
       </div>
 
@@ -604,6 +607,8 @@ export function SignUpForm({
               </Button>
             </div>
           </form>
+        ) : step === 3 ? (
+          <SignatureSetupPanel fullName={fullName} onSaved={() => setStep(4)} />
         ) : (
           <AuthorityToActPanel
             onSaved={() => {
@@ -615,7 +620,7 @@ export function SignUpForm({
         )}
       </div>
 
-      {!hideFooterLink && step !== 3 && (
+      {!hideFooterLink && step !== 3 && step !== 4 && (
         <p className={cn("text-center text-sm text-muted-foreground", compact ? "mt-3" : "mt-6")}>
           Already have an account?{" "}
           <Link
