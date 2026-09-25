@@ -1,3 +1,4 @@
+import { RelabelScope } from "@/components/RelabelScope";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -136,7 +137,11 @@ export const Route = createFileRoute("/_authenticated/live-deal-engine")({
       ? { n: Number(search["n"]) }
       : {}),
   }),
-  component: LiveDealEngine,
+  component: () => (
+    <RelabelScope>
+      <LiveDealEngine />
+    </RelabelScope>
+  ),
 });
 
 type Attachment = {

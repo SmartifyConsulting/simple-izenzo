@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -27,7 +28,8 @@ export function useWorkflowTemplate() {
     },
   });
 
-  const lexicon = data?.lexicon ?? {};
+  const lexicon = data?.lexicon ?? EMPTY;
+  const boundRelabel = useCallback((t: string) => relabel(t, lexicon), [lexicon]);
   const spine: StageDef[] = SPINE.map((stage) => {
     const order = data?.stages?.find((s) => s.key === stage.key)?.steps;
     const steps = order
@@ -38,8 +40,10 @@ export function useWorkflowTemplate() {
       : stage.steps;
     return { ...stage, steps: steps.map((s) => ({ ...s, label: relabel(s.label, lexicon) })) };
   });
-  return { templateKey: data?.key ?? "izenzo_default", lexicon, spine, relabel: (t: string) => relabel(t, lexicon) };
+  return { templateKey: data?.key ?? "izenzo_default", lexicon, spine, relabel: boundRelabel };
 }
+
+const EMPTY: Record<string, string> = {};
 
 const DEFAULT_WORDS: Record<string, string> = {
   bid: "Bid",
