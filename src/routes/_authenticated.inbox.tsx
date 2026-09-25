@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown } from "lucide-react";
+import { ArrowLeftRight, ChevronDown, Handshake, Hourglass } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -109,13 +109,24 @@ function InboxPage() {
     await supabase.from("notifications").update({ read: true }).eq("id", id);
     await queryClient.invalidateQueries({ queryKey: ["notifications"] });
   }
+  async function markUnread(id: string) {
+    await supabase.from("notifications").update({ read: false }).eq("id", id);
+    await queryClient.invalidateQueries({ queryKey: ["notifications"] });
+  }
+
+  // Read notifications move out of the Inbox tab into Archive — Mark Read is the only way in,
+  // Restore (in Archive) is the only way back out.
+  const [tab, setTab] = useState<"inbox" | "archive">("inbox");
+  const archiveCount = notifications.filter((n) => n.read).length;
+  const inboxCount = notifications.length - archiveCount;
+  const visibleNotifications = notifications.filter((n) => (tab === "archive" ? n.read : !n.read));
 
   // Grouped month → week, most recent first. Every group collapses by default except the one
   // holding the current week — that's the only history anyone needs open on arrival.
   const thisWeekKey = weekKey(new Date());
   const thisMonthKey = monthKey(new Date());
   const monthGroups = new Map<string, Map<string, NotificationRow[]>>();
-  for (const n of notifications) {
+  for (const n of visibleNotifications) {
     const created = new Date(n.created_at);
     const mKey = monthKey(created);
     const wKey = weekKey(created);
@@ -159,15 +170,66 @@ function InboxPage() {
     },
   });
 
+  // The bidder's org name for each deal below — this list is always "someone else's bid, you're
+  // the counterparty", so the pair worth showing is that bidder's org name against this org's own.
+  const bidderOrgIds = [...new Set(txs.map((t) => t.org_id).filter(Boolean))];
+  const { data: bidderOrgById = {} } = useQuery({
+    queryKey: ["inbox-bidder-orgs", bidderOrgIds.join(",")],
+    enabled: bidderOrgIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("organisations").select("id, name").in("id", bidderOrgIds);
+      if (error) throw error;
+      return Object.fromEntries((data ?? []).map((o) => [o.id, o.name])) as Record<string, string>;
+    },
+  });
+
+  // Agreement (Seal Intent done) → negotiating (intent confirmed, not yet sealed) → still waiting
+  // (nothing from this bidder yet) — the same three-stage read as the map's own Confirm
+  // Intent → Seal Intent progression, just condensed to one icon per row.
+  function dealProgressIcon(t: Transaction) {
+    if (t.poi_sealed_at) return <Handshake className="h-3.5 w-3.5 text-success" aria-label="Agreement reached" />;
+    if (t.intent_confirmed_at) return <ArrowLeftRight className="h-3.5 w-3.5 text-info" aria-label="In negotiation" />;
+    return <Hourglass className="h-3.5 w-3.5 text-muted-foreground" aria-label="Awaiting negotiation" />;
+  }
+
   return (
     <AppShell title="Inbox" description="Where you are on the other side">
       {notifications.length > 0 && (
         <div className="mb-4 overflow-hidden rounded-md border border-border">
-          <p className="border-b border-border bg-muted/30 px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            Notifications
-          </p>
+          <div className="flex items-center justify-between gap-2 border-b border-border bg-muted/30 px-4 py-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Notifications</p>
+            <div className="flex items-center gap-1">
+              {(
+                [
+                  ["inbox", "Inbox", inboxCount],
+                  ["archive", "Archive", archiveCount],
+                ] as const
+              ).map(([key, label, count]) => (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={tab === key}
+                  onClick={() => setTab(key)}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
+                    tab === key
+                      ? "border-transparent bg-foreground text-background"
+                      : "border-border bg-transparent text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {label}
+                  {count > 0 && <span className="text-[10px] opacity-80">{count}</span>}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="divide-y divide-border">
-            {orderedMonths.map((mKey) => {
+            {visibleNotifications.length === 0 ? (
+              <p className="p-4 text-sm text-muted-foreground">
+                {tab === "archive" ? "Nothing archived yet — notifications land here once marked read." : "You're all caught up."}
+              </p>
+            ) : (
+              orderedMonths.map((mKey) => {
               const weeks = monthGroups.get(mKey)!;
               const orderedWeeks = [...weeks.keys()].sort().reverse();
               const monthOpen = openMonths.has(mKey);
@@ -223,11 +285,11 @@ function InboxPage() {
                                     <li
                                       key={n.id}
                                       className={cn(
-                                        "flex flex-wrap items-center justify-between gap-3 p-4",
+                                        "flex items-center justify-between gap-3 p-4",
                                         !n.read && "bg-primary/5",
                                       )}
                                     >
-                                      <div className="flex min-w-0 items-start gap-2">
+                                      <div className="flex min-w-0 flex-1 items-start gap-2">
                                         {/* A plain dot instead of a "New" badge — the word next to a
                                             title that already says what happened read as a second,
                                             confusing label rather than a status. */}
@@ -331,11 +393,20 @@ function InboxPage() {
                                           <p className="mt-0.5 text-xs text-muted-foreground">{when(n.created_at)}</p>
                                         </div>
                                       </div>
-                                      <div className="flex items-center gap-2">
-                                        {!n.read && (
-                                          <Button size="sm" variant="outline" onClick={() => void markRead(n.id)}>
-                                            Mark read
+                                      {/* shrink-0 + ml-auto: this stays pinned to the row's far right
+                                          even when the title/body on the left wraps onto several
+                                          lines, instead of ever dropping down or drifting inward. */}
+                                      <div className="ml-auto flex shrink-0 items-center gap-2">
+                                        {tab === "archive" ? (
+                                          <Button size="sm" variant="outline" onClick={() => void markUnread(n.id)}>
+                                            Restore
                                           </Button>
+                                        ) : (
+                                          !n.read && (
+                                            <Button size="sm" variant="outline" onClick={() => void markRead(n.id)}>
+                                              Mark read
+                                            </Button>
+                                          )
                                         )}
                                       </div>
                                     </li>
@@ -350,7 +421,8 @@ function InboxPage() {
                   )}
                 </div>
               );
-            })}
+            })
+            )}
           </div>
         </div>
       )}
@@ -367,8 +439,16 @@ function InboxPage() {
           <ul className="divide-y divide-border">
             {txs.map((t) => (
               <li key={t.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
-                <div>
-                  <p className="text-sm font-medium">{t.title}</p>
+                <div className="min-w-0">
+                  <p className="flex items-center gap-1.5 text-sm font-medium">
+                    {dealProgressIcon(t)}
+                    <span className="truncate">
+                      {bidderOrgById[t.org_id] ?? "Unknown bidder"}
+                      <span className="mx-1 text-muted-foreground">→</span>
+                      {org?.name ?? "Your organisation"}
+                    </span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">{t.title}</p>
                   <p className="text-xs text-muted-foreground">
                     {money(t.price, t.currency)} · opened {when(t.created_at)}
                   </p>
