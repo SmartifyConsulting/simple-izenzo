@@ -7,7 +7,7 @@ import { SubmitBidButton } from "@/components/marketing/SubmitBidButton";
 import { AuthTabs } from "@/components/auth/AuthTabs";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { fallbackReference, when } from "@/lib/tx";
+import { creatorTone, displayTitle, fallbackReference, when } from "@/lib/tx";
 import { registrationInProgress } from "@/lib/registrationFlow";
 
 type Search = { next?: string | undefined };
