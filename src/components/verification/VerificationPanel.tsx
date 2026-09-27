@@ -243,7 +243,7 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
                   {otherSubjects.length === 0 ? (
                     <div className="space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="secondary" className="bg-[#4169e1]/15 font-normal text-[#1c2f6b] dark:bg-[#4169e1] dark:text-white">
+                        <Badge variant="secondary" className="!bg-[#4169e1] font-normal !text-white hover:!bg-[#4169e1]">
                           {otherLabel ?? "Counterparty"}
                         </Badge>
                         <Badge variant="outline" className="border-border bg-muted text-muted-foreground">
@@ -256,7 +256,7 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
                     otherSubjects.map((r) => (
                       <div key={r.id} className="space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant="secondary" className="bg-[#4169e1]/15 font-normal text-[#1c2f6b] dark:bg-[#4169e1] dark:text-white">
+                          <Badge variant="secondary" className="!bg-[#4169e1] font-normal !text-white hover:!bg-[#4169e1]">
                             {otherLabel ?? r.subject_label ?? "Counterparty"}
                           </Badge>
                           <Badge
@@ -274,7 +274,7 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
 
                 <div className="space-y-2 rounded-lg border border-emerald-600/25 bg-emerald-600/5 p-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="secondary" className="bg-emerald-600/15 font-normal text-emerald-700 dark:bg-emerald-600 dark:text-white">
+                    <Badge variant="secondary" className="!bg-emerald-600 font-normal !text-white hover:!bg-emerald-600">
                       {myLabel ?? "You"}
                     </Badge>
                     <Badge
