@@ -324,6 +324,9 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
                       </p>
                     </div>
                   )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
               )}
