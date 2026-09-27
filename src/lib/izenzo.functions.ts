@@ -327,7 +327,7 @@ export const completeWad = createServerFn({ method: "POST" })
       payload: { cost: WAD_COST, decision: data.decision },
     });
 
-    return { decision: data.decision, fingerprint, creditsLeft: (org.credits ?? 0) - WAD_COST };
+    return { decision: data.decision, fingerprint };
   });
 
 type CandidateResult = {
