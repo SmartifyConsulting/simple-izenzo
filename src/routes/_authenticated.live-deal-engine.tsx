@@ -1349,6 +1349,13 @@ function LiveDealEngine() {
     setStep1Open(phase === 1);
     setStep2Open(phase === 2);
     setStep3Open(phase === 3);
+    if (phase === 3) {
+      // Step 2 folds as a whole: every record inside it — WaD included — tucks away with it.
+      setSealedWadOpen(false);
+      setSealedPoiOpen(false);
+      setOfferFrameOpen(false);
+      setStagePanel(null);
+    }
   }, [dealTx?.id, dealTx?.intent_confirmed_at, grcDone]);
 
 
@@ -1866,7 +1873,7 @@ function LiveDealEngine() {
             if (tx.step === "business-docs") setStagePanel("business-docs");
             break;
           case "sealedWad":
-            setSealedWadOpen(true);
+            setSealedWadOpen(!tx.wad_continued_at);
             break;
           case "wad":
             setOfferFrameOpen(false);
@@ -3489,9 +3496,10 @@ function LiveDealEngine() {
                           tx={dealTx}
                           stage="compliance"
                           step="wad"
+                          viewOnly={Boolean(dealTx.wad_continued_at) || grcDone}
                           reload={() => void reloadDeal()}
                           onClose={() => setStagePanel(null)}
-                          onContinue={() => {
+                          onContinue={dealTx.wad_continued_at || grcDone ? undefined : () => {
                             // Same collapse-on-advance behaviour every other folded record in
                             // this workspace gets — the frame you just finished with tucks away
                             // once you move on, rather than staying pinned open.
