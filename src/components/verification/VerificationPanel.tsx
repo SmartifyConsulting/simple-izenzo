@@ -128,6 +128,7 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
   // Undefined = follow the automatic rule (collapsed once both sides have passed); true/false once
   // a person overrides it by hand, which then wins regardless of status.
   const [openOverride, setOpenOverride] = useState<Record<string, boolean>>({});
+  const [startedUrl, setStartedUrl] = useState<Record<string, string>>({});
 
   const { data: rows = [], isLoading, refetch } = useQuery({
     queryKey: ["identity-verifications", transactionId ?? "me"],
@@ -157,9 +158,10 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
     setError(null);
     try {
       const origin = typeof window !== "undefined" ? window.location.origin : undefined;
-      await start({
+      const res = await start({
         data: { checkType: type, ...(transactionId ? { transactionId } : {}), ...(origin ? { origin } : {}) },
       });
+      if (res?.url) setStartedUrl((prev) => ({ ...prev, [type]: res.url }));
       await refetch();
       toast.success("Scan the QR code with your phone to complete this check.");
     } catch (err) {
@@ -221,7 +223,7 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
                 className="flex w-full items-center justify-between gap-2 text-left"
               >
                 <span className="flex items-center gap-2">
-                  <span className="label-caps font-sans">{CHECK_LABEL[type]}</span>
+                  <span className="label-caps rounded-full bg-muted px-3 py-1 font-sans text-foreground dark:bg-neutral-700 dark:text-white">{CHECK_LABEL[type]}</span>
                   {bothPassed && (
                     <Badge variant="outline" className="border-emerald-600 bg-emerald-600 font-normal text-white">
                       Both verified
@@ -241,7 +243,7 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
                   {otherSubjects.length === 0 ? (
                     <div className="space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="secondary" className="bg-[#4169e1]/15 font-normal text-[#1c2f6b]">
+                        <Badge variant="secondary" className="bg-[#4169e1]/15 font-normal text-[#1c2f6b] dark:bg-[#4169e1] dark:text-white">
                           {otherLabel ?? "Counterparty"}
                         </Badge>
                         <Badge variant="outline" className="border-border bg-muted text-muted-foreground">
@@ -254,7 +256,7 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
                     otherSubjects.map((r) => (
                       <div key={r.id} className="space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant="secondary" className="bg-[#4169e1]/15 font-normal text-[#1c2f6b]">
+                          <Badge variant="secondary" className="bg-[#4169e1]/15 font-normal text-[#1c2f6b] dark:bg-[#4169e1] dark:text-white">
                             {otherLabel ?? r.subject_label ?? "Counterparty"}
                           </Badge>
                           <Badge
@@ -272,7 +274,7 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
 
                 <div className="space-y-2 rounded-lg border border-emerald-600/25 bg-emerald-600/5 p-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="secondary" className="bg-emerald-600/15 font-normal text-emerald-700">
+                    <Badge variant="secondary" className="bg-emerald-600/15 font-normal text-emerald-700 dark:bg-emerald-600 dark:text-white">
                       {myLabel ?? "You"}
                     </Badge>
                     <Badge
@@ -303,20 +305,28 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
                   </p>
                   {myRow?.reason && <p className="text-xs text-destructive">{myRow.reason}</p>}
 
-                  {(!myRow || myRow.status === "failed" || myRow.status === "expired" || (myRow.status === "pending" && !myRow.provider_url)) && (
+                  {(() => {
+                    const ended = myRow && ["passed", "failed", "expired", "review"].includes(myRow.status);
+                    const qrUrl = ended ? null : (myRow?.provider_url ?? startedUrl[type] ?? null);
+                    return (
+                      <>
+                  {!qrUrl && myRow?.status !== "passed" && (
                     <Button size="sm" disabled={busy === type} onClick={() => onStart(type)}>
                       {busy === type ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : myRow ? "Run again" : "Start"}
                     </Button>
                   )}
 
-                  {(myRow?.status === "in_progress" || myRow?.status === "pending") && myRow.provider_url && (
+                  {qrUrl && (
                     <div className="flex flex-col items-center space-y-1 pt-1 text-center">
-                      <VerificationQr value={myRow.provider_url} />
+                      <VerificationQr value={qrUrl} />
                       <p className="max-w-[10rem] text-[10px] text-muted-foreground">
                         Scan to continue to the verification app
                       </p>
                     </div>
                   )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
               )}
