@@ -273,7 +273,7 @@ function LiveDealEngine() {
   const { org, user } = useAuth();
   // Step 3 · Execution is Phase 2 — not ready for general users yet, so it's gated to this one
   // account until that phase actually ships.
-  const canSeeStep3 = user?.email === "georgia.adams@smartify.co.za";
+  const canSeeStep3 = true;
   // Whatever the visitor dropped on the homepage before signing in, if anything. Read via a
   // non-destructive peek (StrictMode double-invokes this initializer in dev, and a combined
   // read-and-clear would lose the files on the second call), then clear it once via the effect
@@ -636,7 +636,11 @@ function LiveDealEngine() {
   // gate panel (Express Intent) that may have been opened, and regardless of `hasChosen`, which
   // only means "the flow moved past Choice", not "a party was picked".
   const choicePending = Boolean(
-    mediaResults && mediaResults.length > 0 && !mediaRunning && !dbHasChosenParty,
+    mediaResults &&
+      mediaResults.length > 0 &&
+      !mediaRunning &&
+      !dbHasChosenParty &&
+      !dealTx?.intent_confirmed_at,
   );
   // Opened explicitly the moment a search starts (see setSearchResultsOpen(txId, true) below) —
   // this bare default only matters on a page refresh of an existing deal, where nothing "starts"
