@@ -38,7 +38,6 @@ import { DocumentSummaryList } from "@/components/canvas/DocumentSummaryList";
 import { MutualEngagementPanel } from "@/components/engagement/MutualEngagementPanel";
 import { Confetti } from "@/components/effects/Confetti";
 import { hasSeenOfferCelebration, markOfferCelebrationSeen } from "@/lib/celebrationSeen";
-import { TradeSummary } from "@/components/canvas/TradeSummary";
 // Performance only: the map and the classic stepper are each large and only one of them is on
 // screen at a time, so they load as their own chunks instead of inside the first workspace
 // download. Same components, same props, same behaviour.
@@ -669,7 +668,6 @@ function LiveDealEngine() {
     );
   }, [dealTx?.id, choicePending]);
   // The trade record, once everything has cleared — folded away by default.
-  const [tradeSummaryOpen, setTradeSummaryOpen] = useState(false);
   // Step 1 · Trading bundles every completed Trading-stage record (Bid Registration, Bid
   // Information, Search Results, Online Scanning Results, Confirmed Intent, Seal Intent, Offer)
   // behind one collapsed-by-default accordion, so a deal that's moved on doesn't keep the whole
@@ -1116,7 +1114,6 @@ function LiveDealEngine() {
     setSealedPoiOpen(false);
     setOfferFrameOpen(false);
     setSealedWadOpen(false);
-    setTradeSummaryOpen(false);
     setMapPanel(null);
     setStep2Open(true);
     setStagePanel("business-docs");
@@ -1977,7 +1974,6 @@ function LiveDealEngine() {
     setMapPanel(null);
     setSearchError(null);
     setReadError(null);
-    setTradeSummaryOpen(false);
     setConfirmedIntentOpen(false);
     setDirection(null);
     setPendingDirection(null);
@@ -3546,54 +3542,15 @@ function LiveDealEngine() {
                   )}
 
 
-                {/* Only once Step 2's own documents (Business Docs) are in — not the moment the
-                    compliance checks clear. Collapsed by default: it's a record to check back on,
-                    and Execution is what needs attention by then. */}
-                {step2Open && dealTx?.wad_completed_at && stepOverrides["businessDocs"] === "done" && (
-                  <div className="mt-1.5 rounded-2xl border border-border bg-card">
-                    <button
-                      type="button"
-                      onClick={() => setTradeSummaryOpen((v) => !v)}
-                      className="flex w-full items-center justify-between gap-2 px-3.5 py-2 text-left"
-                      aria-expanded={tradeSummaryOpen}
-                    >
-                      <span className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
-                        Trade Summary
-                      </span>
-                      <ChevronDown
-                        className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", tradeSummaryOpen && "rotate-180")}
-                      />
-                    </button>
-                    {tradeSummaryOpen && (
-                      <div className="px-3.5 pb-3">
-                        <TradeSummary tx={dealTx} />
-                      </div>
-                    )}
-                  </div>
-                )}
-
                 {dealTx && grcDone && canSeeStep3 && (
-                  <button
-                    type="button"
-                    onClick={() => setStep3Open((v) => !v)}
-                    aria-expanded={step3Open}
-                    className="mt-1.5 flex w-full items-center gap-2 rounded-full border-2 border-black bg-black px-3 py-1.5 text-left text-xs font-semibold text-white hover:bg-black/90"
-                  >
-                    {step3Open ? <Minus className="h-3.5 w-3.5 shrink-0" /> : <Plus className="h-3.5 w-3.5 shrink-0" />}
+                  <div className="mt-1.5 flex w-full items-center gap-2 rounded-full border-2 border-black bg-black px-3 py-1.5 text-xs font-semibold text-white">
                     <span className="label-caps rounded-full bg-white px-2.5 py-0.5 text-black">
                       Step 3 · Execution
                     </span>
-                    <ChevronDown className={cn("ml-auto h-3.5 w-3.5 shrink-0 text-white/80 transition-transform", step3Open && "rotate-180")} />
-                  </button>
-                )}
-                {dealTx && grcDone && canSeeStep3 && step3Open && (
-                  <InlineFrame
-                    tx={dealTx}
-                    stage="execution"
-                    step="preparation"
-                    reload={() => void reloadDeal()}
-                    onClose={() => setStep3Open(false)}
-                  />
+                    <span className="ml-auto shrink-0 font-mono text-sm font-bold tracking-wide text-white">
+                      {dealTx.reference}
+                    </span>
+                  </div>
                 )}
 
               </div>
