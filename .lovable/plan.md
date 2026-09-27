@@ -32,3 +32,14 @@
 - Reproduce with Playwright: open a deal at Proof of Intent or WaD, reload, and list the open frames.
 - Derive each frame's initial open state from the transaction's current stage/step only (`tx.stage`, sealed POI, WaD complete, legal signed). Ignore stale per-tab `sessionStorage` open flags on first load (e.g. `bid-info-collapsed:*`). Apply this in `live-deal-engine.tsx`, `StepScreen.tsx` and `CounterpartyWorkspaceView.tsx`.
 - Manual toggles still apply for the rest of the session.
+
+## 6. Bidder sees the counterparty's KYC/KYB status change to "In progress"
+- Likely cause: when the counterparty presses Start, its check is saved under the **bidder's** company. BID9140055's two Holarc checks are recorded that way. The bidder's screen then treats them as its own checks, not the counterparty's, so the counterparty column never updates.
+- Fix: a check started by the counterparty is saved under the counterparty's company and name. Each side's own check is recognised by who started it. The bidder's screen now shows the counterparty's check as "In progress" and updates it every few seconds.
+- The existing mislabelled checks on open deals are corrected to point at the right company.
+
+### Technical
+- `src/lib/didit.functions.ts` counterparty branch (≈ line 112): `subjectOrgId = tx.counterparty_org_id`, label = counterparty org name. Bidder branch: `subjectOrgId = tx.org_id`, label = bidder org name (keep `subject_counterparty_id` only for pre-claim counterparties).
+- `VerificationPanel.tsx` `isMine`: match `created_by === user.id` first, then subject org.
+- Data fix: for rows with `transaction_id` set, reset `subject_org_id`/`subject_label` to the creator's org when the creator belongs to the counterparty org.
+- The panel already polls every 4 s while in progress on both sides; confirm with Playwright as the bidder on BID9140055 (before item 1 marks it passed).
