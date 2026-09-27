@@ -252,6 +252,24 @@ function AlphaBravoHome() {
           {showTrades ? "Hide Trades" : "View Trades"}
         </button>
       )}
+      {user ? (
+        <Link
+          to="/live-deal-engine"
+          search={{ fresh: true, n: Date.now() } as never}
+          className="inline-flex h-10 items-center rounded-full bg-foreground px-6 text-sm font-medium text-background transition-opacity hover:opacity-90"
+        >
+          Post a Trade
+        </Link>
+      ) : (
+        <SignInModal defaultTab="signup">
+          <button
+            type="button"
+            className="inline-flex h-10 items-center rounded-full border border-border bg-card px-6 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            Post a Trade
+          </button>
+        </SignInModal>
+      )}
     </div>
   );
 

@@ -302,11 +302,11 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
       )}
       {legalSignedCelebrate && (
         <Confetti
-          message="Both parties signed — on to Execution."
+          message="All Legal Agreements have been mutually signed — on to Execution."
           onDone={() => setLegalSignedCelebrate(false)}
         />
       )}
-      <div className="mx-auto max-w-6xl space-y-4">
+      <div className="w-full space-y-4">
         {/* The registration line spans both columns — who this deal is, and its BID/OFF number. */}
         <div className="glass-node space-y-1.5 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">

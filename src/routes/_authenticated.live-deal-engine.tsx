@@ -2263,7 +2263,7 @@ function LiveDealEngine() {
   // Only the full-bleed layouts (nothing else open, or explicitly maximized) stretch the Map and
   // Workspace panels all the way down to the taskbar of open bid tabs — a docked/floating
   // workspace is a small window, not the whole screen, so it keeps its own fixed height instead.
-  const fillToTaskbar = !popout && (soloWorkspace || windowMode === "maximized");
+  const fillToTaskbar = !popout;
 
   useEffect(() => {
     if (popout) return;
@@ -2328,7 +2328,7 @@ function LiveDealEngine() {
     <>
       {legalSignedCelebrate && (
         <Confetti
-          message="Both parties signed — on to Execution."
+          message="All Legal Agreements have been mutually signed — on to Execution."
           onDone={() => setLegalSignedCelebrate(false)}
         />
       )}
@@ -3602,7 +3602,9 @@ function LiveDealEngine() {
     return <div className="min-h-screen bg-background p-4">{workspaceContent}</div>;
   }
 
-  if (soloWorkspace || windowMode === "maximized") {
+  // Always full-bleed: the floating 1040px "docked" window squeezed the map as soon as saved
+  // tabs loaded in, so every open deal now fills the screen down to the taskbar.
+  if (!popout) {
     return (
       <AppShell wide compactFooter hideFooter>
         {/* bottom-14 (not inset-4 on every side) leaves room for the taskbar of open deal tabs
