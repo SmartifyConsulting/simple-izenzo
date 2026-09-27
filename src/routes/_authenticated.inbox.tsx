@@ -115,10 +115,10 @@ function InboxPage() {
 
   // Read notifications move out of the Inbox tab into Archive — Mark Read is the only way in,
   // Restore (in Archive) is the only way back out.
-  const [tab, setTab] = useState<"inbox" | "archive">("inbox");
+  const [tab, setTab] = useState<"inbox" | "archive" | "all">("inbox");
   const archiveCount = notifications.filter((n) => n.read).length;
   const inboxCount = notifications.length - archiveCount;
-  const visibleNotifications = notifications.filter((n) => (tab === "archive" ? n.read : !n.read));
+  const visibleNotifications = notifications.filter((n) => (tab === "all" ? true : tab === "archive" ? n.read : !n.read));
 
   // Grouped month → week, most recent first. Every group collapses by default except the one
   // holding the current week — that's the only history anyone needs open on arrival.
@@ -166,6 +166,7 @@ function InboxPage() {
                 [
                   ["inbox", "Inbox", inboxCount],
                   ["archive", "Archive", archiveCount],
+                  ["all", "All", notifications.length],
                 ] as const
               ).map(([key, label, count]) => (
                 <button
