@@ -403,14 +403,15 @@ function Credits() {
             ) : (
               <Accordion type="multiple" defaultValue={[monthKey(new Date().toISOString())]}>
                 {groupByMonth(filteredLedger).map(([month, rows]) => {
-                  const net = rows.reduce((sum, r) => sum + r.delta, 0);
+                  const spent = rows.reduce((s, r) => (Number(r.delta) < 0 ? s - Number(r.delta) : s), 0);
+                  const added = rows.reduce((s, r) => (Number(r.delta) > 0 ? s + Number(r.delta) : s), 0);
                   return (
                     <AccordionItem key={month} value={month} className="border-border last:border-b-0">
                       <AccordionTrigger className="bg-sidebar px-4 py-3 text-sm font-medium text-white hover:no-underline [&>svg]:text-white/70">
                         <span className="flex flex-1 items-center justify-between pr-3">
                           <span>{month}</span>
                           <span className="font-mono text-xs tabular-nums text-white/70">
-                            {net > 0 ? `+${net}` : net} tokens (USD {Math.abs(net) * TOKEN_PRICE_USD}) ·{" "}
+                            Spent {spent} (USD {spent * TOKEN_PRICE_USD}) · Added +{added} ·{" "}
                             {rows.length} movement{rows.length === 1 ? "" : "s"}
                           </span>
                         </span>
