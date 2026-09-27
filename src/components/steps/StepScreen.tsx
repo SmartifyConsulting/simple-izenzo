@@ -2119,9 +2119,9 @@ function WadStep({ tx, reload, onContinue }: Props) {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tx.wad_completed_at]);
-  const wadConfetti = wadCelebrate ? (
-    <Confetti txId={tx.id} kind="wad_passed" message="KYC and KYB passed on both sides — on to the legal documents." onDone={() => setWadCelebrate(false)} />
-  ) : null;
+  // KYC/KYB congratulations removed at the client's request — WaD passing advances quietly.
+  void wadCelebrate;
+  const wadConfetti = null;
 
   if (tx.wad_completed_at && revealCertificate) {
     // No outer Panel/title here — the frame this sits inside already reads "Without a Doubt", so
