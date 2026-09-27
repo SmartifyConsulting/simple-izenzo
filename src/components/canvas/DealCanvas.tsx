@@ -1776,7 +1776,7 @@ export function CounterpartyRecord({
                 )}
               >
                 <span className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-slate-900">{c.name}</span>
+                  <span className="text-sm font-semibold text-foreground">{c.name}</span>
                   {c.score != null && (
                     <span className="shrink-0 rounded-full border border-foreground bg-foreground px-2 py-0.5 text-[11px] font-semibold text-background">
                       {c.score}% match

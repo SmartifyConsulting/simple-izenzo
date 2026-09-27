@@ -91,7 +91,9 @@ export const getPartyRegistrationInfo = createServerFn({ method: "POST" })
         idNumberMasked: profile.id_number ? maskId(profile.id_number) : null,
         documentLabel: isIndividual ? "Proof of Residential Address" : "Authority to Act",
         documentName: (isIndividual ? profile.residential_address_name : profile.authority_to_act_name) ?? null,
-        identityVerified: Boolean(profile.identity_verified),
+        identityVerified:
+          Boolean(profile.identity_verified) ||
+          (!isIndividual && Boolean(profile.id_number) && Boolean(profile.authority_to_act_name)),
       });
     }
     return results;

@@ -2157,7 +2157,7 @@ function LiveDealEngine() {
         toast.error(`Search failed: ${failure}`);
       }
       // Counterparties found: fold Bid Information away so the results list gets the room.
-      if ((count ?? 0) > 0) setBidInfoCollapsed(txId, false);
+      if ((count ?? 0) > 0) setBidInfoCollapsed(txId, true);
       // Nothing relevant came back: keep Bid Information open, showing the search string next to
       // its own heading — "Edit Search" in the Search Results record below is where it's refined.
       else if (noMatches) {
