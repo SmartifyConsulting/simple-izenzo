@@ -2120,7 +2120,7 @@ function WadStep({ tx, reload, onContinue }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tx.wad_completed_at]);
   const wadConfetti = wadCelebrate ? (
-    <Confetti message="KYC and KYB passed on both sides — on to the legal documents." onDone={() => setWadCelebrate(false)} />
+    <Confetti txId={tx.id} kind="wad_passed" message="KYC and KYB passed on both sides — on to the legal documents." onDone={() => setWadCelebrate(false)} />
   ) : null;
 
   if (tx.wad_completed_at && revealCertificate) {

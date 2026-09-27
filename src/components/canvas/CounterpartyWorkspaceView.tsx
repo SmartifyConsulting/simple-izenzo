@@ -302,10 +302,12 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
   return (
     <AppShell wide title={tx.title} description={`You're viewing this deal as its counterparty — read-only, shared for transparency.`}>
       {celebrateApproval && (
-        <Confetti message="The offer has been approved." onDone={() => setCelebrateApproval(false)} />
+        <Confetti txId={tx.id} kind="offer_approved" message="The offer has been approved." onDone={() => setCelebrateApproval(false)} />
       )}
       {legalSignedCelebrate && (
         <Confetti
+          txId={tx.id}
+          kind="legal_signed"
           message="All Legal Agreements have been mutually signed — on to Execution."
           onDone={() => setLegalSignedCelebrate(false)}
         />
