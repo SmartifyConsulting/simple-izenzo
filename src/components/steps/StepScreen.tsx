@@ -1879,10 +1879,6 @@ function WadStep({ tx, reload, onContinue }: Props) {
   const [preScreenOpenOverride, setPreScreenOpenOverride] = useState<boolean | null>(null);
   const [revealCertificate, setRevealCertificate] = useState(false);
   const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
-  const [skipDialogOpen, setSkipDialogOpen] = useState(false);
-  const [skipReason, setSkipReason] = useState("");
-  const [skipBusy, setSkipBusy] = useState(false);
-  const waiveDiligence = useServerFn(setDiligenceState);
   const { data: chosenCp } = useQuery({
     queryKey: ["chosen-counterparty-rating", tx.id],
     queryFn: async () => {
@@ -2058,27 +2054,6 @@ function WadStep({ tx, reload, onContinue }: Props) {
     }
   }
 
-  // Skips KYC and KYB outright rather than waiting on either check — genuinely risky (this is the
-  // one hard gate meant to catch a fraudulent or sanctioned counterparty), so it's behind its own
-  // warning dialog and a mandatory written reason. Recorded exactly like any other diligence
-  // override: setDiligenceState's own "waived" state writes a transaction_event with that reason,
-  // so this leaves the same audit trail a real reviewer decision would.
-  async function skipVerification() {
-    if (skipReason.trim().length < 5) return;
-    setSkipBusy(true);
-    try {
-      await waiveDiligence({ data: { transactionId: tx.id, check: "kyc", state: "waived", reason: skipReason.trim() } });
-      await waiveDiligence({ data: { transactionId: tx.id, check: "kyb", state: "waived", reason: skipReason.trim() } });
-      await decide("cleared", { kyc: true, kyb: true });
-      setSkipDialogOpen(false);
-      setSkipReason("");
-      toast.warning("KYC/KYB skipped — recorded on the deal for audit purposes.");
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setSkipBusy(false);
-    }
-  }
 
   // Once both sides' Didit checks have genuinely cleared, Without a Doubt completes itself —
   // there is no separate manual "Run Verification" step to fake past any more; the real result
@@ -2103,6 +2078,8 @@ function WadStep({ tx, reload, onContinue }: Props) {
       markOfferCelebrationSeen(key);
       setWadCelebrate(true);
     }
+    // Once the deal has already moved on, opening this frame is a review — never auto-close it.
+    if ((tx as { wad_continued_at?: string | null }).wad_continued_at) return;
     const t = setTimeout(() => onContinue?.(), 1200);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2156,15 +2133,6 @@ function WadStep({ tx, reload, onContinue }: Props) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <TokenGateFooter cost={WAD_COST} />
           <div className="flex flex-wrap justify-end gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-destructive/40 text-destructive hover:bg-destructive/10"
-              disabled={busy || shortOnTokens}
-              onClick={() => setSkipDialogOpen(true)}
-            >
-              Skip Verification
-            </Button>
             <Button size="sm" variant="outline" disabled={busy || shortOnTokens} onClick={() => setExitConfirmOpen(true)}>
               Exit
             </Button>
@@ -2447,43 +2415,6 @@ function WadStep({ tx, reload, onContinue }: Props) {
             }}
           >
             Exit trade
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-
-    <Dialog
-      open={skipDialogOpen}
-      onOpenChange={(v) => {
-        setSkipDialogOpen(v);
-        if (!v) setSkipReason("");
-      }}
-    >
-      <DialogContent>
-        <DialogTitle>Skip KYC and KYB?</DialogTitle>
-        <DialogDescription>
-          KYC and KYB verification allows the other party to independently confirm who you are and
-          the company you represent. If you choose to skip verification, they will not have this
-          assurance. Your decision to proceed without KYC and KYB will be recorded on this deal and
-          its clearance certificate for audit purposes, together with the reason you provide below.
-        </DialogDescription>
-        <Textarea
-          value={skipReason}
-          onChange={(e) => setSkipReason(e.target.value)}
-          rows={3}
-          placeholder="Why are you skipping verification? (required)"
-        />
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" size="sm" onClick={() => setSkipDialogOpen(false)}>
-            Undo Skip
-          </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            disabled={skipBusy || skipReason.trim().length < 5}
-            onClick={() => void skipVerification()}
-          >
-            {skipBusy ? "Skipping…" : "Continue"}
           </Button>
         </div>
       </DialogContent>
