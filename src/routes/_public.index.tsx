@@ -242,14 +242,16 @@ function AlphaBravoHome() {
           </button>
         </SignInModal>
       )}
-      <button
-        type="button"
-        aria-expanded={showTrades}
-        onClick={() => setShowTrades((v) => !v)}
-        className="inline-flex h-10 items-center rounded-full border border-border bg-card px-6 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-      >
-        {showTrades ? "Hide Trades" : "View Trades"}
-      </button>
+      {user && (
+        <button
+          type="button"
+          aria-expanded={showTrades}
+          onClick={() => setShowTrades((v) => !v)}
+          className="inline-flex h-10 items-center rounded-full border border-border bg-card px-6 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+        >
+          {showTrades ? "Hide Trades" : "View Trades"}
+        </button>
+      )}
     </div>
   );
 

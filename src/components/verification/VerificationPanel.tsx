@@ -239,7 +239,17 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
               <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2 rounded-lg border border-[#4169e1]/25 bg-[#4169e1]/5 p-3 sm:border-r-2">
                   {otherSubjects.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">No check on file yet for the other party.</p>
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="secondary" className="bg-[#4169e1]/15 font-normal text-[#1c2f6b]">
+                          {otherLabel ?? "Counterparty"}
+                        </Badge>
+                        <Badge variant="outline" className="border-border bg-muted text-muted-foreground">
+                          not started
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">No check run yet.</p>
+                    </div>
                   ) : (
                     otherSubjects.map((r) => (
                       <div key={r.id} className="space-y-1">

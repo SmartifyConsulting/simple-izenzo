@@ -154,8 +154,6 @@ export function MainHeader() {
               <ThemeToggle />
               <ProfileAvatarMenu />
             </>
-          ) : isHome ? (
-            <ThemeToggle />
           ) : (
             <>
               <ThemeToggle />
