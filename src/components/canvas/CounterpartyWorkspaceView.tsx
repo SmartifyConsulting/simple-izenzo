@@ -461,7 +461,7 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
             {tx.poi_sealed_at && step2Open && (
               <>
                 <CollapsibleFrame
-                  label="Seal Intent"
+                  label="Proof of Intent"
                   open={openFrame === "poi"}
                   onToggle={() => toggleFrame("poi")}
                 >

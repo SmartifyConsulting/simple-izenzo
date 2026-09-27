@@ -89,7 +89,7 @@ const STEPS: StepDef[] = [
     step: 2,
     label: "GRC",
     items: [
-      { key: "poi", label: "Seal Intent", stage: "trading", step: "poi", icon: FileText },
+      { key: "poi", label: "Proof of Intent", stage: "trading", step: "poi", icon: FileText },
       {
         key: "wad",
         label: "Without a Doubt",

@@ -720,7 +720,7 @@ function LiveDealEngine() {
   const [searchGoByTx, setSearchGoByTx] = useState<Set<string>>(() => new Set());
   function goToSearch(txId: string) {
     setSearchGoByTx((s) => (s.has(txId) ? s : new Set(s).add(txId)));
-    setBidInfoCollapsed(txId, true);
+    setBidInfoCollapsed(txId, false);
   }
   function markSubmitted(txId: string) {
     try {
@@ -2099,7 +2099,8 @@ function LiveDealEngine() {
     await categoriseSearch(txId);
     // Bid Information folds away the moment the stage moves to Search — not just once results
     // land — so the search/results view always has the room, not the bid's own details.
-    setBidInfoCollapsed(txId, true);
+    // Keep Bid Information open so the finished summary is visible while the search runs.
+    setBidInfoCollapsed(txId, false);
     setFlowStep("searching");
     // Force it open the moment a search starts — a re-run (after "Choose a different party", a
     // counter offer, etc.) could otherwise still be carrying the collapsed state a *previous*
@@ -2388,15 +2389,11 @@ function LiveDealEngine() {
           fillToTaskbar && "flex min-h-0 flex-1 flex-col lg:grid",
         )}
       >
-          {/* Engine Map — always visible on the left. Clicking a node opens that step inline in
-              the Live Workspace beside it, instead of navigating away from this screen. When
-              nothing else is competing for screen space (the common case), both panels stretch to
-              fill all the way down to the taskbar of open bid tabs rather than stopping short of
-              it; a docked/floating workspace instead keeps a fixed viewport-relative height, since
-              it's a small window rather than the whole screen. */}
+          {/* Engine Map — always visible on the left, in the same card shell as the Live
+              Workspace so light and dark modes look identical. */}
           <div
             className={cn(
-              "flex w-full flex-col overflow-hidden p-3 sm:p-5",
+              "flex w-full flex-col overflow-hidden rounded-3xl border border-border bg-card p-3 shadow-sm sm:p-5",
               fillToTaskbar ? "h-full" : "h-[calc((100vh-190px)*0.945 + 1cm + 31px)]",
             )}
           >
@@ -2992,74 +2989,6 @@ function LiveDealEngine() {
             />
           )}
 
-          {activity && dealTx && flowStep === "searching" && (
-            <div className="mt-1.5 overflow-hidden rounded-xl border border-border">
-              <div className="flex items-center gap-3 bg-[#F1F5F9] px-4 py-3">
-                <p className="text-xs text-slate-700">Searching using AI for matching counterparties…</p>
-                <div className="ml-auto flex shrink-0 items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={stopSearch}
-                    title="Stop watching this search — it keeps running and will still save whatever it finds"
-                    className="flex items-center gap-1 rounded p-1 text-[11px] font-medium text-slate-500 hover:bg-slate-200 hover:text-slate-800"
-                  >
-                    <StopCircle className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Stop</span>
-                  </button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="h-7 gap-1 border-slate-300 bg-white text-xs font-medium text-slate-800 hover:bg-slate-100"
-                    onClick={() => {
-                      setTopEditedPrompt(
-                        (dealTx as unknown as { search_prompt?: string | null }).search_prompt ?? "",
-                      );
-                      setTopEditingSearch(true);
-                    }}
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                    Edit Search
-                  </Button>
-                </div>
-              </div>
-
-              {topEditingSearch && (
-                <div className="space-y-1.5 bg-white p-2.5">
-                  <Textarea
-                    rows={2}
-                    value={topEditedPrompt}
-                    onChange={(e) => setTopEditedPrompt(e.target.value)}
-                    autoFocus
-                    className="min-h-0 resize-none text-sm text-slate-800 placeholder:text-slate-400"
-                  />
-                  <div className="flex gap-1.5">
-                    <Button
-                      size="sm"
-                      className="flex-1"
-                      disabled={topEditedPrompt.trim().length === 0 || refining}
-                      onClick={() => {
-                        setTopEditingSearch(false);
-                        void refineSearch(dealTx.id, topEditedPrompt.trim());
-                      }}
-                    >
-                      Search
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-slate-700 hover:bg-slate-200 hover:text-slate-900"
-                      onClick={() => setTopEditingSearch(false)}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              <div className="h-1.5 w-full animate-ribbon-sweep" />
-            </div>
-          )}
 
           {/* Bid Registration / Submission of documents now tick in the workflow column instead. */}
 
@@ -3465,7 +3394,7 @@ function LiveDealEngine() {
                     >
                       <span className="min-w-0">
                         <span className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
-                          Seal Intent
+                          Proof of Intent
                         </span>
                         <span className="mt-1 block text-[11px] text-muted-foreground">
                           Sealing writes the transaction state to an immutable record with a fingerprint.

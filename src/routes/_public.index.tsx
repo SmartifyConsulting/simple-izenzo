@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Banknote, Database, Hammer, ShieldCheck, Sparkles, Target } from "lucide-react";
 import { HeroMatchCard } from "@/components/marketing/HeroMatchCard";
 import { SubmitBidButton } from "@/components/marketing/SubmitBidButton";
-import { AuthTabs } from "@/components/auth/AuthTabs";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { creatorTone, displayTitle, fallbackReference, when } from "@/lib/tx";
@@ -200,32 +199,32 @@ function AlphaBravoHome() {
 
   return (
     <section className="mx-auto max-w-6xl px-5 py-6 sm:py-8">
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="max-w-4xl">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-            <Sparkles className="h-3.5 w-3.5" /> AI-Powered Trade Matching
-          </span>
-          <h1 className="mt-3 max-w-3xl text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl">
-            Governance Infrastructure Marketplace
-          </h1>
-          <div className="mt-4">
-            <SubmitBidButton size="sm" />
-          </div>
+      <div className="mx-auto flex max-w-4xl flex-col items-center py-10 text-center sm:py-16">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+          <Sparkles className="h-3.5 w-3.5" /> AI-Powered Trade Matching
+        </span>
+        <h1 className="mt-4 text-4xl leading-[1.05] tracking-tight text-foreground sm:text-6xl">
+          Governance Infrastructure for Institutional Trade.
+        </h1>
+        <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+          One cryptographic network for bilateral global commerce. Access it via our turnkey Trade
+          Desk, manage counterparty risk through the Compliance Profile with non-waivable KYC/KYB,
+          or build directly on the API — all backed by AI-driven matching, hash-sealed intent and
+          independently verifiable execution.
+        </p>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <SubmitBidButton size="sm" />
+          <button
+            type="button"
+            onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}
+            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:border-primary/40 hover:text-primary"
+          >
+            Explore features ↓
+          </button>
         </div>
-
-        {/* Sign in / sign up sits top-right of the hero, level with the badge above the
-            headline. A signed-in visitor sees their active bids/offers here instead — see
-            ActiveDealsPanel below. */}
-        {/* Kept mounted while a sign-up is mid-wizard: the account is signed in already, and
-            unmounting here would drop step 3 (ID number + document) before it renders. */}
-        {(!user || registrationInProgress()) && (
-          <div className="rounded-2xl border border-border bg-card p-3.5 shadow-sm">
-            <AuthTabs compact />
-          </div>
-        )}
       </div>
 
-      <div className="mt-5 w-full">
+      <div id="features" className="mt-5 w-full scroll-mt-20">
         <HeroMatchCard />
       </div>
 

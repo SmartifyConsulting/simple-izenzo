@@ -506,7 +506,7 @@ export function DealCanvas({
           ticked list, the way Deal Creation does, and attention moves on to Without a Doubt. */}
       {poiSealed && (
         <div className={cn("mt-3", stepsBoxClass)}>
-          <GateBar label="Seal Intent" cleared />
+          <GateBar label="Proof of Intent" cleared />
           <div className="space-y-1.5">
             {[
               "Counterparties surfaced",
@@ -529,7 +529,7 @@ export function DealCanvas({
 
           <Connector />
           <GateGroup
-            title="Seal Intent"
+            title="Proof of Intent"
             align={focusSide === "offer" ? "right" : "left"}
             forceOpen={Boolean(openProofOfIntent)}
           >
@@ -655,7 +655,7 @@ export function DealCanvas({
             </div>
             {visible("trading", "poi") && (
               <div className={stepsBoxClass}>
-                <GateBar label="Seal Intent" cleared={poi} />
+                <GateBar label="Proof of Intent" cleared={poi} />
               </div>
             )}
           </GateGroup>
