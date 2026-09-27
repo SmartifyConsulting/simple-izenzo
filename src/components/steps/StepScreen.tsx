@@ -2165,8 +2165,8 @@ function WadStep({ tx, reload, onContinue }: Props) {
         it as this panel's own title doubled it up. */}
     <Panel
       footer={
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap justify-end gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
             {wadUnlocked && (
               <Button size="sm" variant="outline" disabled={busy || shortOnTokens} onClick={() => setExitConfirmOpen(true)}>
                 Exit
