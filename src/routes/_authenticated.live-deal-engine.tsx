@@ -3610,7 +3610,7 @@ function LiveDealEngine() {
             without ever drawing underneath it. Used both when this is the only workspace open
             and when it's explicitly maximized — in both cases it's the full screen, not a small
             floating window. */}
-        <div className="fixed inset-x-4 top-[calc(7.5rem+1vh)] bottom-[calc(3.5rem+2.5vh-23px)] z-30 flex flex-col overflow-y-auto rounded-2xl border border-border bg-background p-4 shadow-2xl">
+        <div className="fixed inset-x-4 top-[calc(7.5rem+1vh)] bottom-[calc(3.5rem+2.5vh-23px)] z-30 flex flex-col overflow-y-auto lw-window rounded-2xl border border-border bg-background p-4 shadow-2xl">
           {workspaceContent}
         </div>
       </AppShell>
