@@ -675,7 +675,7 @@ function LiveDealEngine() {
   // further down are untouched by this — only Step 1's own records are gated on it.
   const [step1Open, setStep1Open] = useState(false);
   const [step2Open, setStep2Open] = useState(false);
-  const [step3Open, setStep3Open] = useState(false);
+  const [, setStep3Open] = useState(false);
   // Once Intent is confirmed, its frame folds into a small accordion nested under Online Media
   // Screening Results rather than staying open as its own full-size panel.
   const [confirmedIntentOpen, setConfirmedIntentOpen] = useState(false);

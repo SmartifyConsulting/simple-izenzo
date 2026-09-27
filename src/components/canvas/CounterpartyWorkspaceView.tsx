@@ -268,7 +268,7 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
     (tx.stage === "execution" && tx.step !== "business-docs") ||
     tx.stage === "finality" ||
     tx.stage === "memory";
-  const [step3Open, setStep3Open] = useState(true);
+
   const [step1Open, setStep1Open] = useState(true);
   const step1AutoCollapsed = useRef(false);
   useEffect(() => {
