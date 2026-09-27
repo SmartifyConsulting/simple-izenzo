@@ -1,8 +1,8 @@
-# Five fixes: Bid Information, dark text, Izenzo verified, Exit row, KYC/KYB QR
+# Six fixes: Bid Information, dark text, Izenzo verified, Exit row, KYC/KYB QR, counterparty names
 
-## 1. Bid Information stays folded after a search
-When a search finds counterparties, Bid Information should fold away to make room for the results. The code says it folds, but it actually forces the frame open. Change that so it folds.
-- If the search finds no matches, Bid Information stays open as it does now, so you can edit the search.
+## 1. Bid Information stays folded after the AI+ search
+Once Bid Information has folded away, it must not open by itself again. That includes after the AI+ (shortlist) search finishes, and when results or counterparties refresh. Several places in the search code tell it to open when they should leave it alone or fold it.
+- It only opens again when you click it, or when a search finds no matches so you can edit the search.
 
 ## 2. White text on dark backgrounds (Pre-Screening card)
 In dark mode, the company-name pill, the ID line and the Authority to Act line on the Pre-Screening cards are dark or grey on a dark background. These become white, with a solid pill background, so they can be read. Light mode stays as it is.
