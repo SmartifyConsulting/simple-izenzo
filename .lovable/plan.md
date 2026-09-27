@@ -1,15 +1,25 @@
-# BID9140055 test verification + map label consistency
+# BID9140055 test verification, map fixes, show-once congratulations
 
 ## 1. Mark BID9140055 as verified on both sides (test data only)
 - Set Izenzo's existing KYC and KYB checks on this deal (currently "In progress") to **Passed**, dated now.
 - Add Passed KYC and KYB records for Holarc Health (Pty) Ltd on the same deal, so both cards show "Both verified".
-- Payment of the 3 tokens is not touched; if a side hasn't paid, the paid section stays hidden until they do.
+- The 3-token payment isn't changed. If a side hasn't paid, its paid section stays hidden until it does.
 
 ## 2. Map: Pre-feasibility and Feasibility match Concept and Bankability
-- The two tiles currently use a fixed "open" look, which gives them a different text colour from Concept and Bankability.
-- They will take the same state and styling as Concept, so all four tiles under Project Preparation / Bankability share the same font colour, size and weight in light and dark mode.
-- Only Concept keeps its pulse when active (the other two won't pulse on their own).
+- The two tiles use the same font colour, size and weight as Concept and Bankability, in light and dark mode.
+- Only Concept keeps its pulse when active.
+
+## 3. Map: reverse the Step 3 arrow
+- The arrow between Step 3 · Execution and Entry / Exit now points from Step 3 into Entry / Exit, instead of the other way round.
+
+## 4. Congratulations show once per person
+- Every celebration applies: offer approved, KYC and KYB passed on both sides, and all Legal Agreements signed.
+- Each one shows once per person per deal, with a **Fantastic!** button. The message stays until they click it, then never appears again for that person on that deal, on any device.
+- The other party still sees their own celebration once.
 
 ## Technical details
-- Data change (`supabase--run_sql`): `UPDATE identity_verifications SET status='passed', decision='approved', completed_at=now()` for ids `f73f495e…` and `4bfe9c24…`; `INSERT` two passed rows (`id_document`, `kyb`) with `transaction_id=d049ed4d…`, `subject_org_id=089084d6…`, `subject_label='Holarc Health (Pty) Ltd'`.
-- `src/components/canvas/MapView.tsx` lines 816–817: replace `{ state: "open" }` with the state computed for the Concept node, minus the active pulse class.
+- Data (`supabase--run_sql`): update `identity_verifications` ids `f73f495e…`, `4bfe9c24…` to `status='passed', decision='approved', completed_at=now()`; insert passed `id_document` + `kyb` rows for tx `d049ed4d…`, `subject_org_id=089084d6…`, label "Holarc Health (Pty) Ltd".
+- `MapView.tsx` 816–817: drop the `{ state: "open" }` override and reuse Concept's computed state without the pulse.
+- `MapView.tsx` 232–235: swap the start and end points so the arrowhead lands on the Entry/Exit frame.
+- Seen-once storage: new migration for table `celebrations_seen (user_id, transaction_id, kind, seen_at)` with PK (user_id, transaction_id, kind), GRANTs to authenticated/service_role, RLS limited to own rows (`auth.uid() = user_id`).
+- `Confetti.tsx`: optional `onAcknowledge` renders a "Fantastic!" button and turns off auto-dismiss. Call sites in `live-deal-engine.tsx` (2330/2336), `CounterpartyWorkspaceView.tsx` (305/308) and `StepScreen.tsx` (2123) only show when there's no seen row. The seen row is written on click.
