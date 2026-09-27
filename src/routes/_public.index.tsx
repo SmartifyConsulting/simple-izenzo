@@ -80,10 +80,12 @@ const STAGES = [
 const HOME_DEALS_LIMIT = 10;
 
 function ActiveDealsPanel() {
-  const { org } = useAuth();
+  const { org, user } = useAuth();
+  // Test-only: this one account sees just 5 active bids.
+  const limit = user?.email?.toLowerCase() === "info@georgiaadams.co.za" ? 5 : HOME_DEALS_LIMIT;
 
   const { data: deals = [], isLoading } = useQuery({
-    queryKey: ["home-active-deals", org?.id],
+    queryKey: ["home-active-deals", org?.id, limit],
     enabled: Boolean(org?.id),
     queryFn: async () => {
       const { data, error } = await supabase
@@ -92,7 +94,7 @@ function ActiveDealsPanel() {
         .or(`org_id.eq.${org!.id},counterparty_org_id.eq.${org!.id}`)
         .not("stage", "in", "(finality,memory)")
         .order("updated_at", { ascending: false })
-        .limit(HOME_DEALS_LIMIT);
+        .limit(limit);
       if (error) throw error;
       return (data ?? []) as {
         id: string;
@@ -161,7 +163,7 @@ function ActiveDealsPanel() {
           })
         )}
       </div>
-      {deals.length === HOME_DEALS_LIMIT && (
+      {deals.length === limit && (
         <Link
           to="/trades"
           className="mt-2.5 block text-[11px] font-medium text-primary hover:underline"
@@ -237,7 +239,6 @@ function AlphaBravoHome() {
     <section className="mx-auto max-w-6xl px-5 py-6 sm:py-8">
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
         <div>
-          <p className="mt-2 text-center text-lg font-medium text-foreground">Ready when you are.</p>
           <div className="mt-3 w-full">
             <HeroMatchCard />
           </div>
@@ -247,11 +248,13 @@ function AlphaBravoHome() {
             </div>
           )}
         </div>
-        {!user && (
-          <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+          {user ? (
+            <p className="text-sm text-muted-foreground">You're signed in as {user.email}.</p>
+          ) : (
             <AuthTabs compact />
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <p className="mt-8 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
