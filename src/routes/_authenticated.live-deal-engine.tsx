@@ -711,7 +711,8 @@ function LiveDealEngine() {
   const [mediaPick, setMediaPick] = useState<string | null>(null);
   // Only one screened counterparty: nothing to choose between, so pre-select it (the person still presses Continue).
   useEffect(() => {
-    if (!mediaPick && mediaResults && mediaResults.length === 1) setMediaPick(mediaResults[0].counterpartyId);
+    const only = mediaResults?.length === 1 ? mediaResults[0] : undefined;
+    if (!mediaPick && only) setMediaPick(only.counterpartyId);
   }, [mediaResults, mediaPick]);
 
   // Once the ask has been made for a bid, the description/drop frame never comes back — not while
