@@ -1348,7 +1348,7 @@ function LiveDealEngine() {
     // opening a deal that was already past GRC on a fresh page load is not.
     if (sameDeal && prev!.phase === 2 && phase === 3) setLegalSignedCelebrate(true);
     if (sameDeal && phase === 1) return;
-    setStep1Open(false);
+    setStep1Open(phase === 1);
     setStep2Open(phase === 2);
     setStep3Open(phase === 3);
   }, [dealTx?.id, dealTx?.intent_confirmed_at, grcDone]);
@@ -1883,7 +1883,7 @@ function LiveDealEngine() {
         }
         // Step 1 holds the record of how the deal got here; it only needs to be open while its own
         // work is still live, which the stepOverrides-driven effect above already handles.
-        setStep1Open(false);
+        setStep1Open(!tx.intent_confirmed_at);
       } catch {
         // Deal not found or not visible to this user — leave the picker showing.
       }

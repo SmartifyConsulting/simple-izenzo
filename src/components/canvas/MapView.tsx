@@ -794,7 +794,7 @@ export function MapView({
         })}
         {node("withoutADoubt", "Without a Doubt", "compliance", "wad", Diamond, {
           overrideKey: "wad",
-          sub: "KYC & KYB on each other",
+          sub: "KYC & KYB HARD GATE",
           subTone: "gate",
           // White on the dark (Ink & Aqua) canvas — a black diamond disappeared against it —
           // staying black only on the light skin.
