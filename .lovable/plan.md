@@ -1,9 +1,9 @@
 # BID9140055 test verification, map fixes, show-once congratulations
 
-## 1. Mark BID9140055 as verified on both sides (test data only)
-- Set Izenzo's existing KYC and KYB checks on this deal (currently "In progress") to **Passed**, dated now.
-- Add Passed KYC and KYB records for Holarc Health (Pty) Ltd on the same deal, so both cards show "Both verified".
-- The 3-token payment isn't changed. If a side hasn't paid, its paid section stays hidden until it does.
+## 1. BID9140055: Pre-Screening verified on both sides (test data only)
+- Both Izenzo and Holarc Health (Pty) Ltd show as **Verified** in Pre-Screening on App Registration for this deal.
+- KYC and KYB checks are **not** changed. They stay as they are, and the parties run them normally.
+- Before changing anything, the plan checks what each side's Pre-Screening card shows now. Only a side that isn't already Verified is updated, by marking that person's profile as verified.
 
 ## 2. Map: Pre-feasibility and Feasibility match Concept and Bankability
 - The two tiles use the same font colour, size and weight as Concept and Bankability, in light and dark mode.
