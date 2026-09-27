@@ -261,7 +261,13 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
   // the time, which never actually collapsed anything.
   // GRC is finished once the deal has moved on to Execution (or every legal agreement is signed by
   // both sides) — Legal Agreements then folds into Step 2 and Step 3 · Execution opens on Concept.
-  const grcDone = tx.stage === "execution" || tx.stage === "finality" || tx.stage === "memory" || legalAllSigned;
+  // Legal Agreements (step "business-docs") is stored under the execution stage, so the stage
+  // alone must not fold GRC — only signed agreements or a step beyond business-docs does.
+  const grcDone =
+    legalAllSigned ||
+    (tx.stage === "execution" && tx.step !== "business-docs") ||
+    tx.stage === "finality" ||
+    tx.stage === "memory";
   const [step3Open, setStep3Open] = useState(true);
   const [step1Open, setStep1Open] = useState(true);
   const step1AutoCollapsed = useRef(false);
