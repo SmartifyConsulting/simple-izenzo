@@ -896,7 +896,7 @@ export function MapView({
           {memoryUpdating && (
             <span
               role="status"
-              className="absolute left-1/2 top-[calc(50%+42px)] flex -translate-x-1/2 items-baseline whitespace-nowrap text-[9px] italic leading-snug text-amber-700"
+              className="absolute left-1/2 top-[calc(50%+42px)] flex -translate-x-1/2 items-baseline whitespace-nowrap text-[12px] font-semibold italic leading-snug text-white"
             >
               Updating memory
               {[0, 1, 2, 3, 4, 5].map((i) => (
