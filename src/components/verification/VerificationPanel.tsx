@@ -103,6 +103,9 @@ type Props = {
   transactionId?: string;
   checks: CheckType[];
   title?: string;
+  /** Company names shown on the two party cards instead of person names / "You". */
+  myLabel?: string | null;
+  otherLabel?: string | null;
   description?: string;
   /** Drops the outer bordered card and its header divider — for a caller (the WaD gate) that
    * already renders this inside another frame of its own, so the two borders don't nest. */
@@ -113,7 +116,7 @@ type Props = {
   hideHeader?: boolean;
 };
 
-export function VerificationPanel({ transactionId, checks: requested, title, description, bare, hideHeader }: Props) {
+export function VerificationPanel({ transactionId, checks: requested, title, description, bare, hideHeader, myLabel, otherLabel }: Props) {
   const { user, profile } = useAuth();
   const listEnabled = useServerFn(listEnabledCheckTypes);
   const start = useServerFn(startVerification);
@@ -242,7 +245,7 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
                       <div key={r.id} className="space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <Badge variant="secondary" className="bg-[#4169e1]/15 font-normal text-[#1c2f6b]">
-                            {r.subject_label ?? "Counterparty"}
+                            {otherLabel ?? r.subject_label ?? "Counterparty"}
                           </Badge>
                           <Badge
                             variant="outline"
@@ -260,7 +263,7 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
                 <div className="space-y-2 rounded-lg border border-emerald-600/25 bg-emerald-600/5 p-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="secondary" className="bg-emerald-600/15 font-normal text-emerald-700">
-                      You
+                      {myLabel ?? "You"}
                     </Badge>
                     <Badge
                       variant="outline"
