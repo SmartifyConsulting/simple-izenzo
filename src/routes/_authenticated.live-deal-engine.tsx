@@ -1118,6 +1118,7 @@ function LiveDealEngine() {
     setSealedWadOpen(false);
     setTradeSummaryOpen(false);
     setMapPanel(null);
+    setStep2Open(true);
     setStagePanel("business-docs");
   }
 
