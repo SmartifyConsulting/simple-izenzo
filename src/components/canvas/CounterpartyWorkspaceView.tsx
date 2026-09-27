@@ -268,7 +268,7 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
     (tx.stage === "execution" && tx.step !== "business-docs") ||
     tx.stage === "finality" ||
     tx.stage === "memory";
-  const [step3Open, setStep3Open] = useState(true);
+
   const [step1Open, setStep1Open] = useState(true);
   const step1AutoCollapsed = useRef(false);
   useEffect(() => {
@@ -608,19 +608,10 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
 
             {grcDone && (
               <>
-                <button
-                  type="button"
-                  onClick={() => setStep3Open((v) => !v)}
-                  aria-expanded={step3Open}
-                  className="mt-1.5 flex w-full items-center gap-2 rounded-full border-2 border-black bg-black px-3 py-1.5 text-left text-xs font-semibold text-white hover:bg-black/90"
-                >
+                <div className="mt-1.5 flex w-full items-center gap-2 rounded-full border-2 border-black bg-black px-3 py-1.5 text-xs font-semibold text-white">
                   <span className="label-caps rounded-full bg-white px-2.5 py-0.5 text-black">Step 3 · Execution</span>
                   <span className="ml-auto shrink-0 font-mono text-sm font-bold tracking-wide text-white">{tx.reference}</span>
-                  <ChevronDown className={cn("h-4 w-4 shrink-0 text-white/80 transition-transform", step3Open && "rotate-180")} />
-                </button>
-                {step3Open && (
-                  <InlineFrame viewOnly tx={tx} stage="execution" step="preparation" reload={reload} onClose={() => setStep3Open(false)} />
-                )}
+                </div>
               </>
             )}
 
