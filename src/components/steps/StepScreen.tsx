@@ -129,7 +129,7 @@ function CertificateBlock({
         Draft
       </span>
       <div className="relative flex items-center justify-between gap-3 pb-3">
-        <Logo />
+        <img src="/izenzo-logo-certificate.png" alt="Izenzo" className="h-14 w-auto rounded-md bg-white" />
       </div>
       <p className="mt-4 text-center font-sans text-sm font-bold uppercase tracking-[0.14em] text-foreground">
         {heading}

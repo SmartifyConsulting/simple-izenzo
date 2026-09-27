@@ -124,7 +124,7 @@ export async function buildBrandedCertificatePdf(opts: {
     if (logoBytes) {
       try {
         const logo = await pdf.embedPng(logoBytes);
-        const logoHeight = 26;
+        const logoHeight = 52;
         const logoWidth = (logo.width / logo.height) * logoHeight;
         page.drawImage(logo, { x: CONTENT_X, y: y - logoHeight + 6, width: logoWidth, height: logoHeight });
         drewLogo = true;
@@ -133,9 +133,9 @@ export async function buildBrandedCertificatePdf(opts: {
       }
     }
     if (!drewLogo) {
-      page.drawText("Izenzo", { x: CONTENT_X, y, size: 14, font: bold, color: rgb(0.1, 0.1, 0.3) });
+      page.drawText("Izenzo", { x: CONTENT_X, y, size: 28, font: bold, color: rgb(0.1, 0.1, 0.3) });
     }
-    y -= 30;
+    y -= drewLogo ? 56 : 30;
     page.drawLine({
       start: { x: CONTENT_X, y },
       end: { x: CONTENT_X + CONTENT_W, y },
