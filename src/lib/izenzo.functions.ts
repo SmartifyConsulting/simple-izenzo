@@ -140,6 +140,55 @@ export const sealProofOfIntent = createServerFn({ method: "POST" })
     return { hash, sealedAt, creditsLeft: (org.credits ?? 0) - POI_COST };
   });
 
+/** Has the WaD fee been paid for this deal? */
+export const getWadPaid = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => z.object({ transactionId: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { data: rows } = await context.supabase
+      .from("credit_ledger")
+      .select("id")
+      .eq("transaction_id", data.transactionId)
+      .eq("reason", "WaD verification")
+      .lt("delta", 0)
+      .limit(1);
+    return { paid: Boolean(rows?.length) };
+  });
+
+/** Pay the 3-token WaD fee up front; unlocks the KYC/KYB checks. Idempotent. */
+export const payWad = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => z.object({ transactionId: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: tx } = await supabase
+      .from("transactions")
+      .select("id, org_id, poi_sealed_at")
+      .eq("id", data.transactionId)
+      .maybeSingle();
+    if (!tx) throw new Error("Transaction not found");
+    if (!tx.poi_sealed_at) throw new Error("Seal the Proof of Intent first");
+    const { data: rows } = await supabase
+      .from("credit_ledger")
+      .select("id")
+      .eq("transaction_id", tx.id)
+      .eq("reason", "WaD verification")
+      .lt("delta", 0)
+      .limit(1);
+    if (rows?.length) return { paid: true };
+    const { data: org } = await supabase.from("organisations").select("id, credits").eq("id", tx.org_id).maybeSingle();
+    if (!org) throw new Error("Organisation not found");
+    if ((org.credits ?? 0) < WAD_COST) throw new Error("Not enough tokens. WaD verification costs 3 tokens.");
+    const { error } = await supabase.rpc("atomic_token_adjust", {
+      p_org_id: org.id,
+      p_delta: -WAD_COST,
+      p_reason: "WaD verification",
+      p_transaction_id: tx.id,
+    });
+    if (error) throw new Error(error.message);
+    return { paid: true };
+  });
+
 /** Complete the WaD case. Hard server-side gate: 3 tokens. */
 export const completeWad = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -176,13 +225,23 @@ export const completeWad = createServerFn({ method: "POST" })
     const now = new Date().toISOString();
     const fingerprint = await sha256(JSON.stringify({ tx: tx.id, checks: data.checks, now }));
 
-    const { error: debitErr } = await supabase.rpc("atomic_token_adjust", {
-      p_org_id: org.id,
-      p_delta: -WAD_COST,
-      p_reason: "WaD verification",
-      p_transaction_id: tx.id,
-    });
-    if (debitErr) throw new Error(debitErr.message);
+    // Paid up front via payWad — never charge the same deal twice.
+    const { data: paidRows } = await supabase
+      .from("credit_ledger")
+      .select("id")
+      .eq("transaction_id", tx.id)
+      .eq("reason", "WaD verification")
+      .lt("delta", 0)
+      .limit(1);
+    if (!paidRows?.length) {
+      const { error: debitErr } = await supabase.rpc("atomic_token_adjust", {
+        p_org_id: org.id,
+        p_delta: -WAD_COST,
+        p_reason: "WaD verification",
+        p_transaction_id: tx.id,
+      });
+      if (debitErr) throw new Error(debitErr.message);
+    }
 
     const record = {
       transaction_id: tx.id,

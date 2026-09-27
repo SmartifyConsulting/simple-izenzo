@@ -32,7 +32,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { sealProofOfIntent, completeWad, runAiProposal, searchCounterparties, extractMaterialTerms } from "@/lib/izenzo.functions";
+import { sealProofOfIntent, completeWad, payWad, getWadPaid, runAiProposal, searchCounterparties, extractMaterialTerms } from "@/lib/izenzo.functions";
 import { notifyChosenCounterparty } from "@/lib/counterpartyOutreach.functions";
 import { sourceLabel, userFacingText } from "@/lib/userFacingText";
 import { type ScreeningCheck } from "@/lib/screening.functions";
@@ -1879,6 +1879,26 @@ function WadStep({ tx, reload, onContinue }: Props) {
   const [preScreenOpenOverride, setPreScreenOpenOverride] = useState<boolean | null>(null);
   const [revealCertificate, setRevealCertificate] = useState(false);
   const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
+  const payWadFn = useServerFn(payWad);
+  const getWadPaidFn = useServerFn(getWadPaid);
+  const [paying, setPaying] = useState(false);
+  const { data: wadPaidData, refetch: refetchWadPaid } = useQuery({
+    queryKey: ["wad-paid", tx.id],
+    queryFn: () => getWadPaidFn({ data: { transactionId: tx.id } }),
+  });
+  const wadUnlocked = Boolean(tx.wad_completed_at) || Boolean(wadPaidData?.paid);
+  async function onPayWad() {
+    setPaying(true);
+    try {
+      await payWadFn({ data: { transactionId: tx.id } });
+      await refetchWadPaid();
+      toast.success("Paid — KYC and KYB checks are now open.");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setPaying(false);
+    }
+  }
   const { data: chosenCp } = useQuery({
     queryKey: ["chosen-counterparty-rating", tx.id],
     queryFn: async () => {
@@ -2131,7 +2151,7 @@ function WadStep({ tx, reload, onContinue }: Props) {
     <Panel
       footer={
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <TokenGateFooter cost={WAD_COST} />
+          <span />
           <div className="flex flex-wrap justify-end gap-2">
             <Button size="sm" variant="outline" disabled={busy || shortOnTokens} onClick={() => setExitConfirmOpen(true)}>
               Exit
@@ -2174,14 +2194,19 @@ function WadStep({ tx, reload, onContinue }: Props) {
     >
       {/* The outer frame this whole panel sits inside already carries the "Without a Doubt" grey
           pill heading — this copy is the next thing under it, not a second heading of its own. */}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <TokenGateFooter cost={WAD_COST} />
+        {!wadUnlocked && (
+          <Button size="sm" disabled={paying || shortOnTokens || !offerApproved} onClick={onPayWad}>
+            {paying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : `Pay ${WAD_COST} tokens to unlock`}
+          </Button>
+        )}
+      </div>
       <p className="mb-1.5 text-xs text-muted-foreground">
         Complete your own identity (KYC) and company (KYB) verification, with both results posted
         to the deal so you each have the same independent assurance that the other party has been
         verified. “Without a Doubt” clears automatically once both parties are verified.
       </p>
-      <div className="mb-4">
-        <TokenGateFooter cost={WAD_COST} />
-      </div>
 
       {!offerApproved && (
         <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
@@ -2235,6 +2260,12 @@ function WadStep({ tx, reload, onContinue }: Props) {
         </div>
       )}
 
+      {!wadUnlocked ? (
+        <p className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Lock className="h-3.5 w-3.5" /> The KYC and KYB checks unlock once the {WAD_COST}-token fee is paid.
+        </p>
+      ) : (
+      <>
       {/* What each side put on file at registration — same two-column, other-party-left-in-blue,
           you-right-in-green layout as the KYC/KYB checks below, so both frames read the same way.
           Never the checks themselves (that's what KYC/KYB verify) — just what each side already
@@ -2391,6 +2422,8 @@ function WadStep({ tx, reload, onContinue }: Props) {
         transactionId={tx.id}
         checks={["id_document", "kyb"]}
       />
+      </>
+      )}
 
     </Panel>
 
