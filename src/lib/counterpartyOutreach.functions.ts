@@ -537,6 +537,7 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
       // straight to the claim page: signing in (or creating an account, if they don't have one
       // yet) links their organisation to this specific deal and opens the same workspace,
       // restricted to their view of it.
+      try {
       await sendEmail(creds, {
         to: toEmail,
         ...(bidderEmail ? { cc: [bidderEmail] } : {}),
@@ -551,13 +552,35 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
             `<p>Izenzo is a governed trading platform: every match carries a hash-sealed Proof of Intent ` +
             `and independent verification at every step, so both sides can move with confidence.</p>` +
             accountCtaHtml(claimUrl) +
-            `<p>Regards,<br>Izenzo</p>`,
+            `<p>Regards,<br>Izenzo Trading</p>`,
         ),
       });
+      } catch (e) {
+        // Recorded on the deal so a failed send is never silent.
+        await supabase.from("transaction_events").insert({
+          transaction_id: cp.transaction_id,
+          actor_id: userId,
+          stage: "compliance",
+          step: "poi",
+          action: "counterparty_email_failed",
+          summary: `Email to ${cp.name} (${toEmail}) failed: ${(e as Error).message}`.slice(0, 480),
+          payload: { counterpartyId: cp.id },
+        } as never);
+        throw e;
+      }
       await supabase
         .from("counterparties")
         .update({ invited_at: new Date().toISOString() } as never)
         .eq("id", cp.id);
+      await supabase.from("transaction_events").insert({
+        transaction_id: cp.transaction_id,
+        actor_id: userId,
+        stage: "compliance",
+        step: "poi",
+        action: "counterparty_emailed",
+        summary: `${cp.name} emailed at ${toEmail}`,
+        payload: { counterpartyId: cp.id },
+      } as never);
       // The counterparty side gets the same news in the app, not only by email — an account that
       // exists for this contact address sees it in their Inbox when they sign in.
       const { notifyCounterpartyContact } = await import("@/lib/bidderNotify.server");

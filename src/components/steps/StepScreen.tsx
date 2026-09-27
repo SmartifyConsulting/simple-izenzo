@@ -1663,8 +1663,19 @@ function PoiStep({ tx, reload, onChangeParty }: Props) {
       // intent can still be walked back (a different party chosen, the seal never paid for), so
       // sealing is the point this is a real enough commitment to email them about. Best-effort
       // and never blocks the seal itself.
-      if (chosenParty?.id) {
-        notifyChosen({ data: { counterpartyId: chosenParty.id } })
+      // Read the chosen party fresh at seal time — the cached query can be stale or still empty
+      // if the party was only just chosen, which silently skipped the email before.
+      const { data: freshChosen } = await supabase
+        .from("counterparties")
+        .select("id")
+        .eq("transaction_id", tx.id)
+        .eq("status", "chosen")
+        .order("chosen_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const chosenId = (freshChosen?.id as string | undefined) ?? chosenParty?.id;
+      if (chosenId) {
+        notifyChosen({ data: { counterpartyId: chosenId } })
           .then((res) => {
             if (res.method === "platform" || res.method === "web") {
               toast.success("The counterparty has been emailed about this deal.");
