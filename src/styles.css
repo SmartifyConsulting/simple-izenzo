@@ -665,3 +665,23 @@
   --glass-border: oklch(1 0 0 / 55%);
   --glass-shadow: none;
 }
+
+/* Dark twin: the workspace window's outer frame disappears into the black page so the Map and
+ * Live Workspace bleed to the screen edges; the yellow "complete" gate bar stays as bright as
+ * in light mode instead of turning muddy over black. */
+[data-app="alpha-bravo"][data-mode="dark"] .lw-window {
+  border-color: transparent;
+  box-shadow: none;
+  left: 0;
+  right: 0;
+  border-radius: 0;
+}
+[data-app="alpha-bravo"][data-mode="dark"] .bg-amber-400\/70 {
+  background-color: oklch(0.85 0.16 86);
+  color: oklch(0 0 0);
+}
+[data-app="alpha-bravo"][data-mode="dark"] .bg-amber-400\/70 > .text-foreground,
+[data-app="alpha-bravo"][data-mode="dark"] .bg-amber-400\/70 > .text-muted-foreground,
+[data-app="alpha-bravo"][data-mode="dark"] .bg-amber-400\/70 > svg {
+  color: oklch(0 0 0);
+}
