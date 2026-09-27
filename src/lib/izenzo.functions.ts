@@ -236,35 +236,13 @@ export const completeWad = createServerFn({ method: "POST" })
     if (!tx.poi_sealed_at) throw new Error("Seal the Proof of Intent first");
     if (tx.wad_completed_at) throw new Error("WaD verification is already complete");
 
-    const { data: org } = await supabase
-      .from("organisations")
-      .select("id, credits")
-      .eq("id", tx.org_id)
-      .maybeSingle();
-    if (!org) throw new Error("Organisation not found");
-    if ((org.credits ?? 0) < WAD_COST)
-      throw new Error("Not enough tokens. WaD verification costs 3 tokens (USD 30).");
-
     const now = new Date().toISOString();
     const fingerprint = await sha256(JSON.stringify({ tx: tx.id, checks: data.checks, now }));
 
-    // Paid up front via payWad — never charge the same deal twice.
-    const { data: paidRows } = await supabase
-      .from("credit_ledger")
-      .select("id")
-      .eq("transaction_id", tx.id)
-      .eq("reason", "WaD verification")
-      .lt("delta", 0)
-      .limit(1);
-    if (!paidRows?.length) {
-      const { error: debitErr } = await supabase.rpc("atomic_token_adjust", {
-        p_org_id: org.id,
-        p_delta: -WAD_COST,
-        p_reason: "WaD verification",
-        p_transaction_id: tx.id,
-      });
-      if (debitErr) throw new Error(debitErr.message);
-    }
+    // Each party pays for its own verification up front via payWad — never charge twice.
+    const { payerOrgId } = await wadPayerOrg(supabase, userId, tx.id);
+    if (!(await wadPaidBy(supabase, tx.id, payerOrgId)))
+      throw new Error("Pay your 3-token WaD fee to unlock verification first");
 
     const record = {
       transaction_id: tx.id,
