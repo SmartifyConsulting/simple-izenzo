@@ -1069,6 +1069,27 @@ export type Database = {
           },
         ]
       }
+      celebrations_seen: {
+        Row: {
+          kind: string
+          seen_at: string
+          transaction_id: string
+          user_id: string
+        }
+        Insert: {
+          kind: string
+          seen_at?: string
+          transaction_id: string
+          user_id?: string
+        }
+        Update: {
+          kind?: string
+          seen_at?: string
+          transaction_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       compliance_case_events: {
         Row: {
           actor_id: string

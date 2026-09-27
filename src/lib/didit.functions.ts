@@ -110,13 +110,16 @@ export const startVerification = createServerFn({ method: "POST" })
           subjectLabel = cp.name as string;
         }
       } else if (tx.counterparty_org_id && myOrgs.has(tx.counterparty_org_id as string)) {
-        subjectOrgId = tx.org_id as string;
-        const { data: bidderOrg } = await context.supabase
+        // The counterparty's own check is filed under the counterparty's company — filing it under
+        // the bidder's org made the bidder's screen treat it as the bidder's own row, so the
+        // counterparty column never moved to "In progress".
+        subjectOrgId = tx.counterparty_org_id as string;
+        const { data: cpOrg } = await context.supabase
           .from("organisations")
           .select("name")
-          .eq("id", tx.org_id as string)
+          .eq("id", tx.counterparty_org_id as string)
           .maybeSingle();
-        subjectLabel = (bidderOrg as { name?: string | null } | null)?.name ?? (tx.title as string | null) ?? null;
+        subjectLabel = (cpOrg as { name?: string | null } | null)?.name ?? null;
       } else {
         throw new Error("You're not a party to this deal.");
       }

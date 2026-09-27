@@ -1871,6 +1871,9 @@ function LiveDealEngine() {
           case "sealedWad":
             setSealedWadOpen(true);
             break;
+          case "wad":
+            setOfferFrameOpen(false);
+            break;
           case "offer":
             // Negotiation is live — the Offer frame is the thing waiting on someone.
             setOfferFrameOpen(true);
@@ -2328,12 +2331,14 @@ function LiveDealEngine() {
     <>
       {legalSignedCelebrate && (
         <Confetti
+          txId={dealTx?.id}
+          kind="legal_signed"
           message="All Legal Agreements have been mutually signed — on to Execution."
           onDone={() => setLegalSignedCelebrate(false)}
         />
       )}
       {celebrateApproval && (
-        <Confetti message="The offer has been approved." onDone={() => setCelebrateApproval(false)} />
+        <Confetti txId={dealTx?.id} kind="offer_approved" message="The offer has been approved." onDone={() => setCelebrateApproval(false)} />
       )}
       {/* A `?tx=` link that couldn't be opened says so, instead of quietly leaving an empty canvas
           that reads as a brand-new workspace. */}
