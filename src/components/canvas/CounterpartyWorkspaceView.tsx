@@ -259,6 +259,10 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
   // matching the bidder's own Live Workspace — previously the Step 1/2 pills were purely
   // decorative (gold once done) while every frame beneath them stayed individually expanded all
   // the time, which never actually collapsed anything.
+  // GRC is finished once the deal has moved on to Execution (or every legal agreement is signed by
+  // both sides) — Legal Agreements then folds into Step 2 and Step 3 · Execution opens on Concept.
+  const grcDone = tx.stage === "execution" || tx.stage === "finality" || tx.stage === "memory" || legalAllSigned;
+  const [step3Open, setStep3Open] = useState(true);
   const [step1Open, setStep1Open] = useState(true);
   const step1AutoCollapsed = useRef(false);
   useEffect(() => {
@@ -520,6 +524,12 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
                     <InlineFrame bare viewOnly tx={tx} stage="compliance" step="wad" reload={reload} onClose={() => {}} />
                   </CollapsibleFrame>
                 )}
+
+                {grcDone && (
+                  <CollapsibleFrame label="Legal Agreements" open={openFrame === "legal"} onToggle={() => toggleFrame("legal")}>
+                    <InlineFrame bare tx={tx} stage="execution" step="business-docs" reload={reload} onClose={() => {}} />
+                  </CollapsibleFrame>
+                )}
               </>
             )}
 
@@ -564,7 +574,7 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
                 upload and sign their side of every document. Collapses itself the moment both
                 sides have signed everything (same treatment as the Offer frame above), but can
                 still be reopened by hand afterward. */}
-            {tx.wad_completed_at && (
+            {!grcDone && tx.wad_completed_at && (
               <div className="glass-node p-4">
                 <button
                   type="button"
@@ -587,6 +597,24 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
               </div>
             )}
 
+
+            {grcDone && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setStep3Open((v) => !v)}
+                  aria-expanded={step3Open}
+                  className="mt-1.5 flex w-full items-center gap-2 rounded-full border-2 border-black bg-black px-3 py-1.5 text-left text-xs font-semibold text-white hover:bg-black/90"
+                >
+                  <span className="label-caps rounded-full bg-white px-2.5 py-0.5 text-black">Step 3 · Execution</span>
+                  <span className="ml-auto shrink-0 font-mono text-sm font-bold tracking-wide text-white">{tx.reference}</span>
+                  <ChevronDown className={cn("h-4 w-4 shrink-0 text-white/80 transition-transform", step3Open && "rotate-180")} />
+                </button>
+                {step3Open && (
+                  <InlineFrame viewOnly tx={tx} stage="execution" step="preparation" reload={reload} onClose={() => setStep3Open(false)} />
+                )}
+              </>
+            )}
 
             {tx.finality_sealed_at && (
               <CollapsibleFrame
