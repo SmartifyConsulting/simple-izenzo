@@ -2328,7 +2328,7 @@ function LiveDealEngine() {
     <>
       {legalSignedCelebrate && (
         <Confetti
-          message="Both parties signed — on to Execution."
+          message="All Legal Agreements have been mutually signed — on to Execution."
           onDone={() => setLegalSignedCelebrate(false)}
         />
       )}

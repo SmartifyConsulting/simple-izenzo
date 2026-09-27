@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const COLORS = ["#14b8a6", "#4169e1", "#F97316", "#22c55e", "#facc15"];
 
@@ -31,15 +31,19 @@ function makePieces(count: number): Piece[] {
 export function Confetti({ message, onDone }: { message: string; onDone: () => void }) {
   const [pieces] = useState(() => makePieces(90));
   const [bannerOut, setBannerOut] = useState(false);
+  // Held in a ref so a parent re-render (new inline callback) never restarts the timers —
+  // that was what kept the banner on screen indefinitely.
+  const doneRef = useRef(onDone);
+  doneRef.current = onDone;
 
   useEffect(() => {
-    const fadeTimer = setTimeout(() => setBannerOut(true), 2600);
-    const doneTimer = setTimeout(onDone, 4200);
+    const fadeTimer = setTimeout(() => setBannerOut(true), 3500);
+    const doneTimer = setTimeout(() => doneRef.current(), 4200);
     return () => {
       clearTimeout(fadeTimer);
       clearTimeout(doneTimer);
     };
-  }, [onDone]);
+  }, []);
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[200] overflow-hidden">
