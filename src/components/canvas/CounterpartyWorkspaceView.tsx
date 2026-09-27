@@ -329,9 +329,12 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
         {/* The same split the bidder gets: the workflow map on the left, the Live Workspace on the
             right. Only the shared record appears here — Search, AI/AI+, Choice and Online Media are
             the bidder's own working steps and never render in this view. */}
-        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          <div className="glass-node p-4" style={{ "--throb-accent": "#4169e1" } as CSSProperties}>
-            <div className="relative w-full" style={{ aspectRatio: "960 / 1050" }}>
+        <div className="grid grid-cols-1 items-stretch gap-4 lg:h-[calc(100vh-270px)] lg:min-h-[560px] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <div
+            className="flex min-h-0 items-center justify-center overflow-hidden rounded-3xl border border-border bg-card p-3 shadow-sm sm:p-5"
+            style={{ "--throb-accent": "#4169e1" } as CSSProperties}
+          >
+            <div className="relative mx-auto w-full lg:h-full lg:w-auto lg:max-w-full" style={{ aspectRatio: "960 / 1050" }}>
               <MapView
                 tx={tx}
                 reload={reload}
@@ -345,7 +348,7 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="min-h-0 space-y-3 overflow-y-auto pr-1">
             <p className="label-caps text-muted-foreground">Live Workspace</p>
 
             {/* Same "settled record" gold look as the bidder's own Step 1 accordion, and now the
