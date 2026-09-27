@@ -2420,6 +2420,8 @@ function WadStep({ tx, reload, onContinue }: Props) {
         hideHeader
         transactionId={tx.id}
         checks={["id_document", "kyb"]}
+        myLabel={myRegistration?.fullName ?? null}
+        otherLabel={otherRegistration?.fullName ?? null}
       />
       </>
       )}
