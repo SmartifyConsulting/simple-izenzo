@@ -140,47 +140,70 @@ export const sealProofOfIntent = createServerFn({ method: "POST" })
     return { hash, sealedAt, creditsLeft: (org.credits ?? 0) - POI_COST };
   });
 
-/** Has the WaD fee been paid for this deal? */
+/** Which side of the deal the caller pays for — each party pays for its own verification. */
+async function wadPayerOrg(
+  supabase: any,
+  userId: string,
+  transactionId: string,
+): Promise<{ tx: { id: string; org_id: string; counterparty_org_id: string | null; poi_sealed_at: string | null }; payerOrgId: string | null }> {
+  const { data: tx } = await supabase
+    .from("transactions")
+    .select("id, org_id, counterparty_org_id, poi_sealed_at")
+    .eq("id", transactionId)
+    .maybeSingle();
+  if (!tx) throw new Error("Transaction not found");
+  const sides = [tx.org_id, tx.counterparty_org_id].filter(Boolean) as string[];
+  const { data: mem } = await supabase
+    .from("org_members")
+    .select("org_id")
+    .eq("user_id", userId)
+    .in("org_id", sides);
+  const mine = new Set((mem ?? []).map((m: { org_id: string }) => m.org_id));
+  // Prefer the counterparty side when the user belongs to it (a bidder's own org is checked second).
+  const payerOrgId =
+    (tx.counterparty_org_id && mine.has(tx.counterparty_org_id) ? tx.counterparty_org_id : null) ??
+    (mine.has(tx.org_id) ? tx.org_id : null);
+  return { tx, payerOrgId };
+}
+
+async function wadPaidBy(supabase: any, transactionId: string, orgId: string | null) {
+  if (!orgId) return false;
+  const { data: rows } = await supabase
+    .from("credit_ledger")
+    .select("id")
+    .eq("transaction_id", transactionId)
+    .eq("org_id", orgId)
+    .eq("reason", "WaD verification")
+    .lt("delta", 0)
+    .limit(1);
+  return Boolean(rows?.length);
+}
+
+/** Has the caller's own side paid its WaD fee for this deal? */
 export const getWadPaid = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data) => z.object({ transactionId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
-    const { data: rows } = await context.supabase
-      .from("credit_ledger")
-      .select("id")
-      .eq("transaction_id", data.transactionId)
-      .eq("reason", "WaD verification")
-      .lt("delta", 0)
-      .limit(1);
-    return { paid: Boolean(rows?.length) };
+    const { supabase, userId } = context;
+    const { payerOrgId } = await wadPayerOrg(supabase, userId, data.transactionId);
+    return { paid: await wadPaidBy(supabase, data.transactionId, payerOrgId) };
   });
 
-/** Pay the 3-token WaD fee up front; unlocks the KYC/KYB checks. Idempotent. */
+/** Pay the caller's own 3-token WaD fee from their own organisation; unlocks their checks. Idempotent. */
 export const payWad = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data) => z.object({ transactionId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
-    const { data: tx } = await supabase
-      .from("transactions")
-      .select("id, org_id, poi_sealed_at")
-      .eq("id", data.transactionId)
-      .maybeSingle();
-    if (!tx) throw new Error("Transaction not found");
+    const { supabase, userId } = context;
+    const { tx, payerOrgId } = await wadPayerOrg(supabase, userId, data.transactionId);
+    if (!payerOrgId) throw new Error("You are not a party to this deal");
     if (!tx.poi_sealed_at) throw new Error("Seal the Proof of Intent first");
-    const { data: rows } = await supabase
-      .from("credit_ledger")
-      .select("id")
-      .eq("transaction_id", tx.id)
-      .eq("reason", "WaD verification")
-      .lt("delta", 0)
-      .limit(1);
-    if (rows?.length) return { paid: true };
-    const { data: org } = await supabase.from("organisations").select("id, credits").eq("id", tx.org_id).maybeSingle();
+    if (await wadPaidBy(supabase, tx.id, payerOrgId)) return { paid: true };
+    const { data: org } = await supabase.from("organisations").select("id, credits").eq("id", payerOrgId).maybeSingle();
     if (!org) throw new Error("Organisation not found");
     if ((org.credits ?? 0) < WAD_COST) throw new Error("Not enough tokens. WaD verification costs 3 tokens.");
     const { error } = await supabase.rpc("atomic_token_adjust", {
-      p_org_id: org.id,
+      p_org_id: payerOrgId,
       p_delta: -WAD_COST,
       p_reason: "WaD verification",
       p_transaction_id: tx.id,
