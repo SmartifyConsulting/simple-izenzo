@@ -39,3 +39,13 @@ Send it from **Izenzo Trading**, name the **counterparty company** (not the pers
 - `src/components/steps/StepScreen.tsx`: remove the client-side `notifyChosen` call after seal; keep the toast based on the returned result.
 - One-off: invoke the send for counterparty Holarc on tx `9a74048a-…` after deploy.
 - No RLS changes. Holarc's visibility still comes only through the claim link.
+
+### 4. Dark mode canvas (Live Workspace + Map) must mirror light mode, edge to edge
+- **Differences to fix** (checked side by side in both modes on the deal screen):
+  - In dark mode the canvas and Live Workspace sit inside a narrower frame and don't reach the screen edges. In light mode they fill the full width.
+  - Some dark-only leftovers from the old dark theme still apply (glass blur, grid texture, spacing). These change the frame sizes and gaps compared with light mode.
+  - The bottom strip and some fixed colours stay light or tinted in dark mode.
+- **Fix:** Dark mode reuses exactly the same layout rules as light mode. Only the colours change: black background, dark grey frames, white text and lines. I'll remove every remaining old dark-only size, spacing or blur rule, so both modes share one layout.
+- **Verify:** Take screenshots of BID9533366 at the same screen width in light and dark mode, and confirm the frame edges, widths and gaps match.
+
+Technical: remove the remaining `:root` / `[data-theme]` Ink & Aqua rules and the `ink-grid` / `glass` overrides that apply only when not `[data-app="alpha-bravo"]`. Make sure the "grid" preset uses the same skin. Fix hardcoded light colours on the footer and taskbar with semantic tokens.
