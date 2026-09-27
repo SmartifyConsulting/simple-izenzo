@@ -875,9 +875,10 @@ export function InlineFrame({
         <button
           type="button"
           onClick={onClose}
+          aria-label={step === "wad" ? "Collapse" : "Close"}
           className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
         >
-          <X className="h-4 w-4" />
+          {step === "wad" ? <ChevronUp className="h-4 w-4" /> : <X className="h-4 w-4" />}
         </button>
       </div>
       {locked ? (
