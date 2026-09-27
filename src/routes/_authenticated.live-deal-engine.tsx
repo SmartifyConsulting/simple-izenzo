@@ -3465,7 +3465,7 @@ function LiveDealEngine() {
                     >
                       <span className="min-w-0">
                         <span className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
-                          Seal Intent
+                          Proof of Intent
                         </span>
                         <span className="mt-1 block text-[11px] text-muted-foreground">
                           Sealing writes the transaction state to an immutable record with a fingerprint.

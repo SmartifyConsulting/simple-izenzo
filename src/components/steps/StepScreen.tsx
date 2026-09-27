@@ -44,7 +44,7 @@ import { useAuth } from "@/lib/auth";
 import { VerificationPanel } from "@/components/verification/VerificationPanel";
 import { Logo } from "@/components/Logo";
 import { MutualEngagementPanel } from "@/components/engagement/MutualEngagementPanel";
-import { attachLegalDocument, getEngagement, setDiligenceState, signDocument, type Side } from "@/lib/engagement.functions";
+import { attachLegalDocument, getEngagement, signDocument, type Side } from "@/lib/engagement.functions";
 import { getPartyRegistrationInfo } from "@/lib/partyRegistration.functions";
 import { generateConceptBrief } from "@/lib/conceptBrief.functions";
 import { generateConceptQuestions } from "@/lib/conceptQuestions.functions";

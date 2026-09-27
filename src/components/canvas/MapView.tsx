@@ -775,7 +775,7 @@ export function MapView({
         })}
 
         {/* Step 2 — compliance & governance */}
-        {node("poi", "Seal Intent", "trading", "poi", Building2, { overrideKey: "poi" })}
+        {node("poi", "Proof of Intent", "trading", "poi", Building2, { overrideKey: "poi" })}
 
         {/* After Seal Intent the Responder reviews the Offer: Approve, Counter or Reject — the
             Counter Offer loop can go back and forth until agreement, which opens Without a Doubt.
