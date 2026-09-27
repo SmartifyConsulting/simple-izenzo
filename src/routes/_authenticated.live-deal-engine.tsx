@@ -709,6 +709,10 @@ function LiveDealEngine() {
   // Which counterparty (from the media-screening findings) the user is about to proceed with —
   // this is where the actual pick happens now, right next to the screening evidence for it.
   const [mediaPick, setMediaPick] = useState<string | null>(null);
+  // Only one screened counterparty: nothing to choose between, so pre-select it (the person still presses Continue).
+  useEffect(() => {
+    if (!mediaPick && mediaResults && mediaResults.length === 1) setMediaPick(mediaResults[0].counterpartyId);
+  }, [mediaResults, mediaPick]);
 
   // Once the ask has been made for a bid, the description/drop frame never comes back — not while
   // the files are still saving, not on a refresh, not on a tab switch. Remembered per bid.
@@ -2151,7 +2155,7 @@ function LiveDealEngine() {
         toast.error(`Search failed: ${failure}`);
       }
       // Counterparties found: fold Bid Information away so the results list gets the room.
-      if ((count ?? 0) > 0) setBidInfoCollapsed(txId, true);
+      if ((count ?? 0) > 0) setBidInfoCollapsed(txId, false);
       // Nothing relevant came back: keep Bid Information open, showing the search string next to
       // its own heading — "Edit Search" in the Search Results record below is where it's refined.
       else if (noMatches) {

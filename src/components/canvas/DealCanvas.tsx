@@ -2452,7 +2452,7 @@ export function CanvasStart({
     <div className="mx-auto w-full max-w-2xl space-y-3">
       {/* Who the bid/offer is traded as. Only worth asking when there's more than one company to
           choose between — a single-company account would just see a dropdown with one option. */}
-      {orgs.length > 1 && (
+      {orgs.filter((o) => !/interpol/i.test(o.name)).length > 1 && (
         <div className="flex items-center gap-2">
           <Label htmlFor="trade-as" className="shrink-0 text-xs text-muted-foreground">
             Trade as
@@ -2465,7 +2465,7 @@ export function CanvasStart({
               <SelectValue placeholder="Choose a company" />
             </SelectTrigger>
             <SelectContent>
-              {orgs.map((o) => (
+              {orgs.filter((o) => !/interpol/i.test(o.name)).map((o) => (
                 <SelectItem key={o.id} value={o.id} className="text-xs">
                   {o.name}
                 </SelectItem>

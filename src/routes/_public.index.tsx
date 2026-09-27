@@ -1,9 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Banknote, Database, Hammer, ShieldCheck, Sparkles, Target } from "lucide-react";
 import { HeroMatchCard } from "@/components/marketing/HeroMatchCard";
-import { SubmitBidButton } from "@/components/marketing/SubmitBidButton";
+import { AuthTabs } from "@/components/auth/AuthTabs";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { creatorTone, displayTitle, fallbackReference, when } from "@/lib/tx";
@@ -175,6 +175,7 @@ function ActiveDealsPanel() {
 
 function AlphaBravoHome() {
   const { user, loading } = useAuth();
+  const [explore, setExplore] = useState(false);
   const { next } = Route.useSearch();
   const navigate = useNavigate();
 
