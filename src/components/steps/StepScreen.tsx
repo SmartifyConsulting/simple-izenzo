@@ -2167,9 +2167,11 @@ function WadStep({ tx, reload, onContinue }: Props) {
       footer={
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap justify-end gap-2">
-            <Button size="sm" variant="outline" disabled={busy || shortOnTokens} onClick={() => setExitConfirmOpen(true)}>
-              Exit
-            </Button>
+            {wadUnlocked && (
+              <Button size="sm" variant="outline" disabled={busy || shortOnTokens} onClick={() => setExitConfirmOpen(true)}>
+                Exit
+              </Button>
+            )}
             {/* Both sides clear themselves (see the effect above), but moving on to Legal
                 Agreements is still a person's own click — collapsing this frame and opening the
                 next one isn't something that should happen out from under someone still reading
@@ -2288,14 +2290,14 @@ function WadStep({ tx, reload, onContinue }: Props) {
             <div className="space-y-1.5 rounded-lg border border-[#4169e1]/25 bg-[#4169e1]/5 p-3 sm:border-r-2">
               {otherRegistration ? (
                 <>
-                  <Badge variant="secondary" className="bg-[#4169e1]/15 font-normal text-[#1c2f6b]">
+                  <Badge variant="secondary" className="bg-[#4169e1]/15 font-normal text-[#1c2f6b] dark:bg-[#4169e1] dark:text-white">
                     {otherRegistration.fullName ?? "Counterparty"}
                   </Badge>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground dark:text-white">
                     {otherRegistration.idNumberType === "passport" ? "Passport" : "ID"}:{" "}
                     {otherRegistration.idNumberMasked ?? "—"}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground dark:text-white">
                     {otherRegistration.documentLabel}: {otherRegistration.documentName ?? "Not on file"}
                   </p>
                   {otherRegistration.identityVerified && (
@@ -2305,20 +2307,20 @@ function WadStep({ tx, reload, onContinue }: Props) {
                   )}
                 </>
               ) : (
-                <p className="text-xs text-muted-foreground">Not on file yet for the other party.</p>
+                <p className="text-xs text-muted-foreground dark:text-white">Not on file yet for the other party.</p>
               )}
             </div>
             <div className="space-y-1.5 rounded-lg border border-emerald-600/25 bg-emerald-600/5 p-3">
               {myRegistration ? (
                 <>
-                  <Badge variant="secondary" className="bg-emerald-600/15 font-normal text-emerald-700">
+                  <Badge variant="secondary" className="bg-emerald-600/15 font-normal text-emerald-700 dark:bg-emerald-600 dark:text-white">
                     {myRegistration.fullName ?? "Your company"}
                   </Badge>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground dark:text-white">
                     {myRegistration.idNumberType === "passport" ? "Passport" : "ID"}:{" "}
                     {myRegistration.idNumberMasked ?? "—"}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground dark:text-white">
                     {myRegistration.documentLabel}: {myRegistration.documentName ?? "Not on file"}
                   </p>
                   {myRegistration.identityVerified && (
@@ -2328,7 +2330,7 @@ function WadStep({ tx, reload, onContinue }: Props) {
                   )}
                 </>
               ) : (
-                <p className="text-xs text-muted-foreground">Not on file yet.</p>
+                <p className="text-xs text-muted-foreground dark:text-white">Not on file yet.</p>
               )}
             </div>
           </div>
@@ -2340,6 +2342,9 @@ function WadStep({ tx, reload, onContinue }: Props) {
           <TokenGateFooter cost={WAD_COST} />
           <Button size="sm" disabled={paying || shortOnTokens || !offerApproved} onClick={onPayWad}>
             {paying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : `Pay ${WAD_COST} tokens to unlock`}
+          </Button>
+          <Button size="sm" variant="outline" className="ml-auto" disabled={busy} onClick={() => setExitConfirmOpen(true)}>
+            Exit
           </Button>
         </div>
       )}

@@ -135,7 +135,7 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
       transactionId ? listForTx({ data: { transactionId } }) : listMine({}),
     // Polls while anything is mid-check so a scanned QR's result lands here on its own — no button
     // to remember to click, no window to poll from the other end.
-    refetchInterval: (query) => (query.state.data ?? []).some((r) => r.status === "in_progress") ? 4000 : false,
+    refetchInterval: (query) => (query.state.data ?? []).some((r) => (r.status === "in_progress" || r.status === "pending")) ? 4000 : false,
   });
 
   // The separate sanctions / PEP check only appears while an administrator has it switched on.
@@ -303,13 +303,13 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
                   </p>
                   {myRow?.reason && <p className="text-xs text-destructive">{myRow.reason}</p>}
 
-                  {(!myRow || myRow.status === "failed" || myRow.status === "expired") && (
+                  {(!myRow || myRow.status === "failed" || myRow.status === "expired" || (myRow.status === "pending" && !myRow.provider_url)) && (
                     <Button size="sm" disabled={busy === type} onClick={() => onStart(type)}>
                       {busy === type ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : myRow ? "Run again" : "Start"}
                     </Button>
                   )}
 
-                  {myRow?.status === "in_progress" && myRow.provider_url && (
+                  {(myRow?.status === "in_progress" || myRow?.status === "pending") && myRow.provider_url && (
                     <div className="flex flex-col items-center space-y-1 pt-1 text-center">
                       <VerificationQr value={myRow.provider_url} />
                       <p className="max-w-[10rem] text-[10px] text-muted-foreground">
