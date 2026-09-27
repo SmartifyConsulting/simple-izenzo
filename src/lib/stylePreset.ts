@@ -11,7 +11,7 @@ const EVENT = "izenzo:style-preset-change";
 
 export const STYLE_PRESETS: { id: StylePreset; label: string; description: string }[] = [
   { id: "cream", label: "Cream", description: "Cream & Cobalt — cream ground, royal blue" },
-  { id: "black", label: "Black", description: "Ink & Aqua — dark ground, teal signal" },
+  { id: "black", label: "Black", description: "Black ground, dark grey frames, white text" },
   { id: "grid", label: "Green Grid", description: "Ink & Aqua with the marketing grid pattern" },
 ];
 
@@ -23,7 +23,10 @@ function getPreset(): StylePreset {
 
 function applyPreset(preset: StylePreset) {
   if (typeof document === "undefined") return;
-  applyAppSkin(preset === "cream" ? "alpha-bravo" : "izenzo");
+  // Dark mode is a twin of the light layout: same skin, only colours change via [data-mode].
+  applyAppSkin("alpha-bravo");
+  if (preset === "cream") delete document.documentElement.dataset["mode"];
+  else document.documentElement.dataset["mode"] = "dark";
   document.documentElement.dataset["theme"] = "dark";
   document.body.classList.toggle("ink-grid", preset === "grid");
 }
