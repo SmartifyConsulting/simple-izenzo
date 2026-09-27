@@ -16,6 +16,10 @@ The bidder's screen already works this way. The counterparty screen was never gi
 
 Nothing changes on the bidder's screen or in the deal's saved records.
 
+## Also: "All" pill in the Inbox
+- A new **All** pill sits next to Inbox and Archive. It lists every message, new and read, with its count.
+- New messages stay green and read ones stay black (white in dark mode). The Mark Read and Restore buttons work the same as they do now.
+
 ## Technical details
 - `src/components/canvas/CounterpartyWorkspaceView.tsx`: add `grcDone = tx.stage === "execution" || legalAllSigned`.
   - Once `grcDone` is true, wrap the Proof of Intent, Offer, WaD and Legal Agreements frames in a collapsible "Step 2 · GRC" pill (`bg-warning`, `CheckCircle`), which is collapsed by default.
