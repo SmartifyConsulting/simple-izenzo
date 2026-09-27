@@ -1887,6 +1887,10 @@ function WadStep({ tx, reload, onContinue }: Props) {
     queryFn: () => getWadPaidFn({ data: { transactionId: tx.id } }),
   });
   const wadUnlocked = Boolean(tx.wad_completed_at) || Boolean(wadPaidData?.paid);
+  // Collapses once both parties are verified at registration and this side has paid.
+  const preScreenDone =
+    wadUnlocked && Boolean(myRegistration?.identityVerified) && Boolean(otherRegistration?.identityVerified);
+  const preScreenOpen = preScreenOpenOverride ?? !preScreenDone;
   async function onPayWad() {
     setPaying(true);
     try {
@@ -2159,7 +2163,7 @@ function WadStep({ tx, reload, onContinue }: Props) {
                 Agreements is still a person's own click — collapsing this frame and opening the
                 next one isn't something that should happen out from under someone still reading
                 the result. */}
-            {tx.wad_completed_at && (
+            {(tx.wad_completed_at || bothCleared) && (
               <Button
                 size="sm"
                 onClick={() => {
@@ -2194,7 +2198,7 @@ function WadStep({ tx, reload, onContinue }: Props) {
       {/* The outer frame this whole panel sits inside already carries the "Without a Doubt" grey
           pill heading — this copy is the next thing under it, not a second heading of its own. */}
       <p className="mb-1.5 text-xs text-muted-foreground">
-        Complete your own identity (KYC) and company (KYB) verification, with both results posted
+        Complete your own identity <strong className="font-semibold text-foreground">(KYC) and company (KYB) verification</strong>, with both results posted
         to the deal so you each have the same independent assurance that the other party has been
         verified. “Without a Doubt” clears automatically once both parties are verified.
       </p>
@@ -2253,7 +2257,22 @@ function WadStep({ tx, reload, onContinue }: Props) {
 
       {(myRegistration || otherRegistration) && (
         <div className="mb-4 rounded-lg border border-border p-3">
-          <p className="label-caps font-sans">Pre-Screening on App Registration</p>
+          <button
+            type="button"
+            onClick={() => setPreScreenOpenOverride(!preScreenOpen)}
+            className="flex w-full items-center justify-between gap-2 text-left"
+          >
+            <span className="flex items-center gap-2">
+              <span className="label-caps font-sans">Pre-Screening on App Registration</span>
+              {preScreenDone && (
+                <Badge variant="outline" className="border-success/40 bg-success/10 font-normal text-success">
+                  Both verified · paid
+                </Badge>
+              )}
+            </span>
+            <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", preScreenOpen && "rotate-180")} />
+          </button>
+          {preScreenOpen && (
           <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5 rounded-lg border border-[#4169e1]/25 bg-[#4169e1]/5 p-3 sm:border-r-2">
               {otherRegistration ? (
@@ -2302,16 +2321,17 @@ function WadStep({ tx, reload, onContinue }: Props) {
               )}
             </div>
           </div>
+          )}
         </div>
       )}
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <TokenGateFooter cost={WAD_COST} />
-        {!wadUnlocked && (
+      {!wadUnlocked && (
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <TokenGateFooter cost={WAD_COST} />
           <Button size="sm" disabled={paying || shortOnTokens || !offerApproved} onClick={onPayWad}>
             {paying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : `Pay ${WAD_COST} tokens to unlock`}
           </Button>
-        )}
-      </div>
+        </div>
+      )}
       {!wadUnlocked ? (
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
           <Lock className="h-3.5 w-3.5" /> The KYC and KYB checks unlock once the {WAD_COST}-token fee is paid.
@@ -2323,97 +2343,6 @@ function WadStep({ tx, reload, onContinue }: Props) {
           Never the checks themselves (that's what KYC/KYB verify) — just what each side already
           told the platform they are. */}
 
-      {priorSubjectRows.length > 0 && (() => {
-        const preScreenAllPassed = priorSubjectRows.every((r) => r.status === "passed");
-        const preScreenOpen = preScreenOpenOverride ?? !preScreenAllPassed;
-        return (
-          <div className="mb-4 rounded-lg border border-border p-3">
-            <button
-              type="button"
-              onClick={() => setPreScreenOpenOverride(!preScreenOpen)}
-              className="flex w-full items-center justify-between gap-2 text-left"
-            >
-              <span className="flex items-center gap-2">
-                <span className="label-caps font-sans">Pre-Screening</span>
-                {preScreenAllPassed && (
-                  <Badge variant="outline" className="border-emerald-600 bg-emerald-600 font-normal text-white">
-                    Both verified
-                  </Badge>
-                )}
-              </span>
-              <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", preScreenOpen && "rotate-180")} />
-            </button>
-            {preScreenOpen && (
-              <>
-                {/* Same green/blue, other-party-left split as the KYC/KYB checks below, one row per
-                    check type per side, rather than a single flat list that didn't say whose result
-                    was whose. */}
-                <div className="mt-3 space-y-3">
-                  {priorCheckTypes.map((type) => {
-                    const rowsForType = priorSubjectRows.filter((r) => r.check_type === type);
-                    const mine = rowsForType.find(isMinePrior) ?? null;
-                    const others = rowsForType.filter((r) => !isMinePrior(r));
-                    return (
-                      <div key={type}>
-                        <p className="label-caps font-sans">{CHECK_TYPE_LABEL[type] ?? type}</p>
-                        <div className="mt-1.5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                          <div className="rounded-lg border border-[#4169e1]/25 bg-[#4169e1]/5 p-2.5 sm:border-r-2">
-                            {others.length === 0 ? (
-                              <p className="text-xs text-muted-foreground">No result yet for the other party.</p>
-                            ) : (
-                              others.map((r) => (
-                                <div key={r.id} className="flex items-center justify-between gap-2">
-                                  <Badge variant="secondary" className="bg-[#4169e1]/15 font-normal text-[#1c2f6b]">
-                                    {r.subject_label ?? "Counterparty"}
-                                  </Badge>
-                                  <span
-                                    className={cn(
-                                      "shrink-0 text-xs",
-                                      r.status === "passed"
-                                        ? "text-emerald-500"
-                                        : r.status === "failed" || r.status === "review"
-                                          ? "text-[#F97316]"
-                                          : "text-muted-foreground",
-                                    )}
-                                  >
-                                    {PRIOR_STATUS_LABEL[r.status as string] ?? r.status}
-                                  </span>
-                                </div>
-                              ))
-                            )}
-                          </div>
-                          <div className="rounded-lg border border-emerald-600/25 bg-emerald-600/5 p-2.5">
-                            <div className="flex items-center justify-between gap-2">
-                              <Badge variant="secondary" className="bg-emerald-600/15 font-normal text-emerald-700">
-                                You
-                              </Badge>
-                              <span
-                                className={cn(
-                                  "shrink-0 text-xs",
-                                  mine?.status === "passed"
-                                    ? "text-emerald-500"
-                                    : mine?.status === "failed" || mine?.status === "review"
-                                      ? "text-[#F97316]"
-                                      : "text-muted-foreground",
-                                )}
-                              >
-                                {mine ? PRIOR_STATUS_LABEL[mine.status as string] ?? mine.status : "No result yet"}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                <p className="mt-3 text-xs text-muted-foreground">
-                  These results carry through from the background screening conducted upon registration.
-                </p>
-              </>
-            )}
-          </div>
-        );
-      })()}
 
       <VerificationPanel
         bare
