@@ -1,3 +1,4 @@
+import { SignInModal } from "@/components/auth/SignInModal";
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -177,7 +178,7 @@ function ActiveDealsPanel() {
 
 function AlphaBravoHome() {
   const { user, loading } = useAuth();
-  const [explore, setExplore] = useState(false);
+  const [showTrades, setShowTrades] = useState(false);
   const { next } = Route.useSearch();
   const navigate = useNavigate();
 
@@ -202,7 +203,7 @@ function AlphaBravoHome() {
 
   const stagesBlock = (
     <>
-      <p className="mt-8 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+      <p className="mt-6 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
         How a match plays out
       </p>
       <h2 className="mt-2 max-w-2xl text-2xl tracking-tight text-foreground sm:text-3xl">
@@ -230,67 +231,59 @@ function AlphaBravoHome() {
     </>
   );
 
-  if (!explore) {
-    return (
-      <section className="mx-auto max-w-6xl px-5 py-6 sm:py-8">
-        <div className="mx-auto flex max-w-5xl flex-col items-center py-14 text-center sm:py-24">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-            <Sparkles className="h-3.5 w-3.5" /> AI-Powered Trade Matching
-          </span>
-          <h1 className="mt-5 text-5xl font-bold leading-[1.05] tracking-tight text-foreground sm:text-7xl">
-            Governance Infrastructure
-            <br />
-            for <span className="text-success">Institutional Trade.</span>
-          </h1>
-          <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-            One cryptographic network for bilateral global commerce. Access it via our turnkey Trade
-            Desk, manage counterparty risk through the Compliance Profile with non-waivable KYC/KYB,
-            or build directly on the API — all backed by AI-driven matching, hash-sealed intent and
-            independently verifiable execution.
-          </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                setExplore(true);
-                window.scrollTo({ top: 0 });
-              }}
-              className="inline-flex h-10 items-center rounded-full bg-foreground px-6 text-sm font-medium text-background transition-opacity hover:opacity-90"
-            >
-              Explore features
-            </button>
-          </div>
-        </div>
-        <div className="mx-auto w-full max-w-4xl">
-          <HeroMatchCard />
-        </div>
-        {stagesBlock}
-      </section>
-    );
-  }
+  const actions = (
+    <div className="flex flex-wrap items-center justify-center gap-3">
+      {!user && (
+        <SignInModal defaultTab="signin">
+          <button
+            type="button"
+            className="inline-flex h-10 items-center rounded-full bg-foreground px-6 text-sm font-medium text-background transition-opacity hover:opacity-90"
+          >
+            Sign In / Sign Up
+          </button>
+        </SignInModal>
+      )}
+      <button
+        type="button"
+        aria-expanded={showTrades}
+        onClick={() => setShowTrades((v) => !v)}
+        className="inline-flex h-10 items-center rounded-full border border-border bg-card px-6 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+      >
+        {showTrades ? "Hide Trades" : "View Trades"}
+      </button>
+    </div>
+  );
 
   return (
-    <section className="mx-auto max-w-6xl px-5 py-6 sm:py-8">
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
-        <div>
-          <div className="mt-3 w-full">
-            <HeroMatchCard />
-          </div>
-          {user && (
-            <div className="mt-4">
-              <ActiveDealsPanel />
-            </div>
-          )}
-        </div>
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-          {user ? (
-            <p className="text-sm text-muted-foreground">You're signed in as {user.email}.</p>
-          ) : (
-            <AuthTabs compact />
-          )}
-        </div>
+    <section className="mx-auto max-w-6xl px-5 py-4">
+      <div className="mx-auto flex max-w-5xl flex-col items-center py-6 text-center sm:py-8">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+          <Sparkles className="h-3.5 w-3.5" /> AI-Powered Trade Matching
+        </span>
+        <h1 className="mt-4 text-5xl font-bold leading-[1.05] tracking-tight text-foreground sm:text-7xl">
+          Governance Infrastructure
+          <br />
+          for <span className="text-success">Institutional Trade.</span>
+        </h1>
+        <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground">
+          One cryptographic network for bilateral global commerce. Access it via our turnkey Trade
+          Desk, manage counterparty risk through the Compliance Profile with non-waivable KYC/KYB,
+          or build directly on the API — all backed by AI-driven matching, hash-sealed intent and
+          independently verifiable execution.
+        </p>
       </div>
-
+      <div className="mx-auto w-full max-w-4xl">
+        <HeroMatchCard actions={actions} />
+        {showTrades && (
+          <div className="mt-4 rounded-2xl border border-border bg-card p-4 text-left">
+            {user ? (
+              <ActiveDealsPanel />
+            ) : (
+              <p className="text-sm text-muted-foreground">Sign in to see your recent trades.</p>
+            )}
+          </div>
+        )}
+      </div>
       {stagesBlock}
     </section>
   );
