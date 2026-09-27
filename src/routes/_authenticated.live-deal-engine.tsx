@@ -1871,6 +1871,9 @@ function LiveDealEngine() {
           case "sealedWad":
             setSealedWadOpen(true);
             break;
+          case "wad":
+            setOfferFrameOpen(false);
+            break;
           case "offer":
             // Negotiation is live — the Offer frame is the thing waiting on someone.
             setOfferFrameOpen(true);
