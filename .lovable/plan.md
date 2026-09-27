@@ -1,8 +1,8 @@
-# Five fixes: Bid Information, dark text, Izenzo verified, Exit row, KYC/KYB QR
+# Six fixes: Bid Information, dark text, Izenzo verified, Exit row, KYC/KYB QR, counterparty names
 
-## 1. Bid Information stays folded after a search
-When a search finds counterparties, Bid Information should fold away to make room for the results. The code says it folds, but it actually forces the frame open. Change that so it folds.
-- If the search finds no matches, Bid Information stays open as it does now, so you can edit the search.
+## 1. Bid Information stays folded after the AI+ search
+Once Bid Information has folded away, it must not open by itself again. That includes after the AI+ (shortlist) search finishes, and when results or counterparties refresh. Several places in the search code tell it to open when they should leave it alone or fold it.
+- It only opens again when you click it, or when a search finds no matches so you can edit the search.
 
 ## 2. White text on dark backgrounds (Pre-Screening card)
 In dark mode, the company-name pill, the ID line and the Authority to Act line on the Pre-Screening cards are dark or grey on a dark background. These become white, with a solid pill background, so they can be read. Light mode stays as it is.
@@ -29,3 +29,10 @@ Clicking **Start** now sets that check to **In progress** straight away. The QR 
   - Render the QR whenever `provider_url` exists and the status is `pending` or `in_progress`.
   - Show the "In progress" badge immediately after Start by writing to the query cache optimistically.
 - Verify with Playwright: run a search on a fresh bid, and use the WaD frame on BID9720321 in both light and dark mode.
+
+## 6. Counterparty names readable in dark mode
+In dark mode the counterparty names in the search results and Choice list lose the green shading. They show as bold white text instead, and the selected one gets a thin green outline. Match scores and pills don't change.
+
+## More technical details
+- Bid Information: in `live-deal-engine.tsx`, audit every `setBidInfoCollapsed(txId, false)` (around lines 728, 2109 and 2160) and the AI+ shortlist completion path, and only reopen it on no matches. Test with Playwright that the frame stays collapsed after an AI+ run.
+- Counterparty rows (`MatchResultsPanel.tsx`): replace the green tint with `dark:bg-card dark:text-white font-semibold`, and use `dark:border-success` for the selected row.
