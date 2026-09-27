@@ -105,7 +105,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 // paints anything — without this, the server-rendered page briefly shows the default dark skin
 // until React hydrates and the useEffect-driven switcher catches up, which reads as a broken
 // layout flash on every navigation for anyone who has Cream selected.
-const APPLY_STYLE_PRESET_SCRIPT = `(function(){try{var p=localStorage.getItem("izenzo:style-preset");var app=(p==="black"||p==="grid")?"izenzo":"alpha-bravo";var d=document.documentElement;d.setAttribute("data-app",app);d.setAttribute("data-theme","dark");}catch(e){}})();`;
+const APPLY_STYLE_PRESET_SCRIPT = `(function(){try{var p=localStorage.getItem("izenzo:style-preset");var d=document.documentElement;d.setAttribute("data-app","alpha-bravo");if(p==="black"||p==="grid"){d.setAttribute("data-mode","dark")}else{d.removeAttribute("data-mode")}d.setAttribute("data-theme","dark");}catch(e){}})();`;
 
 function RootShell({ children }: { children: ReactNode }) {
   return (

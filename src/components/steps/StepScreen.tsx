@@ -1889,7 +1889,7 @@ function WadStep({ tx, reload, onContinue }: Props) {
   const wadUnlocked = Boolean(tx.wad_completed_at) || Boolean(wadPaidData?.paid);
   // Collapses once both parties are verified at registration and this side has paid.
   const preScreenDone =
-    wadUnlocked && Boolean(myRegistration?.identityVerified) && Boolean(otherRegistration?.identityVerified);
+    Boolean(myRegistration?.identityVerified) && Boolean(otherRegistration?.identityVerified);
   const preScreenOpen = preScreenOpenOverride ?? !preScreenDone;
   async function onPayWad() {
     setPaying(true);
@@ -2266,7 +2266,7 @@ function WadStep({ tx, reload, onContinue }: Props) {
               <span className="label-caps font-sans">Pre-Screening on App Registration</span>
               {preScreenDone && (
                 <Badge variant="outline" className="border-success/40 bg-success/10 font-normal text-success">
-                  Both verified · paid
+                  Both Verified
                 </Badge>
               )}
             </span>
