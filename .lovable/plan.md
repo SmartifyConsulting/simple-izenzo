@@ -23,3 +23,12 @@
 - `MapView.tsx` 232–235: swap the start and end points so the arrowhead lands on the Entry/Exit frame.
 - Seen-once storage: new migration for table `celebrations_seen (user_id, transaction_id, kind, seen_at)` with PK (user_id, transaction_id, kind), GRANTs to authenticated/service_role, RLS limited to own rows (`auth.uid() = user_id`).
 - `Confetti.tsx`: optional `onAcknowledge` renders a "Fantastic!" button and turns off auto-dismiss. Call sites in `live-deal-engine.tsx` (2330/2336), `CounterpartyWorkspaceView.tsx` (305/308) and `StepScreen.tsx` (2123) only show when there's no seen row. The seen row is written on click.
+
+## 5. Only the current frame opens after a refresh
+- When you refresh the Live Workspace, only the frame for the step you're working on opens. Every finished or later frame starts closed. You can still open any of them with its arrow.
+- The first step is to reproduce it on a refreshed deal. That shows which frames open on their own, and which saved "open/closed" memory or default is opening them.
+
+### Technical
+- Reproduce with Playwright: open a deal at Proof of Intent or WaD, reload, and list the open frames.
+- Derive each frame's initial open state from the transaction's current stage/step only (`tx.stage`, sealed POI, WaD complete, legal signed). Ignore stale per-tab `sessionStorage` open flags on first load (e.g. `bid-info-collapsed:*`). Apply this in `live-deal-engine.tsx`, `StepScreen.tsx` and `CounterpartyWorkspaceView.tsx`.
+- Manual toggles still apply for the rest of the session.
