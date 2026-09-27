@@ -2151,14 +2151,6 @@ function WadStep({ tx, reload, onContinue }: Props) {
     <Panel
       footer={
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <TokenGateFooter cost={WAD_COST} />
-            {!wadUnlocked && (
-              <Button size="sm" disabled={paying || shortOnTokens || !offerApproved} onClick={onPayWad}>
-                {paying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : `Pay ${WAD_COST} tokens to unlock`}
-              </Button>
-            )}
-          </div>
           <div className="flex flex-wrap justify-end gap-2">
             <Button size="sm" variant="outline" disabled={busy || shortOnTokens} onClick={() => setExitConfirmOpen(true)}>
               Exit
@@ -2259,19 +2251,9 @@ function WadStep({ tx, reload, onContinue }: Props) {
         </div>
       )}
 
-      {!wadUnlocked ? (
-        <p className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Lock className="h-3.5 w-3.5" /> The KYC and KYB checks unlock once the {WAD_COST}-token fee is paid.
-        </p>
-      ) : (
-      <>
-      {/* What each side put on file at registration — same two-column, other-party-left-in-blue,
-          you-right-in-green layout as the KYC/KYB checks below, so both frames read the same way.
-          Never the checks themselves (that's what KYC/KYB verify) — just what each side already
-          told the platform they are. */}
       {(myRegistration || otherRegistration) && (
         <div className="mb-4 rounded-lg border border-border p-3">
-          <p className="label-caps font-sans">ID Number + AtA / Proof of Address</p>
+          <p className="label-caps font-sans">Pre-Screening on App Registration</p>
           <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5 rounded-lg border border-[#4169e1]/25 bg-[#4169e1]/5 p-3 sm:border-r-2">
               {otherRegistration ? (
@@ -2300,7 +2282,7 @@ function WadStep({ tx, reload, onContinue }: Props) {
               {myRegistration ? (
                 <>
                   <Badge variant="secondary" className="bg-emerald-600/15 font-normal text-emerald-700">
-                    You
+                    {myRegistration.fullName ?? "Your company"}
                   </Badge>
                   <p className="text-xs text-muted-foreground">
                     {myRegistration.idNumberType === "passport" ? "Passport" : "ID"}:{" "}
@@ -2322,6 +2304,24 @@ function WadStep({ tx, reload, onContinue }: Props) {
           </div>
         </div>
       )}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <TokenGateFooter cost={WAD_COST} />
+        {!wadUnlocked && (
+          <Button size="sm" disabled={paying || shortOnTokens || !offerApproved} onClick={onPayWad}>
+            {paying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : `Pay ${WAD_COST} tokens to unlock`}
+          </Button>
+        )}
+      </div>
+      {!wadUnlocked ? (
+        <p className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Lock className="h-3.5 w-3.5" /> The KYC and KYB checks unlock once the {WAD_COST}-token fee is paid.
+        </p>
+      ) : (
+      <>
+      {/* What each side put on file at registration — same two-column, other-party-left-in-blue,
+          you-right-in-green layout as the KYC/KYB checks below, so both frames read the same way.
+          Never the checks themselves (that's what KYC/KYB verify) — just what each side already
+          told the platform they are. */}
 
       {priorSubjectRows.length > 0 && (() => {
         const preScreenAllPassed = priorSubjectRows.every((r) => r.status === "passed");
