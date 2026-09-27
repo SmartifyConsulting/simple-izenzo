@@ -2151,7 +2151,14 @@ function WadStep({ tx, reload, onContinue }: Props) {
     <Panel
       footer={
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <span />
+          <div className="flex flex-wrap items-center gap-3">
+            <TokenGateFooter cost={WAD_COST} />
+            {!wadUnlocked && (
+              <Button size="sm" disabled={paying || shortOnTokens || !offerApproved} onClick={onPayWad}>
+                {paying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : `Pay ${WAD_COST} tokens to unlock`}
+              </Button>
+            )}
+          </div>
           <div className="flex flex-wrap justify-end gap-2">
             <Button size="sm" variant="outline" disabled={busy || shortOnTokens} onClick={() => setExitConfirmOpen(true)}>
               Exit
@@ -2194,14 +2201,6 @@ function WadStep({ tx, reload, onContinue }: Props) {
     >
       {/* The outer frame this whole panel sits inside already carries the "Without a Doubt" grey
           pill heading — this copy is the next thing under it, not a second heading of its own. */}
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <TokenGateFooter cost={WAD_COST} />
-        {!wadUnlocked && (
-          <Button size="sm" disabled={paying || shortOnTokens || !offerApproved} onClick={onPayWad}>
-            {paying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : `Pay ${WAD_COST} tokens to unlock`}
-          </Button>
-        )}
-      </div>
       <p className="mb-1.5 text-xs text-muted-foreground">
         Complete your own identity (KYC) and company (KYB) verification, with both results posted
         to the deal so you each have the same independent assurance that the other party has been
