@@ -291,8 +291,8 @@ export function WorkspaceTaskbar() {
               : "border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-500"
             : kind === "offer"
               ? active
-                ? "border-[#4169e1] bg-white text-[#4169e1]"
-                : "border-[#4169e1] bg-[#4169e1] text-white hover:opacity-90"
+                ? "border-[var(--cp-blue)] bg-white text-[var(--cp-blue)]"
+                : "border-[var(--cp-blue)] bg-[var(--cp-blue)] text-white hover:opacity-90"
               : active
                 ? "border-[var(--taskbar-active-border)] bg-[var(--taskbar-active-bg)] text-[var(--taskbar-active-fg)]"
                 : "border-border bg-white text-black hover:bg-white/90";

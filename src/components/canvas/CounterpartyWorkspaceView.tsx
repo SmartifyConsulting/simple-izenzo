@@ -325,7 +325,7 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
             <span
               className={
                 "label-caps rounded-full px-2.5 py-1 " +
-                (kind === "offer" ? "bg-[#4169e1] text-white" : "bg-emerald-600 text-white")
+                (kind === "offer" ? "bg-[var(--cp-blue)] text-white" : "bg-emerald-600 text-white")
               }
             >
               {kindWord} Registration
@@ -344,7 +344,7 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
         <div className="grid grid-cols-1 items-stretch gap-4 lg:h-[calc(100vh-270px)] lg:min-h-[560px] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <div
             className="flex min-h-0 items-center justify-center overflow-hidden rounded-3xl border border-border bg-card p-3 shadow-sm sm:p-5"
-            style={{ "--throb-accent": "#4169e1" } as CSSProperties}
+            style={{ "--throb-accent": "var(--cp-blue)" } as CSSProperties}
           >
             <div className="relative mx-auto w-full lg:h-full lg:w-auto lg:max-w-full" style={{ aspectRatio: "960 / 1050" }}>
               <MapView

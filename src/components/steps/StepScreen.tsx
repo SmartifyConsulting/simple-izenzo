@@ -1867,6 +1867,9 @@ function WadStep({ tx, reload, onContinue }: Props) {
   const { data: engagement } = useQuery({
     queryKey: ["engagement", tx.id],
     queryFn: () => loadEngagement({ data: { transactionId: tx.id } }),
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
   const offerApproved = engagement?.decided === "accepted";
   const loadPartyRegistration = useServerFn(getPartyRegistrationInfo);
@@ -2145,7 +2148,7 @@ function WadStep({ tx, reload, onContinue }: Props) {
     );
   }
 
-  const counterpartyRegistered = Boolean(tx.counterparty_org_id);
+  const counterpartyRegistered = Boolean(tx.counterparty_org_id || engagement?.counterpartyLinked);
 
   // The Offer itself now has its own frame above this one (see live-deal-engine.tsx) — this step
   // has nothing to verify against a deal that isn't agreed yet, so it just waits.
@@ -2278,7 +2281,7 @@ function WadStep({ tx, reload, onContinue }: Props) {
             <span className="flex items-center gap-2">
               <span className="label-caps font-sans">Pre-Screening on App Registration</span>
               {preScreenDone && (
-                <Badge variant="outline" className="border-success/40 bg-success/10 font-normal text-success">
+                <Badge variant="outline" className="border-emerald-600 bg-emerald-600 font-normal text-white">
                   Both Verified
                 </Badge>
               )}
@@ -2287,10 +2290,10 @@ function WadStep({ tx, reload, onContinue }: Props) {
           </button>
           {preScreenOpen && (
           <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5 rounded-lg border border-[#4169e1]/25 bg-[#4169e1]/5 p-3 sm:border-r-2">
+            <div className="space-y-1.5 rounded-lg border border-[var(--cp-blue)]/25 bg-[var(--cp-blue)]/5 p-3 sm:border-r-2">
               {otherRegistration ? (
                 <>
-                  <Badge variant="secondary" className="bg-[#4169e1]/15 font-normal text-[#1c2f6b] dark:bg-[#4169e1] dark:text-white">
+                  <Badge variant="secondary" className="bg-[var(--cp-blue)]/15 font-normal text-[#1c2f6b] dark:bg-[var(--cp-blue)] dark:text-white">
                     {otherRegistration.fullName ?? "Counterparty"}
                   </Badge>
                   <p className="text-xs text-muted-foreground dark:text-white">
@@ -2301,7 +2304,7 @@ function WadStep({ tx, reload, onContinue }: Props) {
                     {otherRegistration.documentLabel}: {otherRegistration.documentName ?? "Not on file"}
                   </p>
                   {otherRegistration.identityVerified && (
-                    <Badge variant="outline" className="border-success/40 bg-success/10 font-normal text-success">
+                    <Badge variant="outline" className="border-emerald-600 bg-emerald-600 font-normal text-white">
                       Verified
                     </Badge>
                   )}
@@ -2324,7 +2327,7 @@ function WadStep({ tx, reload, onContinue }: Props) {
                     {myRegistration.documentLabel}: {myRegistration.documentName ?? "Not on file"}
                   </p>
                   {myRegistration.identityVerified && (
-                    <Badge variant="outline" className="border-success/40 bg-success/10 font-normal text-success">
+                    <Badge variant="outline" className="border-emerald-600 bg-emerald-600 font-normal text-white">
                       Verified
                     </Badge>
                   )}
@@ -2655,13 +2658,13 @@ function BusinessDocsStep({ tx, reload, onContinue }: Props) {
                         key={side}
                         className={cn(
                           "space-y-1.5 p-3",
-                          tone === "emerald" ? "bg-emerald-600/5" : "bg-[#4169e1]/5",
+                          tone === "emerald" ? "bg-emerald-600/5" : "bg-[var(--cp-blue)]/5",
                         )}
                       >
                         <p
                           className={cn(
                             "label-caps font-sans",
-                            tone === "emerald" ? "text-emerald-600" : "text-[#4169e1]",
+                            tone === "emerald" ? "text-emerald-600" : "text-[var(--cp-blue)]",
                           )}
                         >
                           {label}

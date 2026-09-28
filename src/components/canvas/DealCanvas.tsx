@@ -2494,7 +2494,7 @@ export function CanvasStart({
           onClick={() => setStartDirection("offer")}
           className={cn(
             "rounded-full px-3 py-1 text-xs font-semibold transition-colors",
-            startDirection === "offer" ? "bg-[#4169e1] text-white" : "text-muted-foreground hover:text-foreground",
+            startDirection === "offer" ? "bg-[var(--cp-blue)] text-white" : "text-muted-foreground hover:text-foreground",
           )}
         >
           Sell
