@@ -58,9 +58,25 @@ export const claimCounterparty = createServerFn({ method: "POST" })
       .maybeSingle();
     if (profErr) throw new Error(profErr.message);
 
+    // A person in several companies links as the company the bidder actually chose (matched by
+    // name), not whichever one their profile happens to point at — otherwise the deal shows the
+    // wrong company name and misses that company's verified status.
+    const memberOrgIds = (memberships ?? []).map((m) => m.org_id as string);
+    let matchedOrgId: string | null = null;
+    if (memberOrgIds.length > 1) {
+      const { nameKey } = await import("@/lib/dedupeOrgs");
+      const { data: memberOrgs } = await supabaseAdmin.from("organisations").select("id, name").in("id", memberOrgIds);
+      const want = nameKey(cp.name as string);
+      const hit = (memberOrgs ?? []).find((o) => {
+        const k = nameKey((o.name as string) ?? "");
+        return k && want && (k === want || k.includes(want) || want.includes(k));
+      });
+      matchedOrgId = (hit?.id as string | undefined) ?? null;
+    }
+
     const decision = decideClaimOrg({
-      myOrgIds: (memberships ?? []).map((m) => m.org_id as string),
-      profileOrgId: (profile as { org_id?: string | null } | null)?.org_id ?? null,
+      myOrgIds: memberOrgIds,
+      profileOrgId: matchedOrgId ?? (profile as { org_id?: string | null } | null)?.org_id ?? null,
       dealOrgId: tx.org_id as string,
       dealCounterpartyOrgId: tx.counterparty_org_id as string | null,
     });
@@ -133,8 +149,8 @@ export const claimCounterparty = createServerFn({ method: "POST" })
     await notifyBidder({
       orgId: tx.org_id as string,
       transactionId: tx.id,
-      title: `${cp.name} is verified and linked to your deal`,
-      body: `${tx.reference ? `${tx.reference} — ` : ""}${tx.title ?? "Your deal"}: ${cp.name} created and verified their Izenzo account. You can now run KYC/KYB verification on them at the Without a Doubt gate, and they can do the same on you.`,
+      title: `Good news: ${cp.name} has joined your deal on Izenzo`,
+      body: `${cp.name} has created their Izenzo account and is now viewing your offer online${tx.reference ? ` for ${tx.reference}` : ""}${tx.title ? ` (${tx.title})` : ""}. Your deal is moving. Once they respond to the offer, you'll both complete a quick identity and company check before signing the agreements. We'll keep you posted every step of the way.`,
       kind: "counterparty_verified",
     });
 

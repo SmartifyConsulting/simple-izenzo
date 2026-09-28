@@ -24,6 +24,7 @@ import { ApiKeysTab } from "@/components/admin/ApiKeysTab";
 import { ArchiveTab } from "@/components/admin/ArchiveTab";
 import { OrganisationsTab, useOrgDirectory } from "@/components/admin/OrganisationsTab";
 import { WorkflowTemplatesTab } from "@/components/admin/WorkflowTemplatesTab";
+import { adminCreateUser, adminDeleteUser } from "@/lib/adminUsers.functions";
 import { Workflow } from "lucide-react";
 
 type AdminSearch = { group?: string; tab?: string; activityUser?: string };
@@ -163,7 +164,41 @@ const SUPERUSER_EMAIL = "georgia.adams@smartify.co.za";
 function UsersTab() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<"created" | "accessed">("created");
+  const [sortBy, setSortBy] = useState<"name" | "created" | "accessed">("name");
+  const createUserFn = useServerFn(adminCreateUser);
+  const deleteUserFn = useServerFn(adminDeleteUser);
+  const [addOpen, setAddOpen] = useState(false);
+  const [newUser, setNewUser] = useState({ firstName: "", lastName: "", email: "", password: "" });
+  const [deleteTarget, setDeleteTarget] = useState<ProfileRow | null>(null);
+  const [userBusy, setUserBusy] = useState(false);
+  async function createUser() {
+    setUserBusy(true);
+    try {
+      await createUserFn({ data: newUser });
+      toast.success("User created");
+      setAddOpen(false);
+      setNewUser({ firstName: "", lastName: "", email: "", password: "" });
+      await qc.invalidateQueries({ queryKey: ["admin-users"] });
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setUserBusy(false);
+    }
+  }
+  async function deleteUser() {
+    if (!deleteTarget) return;
+    setUserBusy(true);
+    try {
+      await deleteUserFn({ data: { userId: deleteTarget.id } });
+      toast.success("User deleted");
+      setDeleteTarget(null);
+      await qc.invalidateQueries({ queryKey: ["admin-users"] });
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setUserBusy(false);
+    }
+  }
   const [profileId, setProfileId] = useState<string | null>(null);
   const { orgs, orgNamesByUser } = useOrgDirectory();
   const orgNameById = new Map(orgs.map((o) => [o.id, o.name]));
@@ -230,7 +265,9 @@ function UsersTab() {
   )
     .slice()
     .sort((a, b) =>
-      sortBy === "created"
+      sortBy === "name"
+        ? `${a.full_name ?? ""} ${a.last_name ?? ""} ${a.email ?? ""}`.trim().localeCompare(`${b.full_name ?? ""} ${b.last_name ?? ""} ${b.email ?? ""}`.trim(), undefined, { sensitivity: "base" })
+        : sortBy === "created"
         ? stamp(b.created_at) - stamp(a.created_at)
         : stamp(b.last_accessed_at) - stamp(a.last_accessed_at),
     );
@@ -246,13 +283,17 @@ function UsersTab() {
         />
         <select
           value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as "created" | "accessed")}
+          onChange={(e) => setSortBy(e.target.value as "name" | "created" | "accessed")}
           className="h-9 rounded-md border border-input bg-background px-3 text-sm"
           aria-label="Sort users"
         >
+          <option value="name">Name (A to Z)</option>
           <option value="created">Newest created first</option>
           <option value="accessed">Most recently accessed first</option>
         </select>
+        <Button size="sm" className="ml-auto" onClick={() => setAddOpen(true)}>
+          Add user
+        </Button>
       </div>
       <div className="overflow-hidden rounded-md border border-border">
       {filteredUsers.length === 0 ? (
@@ -340,6 +381,12 @@ function UsersTab() {
                   <Button size="sm" variant="outline" onClick={() => toggleAdmin(u.id, isUserAdmin, u.email)}>
                     {isUserAdmin ? "Revoke admin" : "Make admin"}
                   </Button>
+                  <Button size="sm" variant="outline" onClick={() => setProfileId(u.id)}>
+                    Edit
+                  </Button>
+                  <Button size="sm" variant="outline" className="text-destructive" onClick={() => setDeleteTarget(u)}>
+                    Delete
+                  </Button>
                 </div>
               </li>
             );
@@ -348,6 +395,50 @@ function UsersTab() {
         </div>
       )}
       </div>
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add user</DialogTitle>
+            <DialogDescription>The account is created ready to sign in with this email and password.</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>First name</Label>
+              <Input value={newUser.firstName} onChange={(e) => setNewUser({ ...newUser, firstName: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Last name</Label>
+              <Input value={newUser.lastName} onChange={(e) => setNewUser({ ...newUser, lastName: e.target.value })} />
+            </div>
+            <div className="col-span-2 space-y-1.5">
+              <Label>Email</Label>
+              <Input type="email" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} />
+            </div>
+            <div className="col-span-2 space-y-1.5">
+              <Label>Temporary password (8+ characters)</Label>
+              <Input type="text" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+            <Button disabled={userBusy} onClick={() => void createUser()}>Create user</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={Boolean(deleteTarget)} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete this user?</DialogTitle>
+            <DialogDescription>
+              {deleteTarget?.full_name ?? deleteTarget?.email} will no longer be able to sign in. Their companies and deals stay in place. This can't be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="destructive" disabled={userBusy} onClick={() => void deleteUser()}>Delete user</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <UserProfileDialog
         user={users.find((u) => u.id === profileId) ?? null}
         orgNames={profileId ? (orgNamesByUser.get(profileId) ?? []) : []}

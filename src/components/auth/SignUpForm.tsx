@@ -621,13 +621,28 @@ export function SignUpForm({
             </div>
           </form>
         ) : (
-          <AuthorityToActPanel
-            onSaved={() => {
-              // Registration is finished — let the app take over from here.
-              endRegistration();
-              navigate({ to: safeNext(next), replace: true });
-            }}
-          />
+          <div className="space-y-3">
+            <AuthorityToActPanel
+              onSaved={() => {
+                // Registration is finished — let the app take over from here.
+                endRegistration();
+                navigate({ to: safeNext(next), replace: true });
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                // Steps 1 and 2 are already saved; the document can be added later.
+                endRegistration();
+                toast.success("Saved. You can finish this step later from Account settings.");
+                navigate({ to: "/", replace: true });
+              }}
+            >
+              Save and Close
+            </Button>
+          </div>
         )}
       </div>
 
