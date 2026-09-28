@@ -116,7 +116,7 @@ export async function notifyTransactionOwner(args: {
         await sendEmail(creds, {
           to: recipient.email,
           subject: args.title,
-          html: renderBrandedEmail(`<p>${args.title}</p><p>${args.body}</p>`),
+          html: renderBrandedEmail(`<p>Hello,</p><p><strong>${args.title}</strong></p><p>${args.body}</p><p>Kind regards,<br/>Izenzo Trading</p>`),
         });
       } catch {
         // The bidder's own email is a courtesy on top of the in-app record, never a requirement.
@@ -147,7 +147,7 @@ export async function notifyBidder(args: {
     await sendEmail(creds, {
       to: ADMIN_EMAIL,
       subject: `[Bidder notification] ${args.title}`,
-      html: renderBrandedEmail(`<p>Hello Admin,</p><p>${args.title}</p><p>${args.body}</p>`),
+      html: renderBrandedEmail(`<p>Hello Admin,</p><p><strong>${args.title}</strong></p><p>${args.body}</p><p>Kind regards,<br/>Izenzo Trading</p>`),
     });
   } catch {
     // Admin's copy is a courtesy, not a requirement — never blocks or surfaces as an error.
