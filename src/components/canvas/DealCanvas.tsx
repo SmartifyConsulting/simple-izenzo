@@ -1649,13 +1649,15 @@ export function CounterpartyRecord({
             <Button
               size="sm"
               className="flex-1"
-              disabled={editedPrompt.trim().length === 0}
+              disabled={
+                editedPrompt.trim().length === 0 || editedPrompt.trim() === (searchPrompt ?? "").trim()
+              }
               onClick={() => {
                 setEditingSearch(false);
                 onSearchAgain?.(editedPrompt.trim());
               }}
             >
-              Search
+              Search again
             </Button>
             <Button
               size="sm"
