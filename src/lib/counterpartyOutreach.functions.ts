@@ -459,30 +459,28 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
       }
       if (!website) website = org?.website ?? null;
     }
-    if (!toEmail && cp.contact_email) {
-      toEmail = cp.contact_email;
-      emailSource = "Web scrape — address found during the counterparty search";
-    }
-
     const { loadOpenAiApiKey } = await import("@/lib/openai.server");
     const apiKey = await loadOpenAiApiKey();
     const { loadTavilyApiKey } = await import("@/lib/tavily.server");
     const tavilyKey = apiKey ? await loadTavilyApiKey() : null;
     const canSearch = Boolean(apiKey);
 
-    // Tier 1b: no website on file at all yet — a quick best-effort search for one, the same way
-    // enrichCounterparty does, so there's at least a domain to try before giving up.
+    // Tier 1b: the company's own website is scraped FIRST — find it if we don't have it yet.
     if (!toEmail && !website && canSearch) {
       website = await findOfficialWebsite(cp.name, apiKey!, tavilyKey, { transactionId: cp.transaction_id });
     }
-
-    // Tier 1c: a website is known — read it for a literal, verbatim email before ever guessing.
     if (!toEmail && website && canSearch) {
       const { email } = await readContactFromSite(cp.name, website, apiKey!, tavilyKey, { transactionId: cp.transaction_id });
       if (email) {
         toEmail = email;
-        emailSource = `Client's own website — published on ${website}`;
+        emailSource = `Company website — published on ${website}`;
       }
+    }
+
+    // Tier 1c: only if the site publishes nothing, fall back to the address from the web scrape.
+    if (!toEmail && cp.contact_email) {
+      toEmail = cp.contact_email;
+      emailSource = "Web scrape — address found during the counterparty search";
     }
 
     if (toEmail || website) {
