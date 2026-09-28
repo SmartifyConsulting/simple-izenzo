@@ -183,6 +183,13 @@
       "when": 1790617686931,
       "tag": "0025_credit_ledger_read_all_member_orgs",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1790629689540,
+      "tag": "0026_realtime_deal_tables",
+      "breakpoints": true
     }
   ]
 }
