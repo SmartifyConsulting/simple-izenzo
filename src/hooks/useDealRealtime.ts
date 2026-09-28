@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -19,6 +19,8 @@ const TX_TABLES = [
  * RLS limits the rows each person receives to deals they can already see. */
 export function useDealRealtime(txId: string | null | undefined, onChange?: () => void) {
   const qc = useQueryClient();
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
   useEffect(() => {
     if (!txId) return;
     let timer: ReturnType<typeof setTimeout> | null = null;
@@ -26,7 +28,7 @@ export function useDealRealtime(txId: string | null | undefined, onChange?: () =
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
         void qc.invalidateQueries({ refetchType: "active" });
-        onChange?.();
+        onChangeRef.current?.();
       }, 300);
     };
     let channel = supabase
