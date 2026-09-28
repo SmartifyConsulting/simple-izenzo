@@ -477,6 +477,27 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
       website: string | null;
       contact_email: string | null;
     };
+    // The same company can have been listed twice on this bid (e.g. its Crunchbase page) — borrow a
+    // sibling's website/email before searching or guessing, and save it on the chosen row.
+    if (!cp.website || !cp.contact_email) {
+      const { data: siblings } = await supabase
+        .from("counterparties")
+        .select("id, name, website, contact_email")
+        .eq("transaction_id", cp.transaction_id);
+      const key = nameKey(cp.name);
+      const sib = (siblings ?? []).find(
+        (s) => s.id !== cp.id && nameKey(s.name as string) === key && (s.website || s.contact_email),
+      );
+      if (sib) {
+        cp.website = cp.website ?? (sib.website as string | null);
+        cp.contact_email = cp.contact_email ?? (sib.contact_email as string | null);
+        await supabase
+          .from("counterparties")
+          .update({ website: cp.website, contact_email: cp.contact_email } as never)
+          .eq("id", cp.id);
+      }
+    }
+
 
     const { data: tx } = await supabase
       .from("transactions")
