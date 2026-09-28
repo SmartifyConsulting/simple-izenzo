@@ -116,7 +116,8 @@ export async function sendEmail(
       ...(bcc.length > 0 ? { bcc } : {}),
       subject: opts.subject,
       html: opts.html,
-    }),
+      };
+    })()),
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
