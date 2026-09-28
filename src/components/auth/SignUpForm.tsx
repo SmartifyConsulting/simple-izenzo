@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -213,7 +213,7 @@ export function SignUpForm({
         // Individuals don't get asked separately — their own login email is their organisation's
         // contact email by definition. A company can point it somewhere else (a shared inbox, a
         // colleague), which is what the "Same as login email" checkbox is for.
-        const orgContactEmail = isCompany ? (orgEmailSameAsLogin ? email : orgEmail.trim()) || null : email || null;
+        const orgContactEmail = (isCompany ? (orgEmailSameAsLogin ? email : orgEmail.trim()) || email : email) || null;
         const { data: org, error: orgErr } = await supabase
           .from("organisations")
           .insert({
