@@ -9,6 +9,9 @@ import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/PasswordInput";
 import { mapAuthError, useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import { useServerFn } from "@tanstack/react-start";
+import { PhoneInput, toInternational } from "@/components/auth/PhoneInput";
+import { phoneSignIn } from "@/lib/phoneAuth.functions";
 
 function safeNext(next: string | undefined) {
   if (next && next.startsWith("/") && !next.startsWith("//")) return next;
@@ -34,19 +37,29 @@ export function SignInForm({
   const navigate = useNavigate();
   const router = useRouter();
   const { refresh } = useAuth();
+  const [method, setMethod] = useState<"phone" | "email">("phone");
   const [email, setEmail] = useState("");
+  const [dial, setDial] = useState("27");
+  const [phoneLocal, setPhoneLocal] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const phoneSignInFn = useServerFn(phoneSignIn);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setMessage("");
     setBusy(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      if (!data.session) throw new Error("Your sign-in could not be saved. Please try again.");
+      if (method === "phone") {
+        const tokens = await phoneSignInFn({ data: { phone: toInternational(dial, phoneLocal), password } });
+        const { error } = await supabase.auth.setSession(tokens);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        if (!data.session) throw new Error("Your sign-in could not be saved. Please try again.");
+      }
       await refresh();
       await router.invalidate();
       await navigate({ to: safeNext(next), replace: true });
@@ -86,16 +99,39 @@ export function SignInForm({
 
       <form onSubmit={onSubmit} className={cn(compact ? "space-y-1.5" : "space-y-4", !hideHeader && "mt-7")}>
         <div className={compact ? "space-y-1" : "space-y-1.5"}>
-          <Label htmlFor="signin-email" className={compact ? "text-xs" : undefined}>Email</Label>
-          <Input
-            id="signin-email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-            required
-            className={compact ? "h-8 text-sm" : undefined}
-          />
+          <div className="flex items-center justify-between">
+            <Label htmlFor="signin-id" className={compact ? "text-xs" : undefined}>
+              {method === "phone" ? "Mobile number" : "Email"}
+            </Label>
+            <button
+              type="button"
+              tabIndex={-1}
+              className="text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => setMethod((m) => (m === "phone" ? "email" : "phone"))}
+            >
+              {method === "phone" ? "Use email instead" : "Use phone instead"}
+            </button>
+          </div>
+          {method === "phone" ? (
+            <PhoneInput
+              id="signin-id"
+              dial={dial}
+              onDialChange={setDial}
+              value={phoneLocal}
+              onChange={setPhoneLocal}
+              compact={compact}
+            />
+          ) : (
+            <Input
+              id="signin-id"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              required
+              className={compact ? "h-8 text-sm" : undefined}
+            />
+          )}
         </div>
         <div className={compact ? "space-y-1" : "space-y-1.5"}>
           <div className="flex items-center justify-between">
