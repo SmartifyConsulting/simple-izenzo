@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { VerifyEmailDialog } from "@/components/auth/VerifyEmailDialog";
+import { AddPhoneDialog } from "@/components/auth/AddPhoneDialog";
 import { RegistrationDetailsDialog } from "@/components/verification/RegistrationDetailsDialog";
 import { ActivityTracker } from "@/components/ActivityTracker";
 
@@ -65,6 +66,9 @@ function RequireEmailVerified() {
     !nativelyConfirmed;
 
   const needsOrg = !loading && !!profile && !profile.org_id;
+  // Everyone signs in by mobile number now; older email accounts confirm one once.
+  const needsPhone =
+    !loading && !!profile && !mustVerify && !(profile as { phone_verified_at?: string | null }).phone_verified_at;
   const onOrgSetup = pathname.startsWith("/account/settings");
 
   // Registration is done once both compulsory items are on file: an ID/passport number (typed,
@@ -102,8 +106,9 @@ function RequireEmailVerified() {
       <ActivityTracker />
       <Outlet />
       <VerifyEmailDialog open={mustVerify} />
+      <AddPhoneDialog open={needsPhone} />
       <RegistrationDetailsDialog
-        open={!mustVerify && needsRegistrationDetails}
+        open={!mustVerify && !needsPhone && needsRegistrationDetails}
         blocking={isNewAccount}
         onDismiss={() => {
           if (typeof window !== "undefined") window.sessionStorage.setItem("izenzo:registration-later", "1");
