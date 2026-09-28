@@ -693,6 +693,7 @@ function LiveDealEngine() {
   const [offerFrameOpen, setOfferFrameOpen] = useState(false);
   // Cleared WaD case — same folded-record treatment, closed until wanted.
   const [sealedWadOpen, setSealedWadOpen] = useState(false);
+  const [legalRecordOpen, setLegalRecordOpen] = useState(false);
   // Opens the Offer frame the moment sealing actually happens live in this session — distinct
   // from a page load (or a switch to a different tab) that finds the deal already sealed, which
   // leaves it collapsed like every other frame. Tracked per transaction id: the first time this
@@ -3556,8 +3557,43 @@ function LiveDealEngine() {
                   )}
 
 
+                {step2Open && dealTx && grcDone && (
+                  <div className="rounded-2xl border border-border bg-card">
+                    <button
+                      type="button"
+                      onClick={() => setLegalRecordOpen((v) => !v)}
+                      className="flex w-full items-center justify-between gap-2 px-3.5 py-2 text-left"
+                      aria-expanded={legalRecordOpen}
+                    >
+                      <span className="min-w-0">
+                        <span className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+                          Legal Agreements
+                        </span>
+                        <span className="mt-1 block text-[11px] text-muted-foreground">
+                          NDAs, MOUs and agreements bilaterally signed with tamper-evident digital signatures.
+                        </span>
+                      </span>
+                      <ChevronDown
+                        className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", legalRecordOpen && "rotate-180")}
+                      />
+                    </button>
+                    {legalRecordOpen && (
+                      <div className="px-3.5 pb-3">
+                        <InlineFrame
+                          bare
+                          tx={dealTx}
+                          stage="execution"
+                          step="business-docs"
+                          reload={() => void reloadDeal()}
+                          onClose={() => setLegalRecordOpen(false)}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {dealTx && grcDone && canSeeStep3 && (
-                  <div className="mt-1.5 flex w-full items-center gap-2 rounded-full border-2 border-black bg-black px-3 py-1.5 text-xs font-semibold text-white">
+                  <div className="lw-step3 mt-1.5 flex w-full items-center gap-2 rounded-full border-2 border-black bg-black px-3 py-1.5 text-xs font-semibold text-white">
                     <span className="label-caps rounded-full bg-white px-2.5 py-0.5 text-black">
                       Step 3 · Execution
                     </span>

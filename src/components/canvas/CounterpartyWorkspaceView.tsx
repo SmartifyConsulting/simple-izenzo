@@ -608,7 +608,7 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
 
             {grcDone && (
               <>
-                <div className="mt-1.5 flex w-full items-center gap-2 rounded-full border-2 border-black bg-black px-3 py-1.5 text-xs font-semibold text-white">
+                <div className="lw-step3 mt-1.5 flex w-full items-center gap-2 rounded-full border-2 border-black bg-black px-3 py-1.5 text-xs font-semibold text-white">
                   <span className="label-caps rounded-full bg-white px-2.5 py-0.5 text-black">Step 3 · Execution</span>
                   <span className="ml-auto shrink-0 font-mono text-sm font-bold tracking-wide text-white">{tx.reference}</span>
                 </div>
