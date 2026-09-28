@@ -2,9 +2,8 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { generateOrgBrief } from "@/lib/orgBrief.functions";
-import { joinOrgByInviteCode } from "@/lib/orgInvite.functions";
 import { toast } from "sonner";
-import { Check, Copy, Pencil, Plus, Trash2, UserPlus } from "lucide-react";
+import { BadgeCheck, Check, Pencil, Plus, Trash2 } from "lucide-react";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { PublicListingToggle } from "@/components/account/PublicListingToggle";
 import {
@@ -57,38 +56,23 @@ export function OrganisationsPanel() {
   const [busy, setBusy] = useState(false);
   const [briefBusy, setBriefBusy] = useState(false);
   const writeBriefFn = useServerFn(generateOrgBrief);
-  const [joining, setJoining] = useState(false);
-  const [inviteCode, setInviteCode] = useState("");
-  const [joinBusy, setJoinBusy] = useState(false);
-  const joinOrgFn = useServerFn(joinOrgByInviteCode);
-
-  async function joinOrg(e: React.FormEvent) {
-    e.preventDefault();
-    if (!inviteCode.trim()) return;
-    setJoinBusy(true);
-    try {
-      const res = await joinOrgFn({ data: { code: inviteCode.trim() } });
-      await refresh();
-      setInviteCode("");
-      setJoining(false);
-      toast.success(
-        res.alreadyMember ? `Switched to ${res.orgName}` : `Joined ${res.orgName} as a member`,
-      );
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setJoinBusy(false);
-    }
-  }
-
-  async function copyInviteCode(code: string) {
-    try {
-      await navigator.clipboard.writeText(code);
-      toast.success("Invite code copied — share it with a colleague to add them to this organisation.");
-    } catch {
-      toast.error("Could not copy — select and copy the code by hand.");
-    }
-  }
+  const orgIdsKey = orgs.map((o) => o.id).join(",");
+  const { data: verifiedList = [] } = useQuery({
+    queryKey: ["org-verified", orgIdsKey, profile?.identity_verified],
+    enabled: orgs.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("identity_verifications")
+        .select("subject_org_id")
+        .in("subject_org_id", orgs.map((o) => o.id))
+        .eq("status", "passed");
+      const ids = new Set((data ?? []).map((r) => r.subject_org_id as string));
+      // A verified registrant's own organisations count as verified at registration.
+      if (profile?.identity_verified) orgs.forEach((o) => ids.add(o.id));
+      return [...ids];
+    },
+  });
+  const verifiedOrgs = new Set(verifiedList);
 
   /** Saves whatever is on screen first (so the website the user just typed is the one read), then
    * asks the AI for the brief and drops it straight into the form. */
@@ -209,17 +193,6 @@ export function OrganisationsPanel() {
           </div>
           {!showForm && (
             <div className="flex shrink-0 items-center gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-1.5"
-                onClick={() => {
-                  setJoining((v) => !v);
-                  setInviteCode("");
-                }}
-              >
-                <UserPlus className="h-3.5 w-3.5" /> Join with code
-              </Button>
               <Button size="icon" variant="outline" className="h-8 w-8" onClick={startCreate}>
                 <Plus className="h-4 w-4" />
                 <span className="sr-only">Add organisation</span>
@@ -227,28 +200,6 @@ export function OrganisationsPanel() {
             </div>
           )}
         </div>
-
-        {joining && !showForm && (
-          <form onSubmit={joinOrg} className="flex flex-wrap items-end gap-2 border-t border-border p-5">
-            <div className="min-w-0 flex-1 space-y-1.5">
-              <Label htmlFor="invite-code">Invite code</Label>
-              <Input
-                id="invite-code"
-                placeholder="e.g. 4F82A1C9"
-                value={inviteCode}
-                onChange={(e) => setInviteCode(e.target.value)}
-                autoFocus
-              />
-              <p className="text-xs text-muted-foreground">
-                Ask a colleague at the organisation you want to join for their invite code — found
-                under their own Organizations settings.
-              </p>
-            </div>
-            <Button type="submit" size="sm" disabled={joinBusy || !inviteCode.trim()}>
-              {joinBusy ? "Joining…" : "Join"}
-            </Button>
-          </form>
-        )}
 
         {orgs.length > 0 && (
           <div className="border-t border-border">
@@ -265,6 +216,15 @@ export function OrganisationsPanel() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="truncate text-sm font-semibold">{o.name}</p>
+                      {verifiedOrgs.has(o.id) ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-success px-2 py-0.5 text-[11px] font-medium text-success-foreground">
+                          <BadgeCheck className="h-3 w-3" /> Verified
+                        </span>
+                      ) : (
+                        <Button asChild size="sm" variant="outline" className="h-6 px-2 text-[11px]">
+                          <a href="/account/settings#verification">Verify now</a>
+                        </Button>
+                      )}
                       {org?.id === o.id && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[11px] font-medium text-success">
                           <Check className="h-3 w-3" /> Primary
@@ -277,16 +237,6 @@ export function OrganisationsPanel() {
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {o.credits} token{o.credits === 1 ? "" : "s"}
                     </p>
-                    {o.invite_code && (
-                      <button
-                        type="button"
-                        onClick={() => copyInviteCode(o.invite_code!)}
-                        title="Copy invite code — share it with a colleague to add them to this organisation"
-                        className="mt-1 flex items-center gap-1.5 rounded-full border border-border px-2 py-0.5 text-[11px] font-mono text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
-                      >
-                        <Copy className="h-3 w-3 shrink-0" /> {o.invite_code}
-                      </button>
-                    )}
                     <Accordion type="single" collapsible className="mt-1">
                       <AccordionItem value="details" className="border-none">
                         <AccordionTrigger className="py-1 text-xs text-muted-foreground hover:no-underline">

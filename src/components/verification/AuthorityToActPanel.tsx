@@ -48,6 +48,7 @@ export function AuthorityToActPanel({ onSaved }: { onSaved?: () => void }) {
     try {
       let identityVerified = false;
       let identityVerifiedReason: string | null = null;
+      let mismatch: string | null = null;
       try {
         const check = await verifyRegistrationDocument({
           data: isIndividual
@@ -71,12 +72,14 @@ export function AuthorityToActPanel({ onSaved }: { onSaved?: () => void }) {
         identityVerified = check.checked && check.matches;
         identityVerifiedReason = check.reason;
         if (check.checked && !check.matches) {
-          toast.warning(`Document doesn't look like a match: ${check.reason}`);
+          mismatch = check.reason || "Nothing in the document matched your name, ID number or email.";
         }
       } catch {
         // Best-effort only — a failed check just means no verified badge yet, not a blocked save.
       }
 
+      let mismatchBlock = false;
+      if (mismatch) mismatchBlock = true;
       const { error: updateError } = await supabase
         .from("profiles")
         .update({
@@ -85,13 +88,21 @@ export function AuthorityToActPanel({ onSaved }: { onSaved?: () => void }) {
           account_type: accountType,
           // Reaching this point means both compulsory items are on file, so the registration wizard
           // is done — the layout stops asking as soon as this is read back.
-          onboarding_required: false,
+          // A document that doesn't match the registrant keeps registration open until a matching
+          // one is uploaded — the user cannot proceed on a failed check.
+          onboarding_required: mismatchBlock,
           identity_verified: identityVerified,
           identity_verified_reason: identityVerifiedReason,
         } as never)
         .eq("id", profile.id);
       if (updateError) throw updateError;
       await refresh();
+      if (mismatchBlock) {
+        const m = `Verification failed — the document doesn't match you: ${mismatch}. Upload a document showing your name, ID number or email, then press Save again.`;
+        setError(m);
+        toast.error(m);
+        return;
+      }
       toast.success("Registration details saved");
       onSaved?.();
     } catch (err) {

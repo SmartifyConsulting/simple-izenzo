@@ -177,7 +177,7 @@ export const postIntentMessage = createServerFn({ method: "POST" })
               html: renderBrandedEmail(
                 `<p><strong>${senderName}</strong> wrote on the Confirm Intent thread for ${dealName}:</p>` +
                 `<blockquote>${data.body}</blockquote>` +
-                `<p><a href="https://izenzo.co.za/live-deal-engine?tx=${data.transactionId}">Open the deal</a></p>`,
+                `<p><a href="https://api.trade.izenzo.co.za/live-deal-engine?tx=${data.transactionId}">Open the deal</a></p>`,
               ),
             });
           } catch {

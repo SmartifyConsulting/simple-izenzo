@@ -167,6 +167,7 @@ function SettingsPage() {
           {/* Company and identity checks are started from here — without this the panel existed but
               nothing in the app ever rendered it, so no one could pass the check that creating a
               bid now requires. */}
+          <div id="verification" className="scroll-mt-24" />
           <VerificationPanel
             checks={["kyb", "id_document"]}
             title="Verification"
