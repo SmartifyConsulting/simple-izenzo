@@ -2,29 +2,33 @@
 
 ## What actually happened on BID9948162
 
-The address was found. The main **SeedAxis** result has https://seedaxis.co.za and **info@seedaxis.co.za** saved on it.
-
-The search also brought back two pages about SeedAxis and listed each one as its own company:
-- "SeedAxis - GCC & Capability Enablement (site subpage)", which is a page on their own website
-- "SeedAxis (Crunchbase profile)", which is their Crunchbase page
-
-Neither extra entry has a website or email address saved, so they look like failures when you pick them in a demo. They are really the same company listed again.
+- **SeedAxis did come up in the first AI search.** It found 3 results in 29 seconds, and all 3 were SeedAxis:
+  1. "SeedAxis", with https://seedaxis.co.za and **info@seedaxis.co.za** saved
+  2. "SeedAxis (Crunchbase profile)", with no website or email
+  3. "SeedAxis - GCC & Capability Enablement (site subpage)", with no website or email
+- The Crunchbase entry was chosen and sealed into the Proof of Intent. It had no address, so nothing was sent. The app recorded "No registered account, website or contact address found for SeedAxis (Crunchbase profile)".
+- The address was found, but on a different entry from the one that was chosen.
+- The second search, AI+, found nothing new. This is expected: SeedAxis was already on the list, so it was left out.
 
 ## What changes
 
-1. **Directory pages are never a separate company.** Crunchbase, LinkedIn, ZoomInfo, Bloomberg and similar pages about a company get merged into that company. If one of these pages shows an email address (such as Crunchbase showing info@seedaxis.co.za), the company can use that address.
-2. **Pages from a company's own website are never a separate company.** A subpage of seedaxis.co.za gets merged into SeedAxis.
-3. **One company, one entry.** Results are also grouped by the core company name (so "SeedAxis", "SeedAxis (…)" and "SeedAxis - …" become one). The entry with the website and email is kept.
-4. **Clean up BID9948162** so your demo shows only the single SeedAxis entry with info@seedaxis.co.za. The two extra entries are removed. Nothing has been sent or chosen yet, so no signed or sealed records are affected.
+1. **Directory pages are never a separate company.** Pages about a company on Crunchbase, LinkedIn, ZoomInfo, Bloomberg and similar sites are merged into that company. If one of these pages shows an email address, the company uses it.
+2. **Pages from a company's own website are never a separate company.** For example, a subpage of seedaxis.co.za is merged into SeedAxis.
+3. **One company, one entry.** Names with added labels, like "SeedAxis (…)" or "SeedAxis - …", are merged into a single entry. The entry that has the website and email is kept.
+4. **Backup before "no contact found".** If a chosen company has no address, the app first checks the other results on the same bid for that company's website or email. Only then does it search the web or guess.
+5. **Rescue BID9948162.** The Proof of Intent can't be changed once sealed, so it stays as it is. The app copies the SeedAxis website and info@seedaxis.co.za onto the chosen entry and sends the normal counterparty invitation. Your bracketed source note will show "Company website".
 
 ## Technical details
 
-- `src/lib/counterpartyPipeline.server.ts`: before saving candidates, run a merge step:
-  - Group candidates by their registrable domain.
-  - Map known directory hosts (crunchbase.com, linkedin.com, zoominfo.com, dnb.com, bloomberg.com, opencorporates.com, bizcommunity etc.) to the company name extracted from the page.
-  - Also group by a name with bracketed/dash suffixes removed and lower-cased.
-  - Keep the entry with the website or email. Carry over any email or phone found in a merged snippet, and record its source (web scrape) so the email's bracket note stays accurate.
-- The Understand/verdict prompt must return only the organisation, never labels like "(Crunchbase profile)" or "(site subpage)".
-- One data fix deletes the two extra `counterparties` rows on transaction `7f72a0b9-…` (invited_at is null, so nothing was sent).
-- Add a unit test in `counterpartyPipeline.test.ts` with the three SeedAxis entries, checking they merge into one entry that keeps info@seedaxis.co.za.
-- No changes to security or to the workflow gates.
+- `src/lib/counterpartyPipeline.server.ts`: add a merge step before candidates are saved.
+  - Group candidates by registrable domain.
+  - Match known directory hosts (crunchbase.com, linkedin.com, zoominfo.com, dnb.com, bloomberg.com, opencorporates.com and similar) to the company they describe.
+  - Group by name after removing bracketed or dash suffixes and lower-casing.
+  - Keep the entry that has a website or email. Merge in any email or phone from the others.
+- Verdict prompt: return only the organisation's name. Never add labels such as "(Crunchbase profile)" or "(site subpage)".
+- `counterpartyOutreach.functions.ts`: when the chosen row has no website or email, look for a row on the same transaction with the same core name that does, then continue with the existing order (in app, website, web scrape, guessed).
+- One data fix on transaction `7f72a0b9-…`:
+  - Set website and contact_email on counterparty `aa815137-…`. This changes only contact details, not the sealed Proof of Intent fields.
+  - Trigger the outreach send.
+- Unit test in `counterpartyPipeline.test.ts`: the three SeedAxis entries merge into one that keeps info@seedaxis.co.za.
+- No changes to security, to the Proof of Intent seal, or to the workflow gates.
