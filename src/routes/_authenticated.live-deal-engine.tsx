@@ -34,6 +34,7 @@ import {
   type RecordedActivity,
 } from "@/components/canvas/DealCanvas";
 import { CounterpartyWorkspaceView } from "@/components/canvas/CounterpartyWorkspaceView";
+import { useDealRealtime } from "@/hooks/useDealRealtime";
 import { DocumentSummaryList } from "@/components/canvas/DocumentSummaryList";
 import { MutualEngagementPanel } from "@/components/engagement/MutualEngagementPanel";
 import { Confetti } from "@/components/effects/Confetti";
