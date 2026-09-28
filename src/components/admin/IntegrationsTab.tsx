@@ -26,6 +26,7 @@ import {
   type ProviderPricingCache,
 } from "@/lib/integrations.functions";
 import { cn } from "@/lib/utils";
+import { CustomIntegrationsSection } from "@/components/admin/CustomIntegrationsSection";
 import { homeCurrencyFor } from "@/lib/currency";
 
 // Same static USD→ZAR rate the rest of the app uses for a home-currency estimate — Izenzo is a
@@ -193,6 +194,7 @@ export function IntegrationsTab() {
           </div>
         </div>
       )}
+      {view === "services" && <CustomIntegrationsSection />}
     </div>
   );
 }
