@@ -133,8 +133,8 @@ export const claimCounterparty = createServerFn({ method: "POST" })
     await notifyBidder({
       orgId: tx.org_id as string,
       transactionId: tx.id,
-      title: `${cp.name} is verified and linked to your deal`,
-      body: `${tx.reference ? `${tx.reference} — ` : ""}${tx.title ?? "Your deal"}: ${cp.name} created and verified their Izenzo account. You can now run KYC/KYB verification on them at the Without a Doubt gate, and they can do the same on you.`,
+      title: `Good news: ${cp.name} has joined your deal on Izenzo`,
+      body: `${cp.name} has created their Izenzo account and is now viewing your offer online${tx.reference ? ` for ${tx.reference}` : ""}${tx.title ? ` (${tx.title})` : ""}. Your deal is moving. Once they respond to the offer, you'll both complete a quick identity and company check before signing the agreements. We'll keep you posted every step of the way.`,
       kind: "counterparty_verified",
     });
 
