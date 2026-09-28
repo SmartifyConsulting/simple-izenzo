@@ -3144,13 +3144,15 @@ function LiveDealEngine() {
                       {dbHasChosenParty && !dealTx?.poi_sealed_at && (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <button
+                            <Button
                               type="button"
+                              size="sm"
+                              variant="outline"
+                              className="shrink-0"
                               title="Not happy with the online screening findings? Pick someone else."
-                              className="shrink-0 text-[11px] font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"
                             >
                               Change Party
-                            </button>
+                            </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
