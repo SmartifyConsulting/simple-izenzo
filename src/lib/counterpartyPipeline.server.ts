@@ -185,6 +185,9 @@ async function understand(input: PipelineInput): Promise<BriefCore> {
     'Reply with JSON only: {"transactionSummary":string,"role":string,"organisationTypes":string[],"capabilities":string[],"sectors":string[],"geographies":string[],"mustHave":string[],"exclude":string[],"searchQueries":string[]}.';
   const user = [
     side,
+    input.ownOrgName
+      ? `The person placing this is from the organisation "${input.ownOrgName}". Any OTHER organisation named in their typed text or documents is the counterparty they want to find, never themselves — put that exact name first in searchQueries and do not list it in exclude.`
+      : "Any organisation named in the person's typed text is the counterparty they want to find, never the person themselves — put that exact name first in searchQueries and do not list it in exclude.",
     `Commodity / subject: ${input.commodity ?? "n/a"}`,
     `Quantity: ${input.quantity}`,
     `Price: ${input.price}`,
@@ -465,6 +468,10 @@ export async function findCounterparties(input: PipelineInput): Promise<Pipeline
       "You test candidate organisations against a required-counterparty brief, using only the evidence supplied. " +
         'For each candidate decide "relevant": true only if the evidence shows it is a real operating organisation that acts in the required counterparty role (see requiredSide in the brief), meets every hard requirement it can be judged on, and is not something the brief rules out. ' +
         "A candidate on the SAME side as the requester (personSide) is a competitor: mark it not relevant. " +
+        (input.typedPrompt
+          ? `The requester typed: "${input.typedPrompt.slice(0, 300).replace(/"/g, "'")}". If that text names this exact organisation, it is the requester's intended counterparty: mark it relevant with a high score, even if little else is known. ` +
+            (input.ownOrgName ? `The requester's own organisation is "${input.ownOrgName.replace(/"/g, "'")}" — a named organisation is never the requester unless it is that one. ` : "")
+          : "") +
         "Anything shown as [requester's term] is the requester's own quantity, price or delivery term — never a fact about a candidate; judge and write only from the candidate's own evidence. " +
         'Also give "operatesAs" ("buyer", "seller", "both" or "unclear" — what the evidence shows the organisation does with this product) and "showsRequiredRole" (true only if the evidence itself shows it acting in the required role). ' +
         'Give "score" 0-100 for how well it fits, and "rationale": one or two plain sentences, under 45 words, naming the specific evidence and how it meets the need. ' +
