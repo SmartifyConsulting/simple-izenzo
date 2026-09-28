@@ -84,6 +84,22 @@ export function SignUpForm({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
+  // Arriving on step 2 from the confirmation link reloads the page, so the email typed in step 1 is
+  // gone — pull it back from the signed-in account so "Same as login email" shows a real address.
+  useEffect(() => {
+    if (step < 2) return;
+    let live = true;
+    void supabase.auth.getUser().then(({ data }) => {
+      const e = data.user?.email;
+      if (!live || !e) return;
+      setEmail((cur) => cur || e);
+      setOrgEmail((cur) => cur || e);
+    });
+    return () => {
+      live = false;
+    };
+  }, [step]);
+
   const fullName = [firstName.trim(), lastName.trim()].filter(Boolean).join(" ");
   const resolvedSector = sector === ADD_NEW_SECTOR ? customSector.trim() : sector;
 
