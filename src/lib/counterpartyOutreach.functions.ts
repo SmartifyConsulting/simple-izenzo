@@ -201,6 +201,55 @@ async function findOfficialWebsite(
   }
 }
 
+/** Opens the company's own home page and contact pages and returns the best email address
+ * literally printed there (text or mailto:). Own-domain role addresses rank first. */
+async function scrapeSiteEmails(website: string): Promise<{ email: string; page: string } | null> {
+  let base: URL;
+  try {
+    base = new URL(website);
+  } catch {
+    return null;
+  }
+  const domain = base.hostname.replace(/^www\./, "").toLowerCase();
+  const get = async (u: string) => {
+    try {
+      const r = await fetch(u, {
+        signal: AbortSignal.timeout(10_000),
+        headers: { "user-agent": "Mozilla/5.0 (compatible; IzenzoBot/1.0)" },
+      });
+      return r.ok ? await r.text() : "";
+    } catch {
+      return "";
+    }
+  };
+  const found: { email: string; page: string }[] = [];
+  const collect = (html: string, page: string) => {
+    const text = html.replace(/&#64;|&commat;/gi, "@");
+    for (const m of text.matchAll(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi)) {
+      const e = m[0].toLowerCase().replace(/\.$/, "");
+      if (/\.(png|jpe?g|gif|svg|webp)$/.test(e)) continue;
+      if (!found.some((f) => f.email === e)) found.push({ email: e, page });
+    }
+  };
+  const home = await get(base.toString());
+  collect(home, base.toString());
+  const pages = new Set<string>();
+  for (const m of home.matchAll(/href="([^"#]*contact[^"#]*)"/gi)) {
+    try {
+      const u = new URL(m[1]!, base);
+      if (u.hostname.replace(/^www\./, "") === domain) pages.add(u.toString());
+    } catch { /* ignore */ }
+  }
+  pages.add(new URL("/contact", base).toString());
+  pages.add(new URL("/contact-us", base).toString());
+  for (const p of [...pages].slice(0, 4)) collect(await get(p), p);
+  if (found.length === 0) return null;
+  const rank = (e: string) =>
+    (e.endsWith(`@${domain}`) ? 0 : 2) + (/^(info|sales|contact|trade|enquiries|hello)@/.test(e) ? 0 : 1);
+  found.sort((a, b) => rank(a.email) - rank(b.email));
+  return found[0]!;
+}
+
 /** Reads a known website — through Tavily's own extracted page text when configured, OpenAI's web
  * search otherwise — for a contact email and/or phone number literally published on it. Never
  * guesses or constructs either; NONE means nothing was found, not that nothing exists. */
@@ -210,7 +259,10 @@ async function readContactFromSite(
   apiKey: string,
   tavilyKey: string | null,
   usage?: { transactionId?: string | null | undefined; orgId?: string | null | undefined },
-): Promise<{ email: string | null; phone: string | null }> {
+): Promise<{ email: string | null; phone: string | null; foundOn?: string }> {
+  // First, actually open the site (home + contact pages) and read any printed/mailto address.
+  const direct = await scrapeSiteEmails(website);
+  if (direct) return { email: direct.email, phone: null, foundOn: direct.page };
   try {
     let pageText = "";
     if (tavilyKey) {
