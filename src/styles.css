@@ -689,3 +689,10 @@
 /* Counterparty accent: royal blue on light, sky blue on dark (royal blue vanishes on black). */
 :root { --cp-blue: #4169e1; }
 [data-mode="dark"], .dark { --cp-blue: oklch(0.74 0.14 230); }
+
+/* Step 3 · Execution bar: elegant white border in dark mode */
+[data-mode="dark"] .lw-step3,
+.dark .lw-step3 {
+  border-width: 1px;
+  border-color: oklch(1 0 0 / 0.85);
+}
