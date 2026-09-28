@@ -1313,6 +1313,7 @@ export type Database = {
         Row: {
           chosen_at: string | null
           contact_email: string | null
+          contact_email_source: string | null
           counterparty_responded_at: string | null
           counterparty_response: string | null
           created_at: string
@@ -1346,6 +1347,7 @@ export type Database = {
         Insert: {
           chosen_at?: string | null
           contact_email?: string | null
+          contact_email_source?: string | null
           counterparty_responded_at?: string | null
           counterparty_response?: string | null
           created_at?: string
@@ -1379,6 +1381,7 @@ export type Database = {
         Update: {
           chosen_at?: string | null
           contact_email?: string | null
+          contact_email_source?: string | null
           counterparty_responded_at?: string | null
           counterparty_response?: string | null
           created_at?: string
