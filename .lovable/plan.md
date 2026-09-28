@@ -18,6 +18,12 @@
 4. **Backup before "no contact found".** If a chosen company has no address, the app first checks the other results on the same bid for that company's website or email. Only then does it search the web or guess.
 5. **Rescue BID9948162.** The Proof of Intent can't be changed once sealed, so it stays as it is. The app copies the SeedAxis website and info@seedaxis.co.za onto the chosen entry and sends the normal counterparty invitation. Your bracketed source note will show "Company website".
 
+## "Hello Admin" and the missing email
+
+- **Why nothing went to SeedAxis:** the chosen entry, the Crunchbase copy, had no address. The app sent only the "We couldn't find contact details" notice to you and Admin. Point 5 above fixes this deal.
+- **Why the admin email still says "Hello,":** "Hello Admin," is in the latest version, but your live site hasn't been published since. Your demo ran on the live site, so it still sends the old wording.
+- **Fix:** publish after this change, so the live site gets "Hello Admin,", the source notes in brackets, and the SeedAxis fixes. After publishing, I'll check the email records to confirm the Admin copy arrives with the right greeting.
+
 ## Technical details
 
 - `src/lib/counterpartyPipeline.server.ts`: add a merge step before candidates are saved.
