@@ -77,15 +77,13 @@ export function SignUpForm({
   const [customSector, setCustomSector] = useState("");
   const [yearsInBusiness, setYearsInBusiness] = useState("");
   const [website, setWebsite] = useState("");
-  // Defaults to the signer's own login email — unchecking this is the only way an organisation's
-  // contact email ends up different from whoever happened to register it.
-  const [orgEmailSameAsLogin, setOrgEmailSameAsLogin] = useState(true);
+  // The organisation's contact email is always typed in separately — deal emails go to the company.
   const [orgEmail, setOrgEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
   // Arriving on step 2 from the confirmation link reloads the page, so the email typed in step 1 is
-  // gone — pull it back from the signed-in account so "Same as login email" shows a real address.
+  // gone — pull it back from the signed-in account.
   useEffect(() => {
     if (step < 2) return;
     let live = true;
@@ -93,7 +91,6 @@ export function SignUpForm({
       const e = data.user?.email;
       if (!live || !e) return;
       setEmail((cur) => cur || e);
-      setOrgEmail((cur) => cur || e);
     });
     return () => {
       live = false;
@@ -213,7 +210,7 @@ export function SignUpForm({
         // Individuals don't get asked separately — their own login email is their organisation's
         // contact email by definition. A company can point it somewhere else (a shared inbox, a
         // colleague), which is what the "Same as login email" checkbox is for.
-        const orgContactEmail = (isCompany ? (orgEmailSameAsLogin ? email : orgEmail.trim()) || email : email) || null;
+        const orgContactEmail = (isCompany ? orgEmail.trim() || email : email) || null;
         const { data: org, error: orgErr } = await supabase
           .from("organisations")
           .insert({
@@ -575,17 +572,10 @@ export function SignUpForm({
                     id="org-email"
                     type="email"
                     placeholder="trading@yourcompany.com"
-                    value={orgEmailSameAsLogin ? email : orgEmail}
-                    disabled={orgEmailSameAsLogin}
+                    value={orgEmail}
+                    required
                     onChange={(e) => setOrgEmail(e.target.value)}
                   />
-                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Checkbox
-                      checked={orgEmailSameAsLogin}
-                      onCheckedChange={(checked) => setOrgEmailSameAsLogin(checked === true)}
-                    />
-                    Same as login email
-                  </label>
                 </div>
               </>
             )}
