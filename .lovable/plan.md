@@ -25,6 +25,11 @@
 - The system admin account stays hidden and protected.
 - Sort the user list alphabetically by name.
 
+## 6. Skip Verification (for Demo ONLY) on KYC and KYB
+- Add a **Skip Verification (for Demo ONLY)** button to the KYC and KYB frame on Without a Doubt.
+- Pressing it shows a pink **Both Parties Verified (Demo)** badge and pink **Verified (Demo)** badges on each party, and lets Continue appear.
+- Demo skips are recorded as demo in the deal history, never as real passed checks, so the real verified badges and records stay accurate.
+
 ## Technical details
 - Test data: create the auth user with the admin client via a one-off server function, or through the sign-up flow with Playwright. Insert `organisations` (with `primary_contact_email`) and `org_members` rows through data queries, not migrations.
 - Badge: trace the `identity_verified` source in `DealCanvas`/`live-deal-engine`/`CounterpartyWorkspaceView` against `counterparty_org_id` and org members.
