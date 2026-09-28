@@ -4,6 +4,8 @@
 - When one party accepts, challenges, counters, signs, pays or finishes a check, the other party's screen updates within about a second. Right now it can take up to 15 seconds.
 - The update happens quietly in the background. The page doesn't reload or flicker, open frames stay open, and anything you're typing is kept.
 - The celebration now reads **"Congratulations! The proposal has been accepted."** It no longer says "The offer has been approved." This applies to both the bidder and the counterparty.
+- **Keeping both parties in step:** as soon as a proposal is accepted, the other party's screen shows it (with the celebration) within about a second, so neither side is left behind.
+- If one party pays the 3 tokens or reaches Legal Agreements first, they see a clear note: "Waiting for [other company] to catch up." The other party gets a matching prompt: "[Company] is ahead — the proposal was accepted; pay 3 tokens to continue." No gates change. Both parties must still pay and verify, and each must sign for themselves.
 
 ## How it works
 - Each open Live Workspace listens for changes to its own deal: the deal's step, offers and responses, challenges, Legal Agreement signatures, KYC/KYB checks and payments.
