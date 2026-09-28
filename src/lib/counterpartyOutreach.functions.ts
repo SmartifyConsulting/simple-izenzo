@@ -442,18 +442,26 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
       .maybeSingle();
     const bidderEmail = bidderProfile?.email ?? null;
 
-    let toEmail: string | null = cp.contact_email;
+    let toEmail: string | null = null;
     let website = cp.website;
     let onPlatform = false;
+    // Where the address came from — shown in brackets in the email while we're testing.
+    let emailSource: string | null = null;
 
-    // Tier 1a: a registered platform organisation by this name — a real address, not a guess.
-    if (!toEmail) {
+    // Tier 1a: a registered in-app organisation by this name is always preferred — a real
+    // address, so nothing ever needs to be guessed.
+    {
       const org = await findRegisteredOrg(supabase, cp.name);
       if (org?.primary_contact_email) {
         toEmail = org.primary_contact_email;
         onPlatform = true;
+        emailSource = "In app — registered Izenzo organisation";
       }
       if (!website) website = org?.website ?? null;
+    }
+    if (!toEmail && cp.contact_email) {
+      toEmail = cp.contact_email;
+      emailSource = "Web scrape — address found during the counterparty search";
     }
 
     const { loadOpenAiApiKey } = await import("@/lib/openai.server");
@@ -471,7 +479,10 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
     // Tier 1c: a website is known — read it for a literal, verbatim email before ever guessing.
     if (!toEmail && website && canSearch) {
       const { email } = await readContactFromSite(cp.name, website, apiKey!, tavilyKey, { transactionId: cp.transaction_id });
-      if (email) toEmail = email;
+      if (email) {
+        toEmail = email;
+        emailSource = `Client's own website — published on ${website}`;
+      }
     }
 
     if (toEmail || website) {
