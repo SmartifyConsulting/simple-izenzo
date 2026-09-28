@@ -1,0 +1,1 @@
+ALTER PUBLICATION supabase_realtime ADD TABLE public.transactions, public.engagement_responses, public.transaction_events, public.documents, public.identity_verifications, public.engagement_diligence, public.match_challenges, public.counter_offers, public.bid_offers, public.document_signatures;
