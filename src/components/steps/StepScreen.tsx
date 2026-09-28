@@ -1901,6 +1901,16 @@ function WadStep({ tx, reload, onContinue }: Props) {
     queryFn: () => getWadPaidFn({ data: { transactionId: tx.id } }),
   });
   const wadUnlocked = Boolean(tx.wad_completed_at) || Boolean(wadPaidData?.paid);
+  // Demo only: a visible pink "skipped" state. It clears WaD with notes saying no real check ran.
+  const demoKey = `izenzo:demo-wad:${tx.id}`;
+  const [demoSkipped, setDemoSkipped] = useState(false);
+  useEffect(() => {
+    try {
+      setDemoSkipped(window.localStorage.getItem(demoKey) === "1");
+    } catch {
+      /* ignore */
+    }
+  }, [demoKey]);
   // Collapses once both parties are verified at registration and this side has paid.
   const preScreenDone =
     Boolean(myRegistration?.identityVerified) && Boolean(otherRegistration?.identityVerified);
@@ -2061,6 +2071,33 @@ function WadStep({ tx, reload, onContinue }: Props) {
     });
   }
 
+  async function skipForDemo() {
+    try {
+      window.localStorage.setItem(demoKey, "1");
+    } catch {
+      /* ignore */
+    }
+    setDemoSkipped(true);
+    setBusy(true);
+    try {
+      await complete({
+        data: {
+          transactionId: tx.id,
+          decision: "cleared",
+          checks: Object.fromEntries(
+            WAD_CHECKS.map((c) => [c.key, { passed: true, demo: true, notes: "DEMO ONLY: verification skipped, no real check ran" }]),
+          ),
+        },
+      });
+      reload();
+      toast.success("Verification skipped for demo.");
+    } catch (err) {
+      reportGateError(err, navigate, tx);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function decide(decision: "cleared" | "referred" | "blocked", overrideChecks?: Record<string, boolean>) {
     setBusy(true);
     try {
@@ -2179,6 +2216,16 @@ function WadStep({ tx, reload, onContinue }: Props) {
                 Agreements is still a person's own click — collapsing this frame and opening the
                 next one isn't something that should happen out from under someone still reading
                 the result. */}
+            {wadUnlocked && !tx.wad_completed_at && !bothCleared && (
+              <Button
+                size="sm"
+                disabled={busy}
+                className="bg-pink-500 text-white hover:bg-pink-600"
+                onClick={() => void skipForDemo()}
+              >
+                Skip Verification (for Demo ONLY)
+              </Button>
+            )}
             {(tx.wad_completed_at || bothCleared) && (
               <Button
                 size="sm"
@@ -2370,6 +2417,7 @@ function WadStep({ tx, reload, onContinue }: Props) {
         checks={["id_document", "kyb"]}
         myLabel={myRegistration?.fullName ?? null}
         otherLabel={otherRegistration?.fullName ?? null}
+        demoVerified={demoSkipped}
       />
       </>
       )}

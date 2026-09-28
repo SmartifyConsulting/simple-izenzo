@@ -114,9 +114,11 @@ type Props = {
    * and needs to place something (the WaD gate's "Already screened in Step 1") between that
    * heading and the checks themselves, rather than after this component's own closing tag. */
   hideHeader?: boolean;
+  /** Demo only: shows pink fake-verified badges. Never a real check result. */
+  demoVerified?: boolean;
 };
 
-export function VerificationPanel({ transactionId, checks: requested, title, description, bare, hideHeader, myLabel, otherLabel }: Props) {
+export function VerificationPanel({ transactionId, checks: requested, title, description, bare, hideHeader, myLabel, otherLabel, demoVerified }: Props) {
   const { user, profile } = useAuth();
   const listEnabled = useServerFn(listEnabledCheckTypes);
   const start = useServerFn(startVerification);
@@ -224,6 +226,9 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
               >
                 <span className="flex items-center gap-2">
                   <span className="label-caps rounded-full bg-muted px-3 py-1 font-sans text-foreground dark:bg-neutral-700 dark:text-white">{CHECK_LABEL[type]}</span>
+                  {demoVerified && !bothPassed && (
+                    <Badge variant="outline" className="border-pink-500 bg-pink-500 font-normal text-white">Both Parties Verified (Demo)</Badge>
+                  )}
                   {bothPassed && (
                     <Badge variant="outline" className="border-emerald-600 bg-emerald-600 font-normal text-white">
                       Both verified
@@ -246,6 +251,7 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
                         <Badge variant="secondary" className="!bg-[var(--cp-blue)] font-normal !text-white hover:!bg-[var(--cp-blue)]">
                           {otherLabel ?? "Counterparty"}
                         </Badge>
+                        {demoVerified && <Badge variant="outline" className="border-pink-500 bg-pink-500 font-normal text-white">Verified (Demo)</Badge>}
                         <Badge variant="outline" className="border-border bg-muted text-muted-foreground">
                           not started
                         </Badge>
@@ -259,6 +265,7 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
                           <Badge variant="secondary" className="!bg-[var(--cp-blue)] font-normal !text-white hover:!bg-[var(--cp-blue)]">
                             {otherLabel ?? r.subject_label ?? "Counterparty"}
                           </Badge>
+                          {demoVerified && r.status !== "passed" && <Badge variant="outline" className="border-pink-500 bg-pink-500 font-normal text-white">Verified (Demo)</Badge>}
                           <Badge
                             variant="outline"
                             className={cn(STATUS_TONE[r.status] ?? "border-border bg-muted text-muted-foreground")}
@@ -277,6 +284,7 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
                     <Badge variant="secondary" className="!bg-emerald-600 font-normal !text-white hover:!bg-emerald-600">
                       {myLabel ?? "You"}
                     </Badge>
+                    {demoVerified && myRow?.status !== "passed" && <Badge variant="outline" className="border-pink-500 bg-pink-500 font-normal text-white">Verified (Demo)</Badge>}
                     <Badge
                       variant="outline"
                       className={cn(STATUS_TONE[myRow?.status ?? "pending"] ?? "border-border bg-muted text-muted-foreground")}
