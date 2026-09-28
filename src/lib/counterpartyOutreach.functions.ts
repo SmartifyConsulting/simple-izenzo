@@ -522,10 +522,10 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
       website = await findOfficialWebsite(cp.name, apiKey!, tavilyKey, { transactionId: cp.transaction_id });
     }
     if (!toEmail && website && canSearch) {
-      const { email } = await readContactFromSite(cp.name, website, apiKey!, tavilyKey, { transactionId: cp.transaction_id });
+      const { email, foundOn } = await readContactFromSite(cp.name, website, apiKey!, tavilyKey, { transactionId: cp.transaction_id });
       if (email) {
         toEmail = email;
-        emailSource = `Company website — published on ${website}`;
+        emailSource = `Company website — found on ${foundOn ?? website}`;
       }
     }
 
@@ -691,22 +691,18 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
         }
       }
       const guessedList = guessedEmails.map((e) => `<li style="font-family:monospace;">${e}</li>`).join("");
-      await sendEmail(creds, {
-        to: bidderEmail,
-        bcc: [ADMIN_EMAIL],
-        usage: { operation: "outreach_email_guessed", transactionId: cp.transaction_id },
-        subject: `Reaching out to ${cp.name} on your behalf`,
-        html: renderBrandedEmail(
-          `<p>Hello,</p>` +
-            `<p>We couldn't find ${cp.name} in the app, on file from the web scrape, or published on their ` +
-            `own website, so the standard counterparty invitation for ${dealName} was sent to these likely ` +
-            `address${guessedEmails.length === 1 ? "" : "es"}:</p>` +
-            `<ul style="margin:8px 0;padding-left:20px;">${guessedList}</ul>` +
-            `<p>These are educated guesses, not confirmed contacts — delivery isn't guaranteed (one or more may ` +
-            `bounce or simply go unread), so it's worth following up directly if you know another way to reach ` +
-            `them.</p>`,
-        ),
-      });
+      await sendBidderAndAdmin(
+        `Reaching out to ${cp.name} on your behalf`,
+        "outreach_email_guessed",
+        `<p>We couldn't find ${cp.name} in the app, on file from the web scrape, or published on their ` +
+          `own website, so the standard counterparty invitation for ${dealName} was sent to these likely ` +
+          `address${guessedEmails.length === 1 ? "" : "es"}:</p>` +
+          `<ul style="margin:8px 0;padding-left:20px;">${guessedList}</ul>` +
+          `<p>These are educated guesses, not confirmed contacts — delivery isn't guaranteed (one or more may ` +
+          `bounce or simply go unread), so it's worth following up directly if you know another way to reach ` +
+          `them.</p>`,
+        guessNote,
+      );
       await supabase.from("transaction_events").insert({
         transaction_id: cp.transaction_id,
         actor_id: userId,
@@ -721,19 +717,15 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
 
     // Tier 3: nothing at all to go on — the bidder is told rather than silence, and it's on the
     // deal's own record too so it isn't just a one-off email easy to lose track of.
-    await sendEmail(creds, {
-      to: bidderEmail,
-      bcc: [ADMIN_EMAIL],
-      usage: { operation: "outreach_email_not_found", transactionId: cp.transaction_id },
-      subject: `We couldn't find contact details for ${cp.name}`,
-      html: renderBrandedEmail(
-        `<p>Hello,</p>` +
-          `<p>You've chosen <strong>${cp.name}</strong> as the counterparty for ${dealName}, but we ` +
-          `couldn't find a registered account, a website, or a published contact address for them — no email ` +
-          `has gone out to them at all.</p>` +
-          `<p>You'll need to reach out to them directly through another channel.</p>`,
-      ),
-    });
+    await sendBidderAndAdmin(
+      `We couldn't find contact details for ${cp.name}`,
+      "outreach_email_not_found",
+      `<p>You've chosen <strong>${cp.name}</strong> as the counterparty for ${dealName}, but we ` +
+        `couldn't find a registered account, a website, or a published contact address for them — no email ` +
+        `has gone out to them at all.</p>` +
+        `<p>You'll need to reach out to them directly through another channel.</p>`,
+      "None found — not in app, no web scrape address, nothing published on their website",
+    );
     await supabase.from("transaction_events").insert({
       transaction_id: cp.transaction_id,
       actor_id: userId,
