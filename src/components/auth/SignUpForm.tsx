@@ -637,7 +637,7 @@ export function SignUpForm({
                 // Steps 1 and 2 are already saved; the document can be added later.
                 endRegistration();
                 toast.success("Saved. You can finish this step later from Account settings.");
-                navigate({ to: "/", replace: true });
+                navigate({ to: safeNext(next), replace: true });
               }}
             >
               Save and Close
