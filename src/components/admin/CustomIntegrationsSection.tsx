@@ -47,8 +47,8 @@ export function CustomIntegrationsSection() {
     );
   }
 
-  async function save() {
-    if (!form.name.trim()) return toast.error("Give the service a name.");
+  async function save(): Promise<void> {
+    if (!form.name.trim()) { toast.error("Give the service a name."); return; }
     setBusy(true);
     const payload = {
       name: form.name.trim(),
@@ -59,19 +59,19 @@ export function CustomIntegrationsSection() {
     };
     const { error } =
       editing === "new"
-        ? await supabase.from("integration_custom_providers").insert(payload)
+        ? await supabase.from("integration_custom_providers").insert({ ...payload, id: `custom-${payload.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now().toString(36)}` })
         : await supabase.from("integration_custom_providers").update(payload).eq("id", editing!);
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success(editing === "new" ? "Service added" : "Service updated");
     setEditing(null);
     refresh();
   }
 
-  async function remove(row: Row) {
+  async function remove(row: Row): Promise<void> {
     if (!window.confirm(`Delete ${row.name}?`)) return;
     const { error } = await supabase.from("integration_custom_providers").delete().eq("id", row.id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success(`${row.name} deleted`);
     refresh();
   }
