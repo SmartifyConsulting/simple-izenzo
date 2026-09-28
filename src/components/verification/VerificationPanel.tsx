@@ -239,11 +239,11 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
                   else's identity check. */}
               {open && (
               <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-2 rounded-lg border border-[#4169e1]/25 bg-[#4169e1]/5 p-3 sm:border-r-2">
+                <div className="space-y-2 rounded-lg border border-[var(--cp-blue)]/25 bg-[var(--cp-blue)]/5 p-3 sm:border-r-2">
                   {otherSubjects.length === 0 ? (
                     <div className="space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="secondary" className="!bg-[#4169e1] font-normal !text-white hover:!bg-[#4169e1]">
+                        <Badge variant="secondary" className="!bg-[var(--cp-blue)] font-normal !text-white hover:!bg-[var(--cp-blue)]">
                           {otherLabel ?? "Counterparty"}
                         </Badge>
                         <Badge variant="outline" className="border-border bg-muted text-muted-foreground">
@@ -256,7 +256,7 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
                     otherSubjects.map((r) => (
                       <div key={r.id} className="space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant="secondary" className="!bg-[#4169e1] font-normal !text-white hover:!bg-[#4169e1]">
+                          <Badge variant="secondary" className="!bg-[var(--cp-blue)] font-normal !text-white hover:!bg-[var(--cp-blue)]">
                             {otherLabel ?? r.subject_label ?? "Counterparty"}
                           </Badge>
                           <Badge

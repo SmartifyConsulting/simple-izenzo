@@ -685,3 +685,7 @@
 [data-app="alpha-bravo"][data-mode="dark"] .bg-amber-400\/70 > svg {
   color: oklch(0 0 0);
 }
+
+/* Counterparty accent: royal blue on light, sky blue on dark (royal blue vanishes on black). */
+:root { --cp-blue: #4169e1; }
+[data-mode="dark"], .dark { --cp-blue: oklch(0.74 0.14 230); }

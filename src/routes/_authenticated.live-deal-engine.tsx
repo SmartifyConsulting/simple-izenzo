@@ -2462,7 +2462,7 @@ function LiveDealEngine() {
               // stepper without touching either component.
               style={
                 org?.id && dealTx?.counterparty_org_id === org.id
-                  ? ({ "--throb-accent": "#4169e1" } as CSSProperties)
+                  ? ({ "--throb-accent": "var(--cp-blue)" } as CSSProperties)
                   : undefined
               }
             >
@@ -2714,7 +2714,7 @@ function LiveDealEngine() {
                     (negotiationTurn === "accepted" || dealTx.wad_completed_at) &&
                     counterpartyIdentity?.name && (
                     <div className="mt-1.5 flex flex-wrap items-center gap-2 border-t border-border pt-1.5">
-                      <User className="h-4 w-4 shrink-0 text-[#4169e1]" aria-label="Counterparty" />
+                      <User className="h-4 w-4 shrink-0 text-[var(--cp-blue)]" aria-label="Counterparty" />
                       <span className="min-w-0 truncate text-sm font-semibold text-foreground">
                         {counterpartyIdentity.name}
                       </span>
@@ -3144,13 +3144,15 @@ function LiveDealEngine() {
                       {dbHasChosenParty && !dealTx?.poi_sealed_at && (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <button
+                            <Button
                               type="button"
+                              size="sm"
+                              variant="outline"
+                              className="shrink-0"
                               title="Not happy with the online screening findings? Pick someone else."
-                              className="shrink-0 text-[11px] font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"
                             >
                               Change Party
-                            </button>
+                            </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
