@@ -442,18 +442,26 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
       .maybeSingle();
     const bidderEmail = bidderProfile?.email ?? null;
 
-    let toEmail: string | null = cp.contact_email;
+    let toEmail: string | null = null;
     let website = cp.website;
     let onPlatform = false;
+    // Where the address came from — shown in brackets in the email while we're testing.
+    let emailSource: string | null = null;
 
-    // Tier 1a: a registered platform organisation by this name — a real address, not a guess.
-    if (!toEmail) {
+    // Tier 1a: a registered in-app organisation by this name is always preferred — a real
+    // address, so nothing ever needs to be guessed.
+    {
       const org = await findRegisteredOrg(supabase, cp.name);
       if (org?.primary_contact_email) {
         toEmail = org.primary_contact_email;
         onPlatform = true;
+        emailSource = "In app — registered Izenzo organisation";
       }
       if (!website) website = org?.website ?? null;
+    }
+    if (!toEmail && cp.contact_email) {
+      toEmail = cp.contact_email;
+      emailSource = "Web scrape — address found during the counterparty search";
     }
 
     const { loadOpenAiApiKey } = await import("@/lib/openai.server");
@@ -471,7 +479,10 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
     // Tier 1c: a website is known — read it for a literal, verbatim email before ever guessing.
     if (!toEmail && website && canSearch) {
       const { email } = await readContactFromSite(cp.name, website, apiKey!, tavilyKey, { transactionId: cp.transaction_id });
-      if (email) toEmail = email;
+      if (email) {
+        toEmail = email;
+        emailSource = `Client's own website — published on ${website}`;
+      }
     }
 
     if (toEmail || website) {
@@ -532,28 +543,34 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
       return { sent: false, reason: "email-not-connected" as const };
     }
 
+    // The one regular counterparty invitation — used for confirmed AND guessed addresses.
+    // While testing, a bracketed note says where the address came from.
+    function regularCounterpartyHtml(sourceNote: string | null): string {
+      return (
+        `<p>Hello,</p>` +
+        (sourceNote
+          ? `<p style="font-size:12px;color:#6b7280;">(Testing only — email address source: ${sourceNote})</p>`
+          : "") +
+        `<p>Good news — a verified party on the Izenzo Trading Gateway has selected <strong>${cp.name}</strong> ` +
+        `as a potential counterparty for the opportunity below. The reference above links straight to it ` +
+        `once you're signed in.</p>` +
+        dealDetailsHtml +
+        `<p>Izenzo is a governed trading platform: every match carries a hash-sealed Proof of Intent ` +
+        `and independent verification at every step, so both sides can move with confidence.</p>` +
+        accountCtaHtml(claimUrl) +
+        `<p>Regards,<br>Izenzo Trading</p>`
+      );
+    }
+
     if (toEmail) {
-      // Tier 1: a real, confirmed address — send it there directly, cc the bidder. The link goes
-      // straight to the claim page: signing in (or creating an account, if they don't have one
-      // yet) links their organisation to this specific deal and opens the same workspace,
-      // restricted to their view of it.
+      // Tier 1: a real, confirmed address — send it there directly, cc the bidder.
       try {
       await sendEmail(creds, {
         to: toEmail,
         ...(bidderEmail ? { cc: [bidderEmail] } : {}),
         usage: { operation: "outreach_email", transactionId: cp.transaction_id },
         subject: `${cp.name}, you've been matched to a live opportunity on Izenzo`,
-        html: renderBrandedEmail(
-          `<p>Hello,</p>` +
-            `<p>Good news — a verified party on the Izenzo Trading Gateway has selected <strong>${cp.name}</strong> ` +
-            `as a potential counterparty for the opportunity below. The reference above links straight to it ` +
-            `once you're signed in.</p>` +
-            dealDetailsHtml +
-            `<p>Izenzo is a governed trading platform: every match carries a hash-sealed Proof of Intent ` +
-            `and independent verification at every step, so both sides can move with confidence.</p>` +
-            accountCtaHtml(claimUrl) +
-            `<p>Regards,<br>Izenzo Trading</p>`,
-        ),
+        html: renderBrandedEmail(regularCounterpartyHtml(emailSource)),
       });
       } catch (e) {
         // Recorded on the deal so a failed send is never silent.
@@ -607,24 +624,33 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
     if (!bidderEmail) return { sent: false, reason: "no-contact-and-no-bidder-email" as const };
 
     if (guessedEmails.length > 0) {
-      // Tier 2: no confirmed address — bidder is the visible recipient, guesses are bcc'd so they
-      // never see each other. Admin is bcc'd too, and every address tried is written into the
-      // email body (not just a count) and onto the deal's own event log — the bidder and admin
-      // team both need to know exactly which addresses were guessed, since none of them is
-      // confirmed to be real and any of them could be why the counterparty never actually
-      // received anything.
+      // Tier 2: no confirmed address. Each guessed address gets the SAME regular counterparty
+      // email a confirmed contact receives (one send per address, so they never see each other),
+      // with a testing note saying the address was guessed. The bidder and admin get a summary.
+      const guessNote = `Guessed — likely address at ${cp.website ?? "their"} domain (not confirmed)`;
+      for (const g of guessedEmails) {
+        try {
+          await sendEmail(creds, {
+            to: g,
+            usage: { operation: "outreach_email_guessed", transactionId: cp.transaction_id },
+            subject: `${cp.name}, you've been matched to a live opportunity on Izenzo`,
+            html: renderBrandedEmail(regularCounterpartyHtml(guessNote)),
+          });
+        } catch {
+          // One bad guess shouldn't stop the others.
+        }
+      }
       const guessedList = guessedEmails.map((e) => `<li style="font-family:monospace;">${e}</li>`).join("");
       await sendEmail(creds, {
         to: bidderEmail,
-        bcc: [...guessedEmails, ADMIN_EMAIL],
+        bcc: [ADMIN_EMAIL],
         usage: { operation: "outreach_email_guessed", transactionId: cp.transaction_id },
         subject: `Reaching out to ${cp.name} on your behalf`,
         html: renderBrandedEmail(
           `<p>Hello,</p>` +
-            `<p>We couldn't confirm a published contact address for <strong>${cp.name}</strong>, so — to ` +
-            `give this the best chance of reaching them — we've sent a best-effort outreach for ` +
-            `${dealName} to the following likely address${guessedEmails.length === 1 ? "" : "es"} ` +
-            `at their domain, blind copied on this message so you can see exactly what went out:</p>` +
+            `<p>We couldn't find ${cp.name} in the app, on file from the web scrape, or published on their ` +
+            `own website, so the standard counterparty invitation for ${dealName} was sent to these likely ` +
+            `address${guessedEmails.length === 1 ? "" : "es"}:</p>` +
             `<ul style="margin:8px 0;padding-left:20px;">${guessedList}</ul>` +
             `<p>These are educated guesses, not confirmed contacts — delivery isn't guaranteed (one or more may ` +
             `bounce or simply go unread), so it's worth following up directly if you know another way to reach ` +
