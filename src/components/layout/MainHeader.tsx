@@ -154,28 +154,6 @@ export function MainHeader() {
               <ThemeToggle />
               <ProfileAvatarMenu />
             </>
-          ) : isHome ? (
-            <>
-              <div className="flex items-center gap-1 rounded-full border border-border p-1">
-                <SignInModal defaultTab="signin" next={next}>
-                  <button
-                    type="button"
-                    className="rounded-full bg-foreground px-3 py-1 text-xs font-medium text-background transition-colors"
-                  >
-                    Sign In
-                  </button>
-                </SignInModal>
-                <SignInModal defaultTab="signup" next={next}>
-                  <button
-                    type="button"
-                    className="rounded-full px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-                  >
-                    Sign Up
-                  </button>
-                </SignInModal>
-              </div>
-              <ThemeToggle />
-            </>
           ) : (
             <>
               <ThemeToggle />

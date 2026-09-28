@@ -1,12 +1,12 @@
 import { useEffect } from "react";
 import { MainHeader } from "@/components/layout/MainHeader";
-import { applyAppSkin } from "@/lib/appSkin";
+import { applyCurrentStylePreset } from "@/lib/stylePreset";
 
-/** Kept as a thin wrapper so the older content pages (Pricing, Glossary, Contact, Privacy,
- * Terms, Status, product and solution pages) render the exact same menu as every other screen. */
+/** Kept as a thin wrapper so the older content pages render the exact same menu as every other
+ * screen. Applies the user's saved light/dark preset — never forces a skin over it. */
 export function SiteHeader(_props: { logoClassName?: string | undefined; containerClassName?: string | undefined } = {}) {
   useEffect(() => {
-    applyAppSkin("izenzo");
+    applyCurrentStylePreset();
   }, []);
 
   return <MainHeader />;

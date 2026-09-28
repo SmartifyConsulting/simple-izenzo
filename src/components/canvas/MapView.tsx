@@ -229,9 +229,10 @@ const REST_ARROWS: Arrow[] = [
     { x: ENTRY_EXIT_FRAME.x - ARROW_GAP, y: cy(ENTRY_EXIT_FRAME) },
     { x: FINALITY_FRAME.x + FINALITY_FRAME.w + ARROW_GAP, y: cy(ENTRY_EXIT_FRAME) },
   ),
+  // Step 3 flows into Entry/Exit (arrowhead lands on the Entry/Exit frame).
   line(
-    { x: ENTRY_EXIT_FRAME.x + ENTRY_EXIT_FRAME.w + ARROW_GAP, y: cy(EXECUTION_FRAME) },
     { x: EXECUTION_FRAME.x - ARROW_GAP, y: cy(EXECUTION_FRAME) },
+    { x: ENTRY_EXIT_FRAME.x + ENTRY_EXIT_FRAME.w + ARROW_GAP, y: cy(EXECUTION_FRAME) },
   ),
   // Step 4 into Memory: straight up out of the Finality frame, then a single right-angle turn
   // right into the circle at its centre height (Memory now sits to Finality's right, not its
@@ -392,6 +393,7 @@ function DocumentsFolder({
             ? "cursor-default border-muted-foreground/30"
             : "border-muted-foreground/50 hover:border-foreground/60 hover:bg-card/60",
           justFiled && "scale-105 border-success bg-success/10",
+          open && "scale-105 border-solid border-primary bg-primary/10 shadow-md ring-2 ring-primary/40",
         )}
       >
         <FolderOpen
@@ -775,7 +777,7 @@ export function MapView({
         })}
 
         {/* Step 2 — compliance & governance */}
-        {node("poi", "Seal Intent", "trading", "poi", Building2, { overrideKey: "poi" })}
+        {node("poi", "Proof of Intent", "trading", "poi", Building2, { overrideKey: "poi" })}
 
         {/* After Seal Intent the Responder reviews the Offer: Approve, Counter or Reject — the
             Counter Offer loop can go back and forth until agreement, which opens Without a Doubt.
@@ -793,7 +795,7 @@ export function MapView({
         })}
         {node("withoutADoubt", "Without a Doubt", "compliance", "wad", Diamond, {
           overrideKey: "wad",
-          sub: "KYC & KYB on each other",
+          sub: "KYC & KYB HARD GATE",
           subTone: "gate",
           // White on the dark (Ink & Aqua) canvas — a black diamond disappeared against it —
           // staying black only on the light skin.
@@ -812,8 +814,9 @@ export function MapView({
             pulsed together the moment Execution opened. Only Concept is actually built out, so
             only it reads its real state; the other two stay a plain, non-pulsing "open" tile. */}
         {node("concept", "Concept", "execution", "preparation")}
-        {node("prefeasibility", "Pre-feasibility", "execution", "preparation", undefined, { state: "open" })}
-        {node("feasibility", "Feasibility", "execution", "preparation", undefined, { state: "open" })}
+        {/* Same text tone as Concept/Bankability: mirror Bankability's state (never pulses itself). */}
+        {node("prefeasibility", "Pre-feasibility", "execution", "preparation", undefined, { state: st("execution", "bankability") === "active" ? "open" : st("execution", "bankability") })}
+        {node("feasibility", "Feasibility", "execution", "preparation", undefined, { state: st("execution", "bankability") === "active" ? "open" : st("execution", "bankability") })}
         {node("bankability", "Bankability", "execution", "bankability")}
         {node("implementation", "Implementation", "execution", "implementation")}
         {/* Entry/Exit sits between the Step 3 and Step 4 frames, on its own. */}
@@ -895,7 +898,7 @@ export function MapView({
           {memoryUpdating && (
             <span
               role="status"
-              className="absolute left-1/2 top-[calc(50%+42px)] flex -translate-x-1/2 items-baseline whitespace-nowrap text-[9px] italic leading-snug text-amber-700"
+              className="absolute left-1/2 top-[calc(50%+42px)] flex -translate-x-1/2 items-baseline whitespace-nowrap text-[12px] font-semibold italic leading-snug text-white"
             >
               Updating memory
               {[0, 1, 2, 3, 4, 5].map((i) => (

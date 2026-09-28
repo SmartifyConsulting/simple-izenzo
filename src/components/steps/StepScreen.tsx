@@ -1,4 +1,5 @@
 import { hasSeenOfferCelebration, markOfferCelebrationSeen } from "@/lib/celebrationSeen";
+import { GovernanceCard } from "@/components/steps/GovernanceCard";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -31,7 +32,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { sealProofOfIntent, completeWad, runAiProposal, searchCounterparties, extractMaterialTerms } from "@/lib/izenzo.functions";
+import { sealProofOfIntent, completeWad, payWad, getWadPaid, runAiProposal, searchCounterparties, extractMaterialTerms } from "@/lib/izenzo.functions";
 import { notifyChosenCounterparty } from "@/lib/counterpartyOutreach.functions";
 import { sourceLabel, userFacingText } from "@/lib/userFacingText";
 import { type ScreeningCheck } from "@/lib/screening.functions";
@@ -43,7 +44,7 @@ import { useAuth } from "@/lib/auth";
 import { VerificationPanel } from "@/components/verification/VerificationPanel";
 import { Logo } from "@/components/Logo";
 import { MutualEngagementPanel } from "@/components/engagement/MutualEngagementPanel";
-import { attachLegalDocument, getEngagement, setDiligenceState, signDocument, type Side } from "@/lib/engagement.functions";
+import { attachLegalDocument, getEngagement, signDocument, type Side } from "@/lib/engagement.functions";
 import { getPartyRegistrationInfo } from "@/lib/partyRegistration.functions";
 import { generateConceptBrief } from "@/lib/conceptBrief.functions";
 import { generateConceptQuestions } from "@/lib/conceptQuestions.functions";
@@ -128,7 +129,7 @@ function CertificateBlock({
         Draft
       </span>
       <div className="relative flex items-center justify-between gap-3 pb-3">
-        <Logo />
+        <img src="/izenzo-logo-certificate.png" alt="Izenzo" className="h-14 w-auto rounded-md bg-white" />
       </div>
       <p className="mt-4 text-center font-sans text-sm font-bold uppercase tracking-[0.14em] text-foreground">
         {heading}
@@ -263,6 +264,7 @@ function Empty({ text }: { text: string }) {
 export function StepScreen(props: Props) {
   return (
     <div className="space-y-8">
+      <GovernanceCard stage={props.stage} step={props.step} />
       <Body {...props} />
     </div>
   );
@@ -1661,8 +1663,19 @@ function PoiStep({ tx, reload, onChangeParty }: Props) {
       // intent can still be walked back (a different party chosen, the seal never paid for), so
       // sealing is the point this is a real enough commitment to email them about. Best-effort
       // and never blocks the seal itself.
-      if (chosenParty?.id) {
-        notifyChosen({ data: { counterpartyId: chosenParty.id } })
+      // Read the chosen party fresh at seal time — the cached query can be stale or still empty
+      // if the party was only just chosen, which silently skipped the email before.
+      const { data: freshChosen } = await supabase
+        .from("counterparties")
+        .select("id")
+        .eq("transaction_id", tx.id)
+        .eq("status", "chosen")
+        .order("chosen_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const chosenId = (freshChosen?.id as string | undefined) ?? chosenParty?.id;
+      if (chosenId) {
+        notifyChosen({ data: { counterpartyId: chosenId } })
           .then((res) => {
             if (res.method === "platform" || res.method === "web") {
               toast.success("The counterparty has been emailed about this deal.");
@@ -1854,6 +1867,9 @@ function WadStep({ tx, reload, onContinue }: Props) {
   const { data: engagement } = useQuery({
     queryKey: ["engagement", tx.id],
     queryFn: () => loadEngagement({ data: { transactionId: tx.id } }),
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
   const offerApproved = engagement?.decided === "accepted";
   const loadPartyRegistration = useServerFn(getPartyRegistrationInfo);
@@ -1877,10 +1893,30 @@ function WadStep({ tx, reload, onContinue }: Props) {
   const [preScreenOpenOverride, setPreScreenOpenOverride] = useState<boolean | null>(null);
   const [revealCertificate, setRevealCertificate] = useState(false);
   const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
-  const [skipDialogOpen, setSkipDialogOpen] = useState(false);
-  const [skipReason, setSkipReason] = useState("");
-  const [skipBusy, setSkipBusy] = useState(false);
-  const waiveDiligence = useServerFn(setDiligenceState);
+  const payWadFn = useServerFn(payWad);
+  const getWadPaidFn = useServerFn(getWadPaid);
+  const [paying, setPaying] = useState(false);
+  const { data: wadPaidData, refetch: refetchWadPaid } = useQuery({
+    queryKey: ["wad-paid", tx.id],
+    queryFn: () => getWadPaidFn({ data: { transactionId: tx.id } }),
+  });
+  const wadUnlocked = Boolean(tx.wad_completed_at) || Boolean(wadPaidData?.paid);
+  // Collapses once both parties are verified at registration and this side has paid.
+  const preScreenDone =
+    Boolean(myRegistration?.identityVerified) && Boolean(otherRegistration?.identityVerified);
+  const preScreenOpen = preScreenOpenOverride ?? !preScreenDone;
+  async function onPayWad() {
+    setPaying(true);
+    try {
+      await payWadFn({ data: { transactionId: tx.id } });
+      await refetchWadPaid();
+      toast.success("Paid — KYC and KYB checks are now open.");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setPaying(false);
+    }
+  }
   const { data: chosenCp } = useQuery({
     queryKey: ["chosen-counterparty-rating", tx.id],
     queryFn: async () => {
@@ -2056,27 +2092,6 @@ function WadStep({ tx, reload, onContinue }: Props) {
     }
   }
 
-  // Skips KYC and KYB outright rather than waiting on either check — genuinely risky (this is the
-  // one hard gate meant to catch a fraudulent or sanctioned counterparty), so it's behind its own
-  // warning dialog and a mandatory written reason. Recorded exactly like any other diligence
-  // override: setDiligenceState's own "waived" state writes a transaction_event with that reason,
-  // so this leaves the same audit trail a real reviewer decision would.
-  async function skipVerification() {
-    if (skipReason.trim().length < 5) return;
-    setSkipBusy(true);
-    try {
-      await waiveDiligence({ data: { transactionId: tx.id, check: "kyc", state: "waived", reason: skipReason.trim() } });
-      await waiveDiligence({ data: { transactionId: tx.id, check: "kyb", state: "waived", reason: skipReason.trim() } });
-      await decide("cleared", { kyc: true, kyb: true });
-      setSkipDialogOpen(false);
-      setSkipReason("");
-      toast.warning("KYC/KYB skipped — recorded on the deal for audit purposes.");
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setSkipBusy(false);
-    }
-  }
 
   // Once both sides' Didit checks have genuinely cleared, Without a Doubt completes itself —
   // there is no separate manual "Run Verification" step to fake past any more; the real result
@@ -2101,13 +2116,15 @@ function WadStep({ tx, reload, onContinue }: Props) {
       markOfferCelebrationSeen(key);
       setWadCelebrate(true);
     }
+    // Once the deal has already moved on, opening this frame is a review — never auto-close it.
+    if ((tx as { wad_continued_at?: string | null }).wad_continued_at) return;
     const t = setTimeout(() => onContinue?.(), 1200);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tx.wad_completed_at]);
-  const wadConfetti = wadCelebrate ? (
-    <Confetti message="KYC and KYB passed on both sides — on to the legal documents." onDone={() => setWadCelebrate(false)} />
-  ) : null;
+  // KYC/KYB congratulations removed at the client's request — WaD passing advances quietly.
+  void wadCelebrate;
+  const wadConfetti = null;
 
   if (tx.wad_completed_at && revealCertificate) {
     // No outer Panel/title here — the frame this sits inside already reads "Without a Doubt", so
@@ -2131,7 +2148,7 @@ function WadStep({ tx, reload, onContinue }: Props) {
     );
   }
 
-  const counterpartyRegistered = Boolean(tx.counterparty_org_id);
+  const counterpartyRegistered = Boolean(tx.counterparty_org_id || engagement?.counterpartyLinked);
 
   // The Offer itself now has its own frame above this one (see live-deal-engine.tsx) — this step
   // has nothing to verify against a deal that isn't agreed yet, so it just waits.
@@ -2151,26 +2168,18 @@ function WadStep({ tx, reload, onContinue }: Props) {
         it as this panel's own title doubled it up. */}
     <Panel
       footer={
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <TokenGateFooter cost={WAD_COST} />
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-destructive/40 text-destructive hover:bg-destructive/10"
-              disabled={busy || shortOnTokens}
-              onClick={() => setSkipDialogOpen(true)}
-            >
-              Skip Verification
-            </Button>
-            <Button size="sm" variant="outline" disabled={busy || shortOnTokens} onClick={() => setExitConfirmOpen(true)}>
-              Exit
-            </Button>
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+            {wadUnlocked && (
+              <Button size="sm" variant="outline" disabled={busy || shortOnTokens} onClick={() => setExitConfirmOpen(true)}>
+                Exit
+              </Button>
+            )}
             {/* Both sides clear themselves (see the effect above), but moving on to Legal
                 Agreements is still a person's own click — collapsing this frame and opening the
                 next one isn't something that should happen out from under someone still reading
                 the result. */}
-            {tx.wad_completed_at && (
+            {(tx.wad_completed_at || bothCleared) && (
               <Button
                 size="sm"
                 onClick={() => {
@@ -2205,13 +2214,10 @@ function WadStep({ tx, reload, onContinue }: Props) {
       {/* The outer frame this whole panel sits inside already carries the "Without a Doubt" grey
           pill heading — this copy is the next thing under it, not a second heading of its own. */}
       <p className="mb-1.5 text-xs text-muted-foreground">
-        Complete your own identity (KYC) and company (KYB) verification, with both results posted
+        Complete your own identity <strong className="font-semibold text-foreground">(KYC) and company (KYB) verification</strong>, with both results posted
         to the deal so you each have the same independent assurance that the other party has been
         verified. “Without a Doubt” clears automatically once both parties are verified.
       </p>
-      <div className="mb-4">
-        <TokenGateFooter cost={WAD_COST} />
-      </div>
 
       {!offerApproved && (
         <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
@@ -2265,162 +2271,108 @@ function WadStep({ tx, reload, onContinue }: Props) {
         </div>
       )}
 
-      {/* What each side put on file at registration — same two-column, other-party-left-in-blue,
-          you-right-in-green layout as the KYC/KYB checks below, so both frames read the same way.
-          Never the checks themselves (that's what KYC/KYB verify) — just what each side already
-          told the platform they are. */}
       {(myRegistration || otherRegistration) && (
         <div className="mb-4 rounded-lg border border-border p-3">
-          <p className="label-caps font-sans">ID Number + AtA / Proof of Address</p>
+          <button
+            type="button"
+            onClick={() => setPreScreenOpenOverride(!preScreenOpen)}
+            className="flex w-full items-center justify-between gap-2 text-left"
+          >
+            <span className="flex items-center gap-2">
+              <span className="label-caps font-sans">Pre-Screening on App Registration</span>
+              {preScreenDone && (
+                <Badge variant="outline" className="border-emerald-600 bg-emerald-600 font-normal text-white">
+                  Both Verified
+                </Badge>
+              )}
+            </span>
+            <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", preScreenOpen && "rotate-180")} />
+          </button>
+          {preScreenOpen && (
           <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5 rounded-lg border border-[#4169e1]/25 bg-[#4169e1]/5 p-3 sm:border-r-2">
+            <div className="space-y-1.5 rounded-lg border border-[var(--cp-blue)]/25 bg-[var(--cp-blue)]/5 p-3 sm:border-r-2">
               {otherRegistration ? (
                 <>
-                  <Badge variant="secondary" className="bg-[#4169e1]/15 font-normal text-[#1c2f6b]">
+                  <Badge variant="secondary" className="bg-[var(--cp-blue)]/15 font-normal text-[#1c2f6b] dark:bg-[var(--cp-blue)] dark:text-white">
                     {otherRegistration.fullName ?? "Counterparty"}
                   </Badge>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground dark:text-white">
                     {otherRegistration.idNumberType === "passport" ? "Passport" : "ID"}:{" "}
                     {otherRegistration.idNumberMasked ?? "—"}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground dark:text-white">
                     {otherRegistration.documentLabel}: {otherRegistration.documentName ?? "Not on file"}
                   </p>
                   {otherRegistration.identityVerified && (
-                    <Badge variant="outline" className="border-success/40 bg-success/10 font-normal text-success">
+                    <Badge variant="outline" className="border-emerald-600 bg-emerald-600 font-normal text-white">
                       Verified
                     </Badge>
                   )}
                 </>
               ) : (
-                <p className="text-xs text-muted-foreground">Not on file yet for the other party.</p>
+                <p className="text-xs text-muted-foreground dark:text-white">Not on file yet for the other party.</p>
               )}
             </div>
             <div className="space-y-1.5 rounded-lg border border-emerald-600/25 bg-emerald-600/5 p-3">
               {myRegistration ? (
                 <>
-                  <Badge variant="secondary" className="bg-emerald-600/15 font-normal text-emerald-700">
-                    You
+                  <Badge variant="secondary" className="bg-emerald-600/15 font-normal text-emerald-700 dark:bg-emerald-600 dark:text-white">
+                    {myRegistration.fullName ?? "Your company"}
                   </Badge>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground dark:text-white">
                     {myRegistration.idNumberType === "passport" ? "Passport" : "ID"}:{" "}
                     {myRegistration.idNumberMasked ?? "—"}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground dark:text-white">
                     {myRegistration.documentLabel}: {myRegistration.documentName ?? "Not on file"}
                   </p>
                   {myRegistration.identityVerified && (
-                    <Badge variant="outline" className="border-success/40 bg-success/10 font-normal text-success">
+                    <Badge variant="outline" className="border-emerald-600 bg-emerald-600 font-normal text-white">
                       Verified
                     </Badge>
                   )}
                 </>
               ) : (
-                <p className="text-xs text-muted-foreground">Not on file yet.</p>
+                <p className="text-xs text-muted-foreground dark:text-white">Not on file yet.</p>
               )}
             </div>
           </div>
+          )}
         </div>
       )}
+      {!wadUnlocked && (
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <TokenGateFooter cost={WAD_COST} />
+          <Button size="sm" disabled={paying || shortOnTokens || !offerApproved} onClick={onPayWad}>
+            {paying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : `Pay ${WAD_COST} tokens to unlock`}
+          </Button>
+          <Button size="sm" variant="outline" className="ml-auto" disabled={busy} onClick={() => setExitConfirmOpen(true)}>
+            Exit
+          </Button>
+        </div>
+      )}
+      {!wadUnlocked ? (
+        <p className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Lock className="h-3.5 w-3.5" /> The KYC and KYB checks unlock once the {WAD_COST}-token fee is paid.
+        </p>
+      ) : (
+      <>
+      {/* What each side put on file at registration — same two-column, other-party-left-in-blue,
+          you-right-in-green layout as the KYC/KYB checks below, so both frames read the same way.
+          Never the checks themselves (that's what KYC/KYB verify) — just what each side already
+          told the platform they are. */}
 
-      {priorSubjectRows.length > 0 && (() => {
-        const preScreenAllPassed = priorSubjectRows.every((r) => r.status === "passed");
-        const preScreenOpen = preScreenOpenOverride ?? !preScreenAllPassed;
-        return (
-          <div className="mb-4 rounded-lg border border-border p-3">
-            <button
-              type="button"
-              onClick={() => setPreScreenOpenOverride(!preScreenOpen)}
-              className="flex w-full items-center justify-between gap-2 text-left"
-            >
-              <span className="flex items-center gap-2">
-                <span className="label-caps font-sans">Pre-Screening</span>
-                {preScreenAllPassed && (
-                  <Badge variant="outline" className="border-emerald-600 bg-emerald-600 font-normal text-white">
-                    Both verified
-                  </Badge>
-                )}
-              </span>
-              <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", preScreenOpen && "rotate-180")} />
-            </button>
-            {preScreenOpen && (
-              <>
-                {/* Same green/blue, other-party-left split as the KYC/KYB checks below, one row per
-                    check type per side, rather than a single flat list that didn't say whose result
-                    was whose. */}
-                <div className="mt-3 space-y-3">
-                  {priorCheckTypes.map((type) => {
-                    const rowsForType = priorSubjectRows.filter((r) => r.check_type === type);
-                    const mine = rowsForType.find(isMinePrior) ?? null;
-                    const others = rowsForType.filter((r) => !isMinePrior(r));
-                    return (
-                      <div key={type}>
-                        <p className="label-caps font-sans">{CHECK_TYPE_LABEL[type] ?? type}</p>
-                        <div className="mt-1.5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                          <div className="rounded-lg border border-[#4169e1]/25 bg-[#4169e1]/5 p-2.5 sm:border-r-2">
-                            {others.length === 0 ? (
-                              <p className="text-xs text-muted-foreground">No result yet for the other party.</p>
-                            ) : (
-                              others.map((r) => (
-                                <div key={r.id} className="flex items-center justify-between gap-2">
-                                  <Badge variant="secondary" className="bg-[#4169e1]/15 font-normal text-[#1c2f6b]">
-                                    {r.subject_label ?? "Counterparty"}
-                                  </Badge>
-                                  <span
-                                    className={cn(
-                                      "shrink-0 text-xs",
-                                      r.status === "passed"
-                                        ? "text-emerald-500"
-                                        : r.status === "failed" || r.status === "review"
-                                          ? "text-[#F97316]"
-                                          : "text-muted-foreground",
-                                    )}
-                                  >
-                                    {PRIOR_STATUS_LABEL[r.status as string] ?? r.status}
-                                  </span>
-                                </div>
-                              ))
-                            )}
-                          </div>
-                          <div className="rounded-lg border border-emerald-600/25 bg-emerald-600/5 p-2.5">
-                            <div className="flex items-center justify-between gap-2">
-                              <Badge variant="secondary" className="bg-emerald-600/15 font-normal text-emerald-700">
-                                You
-                              </Badge>
-                              <span
-                                className={cn(
-                                  "shrink-0 text-xs",
-                                  mine?.status === "passed"
-                                    ? "text-emerald-500"
-                                    : mine?.status === "failed" || mine?.status === "review"
-                                      ? "text-[#F97316]"
-                                      : "text-muted-foreground",
-                                )}
-                              >
-                                {mine ? PRIOR_STATUS_LABEL[mine.status as string] ?? mine.status : "No result yet"}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                <p className="mt-3 text-xs text-muted-foreground">
-                  These results carry through from the background screening conducted upon registration.
-                </p>
-              </>
-            )}
-          </div>
-        );
-      })()}
 
       <VerificationPanel
         bare
         hideHeader
         transactionId={tx.id}
         checks={["id_document", "kyb"]}
+        myLabel={myRegistration?.fullName ?? null}
+        otherLabel={otherRegistration?.fullName ?? null}
       />
+      </>
+      )}
 
     </Panel>
 
@@ -2445,43 +2397,6 @@ function WadStep({ tx, reload, onContinue }: Props) {
             }}
           >
             Exit trade
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-
-    <Dialog
-      open={skipDialogOpen}
-      onOpenChange={(v) => {
-        setSkipDialogOpen(v);
-        if (!v) setSkipReason("");
-      }}
-    >
-      <DialogContent>
-        <DialogTitle>Skip KYC and KYB?</DialogTitle>
-        <DialogDescription>
-          KYC and KYB verification allows the other party to independently confirm who you are and
-          the company you represent. If you choose to skip verification, they will not have this
-          assurance. Your decision to proceed without KYC and KYB will be recorded on this deal and
-          its clearance certificate for audit purposes, together with the reason you provide below.
-        </DialogDescription>
-        <Textarea
-          value={skipReason}
-          onChange={(e) => setSkipReason(e.target.value)}
-          rows={3}
-          placeholder="Why are you skipping verification? (required)"
-        />
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" size="sm" onClick={() => setSkipDialogOpen(false)}>
-            Undo Skip
-          </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            disabled={skipBusy || skipReason.trim().length < 5}
-            onClick={() => void skipVerification()}
-          >
-            {skipBusy ? "Skipping…" : "Continue"}
           </Button>
         </div>
       </DialogContent>
@@ -2743,13 +2658,13 @@ function BusinessDocsStep({ tx, reload, onContinue }: Props) {
                         key={side}
                         className={cn(
                           "space-y-1.5 p-3",
-                          tone === "emerald" ? "bg-emerald-600/5" : "bg-[#4169e1]/5",
+                          tone === "emerald" ? "bg-emerald-600/5" : "bg-[var(--cp-blue)]/5",
                         )}
                       >
                         <p
                           className={cn(
                             "label-caps font-sans",
-                            tone === "emerald" ? "text-emerald-600" : "text-[#4169e1]",
+                            tone === "emerald" ? "text-emerald-600" : "text-[var(--cp-blue)]",
                           )}
                         >
                           {label}

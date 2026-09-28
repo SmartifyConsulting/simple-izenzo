@@ -128,7 +128,7 @@ export function MutualEngagementPanel({
                     // styles.css).
                     isBidder
                       ? "rounded-bl-sm bg-emerald-600/20 text-emerald-100 theme-light:text-emerald-950"
-                      : "rounded-br-sm bg-[#4169e1]/25 text-blue-100 theme-light:text-[#1c2f6b]",
+                      : "rounded-br-sm bg-[var(--cp-blue)]/25 text-blue-100 theme-light:text-[#1c2f6b]",
                   )}
                 >
                   {/* What happened is a small corner icon, not a repeated line of text — the bubble

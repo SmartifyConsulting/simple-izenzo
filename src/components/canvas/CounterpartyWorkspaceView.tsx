@@ -259,6 +259,16 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
   // matching the bidder's own Live Workspace — previously the Step 1/2 pills were purely
   // decorative (gold once done) while every frame beneath them stayed individually expanded all
   // the time, which never actually collapsed anything.
+  // GRC is finished once the deal has moved on to Execution (or every legal agreement is signed by
+  // both sides) — Legal Agreements then folds into Step 2 and Step 3 · Execution opens on Concept.
+  // Legal Agreements (step "business-docs") is stored under the execution stage, so the stage
+  // alone must not fold GRC — only signed agreements or a step beyond business-docs does.
+  const grcDone =
+    legalAllSigned ||
+    (tx.stage === "execution" && tx.step !== "business-docs") ||
+    tx.stage === "finality" ||
+    tx.stage === "memory";
+
   const [step1Open, setStep1Open] = useState(true);
   const step1AutoCollapsed = useRef(false);
   useEffect(() => {
@@ -298,22 +308,24 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
   return (
     <AppShell wide title={tx.title} description={`You're viewing this deal as its counterparty — read-only, shared for transparency.`}>
       {celebrateApproval && (
-        <Confetti message="The offer has been approved." onDone={() => setCelebrateApproval(false)} />
+        <Confetti txId={tx.id} kind="offer_approved" message="The offer has been approved." onDone={() => setCelebrateApproval(false)} />
       )}
       {legalSignedCelebrate && (
         <Confetti
-          message="Both parties signed — on to Execution."
+          txId={tx.id}
+          kind="legal_signed"
+          message="All Legal Agreements have been mutually signed — on to Execution."
           onDone={() => setLegalSignedCelebrate(false)}
         />
       )}
-      <div className="mx-auto max-w-6xl space-y-4">
+      <div className="w-full space-y-4">
         {/* The registration line spans both columns — who this deal is, and its BID/OFF number. */}
         <div className="glass-node space-y-1.5 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span
               className={
                 "label-caps rounded-full px-2.5 py-1 " +
-                (kind === "offer" ? "bg-[#4169e1] text-white" : "bg-emerald-600 text-white")
+                (kind === "offer" ? "bg-[var(--cp-blue)] text-white" : "bg-emerald-600 text-white")
               }
             >
               {kindWord} Registration
@@ -329,9 +341,12 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
         {/* The same split the bidder gets: the workflow map on the left, the Live Workspace on the
             right. Only the shared record appears here — Search, AI/AI+, Choice and Online Media are
             the bidder's own working steps and never render in this view. */}
-        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          <div className="glass-node p-4" style={{ "--throb-accent": "#4169e1" } as CSSProperties}>
-            <div className="relative w-full" style={{ aspectRatio: "960 / 1050" }}>
+        <div className="grid grid-cols-1 items-stretch gap-4 lg:h-[calc(100vh-270px)] lg:min-h-[560px] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <div
+            className="flex min-h-0 items-center justify-center overflow-hidden rounded-3xl border border-border bg-card p-3 shadow-sm sm:p-5"
+            style={{ "--throb-accent": "var(--cp-blue)" } as CSSProperties}
+          >
+            <div className="relative mx-auto w-full lg:h-full lg:w-auto lg:max-w-full" style={{ aspectRatio: "960 / 1050" }}>
               <MapView
                 tx={tx}
                 reload={reload}
@@ -345,7 +360,7 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="min-h-0 space-y-3 overflow-y-auto pr-1">
             <p className="label-caps text-muted-foreground">Live Workspace</p>
 
             {/* Same "settled record" gold look as the bidder's own Step 1 accordion, and now the
@@ -461,7 +476,7 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
             {tx.poi_sealed_at && step2Open && (
               <>
                 <CollapsibleFrame
-                  label="Seal Intent"
+                  label="Proof of Intent"
                   open={openFrame === "poi"}
                   onToggle={() => toggleFrame("poi")}
                 >
@@ -517,6 +532,12 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
                     <InlineFrame bare viewOnly tx={tx} stage="compliance" step="wad" reload={reload} onClose={() => {}} />
                   </CollapsibleFrame>
                 )}
+
+                {grcDone && (
+                  <CollapsibleFrame label="Legal Agreements" open={openFrame === "legal"} onToggle={() => toggleFrame("legal")}>
+                    <InlineFrame bare tx={tx} stage="execution" step="business-docs" reload={reload} onClose={() => {}} />
+                  </CollapsibleFrame>
+                )}
               </>
             )}
 
@@ -561,7 +582,7 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
                 upload and sign their side of every document. Collapses itself the moment both
                 sides have signed everything (same treatment as the Offer frame above), but can
                 still be reopened by hand afterward. */}
-            {tx.wad_completed_at && (
+            {!grcDone && tx.wad_completed_at && (
               <div className="glass-node p-4">
                 <button
                   type="button"
@@ -584,6 +605,15 @@ export function CounterpartyWorkspaceView({ tx, reload }: { tx: Transaction; rel
               </div>
             )}
 
+
+            {grcDone && (
+              <>
+                <div className="lw-step3 mt-1.5 flex w-full items-center gap-2 rounded-full border-2 border-black bg-black px-3 py-1.5 text-xs font-semibold text-white">
+                  <span className="label-caps rounded-full bg-white px-2.5 py-0.5 text-black">Step 3 · Execution</span>
+                  <span className="ml-auto shrink-0 font-mono text-sm font-bold tracking-wide text-white">{tx.reference}</span>
+                </div>
+              </>
+            )}
 
             {tx.finality_sealed_at && (
               <CollapsibleFrame

@@ -21,7 +21,7 @@
  * that, which never fires — [data-theme] is always "dark", full stop, per stylePreset.ts).
  * Dark is the base/default look throughout, with alpha-bravo as the light override, so this
  * variant is named the same way: use it to override a dark-default color for the light skin. */
-@custom-variant theme-light (&:is([data-app="alpha-bravo"] *));
+@custom-variant theme-light (&:is([data-app="alpha-bravo"]:not([data-mode="dark"]) *));
 
 /*
  * Izenzo design system — "Ink & Aqua": deep navy/ink ground, glass panels, teal signal,
@@ -634,4 +634,65 @@
   background-color: var(--card);
   background-image: none;
   backdrop-filter: none;
+}
+
+/* Dark twin of the light layout: identical structure, black ground, dark grey frames,
+ * white text and lines. Only colour variables change. */
+[data-app="alpha-bravo"][data-mode="dark"] {
+  color-scheme: dark;
+  --background: oklch(0 0 0);
+  --foreground: oklch(0.98 0 0);
+  --card: oklch(0.21 0.006 285);
+  --card-foreground: oklch(0.98 0 0);
+  --popover: oklch(0.21 0.006 285);
+  --popover-foreground: oklch(0.98 0 0);
+  --primary: oklch(0.98 0 0);
+  --primary-foreground: oklch(0 0 0);
+  --secondary: oklch(0.27 0.006 285);
+  --secondary-foreground: oklch(0.98 0 0);
+  --muted: oklch(0.27 0.006 285);
+  --muted-foreground: oklch(0.72 0.01 285);
+  --accent: oklch(0.3 0.006 285);
+  --accent-foreground: oklch(0.98 0 0);
+  --step-pill-bg: oklch(0.98 0 0);
+  --step-pill-fg: oklch(0 0 0);
+  --lw-pill-bg: oklch(0.4 0.005 285);
+  --lw-pill-fg: oklch(1 0 0);
+  --border: oklch(1 0 0 / 55%);
+  --input: oklch(1 0 0 / 55%);
+  --ring: oklch(0.98 0 0);
+  --glass-surface: oklch(0.21 0.006 285);
+  --glass-border: oklch(1 0 0 / 55%);
+  --glass-shadow: none;
+}
+
+/* Dark twin: the workspace window's outer frame disappears into the black page so the Map and
+ * Live Workspace bleed to the screen edges; the yellow "complete" gate bar stays as bright as
+ * in light mode instead of turning muddy over black. */
+[data-app="alpha-bravo"][data-mode="dark"] .lw-window {
+  border-color: transparent;
+  box-shadow: none;
+  left: 0;
+  right: 0;
+  border-radius: 0;
+}
+[data-app="alpha-bravo"][data-mode="dark"] .bg-amber-400\/70 {
+  background-color: oklch(0.85 0.16 86);
+  color: oklch(0 0 0);
+}
+[data-app="alpha-bravo"][data-mode="dark"] .bg-amber-400\/70 > .text-foreground,
+[data-app="alpha-bravo"][data-mode="dark"] .bg-amber-400\/70 > .text-muted-foreground,
+[data-app="alpha-bravo"][data-mode="dark"] .bg-amber-400\/70 > svg {
+  color: oklch(0 0 0);
+}
+
+/* Counterparty accent: royal blue on light, sky blue on dark (royal blue vanishes on black). */
+:root { --cp-blue: #4169e1; }
+[data-mode="dark"], .dark { --cp-blue: oklch(0.74 0.14 230); }
+
+/* Step 3 · Execution bar: elegant white border in dark mode */
+[data-mode="dark"] .lw-step3,
+.dark .lw-step3 {
+  border-width: 1px;
+  border-color: oklch(1 0 0 / 0.85);
 }

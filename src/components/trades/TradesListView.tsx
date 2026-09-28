@@ -566,7 +566,7 @@ export function TradesListView({
                             {t.counterpartyName && (
                               <>
                                 <span className="text-muted-foreground"> → </span>
-                                <span className="text-[#4169e1]">{t.counterpartyName}</span>
+                                <span className="text-[var(--cp-blue)]">{t.counterpartyName}</span>
                               </>
                             )}
                           </p>

@@ -137,7 +137,6 @@ export function mapDiditStatus(raw: string | null | undefined): DiditStatus {
     case "rejected":
       return "failed";
     case "not_started":
-      return "pending";
     case "in_progress":
     case "pending":
       return "in_progress";

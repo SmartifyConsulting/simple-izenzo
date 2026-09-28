@@ -1,3 +1,4 @@
+import { canSeeGovernance } from "@/lib/stepGovernance";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -129,8 +130,8 @@ function AdminPage() {
   // Previously gated behind one hardcoded email — any account with the admin role now sees
   // these too, since that's the same bar the rest of this page is already gated behind.
   const isSuperuser = isAdmin;
-  // Workflow Templates is visible only to georgiaadams.co.za accounts.
-  const canSeeTemplates = (user?.email ?? "").toLowerCase().endsWith("@georgiaadams.co.za");
+  // Workflow Templates is private to Georgia (smartify + georgiaadams.co.za accounts).
+  const canSeeTemplates = canSeeGovernance(user?.email);
   const tabs = ADMIN_TABS.filter((t) => !t.superuserOnly || isSuperuser)
     .filter((t) => !t.hidden)
     .filter((t) => t.value !== "templates" || canSeeTemplates);

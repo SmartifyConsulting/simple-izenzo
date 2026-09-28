@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import {
   CheckCircle2,
   ChevronDown,
+  ChevronUp,
   Download,
   ArrowUp,
   FileCheck2,
@@ -506,7 +507,7 @@ export function DealCanvas({
           ticked list, the way Deal Creation does, and attention moves on to Without a Doubt. */}
       {poiSealed && (
         <div className={cn("mt-3", stepsBoxClass)}>
-          <GateBar label="Seal Intent" cleared />
+          <GateBar label="Proof of Intent" cleared />
           <div className="space-y-1.5">
             {[
               "Counterparties surfaced",
@@ -529,7 +530,7 @@ export function DealCanvas({
 
           <Connector />
           <GateGroup
-            title="Seal Intent"
+            title="Proof of Intent"
             align={focusSide === "offer" ? "right" : "left"}
             forceOpen={Boolean(openProofOfIntent)}
           >
@@ -655,7 +656,7 @@ export function DealCanvas({
             </div>
             {visible("trading", "poi") && (
               <div className={stepsBoxClass}>
-                <GateBar label="Seal Intent" cleared={poi} />
+                <GateBar label="Proof of Intent" cleared={poi} />
               </div>
             )}
           </GateGroup>
@@ -875,9 +876,10 @@ export function InlineFrame({
         <button
           type="button"
           onClick={onClose}
+          aria-label={step === "wad" ? "Collapse" : "Close"}
           className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
         >
-          <X className="h-4 w-4" />
+          {step === "wad" ? <ChevronUp className="h-4 w-4" /> : <X className="h-4 w-4" />}
         </button>
       </div>
       {locked ? (
@@ -1071,13 +1073,7 @@ function ProposalDialog({
                         )}
                         {d.label === "Email" && profile?.contactEmailSource && (
                           <span className="ml-1.5 select-text text-[10px] font-normal text-muted-foreground blur-none">
-                            (
-                            {profile.contactEmailSource === "app"
-                              ? "from the app"
-                              : profile.contactEmailSource === "website"
-                                ? "found on their website"
-                                : "guessed at their domain"}
-                            )
+                            ({profile.contactEmailSource})
                           </span>
                         )}
                       </dd>
@@ -1785,7 +1781,7 @@ export function CounterpartyRecord({
                 )}
               >
                 <span className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-slate-900">{c.name}</span>
+                  <span className="text-sm font-semibold text-foreground">{c.name}</span>
                   {c.score != null && (
                     <span className="shrink-0 rounded-full border border-foreground bg-foreground px-2 py-0.5 text-[11px] font-semibold text-background">
                       {c.score}% match
@@ -2463,7 +2459,7 @@ export function CanvasStart({
     <div className="mx-auto w-full max-w-2xl space-y-3">
       {/* Who the bid/offer is traded as. Only worth asking when there's more than one company to
           choose between — a single-company account would just see a dropdown with one option. */}
-      {orgs.length > 1 && (
+      {orgs.filter((o) => !/interpol/i.test(o.name)).length > 1 && (
         <div className="flex items-center gap-2">
           <Label htmlFor="trade-as" className="shrink-0 text-xs text-muted-foreground">
             Trade as
@@ -2476,7 +2472,7 @@ export function CanvasStart({
               <SelectValue placeholder="Choose a company" />
             </SelectTrigger>
             <SelectContent>
-              {orgs.map((o) => (
+              {orgs.filter((o) => !/interpol/i.test(o.name)).map((o) => (
                 <SelectItem key={o.id} value={o.id} className="text-xs">
                   {o.name}
                 </SelectItem>
@@ -2503,7 +2499,7 @@ export function CanvasStart({
           onClick={() => setStartDirection("offer")}
           className={cn(
             "rounded-full px-3 py-1 text-xs font-semibold transition-colors",
-            startDirection === "offer" ? "bg-[#4169e1] text-white" : "text-muted-foreground hover:text-foreground",
+            startDirection === "offer" ? "bg-[var(--cp-blue)] text-white" : "text-muted-foreground hover:text-foreground",
           )}
         >
           Sell

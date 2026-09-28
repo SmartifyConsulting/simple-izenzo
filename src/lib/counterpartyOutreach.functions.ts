@@ -201,6 +201,55 @@ async function findOfficialWebsite(
   }
 }
 
+/** Opens the company's own home page and contact pages and returns the best email address
+ * literally printed there (text or mailto:). Own-domain role addresses rank first. */
+async function scrapeSiteEmails(website: string): Promise<{ email: string; page: string } | null> {
+  let base: URL;
+  try {
+    base = new URL(website);
+  } catch {
+    return null;
+  }
+  const domain = base.hostname.replace(/^www\./, "").toLowerCase();
+  const get = async (u: string) => {
+    try {
+      const r = await fetch(u, {
+        signal: AbortSignal.timeout(10_000),
+        headers: { "user-agent": "Mozilla/5.0 (compatible; IzenzoBot/1.0)" },
+      });
+      return r.ok ? await r.text() : "";
+    } catch {
+      return "";
+    }
+  };
+  const found: { email: string; page: string }[] = [];
+  const collect = (html: string, page: string) => {
+    const text = html.replace(/&#64;|&commat;/gi, "@");
+    for (const m of text.matchAll(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi)) {
+      const e = m[0].toLowerCase().replace(/\.$/, "");
+      if (/\.(png|jpe?g|gif|svg|webp)$/.test(e)) continue;
+      if (!found.some((f) => f.email === e)) found.push({ email: e, page });
+    }
+  };
+  const home = await get(base.toString());
+  collect(home, base.toString());
+  const pages = new Set<string>();
+  for (const m of home.matchAll(/href="([^"#]*contact[^"#]*)"/gi)) {
+    try {
+      const u = new URL(m[1]!, base);
+      if (u.hostname.replace(/^www\./, "") === domain) pages.add(u.toString());
+    } catch { /* ignore */ }
+  }
+  pages.add(new URL("/contact", base).toString());
+  pages.add(new URL("/contact-us", base).toString());
+  for (const p of [...pages].slice(0, 4)) collect(await get(p), p);
+  if (found.length === 0) return null;
+  const rank = (e: string) =>
+    (e.endsWith(`@${domain}`) ? 0 : 2) + (/^(info|sales|contact|trade|enquiries|hello)@/.test(e) ? 0 : 1);
+  found.sort((a, b) => rank(a.email) - rank(b.email));
+  return found[0]!;
+}
+
 /** Reads a known website — through Tavily's own extracted page text when configured, OpenAI's web
  * search otherwise — for a contact email and/or phone number literally published on it. Never
  * guesses or constructs either; NONE means nothing was found, not that nothing exists. */
@@ -210,7 +259,10 @@ async function readContactFromSite(
   apiKey: string,
   tavilyKey: string | null,
   usage?: { transactionId?: string | null | undefined; orgId?: string | null | undefined },
-): Promise<{ email: string | null; phone: string | null }> {
+): Promise<{ email: string | null; phone: string | null; foundOn?: string }> {
+  // First, actually open the site (home + contact pages) and read any printed/mailto address.
+  const direct = await scrapeSiteEmails(website);
+  if (direct) return { email: direct.email, phone: null, foundOn: direct.page };
   try {
     let pageText = "";
     if (tavilyKey) {
@@ -442,44 +494,45 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
       .maybeSingle();
     const bidderEmail = bidderProfile?.email ?? null;
 
-    let toEmail: string | null = cp.contact_email;
+    let toEmail: string | null = null;
     let website = cp.website;
     let onPlatform = false;
-    // Tracked alongside the address itself so the bidder can see how it was actually obtained —
-    // already on file (the app), read off their own website, or (separately, for guesses) an
-    // unconfirmed AI guess at their domain.
-    let emailSource: "app" | "website" | null = toEmail ? "app" : null;
+    // Where the address came from — shown in brackets in the email while we're testing.
+    let emailSource: string | null = null;
 
-    // Tier 1a: a registered platform organisation by this name — a real address, not a guess.
-    if (!toEmail) {
+    // Tier 1a: a registered in-app organisation by this name is always preferred — a real
+    // address, so nothing ever needs to be guessed.
+    {
       const org = await findRegisteredOrg(supabase, cp.name);
       if (org?.primary_contact_email) {
         toEmail = org.primary_contact_email;
         onPlatform = true;
-        emailSource = "app";
+        emailSource = "In app — registered Izenzo organisation";
       }
       if (!website) website = org?.website ?? null;
     }
-
     const { loadOpenAiApiKey } = await import("@/lib/openai.server");
     const apiKey = await loadOpenAiApiKey();
     const { loadTavilyApiKey } = await import("@/lib/tavily.server");
     const tavilyKey = apiKey ? await loadTavilyApiKey() : null;
     const canSearch = Boolean(apiKey);
 
-    // Tier 1b: no website on file at all yet — a quick best-effort search for one, the same way
-    // enrichCounterparty does, so there's at least a domain to try before giving up.
+    // Tier 1b: the company's own website is scraped FIRST — find it if we don't have it yet.
     if (!toEmail && !website && canSearch) {
       website = await findOfficialWebsite(cp.name, apiKey!, tavilyKey, { transactionId: cp.transaction_id });
     }
-
-    // Tier 1c: a website is known — read it for a literal, verbatim email before ever guessing.
     if (!toEmail && website && canSearch) {
-      const { email } = await readContactFromSite(cp.name, website, apiKey!, tavilyKey, { transactionId: cp.transaction_id });
+      const { email, foundOn } = await readContactFromSite(cp.name, website, apiKey!, tavilyKey, { transactionId: cp.transaction_id });
       if (email) {
         toEmail = email;
-        emailSource = "website";
+        emailSource = `Company website — found on ${foundOn ?? website}`;
       }
+    }
+
+    // Tier 1c: only if the site publishes nothing, fall back to the address from the web scrape.
+    if (!toEmail && cp.contact_email) {
+      toEmail = cp.contact_email;
+      emailSource = "Web scrape — address found during the counterparty search";
     }
 
     if (toEmail || website) {
@@ -544,32 +597,88 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
       return { sent: false, reason: "email-not-connected" as const };
     }
 
+    // The one regular counterparty invitation — used for confirmed AND guessed addresses.
+    // While testing, a bracketed note says where the address came from.
+    function regularCounterpartyHtml(sourceNote: string | null): string {
+      return (
+        `<p>Hello,</p>` +
+        (sourceNote
+          ? `<p style="font-size:12px;color:#6b7280;">(Testing only — email address source: ${sourceNote})</p>`
+          : "") +
+        `<p>Good news — a verified party on the Izenzo Trading Gateway has selected <strong>${cp.name}</strong> ` +
+        `as a potential counterparty for the opportunity below. The reference above links straight to it ` +
+        `once you're signed in.</p>` +
+        dealDetailsHtml +
+        `<p>Izenzo is a governed trading platform: every match carries a hash-sealed Proof of Intent ` +
+        `and independent verification at every step, so both sides can move with confidence.</p>` +
+        accountCtaHtml(claimUrl) +
+        `<p>Regards,<br>Izenzo Trading</p>`
+      );
+    }
+
+    // Bidder gets their own copy; Admin gets a separate copy greeted "Hello Admin," — both carry
+    // the bracketed testing line saying where the counterparty's address came from.
+    async function sendBidderAndAdmin(subject: string, op: string, body: string, sourceNote: string) {
+      const note = `<p style="font-size:12px;color:#6b7280;">(Testing only — email address source: ${sourceNote})</p>`;
+      if (bidderEmail) {
+        // Admin/test inboxes are greeted as Admin even when they are the bidder.
+        const adminInboxes = [ADMIN_EMAIL, "info@georgiaadams.co.za"].map((a) => a.toLowerCase());
+        const greeting = adminInboxes.includes(bidderEmail.toLowerCase()) ? "Hello Admin," : "Hello,";
+        await sendEmail(creds!, {
+          to: bidderEmail,
+          usage: { operation: op, transactionId: cp.transaction_id },
+          subject,
+          html: renderBrandedEmail(`<p>${greeting}</p>` + note + body),
+        });
+      }
+      try {
+        await sendEmail(creds!, {
+          to: ADMIN_EMAIL,
+          usage: { operation: op, transactionId: cp.transaction_id },
+          subject: `[Admin copy] ${subject}`,
+          html: renderBrandedEmail(`<p>Hello Admin,</p>` + note + body),
+        });
+      } catch {
+        // Admin's copy is a courtesy — never blocks the bidder's email.
+      }
+    }
+
     if (toEmail) {
-      // Tier 1: a real, confirmed address — send it there directly, cc the bidder. The link goes
-      // straight to the claim page: signing in (or creating an account, if they don't have one
-      // yet) links their organisation to this specific deal and opens the same workspace,
-      // restricted to their view of it.
+      // Tier 1: a real, confirmed address — send it there directly, cc the bidder.
+      try {
       await sendEmail(creds, {
         to: toEmail,
         ...(bidderEmail ? { cc: [bidderEmail] } : {}),
         usage: { operation: "outreach_email", transactionId: cp.transaction_id },
         subject: `${cp.name}, you've been matched to a live opportunity on Izenzo`,
-        html: renderBrandedEmail(
-          `<p>Hello,</p>` +
-            `<p>Good news — a verified party on the Izenzo Trading Gateway has selected <strong>${cp.name}</strong> ` +
-            `as a potential counterparty for the opportunity below. The reference above links straight to it ` +
-            `once you're signed in.</p>` +
-            dealDetailsHtml +
-            `<p>Izenzo is a governed trading platform: every match carries a hash-sealed Proof of Intent ` +
-            `and independent verification at every step, so both sides can move with confidence.</p>` +
-            accountCtaHtml(claimUrl) +
-            `<p>Regards,<br>Izenzo</p>`,
-        ),
+        html: renderBrandedEmail(regularCounterpartyHtml(emailSource)),
       });
+      } catch (e) {
+        // Recorded on the deal so a failed send is never silent.
+        await supabase.from("transaction_events").insert({
+          transaction_id: cp.transaction_id,
+          actor_id: userId,
+          stage: "compliance",
+          step: "poi",
+          action: "counterparty_email_failed",
+          summary: `Email to ${cp.name} (${toEmail}) failed: ${(e as Error).message}`.slice(0, 480),
+          payload: { counterpartyId: cp.id },
+        } as never);
+        throw e;
+      }
       await supabase
         .from("counterparties")
         .update({ invited_at: new Date().toISOString() } as never)
         .eq("id", cp.id);
+      await supabase.from("transaction_events").insert({
+        transaction_id: cp.transaction_id,
+        actor_id: userId,
+        stage: "compliance",
+        step: "poi",
+        action: "counterparty_emailed",
+        summary: `${cp.name} emailed at ${toEmail}`,
+        payload: { counterpartyId: cp.id },
+      } as never);
       // The counterparty side gets the same news in the app, not only by email — an account that
       // exists for this contact address sees it in their Inbox when they sign in.
       const { notifyCounterpartyContact } = await import("@/lib/bidderNotify.server");
@@ -596,57 +705,42 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
     if (!bidderEmail) return { sent: false, reason: "no-contact-and-no-bidder-email" as const };
 
     if (guessedEmails.length > 0) {
-      // Tier 2: no confirmed address, but the guessed addresses still need the same real outreach a
-      // confirmed contact gets — not just a status note to the bidder with them quietly bcc'd on it
-      // (which is all this used to send: the guessed addresses received an email written entirely
-      // to the bidder, never one actually addressed to them with the opportunity itself). Two
-      // separate emails now: the real outreach, addressed to the guesses; then the bidder's own
-      // status note about what was tried.
-      await sendEmail(creds, {
-        to: guessedEmails,
-        ...(bidderEmail ? { cc: [bidderEmail] } : {}),
-        bcc: [ADMIN_EMAIL],
-        usage: { operation: "outreach_email_guessed", transactionId: cp.transaction_id },
-        subject: `${cp.name}, you've been matched to a live opportunity on Izenzo`,
-        html: renderBrandedEmail(
-          `<p>Hello,</p>` +
-            `<p>Good news — a verified party on the Izenzo Trading Gateway has selected <strong>${cp.name}</strong> ` +
-            `as a potential counterparty for the opportunity below. The reference above links straight to it ` +
-            `once you're signed in.</p>` +
-            dealDetailsHtml +
-            `<p>Izenzo is a governed trading platform: every match carries a hash-sealed Proof of Intent ` +
-            `and independent verification at every step, so both sides can move with confidence.</p>` +
-            `<p style="color:#6b7280;font-size:12px;">This address was not confirmed on file for ${cp.name} — ` +
-            `it was inferred from their domain's usual naming convention. If this reached the wrong person, ` +
-            `please forward it on or let the sender know another way to reach the right contact.</p>` +
-            accountCtaHtml(claimUrl) +
-            `<p>Regards,<br>Izenzo</p>`,
-        ),
-      });
-
-      // Every address tried is written into the bidder's own copy (not just a count) and onto the
-      // deal's own event log — they need to know exactly which addresses were guessed, since none
-      // of them is confirmed to be real and any of them could be why the counterparty never
-      // actually responds.
-      const guessedList = guessedEmails.map((e) => `<li style="font-family:monospace;">${e}</li>`).join("");
-      await sendEmail(creds, {
-        to: bidderEmail,
-        bcc: [ADMIN_EMAIL],
-        usage: { operation: "outreach_email_guessed_notice", transactionId: cp.transaction_id },
-        subject: `Reaching out to ${cp.name} on your behalf`,
-        html: renderBrandedEmail(
-          `<p>Hello,</p>` +
-            `<p>We couldn't confirm a published contact address for <strong>${cp.name}</strong>, so — to ` +
-            `give this the best chance of reaching them — we've sent the same outreach for ${dealName} ` +
-            `directly to the following likely address${guessedEmails.length === 1 ? "" : "es"} at their ` +
-            `domain (found by inferring their usual email format, not by scraping a published contact ` +
-            `page — you were copied on that message too):</p>` +
-            `<ul style="margin:8px 0;padding-left:20px;">${guessedList}</ul>` +
-            `<p>These are educated guesses, not confirmed contacts — delivery isn't guaranteed (one or more may ` +
-            `bounce or simply go unread), so it's worth following up directly if you know another way to reach ` +
-            `them.</p>`,
-        ),
-      });
+      // Tier 2: no confirmed address. Each guessed address gets the SAME regular counterparty
+      // email a confirmed contact receives (one send per address, so they never see each other),
+      // with a testing note saying the address was guessed. The bidder and admin get a summary.
+      const guessNote = `Guessed — likely address at ${cp.website ?? "their"} domain (not confirmed)`;
+      for (const g of guessedEmails) {
+        try {
+          await sendEmail(creds, {
+            to: g,
+            usage: { operation: "outreach_email_guessed", transactionId: cp.transaction_id },
+            subject: `${cp.name}, you've been matched to a live opportunity on Izenzo`,
+            html: renderBrandedEmail(regularCounterpartyHtml(guessNote)),
+          });
+        } catch {
+          // One bad guess shouldn't stop the others.
+        }
+      }
+      const guessDomain = (cp.website ?? "").replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "");
+      const guessedList = guessedEmails
+        .map(
+          (e) =>
+            `<li><span style="font-family:monospace;">${e}</span> ` +
+            `<span style="font-size:12px;color:#6b7280;">(Source: Guessed — common address pattern at ${guessDomain || "their domain"}; not found in app, web scrape or on their website)</span></li>`,
+        )
+        .join("");
+      await sendBidderAndAdmin(
+        `Reaching out to ${cp.name} on your behalf`,
+        "outreach_email_guessed",
+        `<p>We couldn't find ${cp.name} in the app, on file from the web scrape, or published on their ` +
+          `own website, so the standard counterparty invitation for ${dealName} was sent to these likely ` +
+          `address${guessedEmails.length === 1 ? "" : "es"}:</p>` +
+          `<ul style="margin:8px 0;padding-left:20px;">${guessedList}</ul>` +
+          `<p>These are educated guesses, not confirmed contacts — delivery isn't guaranteed (one or more may ` +
+          `bounce or simply go unread), so it's worth following up directly if you know another way to reach ` +
+          `them.</p>`,
+        guessNote,
+      );
       await supabase.from("transaction_events").insert({
         transaction_id: cp.transaction_id,
         actor_id: userId,
@@ -661,19 +755,15 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
 
     // Tier 3: nothing at all to go on — the bidder is told rather than silence, and it's on the
     // deal's own record too so it isn't just a one-off email easy to lose track of.
-    await sendEmail(creds, {
-      to: bidderEmail,
-      bcc: [ADMIN_EMAIL],
-      usage: { operation: "outreach_email_not_found", transactionId: cp.transaction_id },
-      subject: `We couldn't find contact details for ${cp.name}`,
-      html: renderBrandedEmail(
-        `<p>Hello,</p>` +
-          `<p>You've chosen <strong>${cp.name}</strong> as the counterparty for ${dealName}, but we ` +
-          `couldn't find a registered account, a website, or a published contact address for them — no email ` +
-          `has gone out to them at all.</p>` +
-          `<p>You'll need to reach out to them directly through another channel.</p>`,
-      ),
-    });
+    await sendBidderAndAdmin(
+      `We couldn't find contact details for ${cp.name}`,
+      "outreach_email_not_found",
+      `<p>You've chosen <strong>${cp.name}</strong> as the counterparty for ${dealName}, but we ` +
+        `couldn't find a registered account, a website, or a published contact address for them — no email ` +
+        `has gone out to them at all.</p>` +
+        `<p>You'll need to reach out to them directly through another channel.</p>`,
+      "None found — not in app, no web scrape address, nothing published on their website",
+    );
     await supabase.from("transaction_events").insert({
       transaction_id: cp.transaction_id,
       actor_id: userId,

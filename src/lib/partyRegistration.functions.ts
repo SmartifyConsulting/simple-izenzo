@@ -82,15 +82,18 @@ export const getPartyRegistrationInfo = createServerFn({ method: "POST" })
       if (!profile) continue;
 
       const isIndividual = profile.account_type === "individual";
+      const { data: orgRow } = await supabaseAdmin.from("organisations").select("name").eq("id", s.orgId).maybeSingle();
       results.push({
         side: s.side,
-        fullName: profile.full_name ?? null,
+        fullName: (orgRow?.name as string | undefined) ?? profile.full_name ?? null,
         accountType: profile.account_type ?? null,
         idNumberType: profile.id_number_type ?? null,
         idNumberMasked: profile.id_number ? maskId(profile.id_number) : null,
         documentLabel: isIndividual ? "Proof of Residential Address" : "Authority to Act",
         documentName: (isIndividual ? profile.residential_address_name : profile.authority_to_act_name) ?? null,
-        identityVerified: Boolean(profile.identity_verified),
+        identityVerified:
+          Boolean(profile.identity_verified) ||
+          (!isIndividual && Boolean(profile.id_number) && Boolean(profile.authority_to_act_name)),
       });
     }
     return results;

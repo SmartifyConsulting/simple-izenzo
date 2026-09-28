@@ -1,0 +1,2 @@
+- [x] Send [Copy] of both BID9539262 emails to info@georgiaadams.co.za
+- [x] Fix home search bar opening Live Workspace

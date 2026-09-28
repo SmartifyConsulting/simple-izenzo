@@ -103,6 +103,9 @@ type Props = {
   transactionId?: string;
   checks: CheckType[];
   title?: string;
+  /** Company names shown on the two party cards instead of person names / "You". */
+  myLabel?: string | null;
+  otherLabel?: string | null;
   description?: string;
   /** Drops the outer bordered card and its header divider — for a caller (the WaD gate) that
    * already renders this inside another frame of its own, so the two borders don't nest. */
@@ -113,7 +116,7 @@ type Props = {
   hideHeader?: boolean;
 };
 
-export function VerificationPanel({ transactionId, checks: requested, title, description, bare, hideHeader }: Props) {
+export function VerificationPanel({ transactionId, checks: requested, title, description, bare, hideHeader, myLabel, otherLabel }: Props) {
   const { user, profile } = useAuth();
   const listEnabled = useServerFn(listEnabledCheckTypes);
   const start = useServerFn(startVerification);
@@ -125,6 +128,7 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
   // Undefined = follow the automatic rule (collapsed once both sides have passed); true/false once
   // a person overrides it by hand, which then wins regardless of status.
   const [openOverride, setOpenOverride] = useState<Record<string, boolean>>({});
+  const [startedUrl, setStartedUrl] = useState<Record<string, string>>({});
 
   const { data: rows = [], isLoading, refetch } = useQuery({
     queryKey: ["identity-verifications", transactionId ?? "me"],
@@ -132,7 +136,7 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
       transactionId ? listForTx({ data: { transactionId } }) : listMine({}),
     // Polls while anything is mid-check so a scanned QR's result lands here on its own — no button
     // to remember to click, no window to poll from the other end.
-    refetchInterval: (query) => (query.state.data ?? []).some((r) => r.status === "in_progress") ? 4000 : false,
+    refetchInterval: (query) => (query.state.data ?? []).some((r) => (r.status === "in_progress" || r.status === "pending")) ? 4000 : false,
   });
 
   // The separate sanctions / PEP check only appears while an administrator has it switched on.
@@ -154,9 +158,10 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
     setError(null);
     try {
       const origin = typeof window !== "undefined" ? window.location.origin : undefined;
-      await start({
+      const res = await start({
         data: { checkType: type, ...(transactionId ? { transactionId } : {}), ...(origin ? { origin } : {}) },
       });
+      if (res?.url) setStartedUrl((prev) => ({ ...prev, [type]: res.url }));
       await refetch();
       toast.success("Scan the QR code with your phone to complete this check.");
     } catch (err) {
@@ -218,7 +223,7 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
                 className="flex w-full items-center justify-between gap-2 text-left"
               >
                 <span className="flex items-center gap-2">
-                  <span className="label-caps font-sans">{CHECK_LABEL[type]}</span>
+                  <span className="label-caps rounded-full bg-muted px-3 py-1 font-sans text-foreground dark:bg-neutral-700 dark:text-white">{CHECK_LABEL[type]}</span>
                   {bothPassed && (
                     <Badge variant="outline" className="border-emerald-600 bg-emerald-600 font-normal text-white">
                       Both verified
@@ -234,15 +239,25 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
                   else's identity check. */}
               {open && (
               <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-2 rounded-lg border border-[#4169e1]/25 bg-[#4169e1]/5 p-3 sm:border-r-2">
+                <div className="space-y-2 rounded-lg border border-[var(--cp-blue)]/25 bg-[var(--cp-blue)]/5 p-3 sm:border-r-2">
                   {otherSubjects.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">No check on file yet for the other party.</p>
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="secondary" className="!bg-[var(--cp-blue)] font-normal !text-white hover:!bg-[var(--cp-blue)]">
+                          {otherLabel ?? "Counterparty"}
+                        </Badge>
+                        <Badge variant="outline" className="border-border bg-muted text-muted-foreground">
+                          not started
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">No check run yet.</p>
+                    </div>
                   ) : (
                     otherSubjects.map((r) => (
                       <div key={r.id} className="space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant="secondary" className="bg-[#4169e1]/15 font-normal text-[#1c2f6b]">
-                            {r.subject_label ?? "Counterparty"}
+                          <Badge variant="secondary" className="!bg-[var(--cp-blue)] font-normal !text-white hover:!bg-[var(--cp-blue)]">
+                            {otherLabel ?? r.subject_label ?? "Counterparty"}
                           </Badge>
                           <Badge
                             variant="outline"
@@ -259,8 +274,8 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
 
                 <div className="space-y-2 rounded-lg border border-emerald-600/25 bg-emerald-600/5 p-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="secondary" className="bg-emerald-600/15 font-normal text-emerald-700">
-                      You
+                    <Badge variant="secondary" className="!bg-emerald-600 font-normal !text-white hover:!bg-emerald-600">
+                      {myLabel ?? "You"}
                     </Badge>
                     <Badge
                       variant="outline"
@@ -290,20 +305,28 @@ export function VerificationPanel({ transactionId, checks: requested, title, des
                   </p>
                   {myRow?.reason && <p className="text-xs text-destructive">{myRow.reason}</p>}
 
-                  {(!myRow || myRow.status === "failed" || myRow.status === "expired") && (
+                  {(() => {
+                    const ended = myRow && ["passed", "failed", "expired", "review"].includes(myRow.status);
+                    const qrUrl = ended ? null : (myRow?.provider_url ?? startedUrl[type] ?? null);
+                    return (
+                      <>
+                  {!qrUrl && myRow?.status !== "passed" && (
                     <Button size="sm" disabled={busy === type} onClick={() => onStart(type)}>
                       {busy === type ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : myRow ? "Run again" : "Start"}
                     </Button>
                   )}
 
-                  {myRow?.status === "in_progress" && myRow.provider_url && (
+                  {qrUrl && (
                     <div className="flex flex-col items-center space-y-1 pt-1 text-center">
-                      <VerificationQr value={myRow.provider_url} />
+                      <VerificationQr value={qrUrl} />
                       <p className="max-w-[10rem] text-[10px] text-muted-foreground">
                         Scan to continue to the verification app
                       </p>
                     </div>
                   )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
               )}

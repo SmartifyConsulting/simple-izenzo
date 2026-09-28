@@ -115,10 +115,10 @@ function InboxPage() {
 
   // Read notifications move out of the Inbox tab into Archive — Mark Read is the only way in,
   // Restore (in Archive) is the only way back out.
-  const [tab, setTab] = useState<"inbox" | "archive">("inbox");
+  const [tab, setTab] = useState<"inbox" | "archive" | "all">("inbox");
   const archiveCount = notifications.filter((n) => n.read).length;
   const inboxCount = notifications.length - archiveCount;
-  const visibleNotifications = notifications.filter((n) => (tab === "archive" ? n.read : !n.read));
+  const visibleNotifications = notifications.filter((n) => (tab === "all" ? true : tab === "archive" ? n.read : !n.read));
 
   // Grouped month → week, most recent first. Every group collapses by default except the one
   // holding the current week — that's the only history anyone needs open on arrival.
@@ -166,6 +166,7 @@ function InboxPage() {
                 [
                   ["inbox", "Inbox", inboxCount],
                   ["archive", "Archive", archiveCount],
+                  ["all", "All", notifications.length],
                 ] as const
               ).map(([key, label, count]) => (
                 <button
@@ -249,7 +250,7 @@ function InboxPage() {
                                       key={n.id}
                                       className={cn(
                                         "flex items-center justify-between gap-3 p-4",
-                                        !n.read && "bg-primary/5",
+                                        !n.read && "bg-success/10",
                                       )}
                                     >
                                       <div className="flex min-w-0 flex-1 items-start gap-2">
@@ -260,7 +261,7 @@ function InboxPage() {
                                           aria-label={n.read ? undefined : "Unread"}
                                           className={cn(
                                             "mt-1.5 h-2 w-2 shrink-0 rounded-full",
-                                            n.read ? "bg-transparent" : "bg-foreground",
+                                            n.read ? "bg-transparent" : "bg-success",
                                           )}
                                         />
                                         <div className="min-w-0">
@@ -273,11 +274,7 @@ function InboxPage() {
                                                   onClick={() => void markRead(n.id)}
                                                   className={cn(
                                                     "shrink-0 font-mono text-base font-bold underline-offset-2 hover:underline",
-                                                    tradeKindOf(reference) === "bid"
-                                                      ? "theme-light:text-success text-[#00e676]"
-                                                      : tradeKindOf(reference) === "offer"
-                                                        ? "text-[#4169e1]"
-                                                        : "text-primary",
+                                                    n.read ? "text-foreground" : "text-success",
                                                   )}
                                                 >
                                                   {reference}
@@ -292,11 +289,7 @@ function InboxPage() {
                                                     // Same Bid=green / Offer=blue convention as the
                                                     // workspace taskbar and registration pill, so a
                                                     // reference reads the same way everywhere.
-                                                    tradeKindOf(reference) === "bid"
-                                                      ? "theme-light:text-success text-[#00e676]"
-                                                      : tradeKindOf(reference) === "offer"
-                                                        ? "text-[#4169e1]"
-                                                        : "text-primary",
+                                                    n.read ? "text-foreground" : "text-success",
                                                   )}
                                                 >
                                                   {reference}
@@ -320,11 +313,7 @@ function InboxPage() {
                                                 className={cn(
                                                   "text-sm hover:underline",
                                                   n.read ? "font-medium" : "font-semibold",
-                                                  reference && tradeKindOf(reference) === "bid"
-                                                    ? "theme-light:text-success text-[#00e676]"
-                                                    : reference && tradeKindOf(reference) === "offer"
-                                                      ? "text-[#4169e1]"
-                                                      : "text-foreground",
+                                                  n.read ? "text-foreground" : "text-success",
                                                 )}
                                               >
                                                 {n.title}
@@ -337,17 +326,13 @@ function InboxPage() {
                                                 className={cn(
                                                   "text-sm hover:underline",
                                                   n.read ? "font-medium" : "font-semibold",
-                                                  reference && tradeKindOf(reference) === "bid"
-                                                    ? "theme-light:text-success text-[#00e676]"
-                                                    : reference && tradeKindOf(reference) === "offer"
-                                                      ? "text-[#4169e1]"
-                                                      : "text-foreground",
+                                                  n.read ? "text-foreground" : "text-success",
                                                 )}
                                               >
                                                 {n.title}
                                               </Link>
                                             ) : (
-                                              <p className={cn("text-sm", n.read ? "font-medium" : "font-semibold")}>
+                                              <p className={cn("text-sm", n.read ? "font-medium text-foreground" : "font-semibold text-success")}>
                                                 {n.title}
                                               </p>
                                             )}

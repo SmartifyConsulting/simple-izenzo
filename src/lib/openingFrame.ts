@@ -13,6 +13,7 @@ export type OpeningFrame =
   | { kind: "businessDocs" }
   | { kind: "sealedWad" }
   | { kind: "offer" }
+  | { kind: "wad" }
   | { kind: "sealedPoi" }
   | { kind: "confirmedIntent" };
 
@@ -37,6 +38,8 @@ export function openingFrameFor(tx: TxLike): OpeningFrame {
   // Cleared but not yet advanced — nothing else is waiting, so open the gate holding the Continue.
   if (tx.wad_completed_at) return { kind: "sealedWad" };
   // Intent sealed: the Offer ⇄ Counter Offer exchange is live and waiting on someone.
+  // Offer accepted and the deal moved on to Without a Doubt: WaD is current, Offer stays folded.
+  if (tx.poi_sealed_at && tx.step === "wad") return { kind: "wad" };
   if (tx.poi_sealed_at) return { kind: "offer" };
   if (tx.intent_confirmed_at) return { kind: "sealedPoi" };
   return { kind: "confirmedIntent" };

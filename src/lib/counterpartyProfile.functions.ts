@@ -16,9 +16,10 @@ export type CounterpartyProfile = {
   source: string | null;
   website: string | null;
   contactEmail: string | null;
-  /** How contactEmail was actually obtained — set once a counterparty has been chosen and outreach
-   * has run (notifyChosenCounterparty). Null beforehand, or if nothing has been sent yet. */
-  contactEmailSource: "app" | "website" | "guessed" | null;
+  /** How contactEmail was actually obtained — a short descriptive label (e.g. "In app — registered
+   * Izenzo organisation", "Company website — found on …"), set once a counterparty has been chosen
+   * and outreach has run (notifyChosenCounterparty). Null beforehand, or if nothing's been sent. */
+  contactEmailSource: string | null;
   contactName: string | null;
   phone: string | null;
   country: string | null;
@@ -98,8 +99,8 @@ export const getCounterpartyProfile = createServerFn({ method: "POST" })
       // A registered org's own contact is always "from the app", regardless of what outreach
       // separately recorded on the counterparty row itself.
       contactEmailSource: org?.primary_contact_email
-        ? "app"
-        : ((cp.contact_email_source as "app" | "website" | "guessed" | null) ?? null),
+        ? "In app — registered Izenzo organisation"
+        : (cp.contact_email_source ?? null),
       contactName: org?.primary_contact_name ?? null,
       phone: cp.phone ?? null,
       country: org?.country ?? null,

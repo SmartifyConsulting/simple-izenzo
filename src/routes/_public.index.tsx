@@ -1,10 +1,9 @@
-import { useEffect } from "react";
+import { SignInModal } from "@/components/auth/SignInModal";
+import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Banknote, Database, Hammer, ShieldCheck, Sparkles, Target } from "lucide-react";
 import { HeroMatchCard } from "@/components/marketing/HeroMatchCard";
-import { SubmitBidButton } from "@/components/marketing/SubmitBidButton";
-import { AuthTabs } from "@/components/auth/AuthTabs";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { creatorTone, displayTitle, fallbackReference, when } from "@/lib/tx";
@@ -81,10 +80,12 @@ const STAGES = [
 const HOME_DEALS_LIMIT = 10;
 
 function ActiveDealsPanel() {
-  const { org } = useAuth();
+  const { org, user } = useAuth();
+  // Test-only: this one account sees just 5 active bids.
+  const limit = user?.email?.toLowerCase() === "info@georgiaadams.co.za" ? 5 : HOME_DEALS_LIMIT;
 
   const { data: deals = [], isLoading } = useQuery({
-    queryKey: ["home-active-deals", org?.id],
+    queryKey: ["home-active-deals", org?.id, limit],
     enabled: Boolean(org?.id),
     queryFn: async () => {
       const { data, error } = await supabase
@@ -93,7 +94,7 @@ function ActiveDealsPanel() {
         .or(`org_id.eq.${org!.id},counterparty_org_id.eq.${org!.id}`)
         .not("stage", "in", "(finality,memory)")
         .order("updated_at", { ascending: false })
-        .limit(HOME_DEALS_LIMIT);
+        .limit(limit);
       if (error) throw error;
       return (data ?? []) as {
         id: string;
@@ -162,7 +163,7 @@ function ActiveDealsPanel() {
           })
         )}
       </div>
-      {deals.length === HOME_DEALS_LIMIT && (
+      {deals.length === limit && (
         <Link
           to="/trades"
           className="mt-2.5 block text-[11px] font-medium text-primary hover:underline"
@@ -176,6 +177,7 @@ function ActiveDealsPanel() {
 
 function AlphaBravoHome() {
   const { user, loading } = useAuth();
+  const [showTrades, setShowTrades] = useState(false);
   const { next } = Route.useSearch();
   const navigate = useNavigate();
 
@@ -198,45 +200,9 @@ function AlphaBravoHome() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, loading, next, navigate]);
 
-  return (
-    <section className="mx-auto max-w-6xl px-5 py-6 sm:py-8">
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="max-w-4xl">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-            <Sparkles className="h-3.5 w-3.5" /> AI-Powered Trade Matching
-          </span>
-          <h1 className="mt-3 max-w-3xl text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl">
-            Governance Infrastructure Marketplace
-          </h1>
-          <div className="mt-4">
-            <SubmitBidButton size="sm" />
-          </div>
-        </div>
-
-        {/* Sign in / sign up sits top-right of the hero, level with the badge above the
-            headline. A signed-in visitor sees their active bids/offers here instead — see
-            ActiveDealsPanel below. */}
-        {/* Kept mounted while a sign-up is mid-wizard: the account is signed in already, and
-            unmounting here would drop step 3 (ID number + document) before it renders. */}
-        {(!user || registrationInProgress()) && (
-          <div className="rounded-2xl border border-border bg-card p-3.5 shadow-sm">
-            <AuthTabs compact />
-          </div>
-        )}
-      </div>
-
-      <div className="mt-5 w-full">
-        <HeroMatchCard />
-      </div>
-
-      {/* A signed-in visitor's active deals sit under the search bar, not beside it. */}
-      {user && (
-        <div className="mt-4">
-          <ActiveDealsPanel />
-        </div>
-      )}
-
-      <p className="mt-8 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+  const stagesBlock = (
+    <>
+      <p className="mt-6 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
         How a match plays out
       </p>
       <h2 className="mt-2 max-w-2xl text-2xl tracking-tight text-foreground sm:text-3xl">
@@ -261,6 +227,83 @@ function AlphaBravoHome() {
           </div>
         ))}
       </div>
+    </>
+  );
+
+  const actions = (
+    <div className="flex flex-wrap items-center justify-center gap-3">
+      {!user && (
+        <SignInModal defaultTab="signin">
+          <button
+            type="button"
+            className="inline-flex h-10 items-center rounded-full bg-foreground px-6 text-sm font-medium text-background transition-opacity hover:opacity-90"
+          >
+            Sign In / Sign Up
+          </button>
+        </SignInModal>
+      )}
+      {user && (
+        <button
+          type="button"
+          aria-expanded={showTrades}
+          onClick={() => setShowTrades((v) => !v)}
+          className="inline-flex h-10 items-center rounded-full border border-border bg-card px-6 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+        >
+          {showTrades ? "Hide Trades" : "View Trades"}
+        </button>
+      )}
+      {user ? (
+        <Link
+          to="/live-deal-engine"
+          search={{ fresh: true, n: Date.now() } as never}
+          className="inline-flex h-10 items-center rounded-full bg-foreground px-6 text-sm font-medium text-background transition-opacity hover:opacity-90"
+        >
+          Post a Trade
+        </Link>
+      ) : (
+        <SignInModal defaultTab="signup">
+          <button
+            type="button"
+            className="inline-flex h-10 items-center rounded-full border border-border bg-card px-6 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            Post a Trade
+          </button>
+        </SignInModal>
+      )}
+    </div>
+  );
+
+  return (
+    <section className="mx-auto max-w-6xl px-5 py-4">
+      <div className="mx-auto flex max-w-5xl flex-col items-center py-6 text-center sm:py-8">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+          <Sparkles className="h-3.5 w-3.5" /> AI-Powered Trade Matching
+        </span>
+        <h1 className="mt-4 text-5xl font-bold leading-[1.05] tracking-tight text-foreground sm:text-7xl">
+          Governance Infrastructure
+          <br />
+          for <span className="text-success">Institutional Trade.</span>
+        </h1>
+        <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground">
+          One cryptographic network for bilateral global commerce. Access it via our turnkey Trade
+          Desk, manage counterparty risk through the Compliance Profile with non-waivable KYC/KYB,
+          or build directly on the API — all backed by AI-driven matching, hash-sealed intent and
+          independently verifiable execution.
+        </p>
+      </div>
+      <div className="mx-auto w-full max-w-4xl">
+        <HeroMatchCard actions={actions} />
+        {showTrades && (
+          <div className="mt-4 rounded-2xl border border-border bg-card p-4 text-left">
+            {user ? (
+              <ActiveDealsPanel />
+            ) : (
+              <p className="text-sm text-muted-foreground">Sign in to see your recent trades.</p>
+            )}
+          </div>
+        )}
+      </div>
+      {stagesBlock}
     </section>
   );
 }

@@ -38,7 +38,6 @@ import { DocumentSummaryList } from "@/components/canvas/DocumentSummaryList";
 import { MutualEngagementPanel } from "@/components/engagement/MutualEngagementPanel";
 import { Confetti } from "@/components/effects/Confetti";
 import { hasSeenOfferCelebration, markOfferCelebrationSeen } from "@/lib/celebrationSeen";
-import { TradeSummary } from "@/components/canvas/TradeSummary";
 // Performance only: the map and the classic stepper are each large and only one of them is on
 // screen at a time, so they load as their own chunks instead of inside the first workspace
 // download. Same components, same props, same behaviour.
@@ -274,7 +273,7 @@ function LiveDealEngine() {
   const { org, user } = useAuth();
   // Step 3 · Execution is Phase 2 — not ready for general users yet, so it's gated to this one
   // account until that phase actually ships.
-  const canSeeStep3 = user?.email === "georgia.adams@smartify.co.za";
+  const canSeeStep3 = true;
   // Whatever the visitor dropped on the homepage before signing in, if anything. Read via a
   // non-destructive peek (StrictMode double-invokes this initializer in dev, and a combined
   // read-and-clear would lose the files on the second call), then clear it once via the effect
@@ -637,7 +636,11 @@ function LiveDealEngine() {
   // gate panel (Express Intent) that may have been opened, and regardless of `hasChosen`, which
   // only means "the flow moved past Choice", not "a party was picked".
   const choicePending = Boolean(
-    mediaResults && mediaResults.length > 0 && !mediaRunning && !dbHasChosenParty,
+    mediaResults &&
+      mediaResults.length > 0 &&
+      !mediaRunning &&
+      !dbHasChosenParty &&
+      !dealTx?.intent_confirmed_at,
   );
   // Opened explicitly the moment a search starts (see setSearchResultsOpen(txId, true) below) —
   // this bare default only matters on a page refresh of an existing deal, where nothing "starts"
@@ -669,7 +672,6 @@ function LiveDealEngine() {
     );
   }, [dealTx?.id, choicePending]);
   // The trade record, once everything has cleared — folded away by default.
-  const [tradeSummaryOpen, setTradeSummaryOpen] = useState(false);
   // Step 1 · Trading bundles every completed Trading-stage record (Bid Registration, Bid
   // Information, Search Results, Online Scanning Results, Confirmed Intent, Seal Intent, Offer)
   // behind one collapsed-by-default accordion, so a deal that's moved on doesn't keep the whole
@@ -677,7 +679,7 @@ function LiveDealEngine() {
   // further down are untouched by this — only Step 1's own records are gated on it.
   const [step1Open, setStep1Open] = useState(false);
   const [step2Open, setStep2Open] = useState(false);
-  const [step3Open, setStep3Open] = useState(false);
+  const [, setStep3Open] = useState(false);
   // Once Intent is confirmed, its frame folds into a small accordion nested under Online Media
   // Screening Results rather than staying open as its own full-size panel.
   const [confirmedIntentOpen, setConfirmedIntentOpen] = useState(false);
@@ -691,6 +693,7 @@ function LiveDealEngine() {
   const [offerFrameOpen, setOfferFrameOpen] = useState(false);
   // Cleared WaD case — same folded-record treatment, closed until wanted.
   const [sealedWadOpen, setSealedWadOpen] = useState(false);
+  const [legalRecordOpen, setLegalRecordOpen] = useState(false);
   // Opens the Offer frame the moment sealing actually happens live in this session — distinct
   // from a page load (or a switch to a different tab) that finds the deal already sealed, which
   // leaves it collapsed like every other frame. Tracked per transaction id: the first time this
@@ -709,6 +712,11 @@ function LiveDealEngine() {
   // Which counterparty (from the media-screening findings) the user is about to proceed with —
   // this is where the actual pick happens now, right next to the screening evidence for it.
   const [mediaPick, setMediaPick] = useState<string | null>(null);
+  // Only one screened counterparty: nothing to choose between, so pre-select it (the person still presses Continue).
+  useEffect(() => {
+    const only = mediaResults?.length === 1 ? mediaResults[0] : undefined;
+    if (!mediaPick && only) setMediaPick(only.counterpartyId);
+  }, [mediaResults, mediaPick]);
 
   // Once the ask has been made for a bid, the description/drop frame never comes back — not while
   // the files are still saving, not on a refresh, not on a tab switch. Remembered per bid.
@@ -720,7 +728,7 @@ function LiveDealEngine() {
   const [searchGoByTx, setSearchGoByTx] = useState<Set<string>>(() => new Set());
   function goToSearch(txId: string) {
     setSearchGoByTx((s) => (s.has(txId) ? s : new Set(s).add(txId)));
-    setBidInfoCollapsed(txId, true);
+    setBidInfoCollapsed(txId, false);
   }
   function markSubmitted(txId: string) {
     try {
@@ -1111,8 +1119,8 @@ function LiveDealEngine() {
     setSealedPoiOpen(false);
     setOfferFrameOpen(false);
     setSealedWadOpen(false);
-    setTradeSummaryOpen(false);
     setMapPanel(null);
+    setStep2Open(true);
     setStagePanel("business-docs");
   }
 
@@ -1343,9 +1351,16 @@ function LiveDealEngine() {
     // opening a deal that was already past GRC on a fresh page load is not.
     if (sameDeal && prev!.phase === 2 && phase === 3) setLegalSignedCelebrate(true);
     if (sameDeal && phase === 1) return;
-    setStep1Open(false);
+    setStep1Open(phase === 1);
     setStep2Open(phase === 2);
     setStep3Open(phase === 3);
+    if (phase === 3) {
+      // Step 2 folds as a whole: every record inside it — WaD included — tucks away with it.
+      setSealedWadOpen(false);
+      setSealedPoiOpen(false);
+      setOfferFrameOpen(false);
+      setStagePanel(null);
+    }
   }, [dealTx?.id, dealTx?.intent_confirmed_at, grcDone]);
 
 
@@ -1863,7 +1878,10 @@ function LiveDealEngine() {
             if (tx.step === "business-docs") setStagePanel("business-docs");
             break;
           case "sealedWad":
-            setSealedWadOpen(true);
+            setSealedWadOpen(!tx.wad_continued_at);
+            break;
+          case "wad":
+            setOfferFrameOpen(false);
             break;
           case "offer":
             // Negotiation is live — the Offer frame is the thing waiting on someone.
@@ -1878,7 +1896,7 @@ function LiveDealEngine() {
         }
         // Step 1 holds the record of how the deal got here; it only needs to be open while its own
         // work is still live, which the stepOverrides-driven effect above already handles.
-        setStep1Open(false);
+        setStep1Open(!tx.intent_confirmed_at);
       } catch {
         // Deal not found or not visible to this user — leave the picker showing.
       }
@@ -1968,7 +1986,6 @@ function LiveDealEngine() {
     setMapPanel(null);
     setSearchError(null);
     setReadError(null);
-    setTradeSummaryOpen(false);
     setConfirmedIntentOpen(false);
     setDirection(null);
     setPendingDirection(null);
@@ -2099,7 +2116,8 @@ function LiveDealEngine() {
     await categoriseSearch(txId);
     // Bid Information folds away the moment the stage moves to Search — not just once results
     // land — so the search/results view always has the room, not the bid's own details.
-    setBidInfoCollapsed(txId, true);
+    // Keep Bid Information open so the finished summary is visible while the search runs.
+    setBidInfoCollapsed(txId, false);
     setFlowStep("searching");
     // Force it open the moment a search starts — a re-run (after "Choose a different party", a
     // counter offer, etc.) could otherwise still be carrying the collapsed state a *previous*
@@ -2256,7 +2274,7 @@ function LiveDealEngine() {
   // Only the full-bleed layouts (nothing else open, or explicitly maximized) stretch the Map and
   // Workspace panels all the way down to the taskbar of open bid tabs — a docked/floating
   // workspace is a small window, not the whole screen, so it keeps its own fixed height instead.
-  const fillToTaskbar = !popout && (soloWorkspace || windowMode === "maximized");
+  const fillToTaskbar = !popout;
 
   useEffect(() => {
     if (popout) return;
@@ -2321,12 +2339,14 @@ function LiveDealEngine() {
     <>
       {legalSignedCelebrate && (
         <Confetti
-          message="Both parties signed — on to Execution."
+          txId={dealTx?.id}
+          kind="legal_signed"
+          message="All Legal Agreements have been mutually signed — on to Execution."
           onDone={() => setLegalSignedCelebrate(false)}
         />
       )}
       {celebrateApproval && (
-        <Confetti message="The offer has been approved." onDone={() => setCelebrateApproval(false)} />
+        <Confetti txId={dealTx?.id} kind="offer_approved" message="The offer has been approved." onDone={() => setCelebrateApproval(false)} />
       )}
       {/* A `?tx=` link that couldn't be opened says so, instead of quietly leaving an empty canvas
           that reads as a brand-new workspace. */}
@@ -2388,15 +2408,11 @@ function LiveDealEngine() {
           fillToTaskbar && "flex min-h-0 flex-1 flex-col lg:grid",
         )}
       >
-          {/* Engine Map — always visible on the left. Clicking a node opens that step inline in
-              the Live Workspace beside it, instead of navigating away from this screen. When
-              nothing else is competing for screen space (the common case), both panels stretch to
-              fill all the way down to the taskbar of open bid tabs rather than stopping short of
-              it; a docked/floating workspace instead keeps a fixed viewport-relative height, since
-              it's a small window rather than the whole screen. */}
+          {/* Engine Map — always visible on the left, in the same card shell as the Live
+              Workspace so light and dark modes look identical. */}
           <div
             className={cn(
-              "flex w-full flex-col overflow-hidden p-3 sm:p-5",
+              "flex w-full flex-col overflow-hidden rounded-3xl border border-border bg-card p-3 shadow-sm sm:p-5",
               fillToTaskbar ? "h-full" : "h-[calc((100vh-190px)*0.945 + 1cm + 31px)]",
             )}
           >
@@ -2447,7 +2463,7 @@ function LiveDealEngine() {
               // stepper without touching either component.
               style={
                 org?.id && dealTx?.counterparty_org_id === org.id
-                  ? ({ "--throb-accent": "#4169e1" } as CSSProperties)
+                  ? ({ "--throb-accent": "var(--cp-blue)" } as CSSProperties)
                   : undefined
               }
             >
@@ -2699,7 +2715,7 @@ function LiveDealEngine() {
                     (negotiationTurn === "accepted" || dealTx.wad_completed_at) &&
                     counterpartyIdentity?.name && (
                     <div className="mt-1.5 flex flex-wrap items-center gap-2 border-t border-border pt-1.5">
-                      <User className="h-4 w-4 shrink-0 text-[#4169e1]" aria-label="Counterparty" />
+                      <User className="h-4 w-4 shrink-0 text-[var(--cp-blue)]" aria-label="Counterparty" />
                       <span className="min-w-0 truncate text-sm font-semibold text-foreground">
                         {counterpartyIdentity.name}
                       </span>
@@ -2992,74 +3008,6 @@ function LiveDealEngine() {
             />
           )}
 
-          {activity && dealTx && flowStep === "searching" && (
-            <div className="mt-1.5 overflow-hidden rounded-xl border border-border">
-              <div className="flex items-center gap-3 bg-[#F1F5F9] px-4 py-3">
-                <p className="text-xs text-slate-700">Searching using AI for matching counterparties…</p>
-                <div className="ml-auto flex shrink-0 items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={stopSearch}
-                    title="Stop watching this search — it keeps running and will still save whatever it finds"
-                    className="flex items-center gap-1 rounded p-1 text-[11px] font-medium text-slate-500 hover:bg-slate-200 hover:text-slate-800"
-                  >
-                    <StopCircle className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Stop</span>
-                  </button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="h-7 gap-1 border-slate-300 bg-white text-xs font-medium text-slate-800 hover:bg-slate-100"
-                    onClick={() => {
-                      setTopEditedPrompt(
-                        (dealTx as unknown as { search_prompt?: string | null }).search_prompt ?? "",
-                      );
-                      setTopEditingSearch(true);
-                    }}
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                    Edit Search
-                  </Button>
-                </div>
-              </div>
-
-              {topEditingSearch && (
-                <div className="space-y-1.5 bg-white p-2.5">
-                  <Textarea
-                    rows={2}
-                    value={topEditedPrompt}
-                    onChange={(e) => setTopEditedPrompt(e.target.value)}
-                    autoFocus
-                    className="min-h-0 resize-none text-sm text-slate-800 placeholder:text-slate-400"
-                  />
-                  <div className="flex gap-1.5">
-                    <Button
-                      size="sm"
-                      className="flex-1"
-                      disabled={topEditedPrompt.trim().length === 0 || refining}
-                      onClick={() => {
-                        setTopEditingSearch(false);
-                        void refineSearch(dealTx.id, topEditedPrompt.trim());
-                      }}
-                    >
-                      Search
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-slate-700 hover:bg-slate-200 hover:text-slate-900"
-                      onClick={() => setTopEditingSearch(false)}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              <div className="h-1.5 w-full animate-ribbon-sweep" />
-            </div>
-          )}
 
           {/* Bid Registration / Submission of documents now tick in the workflow column instead. */}
 
@@ -3197,13 +3145,15 @@ function LiveDealEngine() {
                       {dbHasChosenParty && !dealTx?.poi_sealed_at && (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <button
+                            <Button
                               type="button"
+                              size="sm"
+                              variant="outline"
+                              className="shrink-0"
                               title="Not happy with the online screening findings? Pick someone else."
-                              className="shrink-0 text-[11px] font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"
                             >
                               Change Party
-                            </button>
+                            </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
@@ -3465,7 +3415,7 @@ function LiveDealEngine() {
                     >
                       <span className="min-w-0">
                         <span className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
-                          Seal Intent
+                          Proof of Intent
                         </span>
                         <span className="mt-1 block text-[11px] text-muted-foreground">
                           Sealing writes the transaction state to an immutable record with a fingerprint.
@@ -3553,9 +3503,10 @@ function LiveDealEngine() {
                           tx={dealTx}
                           stage="compliance"
                           step="wad"
+                          viewOnly={Boolean(dealTx.wad_continued_at) || grcDone}
                           reload={() => void reloadDeal()}
                           onClose={() => setStagePanel(null)}
-                          onContinue={() => {
+                          onContinue={dealTx.wad_continued_at || grcDone ? undefined : () => {
                             // Same collapse-on-advance behaviour every other folded record in
                             // this workspace gets — the frame you just finished with tucks away
                             // once you move on, rather than staying pinned open.
@@ -3606,54 +3557,50 @@ function LiveDealEngine() {
                   )}
 
 
-                {/* Only once Step 2's own documents (Business Docs) are in — not the moment the
-                    compliance checks clear. Collapsed by default: it's a record to check back on,
-                    and Execution is what needs attention by then. */}
-                {step2Open && dealTx?.wad_completed_at && stepOverrides["businessDocs"] === "done" && (
-                  <div className="mt-1.5 rounded-2xl border border-border bg-card">
+                {step2Open && dealTx && grcDone && (
+                  <div className="rounded-2xl border border-border bg-card">
                     <button
                       type="button"
-                      onClick={() => setTradeSummaryOpen((v) => !v)}
+                      onClick={() => setLegalRecordOpen((v) => !v)}
                       className="flex w-full items-center justify-between gap-2 px-3.5 py-2 text-left"
-                      aria-expanded={tradeSummaryOpen}
+                      aria-expanded={legalRecordOpen}
                     >
-                      <span className="label-caps rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
-                        Trade Summary
+                      <span className="min-w-0">
+                        <span className="label-caps inline-block rounded-full bg-[var(--lw-pill-bg)] px-2.5 py-1 text-[var(--lw-pill-fg)]">
+                          Legal Agreements
+                        </span>
+                        <span className="mt-1 block text-[11px] text-muted-foreground">
+                          NDAs, MOUs and agreements bilaterally signed with tamper-evident digital signatures.
+                        </span>
                       </span>
                       <ChevronDown
-                        className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", tradeSummaryOpen && "rotate-180")}
+                        className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", legalRecordOpen && "rotate-180")}
                       />
                     </button>
-                    {tradeSummaryOpen && (
+                    {legalRecordOpen && (
                       <div className="px-3.5 pb-3">
-                        <TradeSummary tx={dealTx} />
+                        <InlineFrame
+                          bare
+                          tx={dealTx}
+                          stage="execution"
+                          step="business-docs"
+                          reload={() => void reloadDeal()}
+                          onClose={() => setLegalRecordOpen(false)}
+                        />
                       </div>
                     )}
                   </div>
                 )}
 
                 {dealTx && grcDone && canSeeStep3 && (
-                  <button
-                    type="button"
-                    onClick={() => setStep3Open((v) => !v)}
-                    aria-expanded={step3Open}
-                    className="mt-1.5 flex w-full items-center gap-2 rounded-full border-2 border-black bg-black px-3 py-1.5 text-left text-xs font-semibold text-white hover:bg-black/90"
-                  >
-                    {step3Open ? <Minus className="h-3.5 w-3.5 shrink-0" /> : <Plus className="h-3.5 w-3.5 shrink-0" />}
+                  <div className="lw-step3 mt-1.5 flex w-full items-center gap-2 rounded-full border-2 border-black bg-black px-3 py-1.5 text-xs font-semibold text-white">
                     <span className="label-caps rounded-full bg-white px-2.5 py-0.5 text-black">
                       Step 3 · Execution
                     </span>
-                    <ChevronDown className={cn("ml-auto h-3.5 w-3.5 shrink-0 text-white/80 transition-transform", step3Open && "rotate-180")} />
-                  </button>
-                )}
-                {dealTx && grcDone && canSeeStep3 && step3Open && (
-                  <InlineFrame
-                    tx={dealTx}
-                    stage="execution"
-                    step="preparation"
-                    reload={() => void reloadDeal()}
-                    onClose={() => setStep3Open(false)}
-                  />
+                    <span className="ml-auto shrink-0 font-mono text-sm font-bold tracking-wide text-white">
+                      {dealTx.reference}
+                    </span>
+                  </div>
                 )}
 
               </div>
@@ -3667,7 +3614,9 @@ function LiveDealEngine() {
     return <div className="min-h-screen bg-background p-4">{workspaceContent}</div>;
   }
 
-  if (soloWorkspace || windowMode === "maximized") {
+  // Always full-bleed: the floating 1040px "docked" window squeezed the map as soon as saved
+  // tabs loaded in, so every open deal now fills the screen down to the taskbar.
+  if (!popout) {
     return (
       <AppShell wide compactFooter hideFooter>
         {/* bottom-14 (not inset-4 on every side) leaves room for the taskbar of open deal tabs
@@ -3675,7 +3624,7 @@ function LiveDealEngine() {
             without ever drawing underneath it. Used both when this is the only workspace open
             and when it's explicitly maximized — in both cases it's the full screen, not a small
             floating window. */}
-        <div className="fixed inset-x-4 top-[calc(7.5rem+1vh)] bottom-[calc(3.5rem+2.5vh-23px)] z-30 flex flex-col overflow-y-auto rounded-2xl border border-border bg-background p-4 shadow-2xl">
+        <div className="fixed inset-x-4 top-[calc(7.5rem+1vh)] bottom-[calc(3.5rem+2.5vh-23px)] z-30 flex flex-col overflow-y-auto lw-window rounded-2xl border border-border bg-background p-4 shadow-2xl">
           {workspaceContent}
         </div>
       </AppShell>

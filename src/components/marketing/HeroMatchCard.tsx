@@ -1,3 +1,4 @@
+import type React from "react";
 import { useRef, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -73,7 +74,7 @@ function fitScore(m: { name: string; sector: string | null; jurisdiction: string
  * actual matching engine. What it shows is real, live Responder data (same counterparties table
  * the Responder Directory reads), framed as an illustration of what a signed-in search returns.
  * Selecting a match is gated behind sign-up/sign-in — this is a preview, not a live workspace. */
-export function HeroMatchCard({ className }: { className?: string }) {
+export function HeroMatchCard({ className, actions }: { className?: string; actions?: React.ReactNode }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [prompt, setPrompt] = useState("");
   // Kept as real File objects (not just names) so they can actually ride along into the bid
@@ -183,8 +184,6 @@ export function HeroMatchCard({ className }: { className?: string }) {
 
       {!searched && !searching && (
         <>
-          <p className="mb-4 text-center text-lg font-medium text-foreground">Ready when you are.</p>
-
           {/* Same pill format as the Live Workspace's own search bar: a "+" on the left to attach
               files, one text field, submit on the right — rather than a two-column strip. */}
           <div
@@ -274,6 +273,8 @@ export function HeroMatchCard({ className }: { className?: string }) {
           )}
         </>
       )}
+
+      {actions && <div className="mt-4">{actions}</div>}
 
       {searching && (
         <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
