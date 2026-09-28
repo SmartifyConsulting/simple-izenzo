@@ -1,6 +1,7 @@
-- [ ] Two-company test user + report
-- [ ] Verified badge on chosen counterparty
-- [ ] Save and Close on last sign-up step
-- [ ] Friendlier "verified and linked" email
-- [ ] Admin user CRUD + alphabetical sort
-- [ ] Pink demo Skip Verification on KYC/KYB
+- [x] Two-company test user created (Test Twoorg, Alpha + Beta)
+- [ ] Live Workspace check picking Alpha then Beta on a real bid (not yet run)
+- [x] Verified badge: link counterparty as the chosen company
+- [x] Save and Close on last sign-up step
+- [x] Friendlier "joined your deal" email
+- [x] Admin add/edit/delete users + A to Z sort
+- [x] Pink demo Skip Verification on KYC/KYB
