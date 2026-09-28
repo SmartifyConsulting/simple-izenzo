@@ -1514,7 +1514,8 @@ function LiveDealEngine() {
     }
   }
 
-
+  // The other party's accept/pay/sign lands here within about a second, without a reload.
+  useDealRealtime(dealTx?.id, () => void reloadDeal());
 
   /** Re-reads the deal (and its attachments) after a step completes, so the Intent → Proof of
    * Intent hand-off and the newly filed certificate both show up without a page refresh. */
