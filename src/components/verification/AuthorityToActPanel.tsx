@@ -48,6 +48,7 @@ export function AuthorityToActPanel({ onSaved }: { onSaved?: () => void }) {
     try {
       let identityVerified = false;
       let identityVerifiedReason: string | null = null;
+      let mismatch: string | null = null;
       try {
         const check = await verifyRegistrationDocument({
           data: isIndividual
