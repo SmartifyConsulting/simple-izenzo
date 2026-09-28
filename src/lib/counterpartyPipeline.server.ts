@@ -277,6 +277,8 @@ const searchInstructions = (maxOrgs: number) =>
   "Report operating organisations that act in the required counterparty role in the brief, not directories, news articles, job boards or lists. " +
   SIDE_AND_PROVENANCE_RULES +
   "For each one give: name, jurisdiction, sector, evidence (one or two concrete facts from that organisation's own page showing it acts in the required role) and sourceUrl (the page address). " +
+  "name is the organisation's plain name only — never add labels like \"(Crunchbase profile)\" or \"- About page\". " +
+  "A directory page (Crunchbase, LinkedIn, ZoomInfo…) or a subpage of the same company's site is the SAME organisation — list it once, preferring the company's own website as sourceUrl. " +
   `Return up to ${maxOrgs} organisations as a JSON array only, or [] if none qualify. ` +
   'Each item: {"name":string,"jurisdiction":string,"sector":string,"evidence":string,"sourceUrl":string}.';
 
