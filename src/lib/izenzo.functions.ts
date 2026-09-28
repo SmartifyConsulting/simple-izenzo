@@ -198,7 +198,10 @@ export const payWad = createServerFn({ method: "POST" })
     const { tx, payerOrgId } = await wadPayerOrg(supabase, userId, data.transactionId);
     if (!payerOrgId) throw new Error("You are not a party to this deal");
     if (!tx.poi_sealed_at) throw new Error("Seal the Proof of Intent first");
-    if (await wadPaidBy(supabase, tx.id, payerOrgId)) return { paid: true };
+    // Caller's membership of payerOrgId is already proven above; check with full access so a
+    // viewer who can't see this company's ledger rows can never be charged twice.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (await wadPaidBy(supabaseAdmin, tx.id, payerOrgId)) return { paid: true };
     const { data: org } = await supabase.from("organisations").select("id, credits").eq("id", payerOrgId).maybeSingle();
     if (!org) throw new Error("Organisation not found");
     if ((org.credits ?? 0) < WAD_COST) throw new Error("Not enough tokens. WaD verification costs 3 tokens.");
