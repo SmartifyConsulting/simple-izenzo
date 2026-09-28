@@ -21,7 +21,7 @@ export async function alertLowFunds(service: string, statusCode: number, detail?
       to: "support@izenzo.co.za",
       subject: `Low funds: ${service} returned ${statusCode}`,
       html: renderBrandedEmail(
-        `<p><strong>${service}</strong> just returned a status ${statusCode}, which usually means the ` +
+        `<p>Hello Admin,</p><p><strong>${service}</strong> just returned a status ${statusCode}, which usually means the ` +
           `connected account is out of credits or funds.</p>` +
           `<p>Please top it up — until then, anything on Izenzo that depends on it will keep failing for ` +
           `users with a "not configured" or "exhausted" message.</p>` +

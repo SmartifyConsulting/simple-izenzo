@@ -147,7 +147,7 @@ export async function notifyBidder(args: {
     await sendEmail(creds, {
       to: ADMIN_EMAIL,
       subject: `[Bidder notification] ${args.title}`,
-      html: renderBrandedEmail(`<p>${args.title}</p><p>${args.body}</p>`),
+      html: renderBrandedEmail(`<p>Hello Admin,</p><p>${args.title}</p><p>${args.body}</p>`),
     });
   } catch {
     // Admin's copy is a courtesy, not a requirement — never blocks or surfaces as an error.
