@@ -16,6 +16,9 @@ export type CounterpartyProfile = {
   source: string | null;
   website: string | null;
   contactEmail: string | null;
+  /** How contactEmail was actually obtained — set once a counterparty has been chosen and outreach
+   * has run (notifyChosenCounterparty). Null beforehand, or if nothing has been sent yet. */
+  contactEmailSource: "app" | "website" | "guessed" | null;
   contactName: string | null;
   phone: string | null;
   country: string | null;
@@ -44,7 +47,7 @@ export const getCounterpartyProfile = createServerFn({ method: "POST" })
     // this person is allowed to look at this row at all.
     const { data: cp, error } = await context.supabase
       .from("counterparties")
-      .select("id, name, jurisdiction, sector, score, source, rationale, website, contact_email, phone")
+      .select("id, name, jurisdiction, sector, score, source, rationale, website, contact_email, contact_email_source, phone")
       .eq("id", data.counterpartyId)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -92,6 +95,11 @@ export const getCounterpartyProfile = createServerFn({ method: "POST" })
       source: cp.source ?? listing?.source ?? null,
       website: org?.website ?? cp.website ?? listing?.source_url ?? null,
       contactEmail: org?.primary_contact_email ?? cp.contact_email ?? null,
+      // A registered org's own contact is always "from the app", regardless of what outreach
+      // separately recorded on the counterparty row itself.
+      contactEmailSource: org?.primary_contact_email
+        ? "app"
+        : ((cp.contact_email_source as "app" | "website" | "guessed" | null) ?? null),
       contactName: org?.primary_contact_name ?? null,
       phone: cp.phone ?? null,
       country: org?.country ?? null,

@@ -81,7 +81,7 @@ export function renderBrandedEmail(bodyHtml: string): string {
 export async function sendEmail(
   creds: ResendCreds,
   opts: {
-    to: string;
+    to: string | string[];
     cc?: string[];
     bcc?: string[];
     subject: string;
@@ -105,7 +105,7 @@ export async function sendEmail(
     },
     body: JSON.stringify({
       from: creds.fromAddress,
-      to: [opts.to],
+      to: Array.isArray(opts.to) ? opts.to : [opts.to],
       ...(opts.cc && opts.cc.length > 0 ? { cc: opts.cc } : {}),
       ...(opts.bcc && opts.bcc.length > 0 ? { bcc: opts.bcc } : {}),
       subject: opts.subject,

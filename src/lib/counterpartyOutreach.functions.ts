@@ -445,6 +445,10 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
     let toEmail: string | null = cp.contact_email;
     let website = cp.website;
     let onPlatform = false;
+    // Tracked alongside the address itself so the bidder can see how it was actually obtained —
+    // already on file (the app), read off their own website, or (separately, for guesses) an
+    // unconfirmed AI guess at their domain.
+    let emailSource: "app" | "website" | null = toEmail ? "app" : null;
 
     // Tier 1a: a registered platform organisation by this name — a real address, not a guess.
     if (!toEmail) {
@@ -452,6 +456,7 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
       if (org?.primary_contact_email) {
         toEmail = org.primary_contact_email;
         onPlatform = true;
+        emailSource = "app";
       }
       if (!website) website = org?.website ?? null;
     }
@@ -471,13 +476,20 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
     // Tier 1c: a website is known — read it for a literal, verbatim email before ever guessing.
     if (!toEmail && website && canSearch) {
       const { email } = await readContactFromSite(cp.name, website, apiKey!, tavilyKey, { transactionId: cp.transaction_id });
-      if (email) toEmail = email;
+      if (email) {
+        toEmail = email;
+        emailSource = "website";
+      }
     }
 
     if (toEmail || website) {
       await supabase
         .from("counterparties")
-        .update({ website: website ?? undefined, contact_email: toEmail ?? undefined } as never)
+        .update({
+          website: website ?? undefined,
+          contact_email: toEmail ?? undefined,
+          contact_email_source: toEmail ? emailSource : undefined,
+        } as never)
         .eq("id", cp.id);
     }
 
@@ -584,24 +596,51 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
     if (!bidderEmail) return { sent: false, reason: "no-contact-and-no-bidder-email" as const };
 
     if (guessedEmails.length > 0) {
-      // Tier 2: no confirmed address — bidder is the visible recipient, guesses are bcc'd so they
-      // never see each other. Admin is bcc'd too, and every address tried is written into the
-      // email body (not just a count) and onto the deal's own event log — the bidder and admin
-      // team both need to know exactly which addresses were guessed, since none of them is
-      // confirmed to be real and any of them could be why the counterparty never actually
-      // received anything.
+      // Tier 2: no confirmed address, but the guessed addresses still need the same real outreach a
+      // confirmed contact gets — not just a status note to the bidder with them quietly bcc'd on it
+      // (which is all this used to send: the guessed addresses received an email written entirely
+      // to the bidder, never one actually addressed to them with the opportunity itself). Two
+      // separate emails now: the real outreach, addressed to the guesses; then the bidder's own
+      // status note about what was tried.
+      await sendEmail(creds, {
+        to: guessedEmails,
+        ...(bidderEmail ? { cc: [bidderEmail] } : {}),
+        bcc: [ADMIN_EMAIL],
+        usage: { operation: "outreach_email_guessed", transactionId: cp.transaction_id },
+        subject: `${cp.name}, you've been matched to a live opportunity on Izenzo`,
+        html: renderBrandedEmail(
+          `<p>Hello,</p>` +
+            `<p>Good news — a verified party on the Izenzo Trading Gateway has selected <strong>${cp.name}</strong> ` +
+            `as a potential counterparty for the opportunity below. The reference above links straight to it ` +
+            `once you're signed in.</p>` +
+            dealDetailsHtml +
+            `<p>Izenzo is a governed trading platform: every match carries a hash-sealed Proof of Intent ` +
+            `and independent verification at every step, so both sides can move with confidence.</p>` +
+            `<p style="color:#6b7280;font-size:12px;">This address was not confirmed on file for ${cp.name} — ` +
+            `it was inferred from their domain's usual naming convention. If this reached the wrong person, ` +
+            `please forward it on or let the sender know another way to reach the right contact.</p>` +
+            accountCtaHtml(claimUrl) +
+            `<p>Regards,<br>Izenzo</p>`,
+        ),
+      });
+
+      // Every address tried is written into the bidder's own copy (not just a count) and onto the
+      // deal's own event log — they need to know exactly which addresses were guessed, since none
+      // of them is confirmed to be real and any of them could be why the counterparty never
+      // actually responds.
       const guessedList = guessedEmails.map((e) => `<li style="font-family:monospace;">${e}</li>`).join("");
       await sendEmail(creds, {
         to: bidderEmail,
-        bcc: [...guessedEmails, ADMIN_EMAIL],
-        usage: { operation: "outreach_email_guessed", transactionId: cp.transaction_id },
+        bcc: [ADMIN_EMAIL],
+        usage: { operation: "outreach_email_guessed_notice", transactionId: cp.transaction_id },
         subject: `Reaching out to ${cp.name} on your behalf`,
         html: renderBrandedEmail(
           `<p>Hello,</p>` +
             `<p>We couldn't confirm a published contact address for <strong>${cp.name}</strong>, so — to ` +
-            `give this the best chance of reaching them — we've sent a best-effort outreach for ` +
-            `${dealName} to the following likely address${guessedEmails.length === 1 ? "" : "es"} ` +
-            `at their domain, blind copied on this message so you can see exactly what went out:</p>` +
+            `give this the best chance of reaching them — we've sent the same outreach for ${dealName} ` +
+            `directly to the following likely address${guessedEmails.length === 1 ? "" : "es"} at their ` +
+            `domain (found by inferring their usual email format, not by scraping a published contact ` +
+            `page — you were copied on that message too):</p>` +
             `<ul style="margin:8px 0;padding-left:20px;">${guessedList}</ul>` +
             `<p>These are educated guesses, not confirmed contacts — delivery isn't guaranteed (one or more may ` +
             `bounce or simply go unread), so it's worth following up directly if you know another way to reach ` +

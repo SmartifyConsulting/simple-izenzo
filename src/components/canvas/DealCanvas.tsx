@@ -1069,6 +1069,17 @@ function ProposalDialog({
                         ) : (
                           d.value
                         )}
+                        {d.label === "Email" && profile?.contactEmailSource && (
+                          <span className="ml-1.5 select-text text-[10px] font-normal text-muted-foreground blur-none">
+                            (
+                            {profile.contactEmailSource === "app"
+                              ? "from the app"
+                              : profile.contactEmailSource === "website"
+                                ? "found on their website"
+                                : "guessed at their domain"}
+                            )
+                          </span>
+                        )}
                       </dd>
                     </div>
                   ))}
