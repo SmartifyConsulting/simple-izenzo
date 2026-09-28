@@ -1,2 +1,6 @@
-- [x] Send [Copy] of both BID9539262 emails to info@georgiaadams.co.za
-- [x] Fix home search bar opening Live Workspace
+- [ ] Two-company test user + report
+- [ ] Verified badge on chosen counterparty
+- [ ] Save and Close on last sign-up step
+- [ ] Friendlier "verified and linked" email
+- [ ] Admin user CRUD + alphabetical sort
+- [ ] Pink demo Skip Verification on KYC/KYB
