@@ -19,8 +19,8 @@
 - Profiles and the admin Users list show the phone number. The rest of registration stays as it is: organisation, then identity document, then Save and Close, which opens the Live Workspace.
 
 ## Before building
-- I'll connect Infobip through the Connectors card. You'll need an Infobip account with an SMS sender approved for South Africa.
-- If Infobip isn't offered as a connector, I'll ask for your Infobip API key and base URL instead, stored securely.
+- Once you approve, a secure form will ask for your Infobip API key and base URL. They're stored as protected server settings and never shown in the app.
+- Your Infobip account needs an SMS sender approved for South Africa.
 
 ## Technical details
 - `_public.index.tsx`: delete the Post a Trade `Link` and its `SignInModal` branch.
