@@ -183,13 +183,6 @@
       "when": 1790617686931,
       "tag": "0025_credit_ledger_read_all_member_orgs",
       "breakpoints": true
-    },
-    {
-      "idx": 26,
-      "version": "7",
-      "when": 1790625114430,
-      "tag": "0026_phone_auth_and_custom_integrations",
-      "breakpoints": true
     }
   ]
 }

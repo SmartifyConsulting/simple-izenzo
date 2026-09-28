@@ -2452,45 +2452,6 @@ export type Database = {
         }
         Relationships: []
       }
-      integration_custom_providers: {
-        Row: {
-          console_url: string | null
-          created_at: string
-          created_by: string | null
-          docs_url: string | null
-          fields: Json
-          id: string
-          name: string
-          summary: string
-          top_up_url: string | null
-          updated_at: string
-        }
-        Insert: {
-          console_url?: string | null
-          created_at?: string
-          created_by?: string | null
-          docs_url?: string | null
-          fields?: Json
-          id: string
-          name: string
-          summary?: string
-          top_up_url?: string | null
-          updated_at?: string
-        }
-        Update: {
-          console_url?: string | null
-          created_at?: string
-          created_by?: string | null
-          docs_url?: string | null
-          fields?: Json
-          id?: string
-          name?: string
-          summary?: string
-          top_up_url?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
       intent_messages: {
         Row: {
           body: string
@@ -2877,42 +2838,6 @@ export type Database = {
           },
         ]
       }
-      phone_otps: {
-        Row: {
-          attempts: number
-          code_hash: string
-          consumed_at: string | null
-          created_at: string
-          expires_at: string
-          id: string
-          phone: string
-          purpose: string
-          user_id: string | null
-        }
-        Insert: {
-          attempts?: number
-          code_hash: string
-          consumed_at?: string | null
-          created_at?: string
-          expires_at: string
-          id?: string
-          phone: string
-          purpose: string
-          user_id?: string | null
-        }
-        Update: {
-          attempts?: number
-          code_hash?: string
-          consumed_at?: string | null
-          created_at?: string
-          expires_at?: string
-          id?: string
-          phone?: string
-          purpose?: string
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
           account_type: string | null
@@ -2937,8 +2862,6 @@ export type Database = {
           notification_subscriptions: Json
           onboarding_required: boolean
           org_id: string | null
-          phone: string | null
-          phone_verified_at: string | null
           residential_address_name: string | null
           residential_address_path: string | null
           residential_address_uploaded_at: string | null
@@ -2969,8 +2892,6 @@ export type Database = {
           notification_subscriptions?: Json
           onboarding_required?: boolean
           org_id?: string | null
-          phone?: string | null
-          phone_verified_at?: string | null
           residential_address_name?: string | null
           residential_address_path?: string | null
           residential_address_uploaded_at?: string | null
@@ -3001,8 +2922,6 @@ export type Database = {
           notification_subscriptions?: Json
           onboarding_required?: boolean
           org_id?: string | null
-          phone?: string | null
-          phone_verified_at?: string | null
           residential_address_name?: string | null
           residential_address_path?: string | null
           residential_address_uploaded_at?: string | null

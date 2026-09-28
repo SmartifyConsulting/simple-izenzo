@@ -21,11 +21,6 @@ import { generateOrgBrief } from "@/lib/orgBrief.functions";
 import { beginRegistration, endRegistration } from "@/lib/registrationFlow";
 import { COUNTRIES } from "@/lib/countries";
 import { cn } from "@/lib/utils";
-import { useServerFn } from "@tanstack/react-start";
-import { PhoneInput, toInternational } from "@/components/auth/PhoneInput";
-import { completePhoneSignup, phoneSignIn, sendPhoneOtp } from "@/lib/phoneAuth.functions";
-
-const isPhoneLogin = (e: string | null | undefined) => Boolean(e && e.toLowerCase().endsWith("@phone.izenzo.app"));
 
 const SECTORS = [
   "Agriculture",
@@ -71,13 +66,6 @@ export function SignUpForm({
   const [checkEmail, setCheckEmail] = useState(false);
   const [resendIn, setResendIn] = useState(0);
   const [email, setEmail] = useState("");
-  const [dial, setDial] = useState("27");
-  const [phoneLocal, setPhoneLocal] = useState("");
-  const [code, setCode] = useState("");
-  const [codeSent, setCodeSent] = useState(false);
-  const sendOtpFn = useServerFn(sendPhoneOtp);
-  const completeSignupFn = useServerFn(completePhoneSignup);
-  const phoneSignInFn = useServerFn(phoneSignIn);
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -89,20 +77,23 @@ export function SignUpForm({
   const [customSector, setCustomSector] = useState("");
   const [yearsInBusiness, setYearsInBusiness] = useState("");
   const [website, setWebsite] = useState("");
-  // The organisation's contact email is always typed in separately — deal emails go to the company.
+  // Defaults to the signer's own login email — unchecking this is the only way an organisation's
+  // contact email ends up different from whoever happened to register it.
+  const [orgEmailSameAsLogin, setOrgEmailSameAsLogin] = useState(true);
   const [orgEmail, setOrgEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
   // Arriving on step 2 from the confirmation link reloads the page, so the email typed in step 1 is
-  // gone — pull it back from the signed-in account.
+  // gone — pull it back from the signed-in account so "Same as login email" shows a real address.
   useEffect(() => {
     if (step < 2) return;
     let live = true;
     void supabase.auth.getUser().then(({ data }) => {
       const e = data.user?.email;
-      if (!live || !e || isPhoneLogin(e)) return;
+      if (!live || !e) return;
       setEmail((cur) => cur || e);
+      setOrgEmail((cur) => cur || e);
     });
     return () => {
       live = false;
@@ -133,30 +124,9 @@ export function SignUpForm({
     }, 1000);
   }
 
-  async function sendCode() {
-    setMessage("");
-    const phone = toInternational(dial, phoneLocal);
-    if (!phone) {
-      setMessage("Enter your mobile number.");
-      return;
-    }
-    setBusy(true);
-    try {
-      await sendOtpFn({ data: { phone, purpose: "signup" } });
-      setCodeSent(true);
-      startCooldown();
-      toast.success("SMS code sent");
-    } catch (err) {
-      const msg = (err as Error).message;
-      setMessage(msg);
-      toast.error(msg);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  // Step 1: phone + password, verified by an SMS code. The account only exists once the code
-  // matches; the person is then signed in and carries on to the organisation step.
+  // Step 1 creates the account and sends the confirmation email. The organisation details (step 2)
+  // are only saved once the person has confirmed and is signed in — the database refuses them
+  // before that.
   async function onContinue(e: React.FormEvent) {
     e.preventDefault();
     setMessage("");
@@ -164,19 +134,22 @@ export function SignUpForm({
       setMessage("Please meet all the password requirements.");
       return;
     }
-    if (!codeSent) {
-      await sendCode();
-      return;
-    }
     setBusy(true);
     beginRegistration();
     try {
-      const phone = toInternational(dial, phoneLocal);
-      await completeSignupFn({ data: { phone, code, password, fullName } });
-      const tokens = await phoneSignInFn({ data: { phone, password } });
-      const { error } = await supabase.auth.setSession(tokens);
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: confirmRedirect(), data: { full_name: fullName } },
+      });
       if (error) throw error;
-      setStep(2);
+      if (data.session) {
+        setStep(2);
+      } else {
+        endRegistration();
+        setCheckEmail(true);
+        startCooldown();
+      }
     } catch (err) {
       endRegistration();
       const msg = mapAuthError((err as Error).message);
@@ -226,7 +199,7 @@ export function SignUpForm({
       const { data: userData } = await supabase.auth.getUser();
       const authUser = userData.user;
       if (!authUser) throw new Error("Please open the confirmation link in your email first.");
-      const email = isPhoneLogin(authUser.email) ? "" : (authUser.email ?? "");
+      const email = authUser.email ?? "";
       const fullName =
         [firstName.trim(), lastName.trim()].filter(Boolean).join(" ") ||
         String(authUser.user_metadata?.["full_name"] ?? "");
@@ -240,7 +213,7 @@ export function SignUpForm({
         // Individuals don't get asked separately — their own login email is their organisation's
         // contact email by definition. A company can point it somewhere else (a shared inbox, a
         // colleague), which is what the "Same as login email" checkbox is for.
-        const orgContactEmail = (isCompany ? orgEmail.trim() || email : email) || null;
+        const orgContactEmail = (isCompany ? (orgEmailSameAsLogin ? email : orgEmail.trim()) || email : email) || null;
         const { data: org, error: orgErr } = await supabase
           .from("organisations")
           .insert({
@@ -408,31 +381,18 @@ export function SignUpForm({
               </div>
             </div>
             <div className={compact ? "space-y-1" : "space-y-1.5"}>
-              <Label htmlFor="hero-phone" className={compact ? "text-xs" : undefined}>
-                Mobile number
+              <Label htmlFor="hero-email" className={compact ? "text-xs" : undefined}>
+                Email
               </Label>
-              <PhoneInput
-                id="hero-phone"
-                dial={dial}
-                onDialChange={setDial}
-                value={phoneLocal}
-                onChange={setPhoneLocal}
-                compact={compact}
-                disabled={codeSent}
+              <Input
+                id="hero-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                required
+                className={compact ? "h-8 text-sm" : undefined}
               />
-              {codeSent && (
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  className="text-xs text-muted-foreground hover:text-foreground"
-                  onClick={() => {
-                    setCodeSent(false);
-                    setCode("");
-                  }}
-                >
-                  Change number
-                </button>
-              )}
             </div>
             <div className={compact ? "space-y-1" : "space-y-1.5"}>
               <Label htmlFor="hero-password" className={compact ? "text-xs" : undefined}>
@@ -460,36 +420,6 @@ export function SignUpForm({
               )}
             </div>
 
-            {codeSent && (
-              <div className={compact ? "space-y-1" : "space-y-1.5"}>
-                <Label htmlFor="hero-otp" className={compact ? "text-xs" : undefined}>
-                  SMS code
-                </Label>
-                <Input
-                  id="hero-otp"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  maxLength={6}
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-                  required
-                  className={compact ? "h-8 text-sm" : undefined}
-                />
-                <p className="text-xs text-muted-foreground">
-                  We sent a 6-digit code to +{toInternational(dial, phoneLocal)}.{" "}
-                  <button
-                    type="button"
-                    tabIndex={-1}
-                    className="underline disabled:no-underline disabled:opacity-60"
-                    disabled={resendIn > 0 || busy}
-                    onClick={() => void sendCode()}
-                  >
-                    {resendIn > 0 ? `Resend in ${resendIn}s` : "Resend code"}
-                  </button>
-                </p>
-              </div>
-            )}
-
             {message && (
               <p aria-live="polite" className="text-sm text-destructive">
                 {message}
@@ -497,7 +427,24 @@ export function SignUpForm({
             )}
 
             <Button type="submit" size={compact ? "sm" : "default"} className="w-full" disabled={busy}>
-              {codeSent ? "Verify and create account" : "Send SMS code"}
+              Create account
+            </Button>
+
+            <div className={cn("flex items-center gap-3", compact ? "my-2" : "my-5")}>
+              <span className="h-px flex-1 bg-border" />
+              <span className="text-xs text-muted-foreground">or</span>
+              <span className="h-px flex-1 bg-border" />
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              size={compact ? "sm" : "default"}
+              className="w-full"
+              onClick={google}
+              disabled={busy}
+            >
+              Continue with Google
             </Button>
           </form>
         ) : step === 2 ? (
@@ -628,10 +575,17 @@ export function SignUpForm({
                     id="org-email"
                     type="email"
                     placeholder="trading@yourcompany.com"
-                    value={orgEmail}
-                    required
+                    value={orgEmailSameAsLogin ? email : orgEmail}
+                    disabled={orgEmailSameAsLogin}
                     onChange={(e) => setOrgEmail(e.target.value)}
                   />
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Checkbox
+                      checked={orgEmailSameAsLogin}
+                      onCheckedChange={(checked) => setOrgEmailSameAsLogin(checked === true)}
+                    />
+                    Same as login email
+                  </label>
                 </div>
               </>
             )}
