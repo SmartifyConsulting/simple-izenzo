@@ -2216,16 +2216,6 @@ function WadStep({ tx, reload, onContinue }: Props) {
                 Agreements is still a person's own click — collapsing this frame and opening the
                 next one isn't something that should happen out from under someone still reading
                 the result. */}
-            {wadUnlocked && !tx.wad_completed_at && !bothCleared && (
-              <Button
-                size="sm"
-                disabled={busy}
-                className="bg-pink-500 text-white hover:bg-pink-600"
-                onClick={() => void skipForDemo()}
-              >
-                Skip Verification (for Demo ONLY)
-              </Button>
-            )}
             {(tx.wad_completed_at || bothCleared) && (
               <Button
                 size="sm"
@@ -2417,7 +2407,7 @@ function WadStep({ tx, reload, onContinue }: Props) {
         checks={["id_document", "kyb"]}
         myLabel={myRegistration?.fullName ?? null}
         otherLabel={otherRegistration?.fullName ?? null}
-        demoVerified={demoSkipped}
+        demoVerified={false}
       />
       </>
       )}
