@@ -5,7 +5,7 @@ import { POI_COST, WAD_COST } from "@/lib/spine";
 import { userFacingText } from "@/lib/userFacingText";
 import { isRelevant, relevanceTerms } from "@/lib/relevance";
 import { guessSideFromWording } from "@/lib/tradeSide";
-import { nameKey } from "@/lib/dedupeOrgs";
+import { nameKey, cleanOrgName, hostKey } from "@/lib/dedupeOrgs";
 
 async function sha256(input: string) {
   const bytes = new TextEncoder().encode(input);
@@ -1012,9 +1012,20 @@ export const searchCounterparties = createServerFn({ method: "POST" })
     });
     // AI and AI+ both run for every bid and often find the same organisations — one that is already
     // on this bid (or repeated within this batch) is not added a second time.
+    // Directory pages (Crunchbase, LinkedIn…) and subpages of a company's own site are the same
+    // company, never separate entries: labels are stripped from the name, and the copy with a
+    // contact email / own website wins when several collapse into one.
+    const DIRECTORY_HOSTS = /(crunchbase|linkedin|zoominfo|dnb|bloomberg|opencorporates|bizcommunity|facebook|twitter|x)\.com$|\.(crunchbase|linkedin)\./;
+    const urlOf = (r: (typeof rows)[number]) =>
+      ((r.media_flags as { evidence?: { url?: string }[] }).evidence?.[0]?.url ?? "") as string;
+    const rank = (r: (typeof rows)[number]) =>
+      ("contact_email" in r && r.contact_email ? 2 : 0) + (DIRECTORY_HOSTS.test(hostKey(urlOf(r))) ? 0 : 1);
+    const ordered = [...rows]
+      .map((r) => ({ ...r, name: cleanOrgName(r.name) }))
+      .sort((a, b) => rank(b) - rank(a));
     const { data: already } = await supabase.from("counterparties").select("name").eq("transaction_id", tx.id);
     const seenKeys = new Set((already ?? []).map((r) => nameKey(r.name as string)));
-    const freshRows = rows.filter((r) => {
+    const freshRows = ordered.filter((r) => {
       const key = nameKey(r.name) || r.name.toLowerCase();
       if (seenKeys.has(key)) return false;
       seenKeys.add(key);

@@ -5,8 +5,18 @@
 const SUFFIXES =
   /\b(inc|llc|llp|pllc|ltd|limited|plc|pty|pte|gmbh|bv|nv|sa|srl|co|corp|corporation|company|group|holdings|holding|partners|associates|advisors|advisers|attorneys|law|legal|services|africa|international|global)\b/g;
 
+/** Drops labels the search adds after a company's name — "SeedAxis (Crunchbase profile)",
+ * "SeedAxis - GCC & Capability Enablement", "SeedAxis | LinkedIn" all become "SeedAxis". */
+export function cleanOrgName(name: string) {
+  const cleaned = (name ?? "")
+    .replace(/\s*\([^)]*\)\s*$/g, "")
+    .split(/\s+[-–—|]\s+/)[0]!
+    .trim();
+  return cleaned || (name ?? "").trim();
+}
+
 export function nameKey(name: string) {
-  return (name ?? "")
+  return cleanOrgName(name)
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, " ")
     .replace(SUFFIXES, " ")
