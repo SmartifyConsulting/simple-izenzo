@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -83,6 +83,22 @@ export function SignUpForm({
   const [orgEmail, setOrgEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+
+  // Arriving on step 2 from the confirmation link reloads the page, so the email typed in step 1 is
+  // gone — pull it back from the signed-in account so "Same as login email" shows a real address.
+  useEffect(() => {
+    if (step < 2) return;
+    let live = true;
+    void supabase.auth.getUser().then(({ data }) => {
+      const e = data.user?.email;
+      if (!live || !e) return;
+      setEmail((cur) => cur || e);
+      setOrgEmail((cur) => cur || e);
+    });
+    return () => {
+      live = false;
+    };
+  }, [step]);
 
   const fullName = [firstName.trim(), lastName.trim()].filter(Boolean).join(" ");
   const resolvedSector = sector === ADD_NEW_SECTOR ? customSector.trim() : sector;
@@ -197,7 +213,7 @@ export function SignUpForm({
         // Individuals don't get asked separately — their own login email is their organisation's
         // contact email by definition. A company can point it somewhere else (a shared inbox, a
         // colleague), which is what the "Same as login email" checkbox is for.
-        const orgContactEmail = isCompany ? (orgEmailSameAsLogin ? email : orgEmail.trim()) || null : email || null;
+        const orgContactEmail = (isCompany ? (orgEmailSameAsLogin ? email : orgEmail.trim()) || email : email) || null;
         const { data: org, error: orgErr } = await supabase
           .from("organisations")
           .insert({
