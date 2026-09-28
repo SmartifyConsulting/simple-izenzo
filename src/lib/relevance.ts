@@ -15,9 +15,13 @@ const GENERIC_TERMS = new Set([
   "provider", "providers", "supply", "contract", "document",
 ]);
 
+/** Lower-cases and strips accents so "Pokémon" and "Pokemon" are the same word. */
+export function foldAccents(text: string): string {
+  return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
 function words(text: string): string[] {
-  return text
-    .toLowerCase()
+  return foldAccents(text)
     .split(/[^a-z0-9]+/)
     .filter((w) => w.length > 2 && !STOPWORDS.has(w));
 }
