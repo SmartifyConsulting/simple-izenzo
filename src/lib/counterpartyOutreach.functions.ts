@@ -612,6 +612,30 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
       );
     }
 
+    // Bidder gets their own copy; Admin gets a separate copy greeted "Hello Admin," — both carry
+    // the bracketed testing line saying where the counterparty's address came from.
+    async function sendBidderAndAdmin(subject: string, op: string, body: string, sourceNote: string) {
+      const note = `<p style="font-size:12px;color:#6b7280;">(Testing only — email address source: ${sourceNote})</p>`;
+      if (bidderEmail) {
+        await sendEmail(creds!, {
+          to: bidderEmail,
+          usage: { operation: op, transactionId: cp.transaction_id },
+          subject,
+          html: renderBrandedEmail(`<p>Hello,</p>` + note + body),
+        });
+      }
+      try {
+        await sendEmail(creds!, {
+          to: ADMIN_EMAIL,
+          usage: { operation: op, transactionId: cp.transaction_id },
+          subject: `[Admin copy] ${subject}`,
+          html: renderBrandedEmail(`<p>Hello Admin,</p>` + note + body),
+        });
+      } catch {
+        // Admin's copy is a courtesy — never blocks the bidder's email.
+      }
+    }
+
     if (toEmail) {
       // Tier 1: a real, confirmed address — send it there directly, cc the bidder.
       try {
