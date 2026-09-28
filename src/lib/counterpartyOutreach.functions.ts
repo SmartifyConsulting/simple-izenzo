@@ -617,11 +617,14 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
     async function sendBidderAndAdmin(subject: string, op: string, body: string, sourceNote: string) {
       const note = `<p style="font-size:12px;color:#6b7280;">(Testing only — email address source: ${sourceNote})</p>`;
       if (bidderEmail) {
+        // Admin/test inboxes are greeted as Admin even when they are the bidder.
+        const adminInboxes = [ADMIN_EMAIL, "info@georgiaadams.co.za"].map((a) => a.toLowerCase());
+        const greeting = adminInboxes.includes(bidderEmail.toLowerCase()) ? "Hello Admin," : "Hello,";
         await sendEmail(creds!, {
           to: bidderEmail,
           usage: { operation: op, transactionId: cp.transaction_id },
           subject,
-          html: renderBrandedEmail(`<p>Hello,</p>` + note + body),
+          html: renderBrandedEmail(`<p>${greeting}</p>` + note + body),
         });
       }
       try {
@@ -714,7 +717,14 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
           // One bad guess shouldn't stop the others.
         }
       }
-      const guessedList = guessedEmails.map((e) => `<li style="font-family:monospace;">${e}</li>`).join("");
+      const guessDomain = (cp.website ?? "").replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "");
+      const guessedList = guessedEmails
+        .map(
+          (e) =>
+            `<li><span style="font-family:monospace;">${e}</span> ` +
+            `<span style="font-size:12px;color:#6b7280;">(Source: Guessed — common address pattern at ${guessDomain || "their domain"}; not found in app, web scrape or on their website)</span></li>`,
+        )
+        .join("");
       await sendBidderAndAdmin(
         `Reaching out to ${cp.name} on your behalf`,
         "outreach_email_guessed",
