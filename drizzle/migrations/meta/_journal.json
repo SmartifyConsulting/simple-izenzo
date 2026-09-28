@@ -162,6 +162,20 @@
       "when": 1790543676680,
       "tag": "0022_celebrations_seen",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1790615183030,
+      "tag": "0023_can_access_tx_counterparty_membership",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1790615214066,
+      "tag": "0024_contact_email_source",
+      "breakpoints": true
     }
   ]
 }

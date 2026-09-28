@@ -541,7 +541,12 @@ export const notifyChosenCounterparty = createServerFn({ method: "POST" })
         .update({
           website: website ?? undefined,
           contact_email: toEmail ?? undefined,
-          contact_email_source: toEmail ? emailSource : undefined,
+          // The column stores a short code ('app' | 'website' | 'guessed'); the long label is only for emails.
+          contact_email_source: toEmail
+            ? emailSource?.startsWith("In app")
+              ? "app"
+              : "website"
+            : undefined,
         } as never)
         .eq("id", cp.id);
     }
