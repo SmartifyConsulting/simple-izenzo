@@ -22,7 +22,16 @@ import { verifyRegistrationDocument } from "@/lib/registrationDocumentCheck.func
  * suits the account: an Authority to Act for a company, proof of residential address for an
  * individual. KYC, KYB, AML and PEP screening still happen, but only once, scoped to a specific
  * deal, at the WaD gate — never here. */
-export function AuthorityToActPanel({ onSaved }: { onSaved?: () => void }) {
+export function AuthorityToActPanel({
+  onSaved,
+  submitLabel,
+  onCloseWithoutDocument,
+}: {
+  onSaved?: () => void;
+  submitLabel?: string;
+  /** When set, pressing the button before everything is filled in just closes (nothing to check). */
+  onCloseWithoutDocument?: () => void;
+}) {
   const { profile, refresh } = useAuth();
   const [idType, setIdType] = useState<"id" | "passport">(profile?.id_number_type ?? "id");
   const [idNumber, setIdNumber] = useState(profile?.id_number ?? "");
@@ -71,15 +80,17 @@ export function AuthorityToActPanel({ onSaved }: { onSaved?: () => void }) {
         });
         identityVerified = check.checked && check.matches;
         identityVerifiedReason = check.reason;
-        if (check.checked && !check.matches) {
-          mismatch = check.reason || "Nothing in the document matched your name, ID number or email.";
+        if (!identityVerified) {
+          mismatch = check.checked
+            ? check.reason || "Nothing in the document matched your name, ID number or email."
+            : "We couldn't read the document. Please upload a clear copy.";
         }
       } catch {
-        // Best-effort only — a failed check just means no verified badge yet, not a blocked save.
+        // A failed check never counts as a pass — registration stays open.
+        mismatch = "We couldn't check the document right now. Please try again.";
       }
 
-      let mismatchBlock = false;
-      if (mismatch) mismatchBlock = true;
+      const mismatchBlock = Boolean(mismatch);
       const { error: updateError } = await supabase
         .from("profiles")
         .update({
@@ -191,9 +202,17 @@ export function AuthorityToActPanel({ onSaved }: { onSaved?: () => void }) {
           </p>
         )}
 
-        <Button size="sm" disabled={busy || !canSave} onClick={() => void save()}>
+        <Button
+          size="sm"
+          className={submitLabel ? "w-full" : undefined}
+          disabled={busy || (!canSave && !onCloseWithoutDocument)}
+          onClick={() => {
+            if (!canSave && onCloseWithoutDocument) onCloseWithoutDocument();
+            else void save();
+          }}
+        >
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-          Save
+          {submitLabel ?? "Save"}
         </Button>
       </div>
     </section>

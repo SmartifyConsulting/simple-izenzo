@@ -617,25 +617,19 @@ export function SignUpForm({
         ) : (
           <div className="space-y-3">
             <AuthorityToActPanel
+              submitLabel="Save and Close"
               onSaved={() => {
                 // Registration is finished — let the app take over from here.
                 endRegistration();
                 navigate({ to: safeNext(next), replace: true });
               }}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={() => {
-                // Steps 1 and 2 are already saved; the document can be added later.
+              onCloseWithoutDocument={() => {
+                // Steps 1 and 2 are saved; the app keeps asking until a matching document is on file.
                 endRegistration();
-                toast.success("Saved. You can finish this step later from Account settings.");
+                toast.success("Saved. You'll be asked to finish this step before you can trade.");
                 navigate({ to: safeNext(next), replace: true });
               }}
-            >
-              Save and Close
-            </Button>
+            />
           </div>
         )}
       </div>

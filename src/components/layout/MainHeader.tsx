@@ -162,6 +162,11 @@ export function MainHeader() {
                   Sign in
                 </Button>
               </SignInModal>
+              <SignInModal defaultTab="signup">
+                <Button size="sm" className="rounded-full">
+                  Sign up
+                </Button>
+              </SignInModal>
             </>
           )}
         </div>
