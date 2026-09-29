@@ -2032,7 +2032,12 @@ function LiveDealEngine() {
   async function applyClassification(txId: string, direction: "bid" | "offer") {
     const { data: row } = await supabase.from("transactions").select("reference").eq("id", txId).maybeSingle();
     const currentReference = (row as { reference?: string | null } | null)?.reference ?? dealTx?.reference ?? "";
-    if (tradeKindOf(currentReference) === direction) return;
+    const previousKind = tradeKindOf(currentReference);
+    if (previousKind === direction) {
+      // Reference already right — still make sure the stored side matches, so the search looks the right way.
+      await supabase.from("bid_offers").update({ direction }).eq("transaction_id", txId);
+      return;
+    }
     const newReference = swapReferencePrefix(currentReference || fallbackReference(txId, direction), direction);
     const newTitle = direction === "bid" ? "New Bid" : "New Offer";
     const [{ error: boError }, { error: txError }] = await Promise.all([
@@ -2045,10 +2050,16 @@ function LiveDealEngine() {
     }
     setDealTx((prev) => (prev && prev.id === txId ? { ...prev, reference: newReference, title: newTitle } : prev));
     setActivity((prev) => (prev ? { ...prev, direction, reference: newReference, title: newTitle } : prev));
+    const switched = previousKind !== "workspace";
     toast.success(
-      direction === "bid"
-        ? `Searching for a seller — recorded as bid ${newReference}.`
-        : `Searching for a buyer — recorded as offer ${newReference}.`,
+      direction === "offer"
+        ? switched
+          ? `Your search reads as an Offer to sell — switched ${currentReference} to ${newReference}. Now searching for buyers.`
+          : `Searching for a buyer — recorded as offer ${newReference}.`
+        : switched
+          ? `Your search reads as a Bid to buy — switched ${currentReference} to ${newReference}. Now searching for sellers.`
+          : `Searching for a seller — recorded as bid ${newReference}.`,
+      { duration: 8000 },
     );
   }
 
@@ -2063,8 +2074,10 @@ function LiveDealEngine() {
    * this only decides whether the visible identity of the workspace changes. */
   async function categoriseSearch(txId: string) {
     try {
-      const { data: row } = await supabase.from("transactions").select("reference").eq("id", txId).maybeSingle();
-      if (tradeKindOf((row as { reference?: string | null } | null)?.reference) !== "workspace") return;
+      const { data: row } = await supabase.from("transactions").select("reference, stage, poi_sealed_at").eq("id", txId).maybeSingle();
+      const r = row as { reference?: string | null; stage?: string | null; poi_sealed_at?: string | null } | null;
+      // Once intent is sealed the identity is fixed; before that, the search wording decides.
+      if (r?.poi_sealed_at || (r?.stage && r.stage !== "trading")) return;
       const { direction } = await classifySide({ data: { transactionId: txId } });
       if (direction) await applyClassification(txId, direction);
     } catch {
