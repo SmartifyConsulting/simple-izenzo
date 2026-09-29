@@ -86,9 +86,12 @@ function RequireEmailVerified() {
   const missingRegistrationDoc = isCompanySeat
     ? !profile?.authority_to_act_path
     : !profile?.residential_address_path;
+  // A document on file that failed the check is not a completed registration.
+  const documentFailed = !missingRegistrationDoc && profile?.identity_verified === false;
   const registrationIncomplete =
-    !loading && !!profile && !needsOrg && (!profile.id_number || missingRegistrationDoc);
-  const isNewAccount = registrationIncomplete && Boolean(profile?.onboarding_required);
+    !loading && !!profile && !needsOrg && (!profile.id_number || missingRegistrationDoc || documentFailed);
+  const isNewAccount =
+    registrationIncomplete && (Boolean(profile?.onboarding_required) || documentFailed);
   const needsRegistrationDetails =
     registrationIncomplete && (isNewAccount || !registrationDismissed);
 

@@ -33,9 +33,16 @@ function SettingsPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    // First and last names are stored in separate columns; older rows may still hold "First Last"
+    // in full_name with no last_name, so split those as a fallback.
     const [first = "", ...rest] = (profile?.full_name ?? "").trim().split(/\s+/).filter(Boolean);
-    setFirstName(first);
-    setLastName(rest.join(" "));
+    if (profile?.last_name) {
+      setFirstName((profile.full_name ?? "").trim());
+      setLastName(profile.last_name);
+    } else {
+      setFirstName(first);
+      setLastName(rest.join(" "));
+    }
   }, [profile]);
 
   async function save(e: React.FormEvent) {
@@ -45,7 +52,7 @@ function SettingsPage() {
     try {
       const { error } = await supabase
         .from("profiles")
-        .update({ full_name: [firstName.trim(), lastName.trim()].filter(Boolean).join(" ") })
+        .update({ full_name: firstName.trim(), last_name: lastName.trim() || null } as never)
         .eq("id", profile.id);
       if (error) throw error;
       await refresh();
