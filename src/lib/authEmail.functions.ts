@@ -10,7 +10,7 @@ export const sendAuthLinkEmail = createServerFn({ method: "POST" })
     z
       .object({
         email: z.string().trim().email().max(255),
-        path: z.string().startsWith("/").refine((p) => !p.startsWith("//")).max(500),
+        path: z.string().max(500).startsWith("/").refine((p) => !p.startsWith("//")),
       })
       .parse(d),
   )
