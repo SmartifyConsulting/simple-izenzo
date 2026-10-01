@@ -60,7 +60,6 @@ export function RegistrationDetailsDialog({
           submitLabel="Save and Close"
           onSaved={onDismiss}
           onCloseWithoutDocument={closeLocked}
-          onSavedWithFailure={undefined}
         />
 
         <div className="flex flex-wrap justify-between gap-2">

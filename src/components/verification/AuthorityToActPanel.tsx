@@ -50,6 +50,29 @@ export function AuthorityToActPanel({
     : Boolean(profile?.authority_to_act_path);
   const canSave = idNumber.trim().length > 0 && hasDocument;
 
+  /** Clears the rejected document so a replacement can be uploaded; the typed ID number is kept. */
+  async function retryDocument() {
+    if (!profile) return;
+    setBusy(true);
+    try {
+      const patch = isIndividual
+        ? { residential_address_path: null, residential_address_name: null }
+        : { authority_to_act_path: null, authority_to_act_name: null };
+      const { error: e } = await supabase
+        .from("profiles")
+        .update({ ...patch, id_number: idNumber.trim() || null } as never)
+        .eq("id", profile.id);
+      if (e) throw e;
+      await refresh();
+      setError(null);
+      toast.info("Upload a document showing your name, ID number or email, then press Save and Close.");
+    } catch (err) {
+      toast.error((err as Error).message || "Could not reset the document — please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function save() {
     if (!profile || !canSave) return;
     setBusy(true);
@@ -197,9 +220,22 @@ export function AuthorityToActPanel({
         {isIndividual ? <ProofOfResidenceCard compulsory /> : <AuthorityDocumentCard compulsory />}
 
         {error && (
-          <p className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
-            {error}
-          </p>
+          <div
+            role="alert"
+            className="space-y-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive"
+          >
+            <p className="font-semibold">Registration not completed</p>
+            <p>{error}</p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={busy}
+              onClick={() => void retryDocument()}
+            >
+              Retry with another document
+            </Button>
+          </div>
         )}
 
         <Button
