@@ -100,10 +100,28 @@ export function HeroMatchCard({ className, actions }: { className?: string; acti
     if (searchTimer.current) window.clearTimeout(searchTimer.current);
   }, []);
 
-  function onFindMatches() {
-    // Already signed in: there is nothing to preview or sign up for — the search goes straight into
-    // the Live Workspace, which records the bid from what was typed (and any files dropped) and
-    // runs the search there.
+  async function openByReference(raw: string): Promise<boolean> {
+    const m = raw.trim().toUpperCase().match(/^(BID|OFF|OFFER)[\s-]?(\d{5,})$/);
+    if (!m) return false;
+    const num = m[2];
+    const { data } = await supabase
+      .from("transactions")
+      .select("id")
+      .in("reference", [`BID${num}`, `OFF${num}`])
+      .limit(1)
+      .maybeSingle();
+    if (!data) {
+      toast.error(`No deal found for ${raw.trim().toUpperCase()} that you can open.`);
+      return true;
+    }
+    void navigate({ to: "/live-deal-engine", search: { tx: data.id } as never });
+    return true;
+  }
+
+  async function onFindMatches() {
+    // A typed BID/OFFER reference opens that deal straight away.
+    if (user && (await openByReference(prompt))) return;
+    // Already signed in: the search goes straight into the Live Workspace.
     if (user) {
       stashHeroFiles(files);
       const seed = prompt.trim();
