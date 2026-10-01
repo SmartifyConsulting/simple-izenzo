@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { mapAuthError, useAuth } from "@/lib/auth";
+import { sendAuthLinkEmail } from "@/lib/authEmail.functions";
 
 type Search = { verified?: boolean };
 
@@ -60,13 +61,18 @@ function VerifyEmailPage() {
     if (!user?.email) return;
     setBusy(true);
     setMessage("");
-    const { error } = await supabase.auth.signInWithOtp({
-      email: user.email,
-      options: {
-        shouldCreateUser: false,
-        emailRedirectTo: `${window.location.origin}/verify-email?verified=1`,
-      },
-    });
+    let error: { message: string } | null = null;
+    try {
+      await sendAuthLinkEmail({ data: { email: user.email, path: "/verify-email?verified=1" } });
+    } catch {
+      ({ error } = await supabase.auth.signInWithOtp({
+        email: user.email,
+        options: {
+          shouldCreateUser: false,
+          emailRedirectTo: `${window.location.origin}/verify-email?verified=1`,
+        },
+      }));
+    }
     setBusy(false);
     if (error) {
       const msg = mapAuthError(error.message);
