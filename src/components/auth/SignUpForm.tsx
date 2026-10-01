@@ -147,9 +147,17 @@ export function SignUpForm({
         setStep(2);
       } else {
         endRegistration();
-        void sendViaResend().catch(() => undefined);
         setCheckEmail(true);
         startCooldown();
+        try {
+          await sendViaResend();
+        } catch (e) {
+          console.error("Izenzo confirmation email failed", e);
+          const msg =
+            "We couldn't send the Izenzo confirmation email. Press Send again in a moment.";
+          setMessage(msg);
+          toast.error(msg);
+        }
       }
     } catch (err) {
       endRegistration();
@@ -161,9 +169,11 @@ export function SignUpForm({
     }
   }
 
+  /** Throws when the branded email wasn't actually sent, so callers can fall back or warn. */
   async function sendViaResend() {
     const target = new URL(confirmRedirect());
-    await sendAuthLinkEmail({ data: { email, path: target.pathname + target.search } });
+    const res = await sendAuthLinkEmail({ data: { email, path: target.pathname + target.search } });
+    if (!res.sent) throw new Error(res.error ?? "Confirmation email was not sent");
   }
 
   async function resend() {
