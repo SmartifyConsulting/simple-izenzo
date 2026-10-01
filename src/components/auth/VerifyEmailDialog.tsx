@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { mapAuthError, useAuth } from "@/lib/auth";
+import { sendAuthLinkEmail } from "@/lib/authEmail.functions";
 
 /** Blocks the app behind a popup (not a page navigation) until the user confirms their email. */
 export function VerifyEmailDialog({ open }: { open: boolean }) {
@@ -18,13 +19,18 @@ export function VerifyEmailDialog({ open }: { open: boolean }) {
     if (!user?.email) return;
     setBusy(true);
     setMessage("");
-    const { error } = await supabase.auth.signInWithOtp({
-      email: user.email,
-      options: {
-        shouldCreateUser: false,
-        emailRedirectTo: `${window.location.origin}/verify-email?verified=1`,
-      },
-    });
+    let error: { message: string } | null = null;
+    try {
+      await sendAuthLinkEmail({ data: { email: user.email, path: "/verify-email?verified=1" } });
+    } catch {
+      ({ error } = await supabase.auth.signInWithOtp({
+        email: user.email,
+        options: {
+          shouldCreateUser: false,
+          emailRedirectTo: `${window.location.origin}/verify-email?verified=1`,
+        },
+      }));
+    }
     setBusy(false);
     if (error) {
       const msg = mapAuthError(error.message);

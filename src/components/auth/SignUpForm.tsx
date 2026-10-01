@@ -21,6 +21,7 @@ import { generateOrgBrief } from "@/lib/orgBrief.functions";
 import { beginRegistration, endRegistration } from "@/lib/registrationFlow";
 import { COUNTRIES } from "@/lib/countries";
 import { cn } from "@/lib/utils";
+import { sendAuthLinkEmail } from "@/lib/authEmail.functions";
 
 const SECTORS = [
   "Agriculture",
@@ -146,6 +147,7 @@ export function SignUpForm({
         setStep(2);
       } else {
         endRegistration();
+        void sendViaResend().catch(() => undefined);
         setCheckEmail(true);
         startCooldown();
       }
@@ -159,18 +161,27 @@ export function SignUpForm({
     }
   }
 
+  async function sendViaResend() {
+    const target = new URL(confirmRedirect());
+    await sendAuthLinkEmail({ data: { email, path: target.pathname + target.search } });
+  }
+
   async function resend() {
     setMessage("");
-    const { error } = await supabase.auth.resend({
-      type: "signup",
-      email,
-      options: { emailRedirectTo: confirmRedirect() },
-    });
-    if (error) {
-      const msg = mapAuthError(error.message);
-      setMessage(msg);
-      toast.error(msg);
-      return;
+    try {
+      await sendViaResend();
+    } catch {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email,
+        options: { emailRedirectTo: confirmRedirect() },
+      });
+      if (error) {
+        const msg = mapAuthError(error.message);
+        setMessage(msg);
+        toast.error(msg);
+        return;
+      }
     }
     toast.success("Confirmation email sent again");
     startCooldown();
