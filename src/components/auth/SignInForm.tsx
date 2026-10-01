@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 function safeNext(next: string | undefined) {
   if (next && next.startsWith("/") && !next.startsWith("//")) return next;
-  return "/";
+  return "/trades";
 }
 
 /** The sign-in form, shared between the standalone /auth page and the home page hero. */

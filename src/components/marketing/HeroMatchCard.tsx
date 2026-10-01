@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { seedNext, stashHeroFiles, useHeroSearch } from "@/lib/heroSearchContext";
 import { useAuth } from "@/lib/auth";
+import { toast } from "sonner";
 
 function extractTerms(prompt: string) {
   return prompt
