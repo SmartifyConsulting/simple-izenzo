@@ -63,7 +63,8 @@ function VerifyEmailPage() {
     setMessage("");
     let error: { message: string } | null = null;
     try {
-      await sendAuthLinkEmail({ data: { email: user.email, path: "/verify-email?verified=1" } });
+      const res = await sendAuthLinkEmail({ data: { email: user.email, path: "/verify-email?verified=1" } });
+      if (!res.sent) throw new Error(res.error ?? "not sent");
     } catch {
       ({ error } = await supabase.auth.signInWithOtp({
         email: user.email,
