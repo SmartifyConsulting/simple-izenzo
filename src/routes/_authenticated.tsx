@@ -93,7 +93,7 @@ function RequireEmailVerified() {
   const isNewAccount =
     registrationIncomplete && (Boolean(profile?.onboarding_required) || documentFailed);
   const needsRegistrationDetails =
-    registrationIncomplete && (isNewAccount || !registrationDismissed);
+    registrationIncomplete && !registrationDismissed;
 
   useEffect(() => {
     if (!mustVerify && needsOrg && !onOrgSetup) navigate({ to: "/account/settings", replace: true });
